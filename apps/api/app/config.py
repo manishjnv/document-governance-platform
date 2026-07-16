@@ -1,0 +1,54 @@
+import os
+from pydantic_settings import BaseSettings
+
+
+class Settings(BaseSettings):
+    """Application settings loaded from environment variables."""
+
+    # Database
+    database_url: str = "postgresql://edgp_user:edgp_password@localhost:5432/edgp_dev"
+    database_echo: bool = False
+
+    # Redis
+    redis_url: str = "redis://localhost:6379"
+
+    # API
+    api_host: str = "0.0.0.0"
+    api_port: int = 8000
+    api_env: str = "development"
+    api_log_level: str = "INFO"
+
+    # JWT
+    jwt_secret_key: str = "your-super-secret-key"
+    jwt_algorithm: str = "HS256"
+    jwt_expiration_hours: int = 24
+    jwt_refresh_expiration_days: int = 7
+
+    # AI
+    claude_api_key: str = ""
+    claude_model: str = "claude-3-5-sonnet-20241022"
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4-turbo"
+    ai_max_retries: int = 3
+    ai_timeout_seconds: int = 60
+
+    # Storage
+    storage_type: str = "local"
+    storage_local_path: str = "./data/uploads"
+    max_document_size_mb: int = 50
+
+    # CORS
+    cors_origins: list = ["http://localhost:3000"]
+    allowed_hosts: list = ["localhost", "127.0.0.1"]
+
+    # Rate Limiting
+    rate_limit_requests_per_minute: int = 60
+    rate_limit_login_attempts: int = 5
+
+    class Config:
+        env_file = ".env"
+        case_sensitive = False
+
+
+# Create global settings instance
+settings = Settings()

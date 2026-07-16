@@ -1,0 +1,105 @@
+repos:
+  # Code formatting (Python)
+  - repo: https://github.com/psf/black
+    rev: '23.12.1'
+    hooks:
+      - id: black
+        name: Black (Python formatter)
+        language_version: python3.11
+        args: [--line-length=100]
+        stages: [commit]
+
+  # Import sorting (Python)
+  - repo: https://github.com/PyCQA/isort
+    rev: '5.13.2'
+    hooks:
+      - id: isort
+        name: isort (import sorter)
+        args: [--profile=black]
+        stages: [commit]
+
+  # Linting (Python)
+  - repo: https://github.com/PyCQA/flake8
+    rev: '6.1.0'
+    hooks:
+      - id: flake8
+        name: Flake8 (Python linter)
+        args: [--max-line-length=100, --ignore=E203,W503]
+        stages: [commit]
+
+  # Type checking (Python)
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: 'v1.7.1'
+    hooks:
+      - id: mypy
+        name: mypy (type checker)
+        additional_dependencies: [types-all]
+        args: [--ignore-missing-imports]
+        stages: [commit]
+
+  # Security checks (Python)
+  - repo: https://github.com/PyCQA/bandit
+    rev: '1.7.5'
+    hooks:
+      - id: bandit
+        name: Bandit (security checker)
+        args: [-ll]  # Report only high/medium severity
+        stages: [commit]
+
+  # YAML formatting
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: 'v4.5.0'
+    hooks:
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+        stages: [commit]
+      - id: end-of-file-fixer
+        name: Fix end of file
+        stages: [commit]
+      - id: check-yaml
+        name: Check YAML syntax
+        stages: [commit]
+      - id: check-json
+        name: Check JSON syntax
+        stages: [commit]
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+        stages: [commit]
+      - id: detect-private-key
+        name: Detect private keys
+        stages: [commit]
+
+  # Commit message check
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: 'v2.4.0'
+    hooks:
+      - id: conventional-pre-commit
+        name: Conventional commit
+        stages: [commit-msg]
+        args: [--force-scope]
+
+# Configuration
+default_language_version:
+  python: python3.11
+
+# Don't run hooks on certain files
+exclude: |
+  (?x)^(
+    \.env|
+    \.env\.*|
+    venv/|
+    node_modules/|
+    dist/|
+    build/|
+    \.next/
+  )
+
+ci:
+  autofix_commit_msg: |
+    style: auto fixes from pre-commit.com hooks
+    for more information, see https://pre-commit.com
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: 'chore: update pre-commit hooks'
+  autoupdate_schedule: weekly
+  skip: [mypy]  # Skip in CI (too slow)
