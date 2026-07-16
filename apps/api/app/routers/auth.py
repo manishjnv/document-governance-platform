@@ -23,28 +23,33 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])
 
 # In-memory user store (Phase 1 MVP - replace with database in T-201+)
-USERS_DB = {
-    1: {
-        "user_id": 1,
-        "email": "admin@example.com",
-        "password_hash": hash_password("password123"),
-        "first_name": "Admin",
-        "last_name": "User",
-        "org_id": 1,
-        "role": "admin",
-        "mfa_enabled": False,
-        "created_at": datetime.utcnow(),
-        "last_login": None,
-    }
-}
+# Initialized lazily to avoid hashing at module import time
+USERS_DB = {}
+ORGANIZATIONS_DB = {}
 
-ORGANIZATIONS_DB = {
-    1: {
-        "org_id": 1,
-        "name": "Default Organization",
-        "subscription_tier": "enterprise",
-    }
-}
+
+def _init_test_data():
+    """Initialize test data on first use."""
+    global USERS_DB, ORGANIZATIONS_DB
+    if not ORGANIZATIONS_DB:
+        ORGANIZATIONS_DB[1] = {
+            "org_id": 1,
+            "name": "Default Organization",
+            "subscription_tier": "enterprise",
+        }
+    if not USERS_DB:
+        USERS_DB[1] = {
+            "user_id": 1,
+            "email": "admin@example.com",
+            "password_hash": hash_password("password123"),
+            "first_name": "Admin",
+            "last_name": "User",
+            "org_id": 1,
+            "role": "admin",
+            "mfa_enabled": False,
+            "created_at": datetime.utcnow(),
+            "last_login": None,
+        }
 
 
 @router.post(
@@ -68,6 +73,7 @@ async def login(request: LoginRequest) -> LoginResponse:
     - T-108: Rate limiting on failed attempts (5 per 15 min)
     - Later: Azure AD/Entra ID oauth flow (T-109)
     """
+    _init_test_data()
     logger.info(f"Login attempt for {request.email}")
 
     # Find user by email (simplified - will use DB in T-201+)
@@ -189,6 +195,7 @@ async def get_current_user_info(current_user=Depends(get_current_user)) -> Curre
 
     **T-106: Get current user endpoint**
     """
+    _init_test_data()
     user = USERS_DB.get(current_user.user_id)
     org = ORGANIZATIONS_DB.get(current_user.org_id)
 
@@ -224,6 +231,7 @@ async def request_password_reset(request: PasswordResetRequest) -> dict:
     Phase 1: Simplified (no actual email sending, just returns token)
     Future: Integrate with email service
     """
+    _init_test_data()
     logger.info(f"Password reset requested for {request.email}")
 
     # Find user
@@ -309,6 +317,7 @@ async def change_password(
 
     **T-110: Change password endpoint**
     """
+    _init_test_data()
     user = USERS_DB.get(current_user.user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")

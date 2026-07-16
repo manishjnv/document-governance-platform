@@ -115,4 +115,4 @@ class MFASetupResponse(BaseModel):
 class MFAVerifyRequest(BaseModel):
     """MFA verification code."""
 
-    code: str = Field(..., regex=r"^\d{6}$")
+    code: str = Field(..., pattern=r"^\d{6}$")
