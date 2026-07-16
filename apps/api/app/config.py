@@ -6,7 +6,9 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     # Database
-    database_url: str = "postgresql://edgp_user:edgp_password@localhost:5432/edgp_dev"
+    # +asyncpg is required: app/db/session.py uses create_async_engine, which
+    # rejects the plain psycopg2-style "postgresql://" scheme at startup.
+    database_url: str = "postgresql+asyncpg://edgp_user:edgp_password@localhost:5432/edgp_dev"
     database_echo: bool = False
 
     # Redis

@@ -1,4 +1,12 @@
-"""Database connection and session management."""
+"""Database connection and session management.
+
+Relocated from app/db.py: that flat module collided with this app/db/
+package (added alongside it for base.py) — a module and a package can't
+share a name, and the package was silently winning, making engine/
+get_db/init_db/close_db unreachable. CODING_STANDARDS.md's own documented
+layout already calls for db/session.py + db/base.py, so this move matches
+the intended structure rather than working around the collision.
+"""
 
 import logging
 from typing import AsyncGenerator
@@ -53,11 +61,14 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db():
-    """Initialize database (create tables)."""
-    from app.models.base import Base
+    """Initialize database (create tables). Dev/test convenience only —
+    production schema changes go through Alembic migrations (T-203)."""
+    # Import app.models first so Organization/User/Document/Review/Finding/
+    # AuditLog are registered on Base.metadata before create_all runs.
+    import app.models  # noqa: F401
+    from app.db.base import Base
 
     async with engine.begin() as conn:
-        # In production, use Alembic migrations instead
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database initialized")
 

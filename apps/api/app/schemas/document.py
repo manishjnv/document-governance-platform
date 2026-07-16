@@ -1,9 +1,21 @@
-"""Document upload and management schemas."""
+"""Document upload and management schemas.
+
+NOTE: The classes below (DocumentUploadRequest, DocumentMetadata, etc.) predate
+the finalized UUID-based schema in 3_DATABASE_SCHEMA.md and use int doc_id/org_id
+and a float version — inconsistent with the DB (UUID PKs, integer version). The
+DocumentCreate/DocumentUpdate/DocumentRead classes at the bottom of this file
+match the current DB schema. Left both in place rather than deleting existing
+work; reconciling/removing the older set is a separate follow-up, not silently
+done here.
+"""
 
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
+from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.models.enums import DocumentType, FileType, StorageStatus
 
 
 class DocumentUploadRequest(BaseModel):
@@ -112,3 +124,51 @@ class DocumentParsingResult(BaseModel):
     sections: list[ParsedSection]
     error_message: Optional[str] = None
     parse_duration_seconds: float
+
+
+# ---------------------------------------------------------------------------
+# Current schema (matches 3_DATABASE_SCHEMA.md / migrations/001_init_schema.sql)
+# ---------------------------------------------------------------------------
+
+
+class DocumentCreate(BaseModel):
+    """Metadata accompanying a document upload (the file itself is multipart)."""
+
+    org_id: UUID
+    original_filename: str = Field(..., min_length=1, max_length=255)
+    file_size_bytes: int = Field(..., gt=0)
+    file_type: FileType
+    # Set when re-uploading a new version of an existing document; omitted on first upload.
+    document_group_id: Optional[UUID] = None
+
+
+class DocumentUpdate(BaseModel):
+    """Fields updatable after upload (post-parsing enrichment, archival, etc.)."""
+
+    parsed_text: Optional[str] = None
+    parsed_sections: Optional[Any] = None
+    document_type: Optional[DocumentType] = None
+    page_count: Optional[int] = Field(None, ge=0)
+    storage_status: Optional[StorageStatus] = None
+
+
+class DocumentRead(BaseModel):
+    """Document as returned by the API."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    doc_id: UUID
+    document_group_id: UUID
+    org_id: UUID
+    uploaded_by_user_id: Optional[UUID] = None
+    filename: str
+    original_filename: str
+    file_size_bytes: int
+    file_type: FileType
+    version: int
+    document_type: Optional[DocumentType] = None
+    page_count: Optional[int] = None
+    language: str
+    storage_status: StorageStatus
+    created_at: datetime
+    updated_at: datetime
