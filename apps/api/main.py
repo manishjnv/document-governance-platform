@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
-from app.routers import auth, documents
+from app.routers import auth, documents, reviews
 
 # Configure logging
 logging.basicConfig(
@@ -56,6 +56,7 @@ app.add_middleware(
 # Include routers
 app.include_router(auth.router)
 app.include_router(documents.router)
+app.include_router(reviews.router)
 
 
 # Health Check Endpoint

@@ -3,7 +3,7 @@
 import asyncio
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 from app.ai.agent import (
@@ -37,6 +37,7 @@ class OrchestratedReview:
     overall_confidence: float
     total_duration_seconds: float
     merged_findings: dict
+    rule_violations: list = field(default_factory=list)  # T-509: Rule engine results
 
 
 class ReviewOrchestrator:
@@ -67,7 +68,7 @@ class ReviewOrchestrator:
         self.initialized = True
         logger.info(f"Orchestrator initialized with {len(self.agents)} agents")
 
-    async def review(self, doc_id: str, document_text: str) -> OrchestratedReview:
+    async def review(self, doc_id: str, document_text: str, document_type: str = "SOW", sections: Optional[dict] = None) -> OrchestratedReview:
         """
         Run all agents in parallel and orchestrate results.
 
@@ -75,6 +76,7 @@ class ReviewOrchestrator:
         **T-448: Agent fallback handling**
         **T-450: Async review task**
         **T-451: Review status tracking**
+        **T-509: Run rule engine in parallel with AI agents**
         """
         if not self.initialized:
             await self.initialize()
@@ -82,12 +84,16 @@ class ReviewOrchestrator:
         start_time = time.time()
         logger.info(f"Starting orchestrated review for {doc_id}")
 
-        # Run all agents in parallel
-        tasks = [self._run_agent(agent, document_text) for agent in self.agents]
-        results = await asyncio.gather(*tasks, return_exceptions=False)
+        # Run all agents AND rule engine in parallel
+        agent_tasks = [self._run_agent(agent, document_text) for agent in self.agents]
+        rule_task = self._run_rule_engine(document_text, document_type, sections or {})
 
-        # Filter out None results (failed agents)
-        results = [r for r in results if r is not None]
+        all_tasks = agent_tasks + [rule_task]
+        all_results = await asyncio.gather(*all_tasks, return_exceptions=False)
+
+        # Split results: agents and rules
+        results = [r for r in all_results[:-1] if r is not None]  # Agent results
+        rule_violations = all_results[-1] or []  # Rule violations
 
         # Determine overall status
         successful = sum(1 for r in results if r.error is None)
@@ -116,15 +122,49 @@ class ReviewOrchestrator:
             overall_confidence=overall_confidence,
             total_duration_seconds=total_duration,
             merged_findings=merged_findings,
+            rule_violations=[
+                {
+                    "rule_id": v.rule_id,
+                    "rule_name": v.rule_name,
+                    "severity": v.severity.value,
+                    "description": v.description,
+                    "evidence": v.evidence,
+                    "recommendation": v.recommendation,
+                }
+                for v in rule_violations
+            ],
         )
 
         logger.info(
             f"Review complete for {doc_id}: {status} "
             f"({successful}/{total_agents} agents, confidence {overall_confidence:.2f}, "
-            f"{total_duration:.1f}s)"
+            f"{len(rule_violations)} rule violations, {total_duration:.1f}s)"
         )
 
         return orchestrated_result
+
+    async def _run_rule_engine(self, document_text: str, document_type: str, sections: dict) -> list:
+        """
+        Run rule engine to validate document against configured rules.
+
+        **T-509: Integrate rule engine with orchestrator**
+        """
+        start_time = time.time()
+
+        try:
+            from app.rules import get_rule_executor
+
+            executor = await get_rule_executor()
+            violations = await executor.validate(document_text, document_type, sections)
+
+            duration = time.time() - start_time
+            logger.info(f"Rule engine complete: {len(violations)} violations found in {duration:.1f}s")
+
+            return violations
+
+        except Exception as e:
+            logger.error(f"Rule engine failed: {e}")
+            return []
 
     async def _run_agent(
         self, agent, document_text: str
