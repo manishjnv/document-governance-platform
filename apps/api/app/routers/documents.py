@@ -10,29 +10,39 @@ Implementation: T-301 through T-320
 
 import logging
 from typing import Optional
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies import get_current_user
+from app.db.session import get_db
+from app.dependencies import get_current_user, verify_org_access
+from app.models.document import Document
+from app.parser import parse_document
 from app.schemas.auth import TokenData
 from app.schemas.document import (
-    DocumentDeleteRequest,
-    DocumentDetailResponse,
-    DocumentListResponse,
-    DocumentMetadata,
-    DocumentSearchRequest,
-    DocumentSearchResponse,
-    DocumentVersionResponse,
+    DocumentCreate,
+    DocumentRead,
+    DocumentUpdate,
 )
+from app.storage import get_storage_instance
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
+
+# Constants
+MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50MB
+ALLOWED_TYPES = {"pdf", "docx"}
+MIME_TO_TYPE = {
+    "application/pdf": "pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+}
 
 
 @router.post(
     "/upload",
     status_code=status.HTTP_202_ACCEPTED,
-    response_model=DocumentMetadata,
+    response_model=DocumentRead,
     summary="Upload document",
     responses={
         413: {"description": "File too large (>50MB)"},
@@ -40,7 +50,10 @@ router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
     },
 )
 async def upload_document(
+    file: UploadFile = File(...),
+    org_id: UUID = Query(..., description="Organization ID"),
     current_user: TokenData = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Upload a document for review.
@@ -50,89 +63,176 @@ async def upload_document(
     - Max size: 50MB
     - Stores in S3/Blob storage
     - Returns: Document metadata with upload_id
-
-    ### Implementation Notes:
-    1. Validate file type (DOCX/PDF only)
-    2. Check file size (<50MB)
-    3. Generate S3 key: org/{org_id}/doc/{doc_id}/v1.0
-    4. Upload to storage
-    5. Store metadata in database
-    6. Trigger parsing task (Celery)
-    7. Return metadata with status=pending
-
-    ### Future:
-    - Virus scanning
-    - OCR for scanned documents
-    - Folder/batch upload
     """
-    # TODO: Implement upload logic
-    # - File validation
-    # - S3 upload
-    # - Database storage
-    # - Async parsing task
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Document upload under implementation",
+    # Verify user has access to org
+    await verify_org_access(str(org_id), current_user)
+
+    # Validate file type
+    content_type = file.content_type or ""
+    file_type = MIME_TO_TYPE.get(content_type, "").lower()
+
+    if not file_type or file_type not in ALLOWED_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unsupported file type. Allowed: {', '.join(ALLOWED_TYPES)}",
+        )
+
+    # Validate file size
+    content = await file.read()
+    if len(content) > MAX_UPLOAD_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File too large. Max size: {MAX_UPLOAD_SIZE / (1024*1024)}MB",
+        )
+
+    # Get storage backend
+    storage = await get_storage_instance()
+
+    # Create document record
+    from uuid import uuid4
+
+    doc_id = uuid4()
+    document_group_id = uuid4()
+    filename = file.filename or f"document_{doc_id}"
+
+    # Generate storage path
+    storage_path = f"org/{org_id}/doc/{doc_id}/v1/{filename}"
+
+    # Upload to storage
+    try:
+        await storage.upload(storage_path, content)
+    except Exception as e:
+        logger.error(f"Storage upload failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to upload file",
+        )
+
+    # Parse document asynchronously
+    try:
+        parse_result = await parse_document(content, file_type)
+        parsed_text = parse_result.raw_text
+        parsed_sections = [
+            {
+                "heading": s.heading,
+                "level": s.level,
+                "content": s.content,
+                "page_number": s.page_number,
+            }
+            for s in parse_result.sections
+        ]
+        page_count = parse_result.page_count
+        detected_type = parse_result.detected_type.value if parse_result.detected_type else None
+    except Exception as e:
+        logger.error(f"Parsing failed: {e}")
+        parsed_text = None
+        parsed_sections = None
+        page_count = None
+        detected_type = None
+
+    # Create database record
+    from datetime import datetime
+
+    doc = Document(
+        doc_id=doc_id,
+        document_group_id=document_group_id,
+        org_id=UUID(current_user.org_id),
+        uploaded_by_user_id=UUID(str(current_user.user_id)),
+        filename=filename,
+        original_filename=file.filename or filename,
+        file_size_bytes=len(content),
+        file_type=file_type.upper(),
+        version=1,
+        document_type=detected_type,
+        page_count=page_count,
+        language="en",
+        storage_status="uploaded",
+        parsed_text=parsed_text,
+        parsed_sections=parsed_sections,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
     )
+
+    db.add(doc)
+    await db.commit()
+    await db.refresh(doc)
+
+    logger.info(f"Document {doc_id} uploaded by user {current_user.user_id}")
+
+    return DocumentRead.from_orm(doc)
 
 
 @router.get(
     "",
-    response_model=DocumentSearchResponse,
+    response_model=list[DocumentRead],
     summary="List organization documents",
 )
 async def list_documents(
-    org_id: int,
-    skip: int = 0,
-    limit: int = 50,
-    status: Optional[str] = None,
+    org_id: UUID = Query(..., description="Organization ID"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=1000),
+    document_type: Optional[str] = Query(None),
     current_user: TokenData = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     List documents in organization.
 
     **T-306: List documents endpoint**
-    - Filters by org_id (org isolation)
-    - Optional status filter (pending|parsed|error)
-    - Pagination (skip, limit)
-    - Returns: List of document metadata
-
-    ### Implementation:
-    1. Verify user has access to org
-    2. Query documents table
-    3. Filter by status if provided
-    4. Paginate results
-    5. Return with metadata
     """
-    # TODO: Implement list logic
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Document listing under implementation",
+    # Verify access
+    await verify_org_access(str(org_id), current_user)
+
+    from sqlalchemy import select
+
+    query = select(Document).where(
+        (Document.org_id == org_id) & (Document.deleted_at.is_(None))
     )
+
+    if document_type:
+        query = query.where(Document.document_type == document_type)
+
+    query = query.offset(skip).limit(limit).order_by(Document.created_at.desc())
+
+    result = await db.execute(query)
+    documents = result.scalars().all()
+
+    return [DocumentRead.from_orm(doc) for doc in documents]
 
 
 @router.get(
     "/{doc_id}",
-    response_model=DocumentDetailResponse,
+    response_model=DocumentRead,
     summary="Get document metadata",
 )
 async def get_document(
-    doc_id: int,
+    doc_id: UUID,
     current_user: TokenData = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get document metadata and parsing status.
 
     **T-307: Get document endpoint**
-    - Returns full document metadata
-    - Includes parsed sections
-    - Verifies org access
     """
-    # TODO: Implement get document logic
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Document retrieval under implementation",
+    from sqlalchemy import select
+
+    result = await db.execute(
+        select(Document).where(
+            (Document.doc_id == doc_id) & (Document.deleted_at.is_(None))
+        )
     )
+    doc = result.scalar_one_or_none()
+
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Document not found"
+        )
+
+    # Verify org access
+    await verify_org_access(str(doc.org_id), current_user)
+
+    return DocumentRead.from_orm(doc)
 
 
 @router.delete(
@@ -141,129 +241,36 @@ async def get_document(
     summary="Delete document",
 )
 async def delete_document(
-    doc_id: int,
-    request: DocumentDeleteRequest,
+    doc_id: UUID,
     current_user: TokenData = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Delete document (soft delete).
 
     **T-308: Delete document endpoint**
-    - Soft delete (marked deleted_at, not removed)
-    - Keeps audit trail
-    - Verifies permissions
-    - Returns 204 No Content
-
-    ### Implementation:
-    1. Verify user owns doc (org isolation)
-    2. Mark deleted_at = now()
-    3. Log deletion action
-    4. Return 204
     """
-    # TODO: Implement delete logic
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Document deletion under implementation",
+    from datetime import datetime
+    from sqlalchemy import select
+
+    result = await db.execute(
+        select(Document).where(
+            (Document.doc_id == doc_id) & (Document.deleted_at.is_(None))
+        )
     )
+    doc = result.scalar_one_or_none()
 
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Document not found"
+        )
 
-@router.get(
-    "/{doc_id}/versions",
-    response_model=list[DocumentVersionResponse],
-    summary="Get document versions",
-)
-async def get_document_versions(
-    doc_id: int,
-    current_user: TokenData = Depends(get_current_user),
-):
-    """
-    Get version history for a document.
+    # Verify org access
+    await verify_org_access(str(doc.org_id), current_user)
 
-    **Future: Version tracking**
-    - Multiple versions of same document
-    - Version comparison
-    - Rollback capability
-    """
-    # TODO: Implement version tracking
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Version tracking under implementation",
-    )
+    # Soft delete
+    doc.deleted_at = datetime.utcnow()
+    await db.commit()
 
-
-@router.post(
-    "/search",
-    response_model=DocumentSearchResponse,
-    summary="Search documents",
-)
-async def search_documents(
-    request: DocumentSearchRequest,
-    current_user: TokenData = Depends(get_current_user),
-):
-    """
-    Search documents by filename or content.
-
-    **Future: Full-text search**
-    - PostgreSQL full-text search (Phase 1)
-    - Elasticsearch (Phase 2)
-    - Vector search for AI-powered search (Phase 3)
-    """
-    # TODO: Implement search
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Document search under implementation",
-    )
-
-
-# Parser endpoints (internal/async)
-
-@router.post(
-    "/{doc_id}/parse",
-    summary="Trigger document parsing",
-)
-async def trigger_parsing(
-    doc_id: int,
-    current_user: TokenData = Depends(get_current_user),
-):
-    """
-    Manually trigger document parsing.
-
-    **T-313-T-320: Document parsing**
-    - DOCX extraction via python-docx
-    - PDF extraction via pypdf
-    - Section detection and extraction
-    - Text normalization
-    - Store parsed content in database
-
-    ### Implementation:
-    1. Celery async task
-    2. Extract text from file
-    3. Detect sections
-    4. Store parsed_text and sections
-    5. Update status to 'parsed'
-    """
-    # TODO: Implement parsing trigger
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Document parsing under implementation",
-    )
-
-
-@router.get(
-    "/{doc_id}/parsing-status",
-    summary="Get parsing status",
-)
-async def get_parsing_status(
-    doc_id: int,
-    current_user: TokenData = Depends(get_current_user),
-):
-    """
-    Get document parsing progress.
-
-    Returns: status (pending|parsing|parsed|error), progress %
-    """
-    # TODO: Implement status check
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Parsing status under implementation",
-    )
+    logger.info(f"Document {doc_id} deleted by user {current_user.user_id}")
+    return None
