@@ -1,8 +1,8 @@
 # EDGP Phase 1 Implementation Progress
 
-**Last Updated:** 2026-07-17 01:40 GMT+5:30  
-**Current Phase:** Foundation & Authentication Complete, Database Schema In Progress  
-**Overall Progress:** ~25% (127 total tasks, 30+ completed)
+**Last Updated:** 2026-07-17 02:00 GMT+5:30  
+**Current Phase:** Foundation, Auth, & Database Complete — Ready for Document Upload  
+**Overall Progress:** ~35% (127 total tasks, 45+ completed)
 
 ---
 
@@ -38,12 +38,23 @@
 
 ---
 
-## 🔄 IN PROGRESS
+## ✅ DATABASE SCHEMA COMPLETE (T-201-T-220)
 
-### Database Schema (T-201-T-220)
-- **Status:** Sonnet agent designing schema
-- **Expected:** SQL migrations, SQLAlchemy models, Pydantic schemas
-- **Blocker for:** Document management, reviews, findings storage
+**Commit 6740984:** Complete schema with ORM and Pydantic
+- ✅ SQL migration (001_init_schema.sql) with 8 bug fixes documented
+- ✅ 6 tables: organizations, users, documents, reviews, findings, audit_logs
+- ✅ SQLAlchemy models with async support
+- ✅ Pydantic schemas for all entities
+- ✅ UUIDs for multi-tenant safety
+- ✅ Soft-delete support with partial unique indexes
+- ✅ Comprehensive CHECK constraints and audit triggers
+
+**Key Fixes:**
+- Fixed multi-agent collision (db.py vs db/ package structure)
+- Corrected DATABASE_URL to postgresql+asyncpg:// scheme
+- Converted hard UNIQUEs to soft-delete-aware partial indexes
+- Added missing CHECK constraints and cross-column validations
+- Made *_user_id columns nullable for audit compliance
 
 ---
 
@@ -89,14 +100,14 @@
 
 | Phase | Tasks | Completed | % Done |
 |-------|-------|-----------|--------|
-| Foundation (T-001-T-010) | 10 | 10 | 100% |
+| Foundation (T-001-T-010) | 10 | 10 | 100% ✅ |
 | Authentication (T-101-T-113) | 13 | 12 | 92% |
-| Database (T-201-T-220) | 20 | 0 | 0% 🔄 |
-| Document Mgmt (T-301-T-320) | 20 | 0 | 0% |
+| Database (T-201-T-220) | 20 | 20 | 100% ✅ |
+| Document Mgmt (T-301-T-320) | 20 | 0 | 0% ⏳ |
 | AI Agents (T-401-T-453) | 53 | 0 | 0% |
 | Rule Engine (T-501-T-512) | 12 | 0 | 0% |
 | Scoring/Reports (T-601-T-619) | 11 | 0 | 0% |
-| **SUBTOTAL** | **139** | **32** | **23%** |
+| **SUBTOTAL** | **139** | **52** | **37%** ✅ |
 | Frontend (T-701-T-720) | 20 | 0 | 0% |
 | Dashboard (T-801-T-809) | 9 | 0 | 0% |
 | Testing (T-901-T-926) | 26 | 0 | 0% |
