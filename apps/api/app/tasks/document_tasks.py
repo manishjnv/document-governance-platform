@@ -39,7 +39,9 @@ async def _build_report_content(review, doc, findings: list) -> tuple[str, bytes
         "delivery", "operations", "security",
     ]:
         score_val = getattr(review, f"score_{category}", None)
-        if score_val:
+        # `is not None`, not truthy -- see app/routers/reviews.py's identical
+        # fix: a category legitimately scoring 0 must not be dropped.
+        if score_val is not None:
             category_scores[category] = CategoryScore(
                 category=category,
                 score=float(score_val),

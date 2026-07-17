@@ -29,8 +29,19 @@ email-validator==2.1.0
 python-multipart==0.0.6
 
 # Document Processing
-pypdf==3.17.1
+# pypdf bumped 3.17.1 -> 6.14.2: xhtml2pdf (below) transitively requires a
+# newer pypdf than this app was pinned to; re-verified PdfParser.parse()
+# against pypdf 6.x (tests/test_parser_document_type.py + a live
+# reportlab-generated PDF smoke test) before repinning -- no API break for
+# the PdfReader/.pages/.extract_text() surface this app actually uses.
+pypdf==6.14.2
 python-docx==0.8.11
+
+# PDF report generation (app/scoring/report.py::ReportGenerator.generate_pdf_report).
+# Pure Python, wraps reportlab -- no system libs (Pango/Cairo) required,
+# unlike weasyprint. Renders the existing HTML report template directly.
+xhtml2pdf==0.2.17
+reportlab==4.5.1
 
 # HTTP Client
 httpx==0.25.2

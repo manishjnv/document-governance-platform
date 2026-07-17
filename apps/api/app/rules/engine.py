@@ -126,19 +126,49 @@ class RuleExecutor:
         """
         T-505: Section presence check
         Verify that required sections exist in document.
+
+        `params["match"]` controls how a multi-item `required_sections` list
+        is interpreted -- defaults to "any" (at least one alias present),
+        which is what every real builtin rule with a multi-item list
+        actually means (e.g. SOW-001's ["Executive Summary", "Overview",
+        "Summary"] are synonyms for ONE section, not three co-required
+        sections -- the previous all-must-be-present behavior made these
+        rules fire "missing section" even when the document plainly had the
+        section under a different accepted heading, a real precision bug
+        discovered during the 2026-07-17 RFP/Legal/PMO adversarial review).
+        Pass `"match": "all"` for the genuinely rare case of several
+        DISTINCT sections that must all be present.
         """
         required_sections = rule.params.get("required_sections", [])
+        if not required_sections:
+            return None
 
-        for section in required_sections:
-            if section.lower() not in [s.lower() for s in sections.keys()]:
-                return RuleViolation(
-                    rule_id=rule.rule_id,
-                    rule_name=rule.name,
-                    severity=rule.severity,
-                    description=rule.description,
-                    evidence=f"Missing section: '{section}'",
-                    recommendation=rule.recommendation,
-                )
+        match_mode = rule.params.get("match", "any")
+        present = {s.lower() for s in sections.keys()}
+
+        if match_mode == "all":
+            for section in required_sections:
+                if section.lower() not in present:
+                    return RuleViolation(
+                        rule_id=rule.rule_id,
+                        rule_name=rule.name,
+                        severity=rule.severity,
+                        description=rule.description,
+                        evidence=f"Missing section: '{section}'",
+                        recommendation=rule.recommendation,
+                    )
+            return None
+
+        if not any(section.lower() in present for section in required_sections):
+            aliases = "', '".join(required_sections)
+            return RuleViolation(
+                rule_id=rule.rule_id,
+                rule_name=rule.name,
+                severity=rule.severity,
+                description=rule.description,
+                evidence=f"Missing section: none of '{aliases}' found",
+                recommendation=rule.recommendation,
+            )
 
         return None
 
@@ -148,14 +178,27 @@ class RuleExecutor:
         """
         T-506: Word count check
         Verify sections have minimum word count.
+
+        Multi-item `required_sections` here are the same synonym-alias
+        pattern as _check_section_presence (e.g. SOW-008's ["Scope of
+        Work", "Scope"]) -- this checks the word count of whichever alias
+        is actually present, not each alias independently (a document using
+        the "Scope" heading with 200 words must not fail this check just
+        because a section literally named "Scope of Work" doesn't exist --
+        that absence is already _check_section_presence's job, a separate
+        rule). If none of the aliases are present at all, this check is
+        silent (word_count is about depth of an existing section, not
+        presence) and defers to whichever section_presence rule covers it.
         """
         required_sections = rule.params.get("required_sections", [])
         min_words = rule.params.get("min_words", 50)
 
         for section in required_sections:
-            section_text = sections.get(section.lower(), "")
-            word_count = len(section_text.split())
+            section_text = sections.get(section.lower())
+            if section_text is None:
+                continue  # this alias isn't the one the document used
 
+            word_count = len(section_text.split())
             if word_count < min_words:
                 return RuleViolation(
                     rule_id=rule.rule_id,
@@ -165,6 +208,7 @@ class RuleExecutor:
                     evidence=f"'{section}' has only {word_count} words (minimum {min_words})",
                     recommendation=rule.recommendation,
                 )
+            return None  # found a present alias with sufficient depth
 
         return None
 
@@ -172,20 +216,45 @@ class RuleExecutor:
         """
         T-508: Keyword check
         Verify document contains required keywords.
+
+        Same `params["match"]` semantics as _check_section_presence
+        (default "any"): every real builtin rule's multi-item `keywords`
+        list is a set of acceptable phrasings for one concept (e.g.
+        SOW-011's ["net 30", "net 60", "net 90", "payment terms", "due
+        upon", "invoice"] means "some payment-terms language", not that a
+        document must contain all six phrases verbatim). Pass `"match":
+        "all"` to require every keyword literally present.
         """
         keywords = rule.params.get("keywords", [])
+        if not keywords:
+            return None
+
+        match_mode = rule.params.get("match", "any")
         text_lower = document_text.lower()
 
-        for keyword in keywords:
-            if keyword.lower() not in text_lower:
-                return RuleViolation(
-                    rule_id=rule.rule_id,
-                    rule_name=rule.name,
-                    severity=rule.severity,
-                    description=rule.description,
-                    evidence=f"Missing keyword: '{keyword}'",
-                    recommendation=rule.recommendation,
-                )
+        if match_mode == "all":
+            for keyword in keywords:
+                if keyword.lower() not in text_lower:
+                    return RuleViolation(
+                        rule_id=rule.rule_id,
+                        rule_name=rule.name,
+                        severity=rule.severity,
+                        description=rule.description,
+                        evidence=f"Missing keyword: '{keyword}'",
+                        recommendation=rule.recommendation,
+                    )
+            return None
+
+        if not any(keyword.lower() in text_lower for keyword in keywords):
+            variants = "', '".join(keywords)
+            return RuleViolation(
+                rule_id=rule.rule_id,
+                rule_name=rule.name,
+                severity=rule.severity,
+                description=rule.description,
+                evidence=f"Missing keyword: none of '{variants}' found",
+                recommendation=rule.recommendation,
+            )
 
         return None
 

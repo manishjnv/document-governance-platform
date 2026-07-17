@@ -80,7 +80,7 @@ async def trigger_review(
         org_id=doc.org_id,
         doc_id=doc_id,
         triggered_by_user_id=UUID(str(current_user.user_id)),
-        status="running",
+        status="pending",
     )
 
     db.add(review)
@@ -90,6 +90,9 @@ async def trigger_review(
     # T-510: Run review in background
     # (In production, this would be an async task via Celery/Redis)
     try:
+        review.status = "running"
+        await db.commit()
+
         orchestrator = await get_orchestrator()
 
         # Get document sections if parsed
@@ -408,7 +411,11 @@ async def generate_report(
     for category in ["completeness", "clarity", "consistency", "commercial", "delivery", "operations", "security"]:
         col = f"score_{category}"
         score_val = getattr(review, col, None)
-        if score_val:
+        # `is not None`, not truthy: a category legitimately scoring 0 (the
+        # worst case -- critical findings everywhere) is falsy and was being
+        # silently dropped from the report/heatmap, hiding exactly the
+        # category a reviewer most needs to see.
+        if score_val is not None:
             category_scores[category] = CategoryScore(
                 category=category,
                 score=float(score_val),

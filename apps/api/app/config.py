@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     ai_max_retries: int = 3
     ai_timeout_seconds: int = 60
 
+    # OpenRouter (ponytail: dev/test-only alt provider, picked over
+    # Anthropic/OpenAI/Google per user request for cheap agent testing)
+    openrouter_api_key: str = ""
+    openrouter_model: str = "deepseek/deepseek-chat"
+
     # Storage
     storage_type: str = "local"
     storage_local_path: str = "./data/uploads"

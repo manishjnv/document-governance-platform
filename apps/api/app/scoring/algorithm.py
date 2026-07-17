@@ -308,10 +308,22 @@ class DocumentScorer:
         """
         points = 100
 
-        # Count operations findings
+        # Count operations findings. Keyword list extended 2026-07-17 to also
+        # catch PMOReviewer findings (RACI/escalation/governance/SLA/entry-exit
+        # criteria/fallback plan) -- those are operations-category concerns per
+        # docs/planning/4_AI_AGENT_SPECS.md Agent 5, they just didn't exist as
+        # a finding source before PMOReviewer was wired into the orchestrator.
         operations_findings = [
             f for f in findings
-            if any(x in str(f).lower() for x in ["resource", "assumption", "constraint", "operations"])
+            if any(
+                x in str(f).lower()
+                for x in [
+                    "resource", "assumption", "constraint", "operations",
+                    "raci", "escalation", "governance", "sla",
+                    "decision authority", "change management",
+                    "entry criteria", "exit criteria", "fallback", "contingency",
+                ]
+            )
         ]
         operations_findings += [
             v for v in violations

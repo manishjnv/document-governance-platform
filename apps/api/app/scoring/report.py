@@ -441,12 +441,30 @@ class ReportGenerator:
         filename: str,
     ) -> bytes:
         """
-        T-617: PDF export with reportlab/weasyprint.
+        T-617: PDF export.
 
-        For now, returns HTML as bytes. In production, use weasyprint:
-        from weasyprint import HTML
-        return HTML(string=html_content).write_pdf()
+        xhtml2pdf (pure Python, wraps reportlab -- no system libs like
+        weasyprint's Pango/Cairo needed) renders the SAME html_content the
+        HTML report already produces. Previously this just returned the raw
+        HTML bytes labeled as a PDF -- a real PDF renderer, not a bigger
+        one, was the actual gap.
+
+        xhtml2pdf's CSS support doesn't include Grid/Flexbox (used by
+        `.score-grid`/`.heatmap` in the HTML template) -- those sections
+        degrade to stacked blocks in the PDF rather than a grid layout.
+        Content and data are unaffected; only that specific visual layout.
         """
+        import io
+
+        from xhtml2pdf import pisa
+
         logger.info(f"PDF export requested for {filename}")
-        # Placeholder: in production, use weasyprint or reportlab
-        return html_content.encode("utf-8")
+
+        output = io.BytesIO()
+        result = pisa.CreatePDF(src=html_content, dest=output)
+
+        if result.err:
+            logger.error(f"PDF generation failed for {filename}: {result.err} error(s)")
+            raise RuntimeError(f"PDF generation failed with {result.err} error(s)")
+
+        return output.getvalue()

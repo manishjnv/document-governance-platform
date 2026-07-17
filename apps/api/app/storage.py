@@ -101,6 +101,7 @@ class S3Storage(StorageBackend):
                 Bucket=self.bucket,
                 Key=file_path,
                 Body=content,
+                ServerSideEncryption="AES256",
             )
             logger.info(f"Uploaded {file_path} to S3")
             return f"s3://{self.bucket}/{file_path}"

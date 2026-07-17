@@ -98,6 +98,56 @@ class TestLogin:
         )
         assert response.status_code == 422  # Validation error
 
+    async def test_login_locks_out_after_five_failed_attempts(self, client, seeded_admin):
+        """5 failed attempts -> 429 lockout, even with the correct password
+        on the 6th try. Previously dead config -- no code tracked failures
+        or enforced a lockout at all."""
+        from app.core.login_lockout import _failures, _locked_until
+
+        _failures.clear()
+        _locked_until.clear()
+
+        for _ in range(5):
+            response = await client.post(
+                "/api/v1/auth/login",
+                json={"email": ADMIN_EMAIL, "password": "wrongpassword"},
+            )
+            assert response.status_code == 401
+
+        locked_response = await client.post(
+            "/api/v1/auth/login",
+            json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD},
+        )
+        assert locked_response.status_code == 429
+        assert "too many" in locked_response.json()["detail"].lower()
+
+        _failures.clear()
+        _locked_until.clear()
+
+    async def test_login_success_resets_failure_count(self, client, seeded_admin):
+        """A successful login clears any prior failure count -- 4 failures
+        then a success must not carry over toward the next lockout."""
+        from app.core.login_lockout import _failures, _locked_until
+
+        _failures.clear()
+        _locked_until.clear()
+
+        for _ in range(4):
+            await client.post(
+                "/api/v1/auth/login",
+                json={"email": ADMIN_EMAIL, "password": "wrongpassword"},
+            )
+
+        success = await client.post(
+            "/api/v1/auth/login",
+            json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD},
+        )
+        assert success.status_code == 200
+        assert ADMIN_EMAIL.lower() not in {k for k in _failures}
+
+        _failures.clear()
+        _locked_until.clear()
+
     async def test_login_ilike_wildcards_dont_match_other_users(self, client, seeded_admin):
         """Regression: email is matched by exact case-insensitive equality,
         not ILIKE -- `%`/`_` in the submitted email must NOT act as SQL
@@ -176,6 +226,81 @@ class TestLogin:
             json={"email": "inactive@example.com", "password": ADMIN_PASSWORD},
         )
         assert response.status_code == 401
+
+
+class TestSignup:
+    """Signup endpoint tests -- creates a new org + its first admin user."""
+
+    async def test_signup_creates_org_and_admin_user(self, client, db_session):
+        response = await client.post(
+            "/api/v1/auth/signup",
+            json={
+                "org_name": "Acme Corp",
+                "email": "founder@acme.example",
+                "password": "supersecret1",
+                "full_name": "Founder Person",
+            },
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert "access_token" in data
+        assert "refresh_token" in data
+        assert data["org_name"] == "Acme Corp"
+        assert data["email"] == "founder@acme.example"
+        assert data["role"] == "admin"
+
+        from sqlalchemy import select
+
+        org = (
+            await db_session.execute(
+                select(Organization).where(Organization.org_id == data["org_id"])
+            )
+        ).scalar_one()
+        assert org.name == "Acme Corp"
+
+        user = (
+            await db_session.execute(
+                select(User).where(User.user_id == data["user_id"])
+            )
+        ).scalar_one()
+        assert user.role == "admin"
+        assert user.org_id == org.org_id
+
+    async def test_signup_new_user_can_immediately_log_in(self, client, db_session):
+        signup_response = await client.post(
+            "/api/v1/auth/signup",
+            json={
+                "org_name": "Beta LLC",
+                "email": "beta-admin@example.com",
+                "password": "supersecret1",
+            },
+        )
+        assert signup_response.status_code == 201
+
+        login_response = await client.post(
+            "/api/v1/auth/login",
+            json={"email": "beta-admin@example.com", "password": "supersecret1"},
+        )
+        assert login_response.status_code == 200
+        assert login_response.json()["role"] == "admin"
+
+    async def test_signup_rejects_short_password(self, client):
+        response = await client.post(
+            "/api/v1/auth/signup",
+            json={"org_name": "Gamma Inc", "email": "x@example.com", "password": "short"},
+        )
+        assert response.status_code == 422
+
+    async def test_signup_two_orgs_can_reuse_the_same_email(self, client, seeded_admin):
+        """Same email is allowed to exist across different orgs (existing
+        product decision, see login's ambiguous-match handling) -- signing
+        up a second org with seeded_admin's email must succeed, not 409."""
+        response = await client.post(
+            "/api/v1/auth/signup",
+            json={"org_name": "Second Org", "email": ADMIN_EMAIL, "password": "differentpassword1"},
+        )
+        assert response.status_code == 201
+        assert response.json()["org_name"] == "Second Org"
 
 
 class TestRefreshToken:

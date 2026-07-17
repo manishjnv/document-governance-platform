@@ -9,6 +9,8 @@ from typing import Optional
 from app.ai.agent import (
     CommercialReviewer,
     DeliveryReviewer,
+    LegalReviewer,
+    PMOReviewer,
     ScopeReviewer,
     SecurityReviewer,
 )
@@ -54,6 +56,8 @@ class ReviewOrchestrator:
             DeliveryReviewer(),
             CommercialReviewer(),
             SecurityReviewer(),
+            PMOReviewer(),
+            LegalReviewer(),
         ]
         self.initialized = False
 
@@ -103,18 +107,21 @@ class ReviewOrchestrator:
             else [a for a in self.agents if a.name in enabled_agent_names]
         )
 
-        # Run all agents AND rule engine in parallel
-        agent_tasks = [self._run_agent(agent, document_text) for agent in active_agents]
+        # Run all agents AND rule engine AND ambiguous-language scan in parallel
+        agent_tasks = [
+            self._run_agent(agent, document_text, document_type) for agent in active_agents
+        ]
         rule_task = self._run_rule_engine(
             document_text, document_type, sections or {}, enabled_rule_ids
         )
+        ambiguous_task = self._run_ambiguous_language_scan(document_text, sections or {})
 
-        all_tasks = agent_tasks + [rule_task]
+        all_tasks = agent_tasks + [rule_task, ambiguous_task]
         all_results = await asyncio.gather(*all_tasks, return_exceptions=False)
 
-        # Split results: agents and rules
-        results = [r for r in all_results[:-1] if r is not None]  # Agent results
-        rule_violations = all_results[-1] or []  # Rule violations
+        # Split results: agents, rule-engine violations, ambiguous-language violations
+        results = [r for r in all_results[:-2] if r is not None]  # Agent results
+        rule_violations = (all_results[-2] or []) + (all_results[-1] or [])  # Rule + ambiguous-language
 
         # Determine overall status
         successful = sum(1 for r in results if r.error is None)
@@ -195,8 +202,37 @@ class ReviewOrchestrator:
             logger.error(f"Rule engine failed: {e}")
             return []
 
+    async def _run_ambiguous_language_scan(
+        self, document_text: str, sections: dict
+    ) -> list:
+        """
+        Run the rule-based ambiguous-language scanner (not an LLM agent).
+
+        **T-2103: ambiguous-language cross-cutting scan, added 2026-07-17**
+        docs/planning/4_AI_AGENT_SPECS.md "Cross-Cutting: Ambiguous Language
+        Detector" -- runs against the full document text for every
+        document type, in the same parallel fan-out as the rule engine.
+        """
+        start_time = time.time()
+
+        try:
+            from app.rules.ambiguous_language import scan_ambiguous_language
+
+            violations = scan_ambiguous_language(document_text, sections)
+
+            duration = time.time() - start_time
+            logger.info(
+                f"Ambiguous-language scan complete: {len(violations)} phrases flagged in {duration:.1f}s"
+            )
+
+            return violations
+
+        except Exception as e:
+            logger.error(f"Ambiguous-language scan failed: {e}")
+            return []
+
     async def _run_agent(
-        self, agent, document_text: str
+        self, agent, document_text: str, document_type: str = "SOW"
     ) -> Optional[ReviewResult]:
         """Run a single agent with error handling and timeout."""
         start_time = time.time()
@@ -204,7 +240,7 @@ class ReviewOrchestrator:
         try:
             # T-409: Implement agent timeout (max 60 seconds)
             findings = await asyncio.wait_for(
-                agent.review(document_text), timeout=60.0
+                agent.review(document_text, document_type), timeout=60.0
             )
 
             # T-407: Confidence scoring

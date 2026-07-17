@@ -208,7 +208,14 @@ async def test_validate_document(executor):
 
 @pytest.mark.asyncio
 async def test_validate_document_with_violations(executor):
-    """T-907: Test document validation detects violations."""
+    """T-907: Test document validation detects violations.
+
+    "match": "all" here because this rule genuinely means "both Scope AND
+    Pricing sections required" (two distinct sections), unlike every real
+    builtin rule's multi-item list which means "any one of these synonym
+    headings" (default "any" as of the 2026-07-17 engine fix -- see
+    _check_section_presence's docstring).
+    """
     rule = Rule(
         rule_id="RULE-003",
         name="Scope Rule",
@@ -216,7 +223,7 @@ async def test_validate_document_with_violations(executor):
         document_types=["SOW"],
         severity=RuleSeverity.CRITICAL,
         check_type="section_presence",
-        params={"required_sections": ["Scope", "Pricing"]},
+        params={"required_sections": ["Scope", "Pricing"], "match": "all"},
         recommendation="Add required sections",
     )
 
@@ -275,6 +282,74 @@ def test_rule_severity_levels(executor):
         )
 
         assert rule.severity.value == severity
+
+
+def test_section_presence_synonym_any_one_alias_satisfies_by_default(executor):
+    """Regression for the 2026-07-17 precision bug: a document using only
+    ONE of several synonym headings (e.g. "Overview" instead of "Executive
+    Summary") must NOT be flagged as missing the section -- the previous
+    all-must-be-present behavior made SOW-001-style rules fire "missing
+    section" on essentially every real document."""
+    rule = Rule(
+        rule_id="TEST-SYN-001",
+        name="Synonym Section Rule",
+        description="Test",
+        document_types=["SOW"],
+        severity=RuleSeverity.MAJOR,
+        check_type="section_presence",
+        params={"required_sections": ["Executive Summary", "Overview", "Summary"]},
+        recommendation="Add an overview section",
+    )
+    executor.register_rule(rule)
+
+    # Document only has "Overview", not the other two aliases.
+    violation = executor._check_section_presence(rule, {"Overview": "text"})
+    assert violation is None
+
+
+def test_keyword_synonym_any_one_keyword_satisfies_by_default(executor):
+    """Same regression, keyword check: a document using only ONE of several
+    synonym phrasings (e.g. "Net 60" instead of "Net 30") must not be
+    flagged as missing payment terms."""
+    rule = Rule(
+        rule_id="TEST-SYN-002",
+        name="Synonym Keyword Rule",
+        description="Test",
+        document_types=["SOW"],
+        severity=RuleSeverity.CRITICAL,
+        check_type="keyword",
+        params={"keywords": ["net 30", "net 60", "net 90", "payment terms", "due upon", "invoice"]},
+        recommendation="Add payment terms",
+    )
+    executor.register_rule(rule)
+
+    violation = executor._check_keyword(rule, "Payment is due Net 60 from invoice date... wait, due upon receipt actually")
+    # (deliberately only "net 60" and "due upon"/"invoice" overlap here to
+    # prove partial coverage is enough, not exhaustive -- but even a single
+    # match should already suffice)
+    assert violation is None
+
+    violation_single = executor._check_keyword(rule, "Payment is due Net 60 only, nothing else mentioned.")
+    assert violation_single is None
+
+
+def test_section_presence_match_all_still_requires_every_entry(executor):
+    """Opt-in "all" mode (for genuinely distinct co-required sections, not
+    synonyms) still requires every entry."""
+    rule = Rule(
+        rule_id="TEST-ALL-001",
+        name="Distinct Sections Rule",
+        description="Test",
+        document_types=["SOW"],
+        severity=RuleSeverity.CRITICAL,
+        check_type="section_presence",
+        params={"required_sections": ["Scope", "Pricing"], "match": "all"},
+        recommendation="Add both sections",
+    )
+    executor.register_rule(rule)
+
+    assert executor._check_section_presence(rule, {"scope": "x", "pricing": "y"}) is None
+    assert executor._check_section_presence(rule, {"scope": "x"}) is not None
 
 
 def test_rule_recommendation_guidance(executor):

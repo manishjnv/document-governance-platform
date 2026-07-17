@@ -9,6 +9,7 @@ Implementation: T-301 through T-320
 """
 
 import logging
+import re
 from typing import Optional
 from uuid import UUID
 
@@ -40,6 +41,32 @@ MIME_TO_TYPE = {
     "application/pdf": "pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
 }
+
+_UNSAFE_FILENAME_CHARS = re.compile(r"[^A-Za-z0-9._-]")
+
+
+def _sanitize_filename(raw_filename: str) -> str:
+    """Storage-safe filename: strips any path components (../, /, \\) and
+    replaces everything but [A-Za-z0-9._-] -- used to build the S3/local
+    storage key. The raw, unsanitized name is still preserved separately as
+    Document.original_filename for display.
+
+    Without this, a crafted filename like "../../etc/passwd" or an absolute
+    path flowed straight into storage_path = f"org/{org_id}/doc/{doc_id}/v1/{filename}",
+    a path-traversal risk against local storage and S3 key-prefix isolation.
+
+    Strips '/' and '\\' explicitly (not via os.path.basename, whose
+    separator handling is platform-dependent -- ntpath treats '\\' as a
+    separator, posixpath doesn't, which would make this function produce a
+    different, still-safe-but-inconsistent result depending on which OS the
+    API happens to run on).
+    """
+    name = (raw_filename or "").strip()
+    name = name.replace("\\", "/")
+    name = name.rsplit("/", 1)[-1]  # basename, separator-consistent across OSes
+    name = _UNSAFE_FILENAME_CHARS.sub("_", name)
+    name = name.lstrip(".") or "document"
+    return name[:255]
 
 
 @router.post(
@@ -96,7 +123,8 @@ async def upload_document(
 
     doc_id = uuid4()
     document_group_id = uuid4()
-    filename = file.filename or f"document_{doc_id}"
+    raw_filename = file.filename or f"document_{doc_id}"
+    filename = _sanitize_filename(raw_filename)
 
     # Generate storage path
     storage_path = f"org/{org_id}/doc/{doc_id}/v1/{filename}"
@@ -142,7 +170,7 @@ async def upload_document(
         org_id=current_user.org_id,
         uploaded_by_user_id=UUID(str(current_user.user_id)),
         filename=filename,
-        original_filename=file.filename or filename,
+        original_filename=raw_filename,
         file_size_bytes=len(content),
         file_type=file_type.upper(),
         version=1,
@@ -318,6 +346,12 @@ async def delete_document(
     """
     from datetime import datetime
     from sqlalchemy import select
+
+    if current_user.role == "viewer":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Viewer role cannot delete documents",
+        )
 
     result = await db.execute(
         select(Document).where(

@@ -15,6 +15,7 @@ class DocumentType(str, Enum):
 
     SOW = "SOW"
     PROPOSAL = "Proposal"
+    RFP = "RFP"
     PROJECT_PLAN = "ProjectPlan"
     HLD = "HLD"
     LLD = "LLD"
@@ -127,8 +128,17 @@ class DocxParser:
         """Detect document type from content."""
         text_lower = text.lower()
 
-        # Simple pattern matching (can be improved with ML later)
-        if "statement of work" in text_lower or "sow" in text_lower:
+        # Simple pattern matching (can be improved with ML later).
+        # RFP is checked BEFORE the bare "statement of work"/"sow" match --
+        # RFPs routinely mention "Statement of Work" as boilerplate (the
+        # deliverable the *awarded* vendor will produce, e.g. "the selected
+        # vendor shall submit a Statement of Work within 10 business days
+        # of award"), which would otherwise misclassify the RFP as a SOW
+        # before this check ever ran, silently routing it through the
+        # wrong ReviewAgent branch and rule set.
+        if "request for proposal" in text_lower or re.search(r"\brfp\b", text_lower):
+            return DocumentType.RFP
+        elif "statement of work" in text_lower or "sow" in text_lower:
             return DocumentType.SOW
         elif "proposal" in text_lower:
             return DocumentType.PROPOSAL
@@ -214,7 +224,12 @@ class PdfParser:
         """Detect document type from content."""
         text_lower = text.lower()
 
-        if "statement of work" in text_lower or "sow" in text_lower:
+        # RFP checked before the bare "statement of work"/"sow" match -- see
+        # DocxParser._detect_type's comment above for why (RFP boilerplate
+        # commonly mentions "Statement of Work" as the future deliverable).
+        if "request for proposal" in text_lower or re.search(r"\brfp\b", text_lower):
+            return DocumentType.RFP
+        elif "statement of work" in text_lower or "sow" in text_lower:
             return DocumentType.SOW
         elif "proposal" in text_lower:
             return DocumentType.PROPOSAL

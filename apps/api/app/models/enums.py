@@ -29,6 +29,7 @@ class FileType(str, Enum):
 class DocumentType(str, Enum):
     SOW = "SOW"
     PROPOSAL = "Proposal"
+    RFP = "RFP"
     OTHER = "Other"
 
 

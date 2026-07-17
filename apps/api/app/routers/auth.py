@@ -30,6 +30,8 @@ from app.schemas.auth import (
     RefreshTokenData,
     RefreshTokenRequest,
     ResetTokenData,
+    SignupRequest,
+    SignupResponse,
     TokenResponse,
 )
 
@@ -97,6 +99,15 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)) -> Lo
     """
     logger.info(f"Login attempt for {request.email}")
 
+    from app.core.login_lockout import is_locked, record_failure, record_success
+
+    locked, retry_after = is_locked(request.email)
+    if locked:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Too many failed login attempts. Try again in {int(retry_after / 60) + 1} minute(s).",
+        )
+
     candidates = await _find_candidate_users_by_email(db, request.email)
     # Verify against every candidate rather than picking one up front: with
     # the same email registered in more than one org, checking only the
@@ -116,12 +127,14 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)) -> Lo
             )
         else:
             logger.warning(f"Failed login attempt for {request.email}")
+        record_failure(request.email)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
 
     user = matches[0]
+    record_success(request.email)
 
     access_token, access_expires = create_access_token(
         user_id=user.user_id,
@@ -170,6 +183,86 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)) -> Lo
         first_name=first_name,
         last_name=last_name,
         org_id=user.org_id,
+        role=user.role,
+    )
+
+
+@router.post(
+    "/signup",
+    response_model=SignupResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new organization + its first admin user",
+    responses={409: {"description": "Email already registered in this new organization"}},
+)
+async def signup(request: SignupRequest, db: AsyncSession = Depends(get_db)) -> SignupResponse:
+    """
+    Self-service signup: creates a NEW organization and its first user
+    (role=admin) atomically, then logs them in immediately.
+
+    There is no platform-superadmin role in this system -- every user is
+    scoped to exactly one org -- so this is the only way an organization
+    can come into existence via the API. Previously no endpoint existed at
+    all; orgs could only be created by inserting rows directly in the DB.
+    """
+    from uuid import uuid4
+
+    org = Organization(
+        org_id=uuid4(),
+        name=request.org_name,
+    )
+    db.add(org)
+    await db.flush()  # org.org_id is already set client-side, but keep the row visible to the User FK within this transaction
+
+    user = User(
+        user_id=uuid4(),
+        org_id=org.org_id,
+        email=request.email,
+        password_hash=hash_password(request.password),
+        full_name=request.full_name,
+        role="admin",
+        is_active=True,
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(org)
+    await db.refresh(user)
+
+    access_token, access_expires = create_access_token(
+        user_id=user.user_id,
+        email=user.email,
+        org_id=user.org_id,
+        role=user.role,
+    )
+    refresh_token, _ = create_refresh_token(
+        user_id=user.user_id,
+        email=user.email,
+        org_id=user.org_id,
+    )
+
+    try:
+        await log_action(
+            db,
+            org_id=org.org_id,
+            user_id=user.user_id,
+            action="organization.created",
+            resource_type="organization",
+            resource_id=org.org_id,
+        )
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        logger.warning(f"Audit log write failed for signup of org '{request.org_name}': {e}")
+
+    logger.info(f"New organization '{request.org_name}' ({org.org_id}) created via signup by {request.email}")
+
+    return SignupResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        expires_in=int(access_expires.timestamp() - datetime.utcnow().timestamp()),
+        user_id=user.user_id,
+        email=user.email,
+        org_id=org.org_id,
+        org_name=org.name,
         role=user.role,
     )
 

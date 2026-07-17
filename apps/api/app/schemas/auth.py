@@ -71,6 +71,30 @@ class LoginResponse(TokenResponse):
     role: str
 
 
+class SignupRequest(BaseModel):
+    """Self-service signup: creates a NEW organization and its first user
+    (role=admin) together. There's no platform-superadmin role in this
+    system -- every user is scoped to exactly one org -- so this is the
+    only way an organization comes into existence via the API (previously
+    orgs could only be seeded directly in the DB, no endpoint existed)."""
+
+    org_name: str = Field(..., min_length=1, max_length=255, description="New organization name")
+    email: EmailStr = Field(..., description="Admin user's email")
+    password: str = Field(..., min_length=8, description="Admin user's password")
+    full_name: Optional[str] = Field(None, max_length=255)
+
+
+class SignupResponse(TokenResponse):
+    """Signup response: same shape as login, the caller is immediately
+    authenticated as the new org's first admin."""
+
+    user_id: uuid.UUID
+    email: str
+    org_id: uuid.UUID
+    org_name: str
+    role: str
+
+
 class RefreshTokenRequest(BaseModel):
     """Refresh token request."""
 

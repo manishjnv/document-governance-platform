@@ -26,7 +26,14 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai.agent import CommercialReviewer, DeliveryReviewer, ScopeReviewer, SecurityReviewer
+from app.ai.agent import (
+    CommercialReviewer,
+    DeliveryReviewer,
+    LegalReviewer,
+    PMOReviewer,
+    ScopeReviewer,
+    SecurityReviewer,
+)
 from app.rules.builtin import get_builtin_rules
 from app.scoring.algorithm import DocumentScorer
 
@@ -35,13 +42,20 @@ logger = logging.getLogger(__name__)
 # Real built-in rule IDs (app/rules/builtin.py) -- validated against, not invented.
 VALID_RULE_IDS = {rule["rule_id"] for rule in get_builtin_rules()}
 
-# Real AI reviewer agent names (app/ai/agent.py). Note: only 4 concrete
-# ReviewAgent subclasses exist in this codebase today (Scope, Delivery,
-# Commercial, Security) despite orchestrator commit messages referencing
-# "5 specialized reviewers" -- validating against what actually exists.
+# Real AI reviewer agent names (app/ai/agent.py). All 6 concrete
+# ReviewAgent subclasses (Scope, Delivery, Commercial, Security, PMO,
+# Legal) as of 2026-07-17 -- PMO and Legal are net-new/newly-wired,
+# validating against what actually exists in orchestrator.py.
 VALID_AGENT_NAMES = {
     cls().name
-    for cls in (ScopeReviewer, DeliveryReviewer, CommercialReviewer, SecurityReviewer)
+    for cls in (
+        ScopeReviewer,
+        DeliveryReviewer,
+        CommercialReviewer,
+        SecurityReviewer,
+        PMOReviewer,
+        LegalReviewer,
+    )
 }
 
 # Real scoring categories (app/scoring/algorithm.py DocumentScorer.WEIGHTS).
