@@ -38,7 +38,10 @@ export function ServiceWorkerRegister() {
   if (!waitingWorker) return null
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-3 bg-primary px-3 py-1.5 text-sm text-primary-foreground">
+    <div
+      role="status"
+      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-3 bg-primary px-3 py-1.5 text-sm text-primary-foreground"
+    >
       <span>A new version is available.</span>
       <Button
         size="sm"

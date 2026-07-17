@@ -24,7 +24,10 @@ export function InstallPrompt() {
   if (!deferredPrompt || dismissed) return null
 
   return (
-    <div className="fixed bottom-4 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2 text-sm shadow-sm">
+    <div
+      role="status"
+      className="fixed bottom-4 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2 text-sm shadow-sm"
+    >
       <span>Install EDGP for offline access</span>
       <div className="flex shrink-0 gap-1.5">
         <Button

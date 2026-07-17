@@ -86,7 +86,7 @@ export default function ResultsPage() {
     return (
       <div className="min-h-screen bg-gray-50 py-8 px-4">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-6">
             <p className="text-red-800 mb-4">{error || 'Review not found'}</p>
             <Link href="/dashboard" className="text-red-600 hover:text-red-700 font-medium">
               Back to Dashboard
@@ -153,7 +153,14 @@ export default function ResultsPage() {
             >
               {review.overall_score.toFixed(1)}
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div
+              role="progressbar"
+              aria-valuenow={review.overall_score}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Overall score"
+              className="w-full bg-gray-200 rounded-full h-2"
+            >
               <div
                 className={`h-2 rounded-full ${
                   scoreStatus(review.overall_score) === 'green'
@@ -255,19 +262,21 @@ export default function ResultsPage() {
                         expandedFinding === finding.finding_id ? null : finding.finding_id
                       )
                     }
+                    aria-expanded={expandedFinding === finding.finding_id}
+                    aria-controls={`finding-detail-${finding.finding_id}`}
                     className="w-full p-4 text-left flex justify-between items-start hover:opacity-90"
                   >
                     <div className="flex-1">
                       <h3 className="font-bold mb-1">{finding.title}</h3>
                       <p className="text-sm opacity-75">{finding.description.substring(0, 100)}...</p>
                     </div>
-                    <span className="text-2xl ml-4">
+                    <span className="text-2xl ml-4" aria-hidden="true">
                       {expandedFinding === finding.finding_id ? '−' : '+'}
                     </span>
                   </button>
 
                   {expandedFinding === finding.finding_id && (
-                    <div className="border-t p-4 bg-opacity-50">
+                    <div id={`finding-detail-${finding.finding_id}`} className="border-t p-4 bg-opacity-50">
                       <div className="mb-4">
                         <h4 className="font-bold mb-2">Description</h4>
                         <p>{finding.description}</p>

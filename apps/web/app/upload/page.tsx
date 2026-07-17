@@ -124,10 +124,11 @@ export default function UploadPage() {
           <form onSubmit={handleUpload} className="space-y-6">
             {/* Organization ID */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="orgId" className="block text-sm font-medium text-gray-700 mb-2">
                 Organization ID
               </label>
               <input
+                id="orgId"
                 type="text"
                 value={orgId}
                 onChange={(e) => setOrgId(e.target.value)}
@@ -149,6 +150,15 @@ export default function UploadPage() {
                   : 'border-gray-300 hover:border-gray-400'
               }`}
               onClick={() => fileInputRef.current?.click()}
+              role="button"
+              tabIndex={0}
+              aria-label="Choose a document to upload, or drag and drop it here"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
             >
               <div className="mb-4">
                 <svg
@@ -156,6 +166,7 @@ export default function UploadPage() {
                   stroke="currentColor"
                   fill="none"
                   viewBox="0 0 48 48"
+                  aria-hidden="true"
                 >
                   <path
                     d="M28 8H12a4 4 0 00-4 4v20a4 4 0 004 4h24a4 4 0 004-4V20m-8-12v12m0 0l-3-3m3 3l3-3"
@@ -178,6 +189,8 @@ export default function UploadPage() {
                 onChange={handleFileInput}
                 accept=".pdf,.docx"
                 className="hidden"
+                aria-label="Document file"
+                tabIndex={-1}
               />
             </div>
 
@@ -192,14 +205,14 @@ export default function UploadPage() {
 
             {/* Error Message */}
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <p className="text-red-800">{error}</p>
               </div>
             )}
 
             {/* Success Message */}
             {success && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div role="status" className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <p className="text-green-800">{success}</p>
               </div>
             )}
