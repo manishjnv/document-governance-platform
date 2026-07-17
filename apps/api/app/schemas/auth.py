@@ -1,5 +1,6 @@
 """Authentication request/response schemas."""
 
+import uuid
 from datetime import datetime
 from typing import Optional
 
@@ -9,13 +10,38 @@ from pydantic import BaseModel, EmailStr, Field
 class TokenData(BaseModel):
     """JWT token payload."""
 
-    user_id: int
+    user_id: uuid.UUID
     email: str
-    org_id: int
+    org_id: uuid.UUID
     role: str
     exp: datetime  # Expiration time
     iat: datetime  # Issued at
     type: str = "access"  # access | refresh
+
+
+class RefreshTokenData(BaseModel):
+    """Refresh-token JWT payload. Deliberately excludes `role`: refresh
+    re-fetches the user from the DB to mint a fresh access token, so a
+    stale/changed role never rides along in a long-lived refresh token."""
+
+    user_id: uuid.UUID
+    email: str
+    org_id: uuid.UUID
+    exp: datetime
+    iat: datetime
+    type: str = "refresh"
+
+
+class ResetTokenData(BaseModel):
+    """Password-reset JWT payload -- deliberately lighter than TokenData: a
+    reset token proves "this email requested a reset", not org/role
+    authority, so it doesn't carry org_id/role claims."""
+
+    user_id: uuid.UUID
+    email: str
+    exp: datetime
+    iat: datetime
+    type: str = "reset"
 
 
 class TokenResponse(BaseModel):
@@ -37,11 +63,11 @@ class LoginRequest(BaseModel):
 class LoginResponse(TokenResponse):
     """Extended login response with user info."""
 
-    user_id: int
+    user_id: uuid.UUID
     email: str
     first_name: str
     last_name: str
-    org_id: int
+    org_id: uuid.UUID
     role: str
 
 
@@ -74,11 +100,11 @@ class ChangePasswordRequest(BaseModel):
 class CurrentUserResponse(BaseModel):
     """Current authenticated user info."""
 
-    user_id: int
+    user_id: uuid.UUID
     email: str
     first_name: str
     last_name: str
-    org_id: int
+    org_id: uuid.UUID
     org_name: str
     role: str
     mfa_enabled: bool

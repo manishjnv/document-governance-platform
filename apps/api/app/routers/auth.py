@@ -2,12 +2,24 @@
 
 import logging
 from datetime import datetime, timedelta
-from typing import Optional
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import create_access_token, create_refresh_token, hash_password, verify_password, verify_token
+from app.auth import (
+    create_access_token,
+    create_refresh_token,
+    hash_password,
+    verify_password,
+    verify_token,
+)
+from app.compliance.audit import log_action
+from app.db.session import get_db
 from app.dependencies import get_current_user
+from app.models.organization import Organization
+from app.models.user import User
 from app.schemas.auth import (
     ChangePasswordRequest,
     CurrentUserResponse,
@@ -15,41 +27,54 @@ from app.schemas.auth import (
     LoginResponse,
     PasswordResetConfirm,
     PasswordResetRequest,
+    RefreshTokenData,
     RefreshTokenRequest,
+    ResetTokenData,
     TokenResponse,
 )
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])
 
-# In-memory user store (Phase 1 MVP - replace with database in T-201+)
-# Initialized lazily to avoid hashing at module import time
-USERS_DB = {}
-ORGANIZATIONS_DB = {}
+
+def _split_name(full_name: str | None) -> tuple[str, str]:
+    """User has one `full_name` column; the API's request/response shapes
+    predate it and still split first/last -- derive rather than change the
+    wire contract."""
+    if not full_name:
+        return "", ""
+    parts = full_name.split(" ", 1)
+    return parts[0], parts[1] if len(parts) > 1 else ""
 
 
-def _init_test_data():
-    """Initialize test data on first use."""
-    global USERS_DB, ORGANIZATIONS_DB
-    if not ORGANIZATIONS_DB:
-        ORGANIZATIONS_DB[1] = {
-            "org_id": 1,
-            "name": "Default Organization",
-            "subscription_tier": "enterprise",
-        }
-    if not USERS_DB:
-        USERS_DB[1] = {
-            "user_id": 1,
-            "email": "admin@example.com",
-            "password_hash": hash_password("password123"),
-            "first_name": "Admin",
-            "last_name": "User",
-            "org_id": 1,
-            "role": "admin",
-            "mfa_enabled": False,
-            "created_at": datetime.utcnow(),
-            "last_login": None,
-        }
+async def _find_candidate_users_by_email(db: AsyncSession, email: str) -> list[User]:
+    """Look up active users by email (case-insensitive EXACT match).
+
+    Exact equality on a lower()'d column, not ilike(): ilike() treats `%`
+    and `_` in the input as wildcards, and both are valid RFC-5322
+    local-part characters that pass EmailStr validation untouched (e.g.
+    "%@corp.com" or "a_b@corp.com") -- passing user input into ilike()
+    unescaped let a single login attempt match every account at a domain
+    instead of one, turning "know one victim's email+password" into "know
+    a domain+password". Exact match closes that off entirely.
+
+    users.email is only unique per-org (uq_users_org_email_active), not
+    globally -- the same email can exist in more than one organization.
+    Returns every active match; the caller must verify the password
+    against each candidate rather than picking one to check by fiat (see
+    login()) -- silently trying only the oldest account meant a shared
+    password across two orgs' same-email accounts logged the caller into
+    the wrong one, and a non-shared password locked every account but the
+    oldest out entirely.
+    """
+    result = await db.execute(
+        select(User).where(
+            func.lower(User.email) == email.lower(),
+            User.deleted_at.is_(None),
+            User.is_active.is_(True),
+        )
+    )
+    return list(result.scalars().all())
 
 
 @router.post(
@@ -62,63 +87,90 @@ def _init_test_data():
         429: {"description": "Too many failed login attempts"},
     },
 )
-async def login(request: LoginRequest) -> LoginResponse:
+async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)) -> LoginResponse:
     """
     Login with email and password.
 
     Returns JWT access and refresh tokens.
 
-    **Implementation notes:**
-    - T-103: Email/password login endpoint
-    - T-108: Rate limiting on failed attempts (5 per 15 min)
-    - Later: Azure AD/Entra ID oauth flow (T-109)
+    **T-103: Email/password login endpoint**
     """
-    _init_test_data()
     logger.info(f"Login attempt for {request.email}")
 
-    # Find user by email (simplified - will use DB in T-201+)
-    user = None
-    for u in USERS_DB.values():
-        if u["email"].lower() == request.email.lower():
-            user = u
-            break
+    candidates = await _find_candidate_users_by_email(db, request.email)
+    # Verify against every candidate rather than picking one up front: with
+    # the same email registered in more than one org, checking only the
+    # oldest account either logs the caller into the WRONG org (if the
+    # password happens to match both) or hard-locks every account but the
+    # oldest (if it only matches the intended one). Matching >1 is treated
+    # as ambiguous and rejected rather than guessed at.
+    matches = [
+        u for u in candidates if u.password_hash and verify_password(request.password, u.password_hash)
+    ]
 
-    if not user or not verify_password(request.password, user["password_hash"]):
-        logger.warning(f"Failed login attempt for {request.email}")
+    if len(matches) != 1:
+        if len(matches) > 1:
+            logger.warning(
+                f"Login for '{request.email}' matched {len(matches)} accounts across "
+                f"different orgs with the same password -- rejecting as ambiguous."
+            )
+        else:
+            logger.warning(f"Failed login attempt for {request.email}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
 
-    # Create tokens
+    user = matches[0]
+
     access_token, access_expires = create_access_token(
-        user_id=user["user_id"],
-        email=user["email"],
-        org_id=user["org_id"],
-        role=user["role"],
+        user_id=user.user_id,
+        email=user.email,
+        org_id=user.org_id,
+        role=user.role,
     )
 
     refresh_token, _ = create_refresh_token(
-        user_id=user["user_id"],
-        email=user["email"],
-        org_id=user["org_id"],
+        user_id=user.user_id,
+        email=user.email,
+        org_id=user.org_id,
     )
 
-    # Update last login (will persist to DB in T-201+)
-    user["last_login"] = datetime.utcnow()
+    user.last_login = datetime.utcnow()
+
+    # T-2041: audit trail -- user_id/org_id are now real FKs, so this
+    # commits for real (see app/compliance/audit.py's log_action). Still
+    # wrapped defensively: an audit-log failure must never break login.
+    try:
+        await log_action(
+            db,
+            org_id=user.org_id,
+            user_id=user.user_id,
+            action="user.login",
+            resource_type="user",
+            resource_id=user.user_id,
+        )
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        logger.warning(f"Audit log write failed for login of {request.email}: {e}")
+        user.last_login = datetime.utcnow()
+        await db.commit()
 
     logger.info(f"Successful login for {request.email}")
+
+    first_name, last_name = _split_name(user.full_name)
 
     return LoginResponse(
         access_token=access_token,
         refresh_token=refresh_token,
         expires_in=int(access_expires.timestamp() - datetime.utcnow().timestamp()),
-        user_id=user["user_id"],
-        email=user["email"],
-        first_name=user["first_name"],
-        last_name=user["last_name"],
-        org_id=user["org_id"],
-        role=user["role"],
+        user_id=user.user_id,
+        email=user.email,
+        first_name=first_name,
+        last_name=last_name,
+        org_id=user.org_id,
+        role=user.role,
     )
 
 
@@ -129,30 +181,52 @@ async def login(request: LoginRequest) -> LoginResponse:
     summary="Refresh access token",
     responses={401: {"description": "Invalid refresh token"}},
 )
-async def refresh(request: RefreshTokenRequest) -> TokenResponse:
+async def refresh(
+    request: RefreshTokenRequest, db: AsyncSession = Depends(get_db)
+) -> TokenResponse:
     """
     Refresh access token using refresh token.
 
     **T-105: Refresh token endpoint**
+
+    Re-fetches the user from the DB (rather than trusting a role claim
+    carried in the refresh token) so a role change or deactivation takes
+    effect on the next refresh, not just the next full login.
     """
-    token_data = verify_token(request.refresh_token, token_type="refresh")
+    token_data = verify_token(
+        request.refresh_token, token_type="refresh", model=RefreshTokenData
+    )
 
     if not token_data:
-        logger.warning(f"Failed refresh attempt: invalid token")
+        logger.warning("Failed refresh attempt: invalid token")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token",
         )
 
-    # Create new access token
+    result = await db.execute(
+        select(User).where(
+            User.user_id == token_data.user_id,
+            User.org_id == token_data.org_id,
+            User.deleted_at.is_(None),
+            User.is_active.is_(True),
+        )
+    )
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+        )
+
     access_token, access_expires = create_access_token(
-        user_id=token_data.user_id,
-        email=token_data.email,
-        org_id=token_data.org_id,
-        role=token_data.role,
+        user_id=user.user_id,
+        email=user.email,
+        org_id=user.org_id,
+        role=user.role,
     )
 
-    logger.info(f"Token refreshed for user {token_data.user_id}")
+    logger.info(f"Token refreshed for user {user.user_id}")
 
     return TokenResponse(
         access_token=access_token,
@@ -189,30 +263,44 @@ async def logout(current_user=Depends(get_current_user)) -> dict:
     status_code=status.HTTP_200_OK,
     summary="Get current user",
 )
-async def get_current_user_info(current_user=Depends(get_current_user)) -> CurrentUserResponse:
+async def get_current_user_info(
+    current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)
+) -> CurrentUserResponse:
     """
     Get current authenticated user info.
 
     **T-106: Get current user endpoint**
     """
-    _init_test_data()
-    user = USERS_DB.get(current_user.user_id)
-    org = ORGANIZATIONS_DB.get(current_user.org_id)
+    result = await db.execute(
+        select(User).where(
+            User.user_id == current_user.user_id,
+            User.org_id == current_user.org_id,
+            User.deleted_at.is_(None),
+        )
+    )
+    user = result.scalar_one_or_none()
+
+    org_result = await db.execute(
+        select(Organization).where(Organization.org_id == current_user.org_id)
+    )
+    org = org_result.scalar_one_or_none()
 
     if not user or not org:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
+    first_name, last_name = _split_name(user.full_name)
+
     return CurrentUserResponse(
-        user_id=user["user_id"],
-        email=user["email"],
-        first_name=user["first_name"],
-        last_name=user["last_name"],
-        org_id=user["org_id"],
-        org_name=org["name"],
-        role=user["role"],
-        mfa_enabled=user["mfa_enabled"],
-        created_at=user["created_at"],
-        last_login=user["last_login"],
+        user_id=user.user_id,
+        email=user.email,
+        first_name=first_name,
+        last_name=last_name,
+        org_id=user.org_id,
+        org_name=org.name,
+        role=user.role,
+        mfa_enabled=False,
+        created_at=user.created_at,
+        last_login=user.last_login,
     )
 
 
@@ -222,50 +310,57 @@ async def get_current_user_info(current_user=Depends(get_current_user)) -> Curre
     summary="Request password reset",
     response_model=dict,
 )
-async def request_password_reset(request: PasswordResetRequest) -> dict:
+async def request_password_reset(
+    request: PasswordResetRequest, db: AsyncSession = Depends(get_db)
+) -> dict:
     """
     Request password reset (sends email with token).
 
     **T-110: Password reset flow**
 
-    Phase 1: Simplified (no actual email sending, just returns token)
-    Future: Integrate with email service
+    Phase 1/2: no email provider is configured in this repo -- logs the
+    token instead of sending it (ponytail: wire to SendGrid/SES per
+    PHASE_2_PROMPT.md's T-2019 once that integration exists).
     """
-    _init_test_data()
     logger.info(f"Password reset requested for {request.email}")
 
-    # Find user
-    user = None
-    for u in USERS_DB.values():
-        if u["email"].lower() == request.email.lower():
-            user = u
-            break
+    candidates = await _find_candidate_users_by_email(db, request.email)
+    # Reset doesn't verify a password, so there's no "which one matched"
+    # signal to disambiguate a same-email-different-org collision -- take
+    # the oldest account, consistent with pre-login behavior for this
+    # lower-stakes path (the response is identical either way, so this
+    # doesn't leak which org actually got the token).
+    user = min(candidates, key=lambda u: u.created_at, default=None)
 
     # Always return success (don't leak whether email exists)
     if not user:
         return {"message": "If email exists, password reset link sent"}
 
-    # Create reset token (valid for 1 hour)
     reset_expires = datetime.utcnow() + timedelta(hours=1)
-    reset_payload = {
-        "user_id": user["user_id"],
-        "email": user["email"],
-        "type": "reset",
-        "exp": reset_expires,
-        "iat": datetime.utcnow(),
-    }
 
     from jose import jwt
+
     from app.config import settings
 
+    # Built as a plain dict, not ResetTokenData(...).model_dump(): jose's
+    # jwt.encode json-dumps the payload, and neither of model_dump()'s modes
+    # fit both fields at once -- mode="python" leaves user_id as a UUID
+    # object (json.dumps can't serialize that), mode="json" turns exp/iat
+    # into ISO strings (jwt.encode needs datetime/int for those). Same
+    # str-the-UUID-but-not-the-timestamps shape as create_access_token().
     reset_token = jwt.encode(
-        reset_payload,
+        {
+            "user_id": str(user.user_id),
+            "email": user.email,
+            "exp": reset_expires,
+            "iat": datetime.utcnow(),
+            "type": "reset",
+        },
         settings.jwt_secret_key,
         algorithm=settings.jwt_algorithm,
     )
 
-    # TODO: Send email with reset link containing token
-    # For now, just log it
+    # ponytail: no email provider configured -- log only, see docstring.
     logger.info(f"Reset token generated: {reset_token[:20]}...")
 
     return {"message": "If email exists, password reset link sent"}
@@ -277,13 +372,15 @@ async def request_password_reset(request: PasswordResetRequest) -> dict:
     summary="Confirm password reset",
     response_model=dict,
 )
-async def confirm_password_reset(request: PasswordResetConfirm) -> dict:
+async def confirm_password_reset(
+    request: PasswordResetConfirm, db: AsyncSession = Depends(get_db)
+) -> dict:
     """
     Confirm password reset with new password.
 
     **T-110: Password reset confirmation**
     """
-    token_data = verify_token(request.token, token_type="reset")
+    token_data = verify_token(request.token, token_type="reset", model=ResetTokenData)
 
     if not token_data:
         raise HTTPException(
@@ -291,13 +388,19 @@ async def confirm_password_reset(request: PasswordResetConfirm) -> dict:
             detail="Invalid or expired reset token",
         )
 
-    user = USERS_DB.get(token_data.user_id)
+    result = await db.execute(
+        select(User).where(
+            User.user_id == token_data.user_id,
+            User.deleted_at.is_(None),
+        )
+    )
+    user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    # Update password
-    user["password_hash"] = hash_password(request.new_password)
-    logger.info(f"Password reset for user {token_data.user_id}")
+    user.password_hash = hash_password(request.new_password)
+    await db.commit()
+    logger.info(f"Password reset for user {user.user_id}")
 
     return {"message": "Password successfully reset"}
 
@@ -311,26 +414,34 @@ async def confirm_password_reset(request: PasswordResetConfirm) -> dict:
 async def change_password(
     request: ChangePasswordRequest,
     current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ) -> dict:
     """
     Change password for authenticated user.
 
     **T-110: Change password endpoint**
     """
-    _init_test_data()
-    user = USERS_DB.get(current_user.user_id)
+    result = await db.execute(
+        select(User).where(
+            User.user_id == current_user.user_id,
+            User.org_id == current_user.org_id,
+            User.deleted_at.is_(None),
+        )
+    )
+    user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    # Verify current password
-    if not verify_password(request.current_password, user["password_hash"]):
+    if not user.password_hash or not verify_password(
+        request.current_password, user.password_hash
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Current password is incorrect",
         )
 
-    # Update password
-    user["password_hash"] = hash_password(request.new_password)
+    user.password_hash = hash_password(request.new_password)
+    await db.commit()
     logger.info(f"Password changed for user {current_user.user_id}")
 
     return {"message": "Password successfully changed"}

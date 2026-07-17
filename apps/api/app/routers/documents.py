@@ -15,6 +15,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analytics.aggregator import record_document_view
+from app.compliance.audit import log_action
 from app.db.session import get_db
 from app.dependencies import get_current_user, verify_org_access
 from app.models.document import Document
@@ -136,7 +138,7 @@ async def upload_document(
     doc = Document(
         doc_id=doc_id,
         document_group_id=document_group_id,
-        org_id=UUID(current_user.org_id),
+        org_id=current_user.org_id,
         uploaded_by_user_id=UUID(str(current_user.user_id)),
         filename=filename,
         original_filename=file.filename or filename,
@@ -156,6 +158,17 @@ async def upload_document(
     db.add(doc)
     await db.commit()
     await db.refresh(doc)
+
+    # T-2041: audit trail
+    await log_action(
+        db,
+        org_id=doc.org_id,
+        user_id=doc.uploaded_by_user_id,
+        action="document.uploaded",
+        resource_type="document",
+        resource_id=doc.doc_id,
+    )
+    await db.commit()
 
     logger.info(f"Document {doc_id} uploaded by user {current_user.user_id}")
 
@@ -231,6 +244,10 @@ async def get_document(
 
     # Verify org access
     await verify_org_access(str(doc.org_id), current_user)
+
+    # T-2006: record this read for document analytics (view_count/unique_viewer_count)
+    await record_document_view(db, doc.org_id, doc.doc_id, current_user.user_id)
+    await db.commit()
 
     return DocumentRead.from_orm(doc)
 

@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     jwt_expiration_hours: int = 24
     jwt_refresh_expiration_days: int = 7
 
+    # Encryption at rest (T-2050)
+    # ponytail: dev-only static key; production needs KMS-backed key rotation
+    encryption_key: str = ""
+
     # AI
     claude_api_key: str = ""
     claude_model: str = "claude-3-5-sonnet-20241022"

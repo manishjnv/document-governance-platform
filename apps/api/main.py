@@ -7,7 +7,36 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
-from app.routers import auth, documents, reviews
+from app.routers import (
+    access_control,
+    admin,
+    admin_config,
+    admin_extra,
+    admin_ops,
+    analytics,
+    approval_extra,
+    approvals,
+    audit,
+    auth,
+    collab_extra,
+    comments,
+    compliance,
+    compliance_frameworks,
+    documents_bulk,
+    documents_extra,
+    documents,
+    filter_templates,
+    governance,
+    insights,
+    insights_extra,
+    knowledge,
+    notifications,
+    predictions,
+    reviews,
+    search,
+    search_history,
+    teams,
+)
 
 # Configure logging
 logging.basicConfig(
@@ -54,9 +83,41 @@ app.add_middleware(
 )
 
 # Include routers
+# NOTE: documents_extra / documents_bulk register static paths under
+# /api/v1/documents (e.g. GET /duplicates, POST /bulk-review) and MUST be
+# included before documents.router -- FastAPI matches routes in
+# registration order, so documents.router's GET /{doc_id} would otherwise
+# swallow /duplicates as doc_id="duplicates" (422 on UUID parse) before
+# documents_extra ever sees the request.
+app.include_router(access_control.router)
+app.include_router(admin.router)
+app.include_router(admin_config.router)
+app.include_router(admin_extra.router)
+app.include_router(admin_ops.router)
+app.include_router(analytics.router)
+app.include_router(approval_extra.router)
+app.include_router(approvals.router)
+app.include_router(audit.router)
 app.include_router(auth.router)
+app.include_router(collab_extra.router)
+app.include_router(comments.router)
+app.include_router(compliance.router)
+app.include_router(compliance_frameworks.router)
+app.include_router(documents_extra.router)
+app.include_router(documents_bulk.router)
 app.include_router(documents.router)
+app.include_router(filter_templates.router)
+app.include_router(governance.router)
+app.include_router(insights.router)
+app.include_router(insights.compare_router)
+app.include_router(insights_extra.router)
+app.include_router(knowledge.router)
+app.include_router(notifications.router)
+app.include_router(predictions.router)
 app.include_router(reviews.router)
+app.include_router(search.router)
+app.include_router(search_history.router)
+app.include_router(teams.router)
 
 
 # Health Check Endpoint

@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.orchestrator import ReviewOrchestrator
+from app.compliance.audit import log_action
 from app.db.session import get_db
 from app.dependencies import get_current_user, verify_org_access
 from app.models.document import Document
@@ -217,6 +218,21 @@ async def trigger_review(
         review.medium_finding_count = medium_count
         review.low_finding_count = low_count
         review.info_finding_count = info_count
+
+        # T-2041: audit trail
+        await log_action(
+            db,
+            org_id=review.org_id,
+            user_id=review.triggered_by_user_id,
+            action="review.completed",
+            resource_type="review",
+            resource_id=review_id,
+            details={
+                "overall_score": float(review.overall_score)
+                if review.overall_score is not None
+                else None
+            },
+        )
 
         await db.commit()
 

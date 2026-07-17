@@ -1,6 +1,7 @@
 """JWT token handling and authentication utilities."""
 
 import logging
+import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -28,9 +29,9 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(
-    user_id: int,
+    user_id: uuid.UUID,
     email: str,
-    org_id: int,
+    org_id: uuid.UUID,
     role: str,
     expires_delta: Optional[timedelta] = None,
 ) -> tuple[str, datetime]:
@@ -53,10 +54,15 @@ def create_access_token(
     now = datetime.utcnow()
     expires = now + expires_delta
 
+    # user_id/org_id are UUID objects -- jose's jwt.encode json-dumps the
+    # payload and json can't serialize UUID directly, so stringify here.
+    # verify_token()'s TokenData(**payload) parses the strings back into
+    # real uuid.UUID objects on the way out (Pydantic coerces a valid UUID
+    # string to uuid.UUID automatically).
     payload = {
-        "user_id": user_id,
+        "user_id": str(user_id),
         "email": email,
-        "org_id": org_id,
+        "org_id": str(org_id),
         "role": role,
         "exp": expires,
         "iat": now,
@@ -73,9 +79,9 @@ def create_access_token(
 
 
 def create_refresh_token(
-    user_id: int,
+    user_id: uuid.UUID,
     email: str,
-    org_id: int,
+    org_id: uuid.UUID,
 ) -> tuple[str, datetime]:
     """
     Create a JWT refresh token (longer expiration).
@@ -93,9 +99,9 @@ def create_refresh_token(
     expires = now + expires_delta
 
     payload = {
-        "user_id": user_id,
+        "user_id": str(user_id),
         "email": email,
-        "org_id": org_id,
+        "org_id": str(org_id),
         "exp": expires,
         "iat": now,
         "type": "refresh",
@@ -110,16 +116,21 @@ def create_refresh_token(
     return encoded_jwt, expires
 
 
-def verify_token(token: str, token_type: str = "access") -> Optional[TokenData]:
+def verify_token(
+    token: str, token_type: str = "access", model: type = TokenData
+) -> Optional[TokenData]:
     """
     Verify and decode a JWT token.
 
     Args:
         token: JWT token string
-        token_type: Expected token type (access | refresh)
+        token_type: Expected token type (access | refresh | reset)
+        model: Pydantic model to parse the payload into -- TokenData for
+            access/refresh tokens (carries org_id/role), ResetTokenData for
+            password-reset tokens (deliberately doesn't).
 
     Returns:
-        TokenData if valid, None if invalid/expired
+        Parsed token model if valid, None if invalid/expired
     """
     try:
         payload = jwt.decode(
@@ -137,8 +148,7 @@ def verify_token(token: str, token_type: str = "access") -> Optional[TokenData]:
         payload["exp"] = datetime.fromtimestamp(payload["exp"])
         payload["iat"] = datetime.fromtimestamp(payload["iat"])
 
-        token_data = TokenData(**payload)
-        return token_data
+        return model(**payload)
 
     except JWTError as e:
         logger.warning(f"JWT decode error: {e}")

@@ -1,6 +1,7 @@
 """FastAPI dependency injection for authentication and authorization."""
 
 import logging
+import uuid
 from typing import Optional
 
 from fastapi import Depends, HTTPException, status
@@ -88,7 +89,7 @@ def require_role(*allowed_roles: str):
 
 
 async def verify_org_access(
-    org_id: int,
+    org_id: "str | uuid.UUID",
     current_user: TokenData = Depends(get_current_user),
 ) -> TokenData:
     """
@@ -98,7 +99,8 @@ async def verify_org_access(
     Future: Support cross-org access for admins.
 
     Args:
-        org_id: Organization ID to access
+        org_id: Organization ID to access -- callers pass either a UUID or
+            str(uuid); compared as strings below so either works.
         current_user: Current authenticated user
 
     Returns:
@@ -107,7 +109,7 @@ async def verify_org_access(
     Raises:
         HTTPException 403: If user is not in organization
     """
-    if current_user.org_id != org_id:
+    if str(current_user.org_id) != str(org_id):
         logger.warning(
             f"Cross-org access attempt: user {current_user.user_id} "
             f"(org {current_user.org_id}) tried to access org {org_id}"
