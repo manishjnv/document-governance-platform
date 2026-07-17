@@ -97,12 +97,24 @@ async def trigger_review(
             for section in doc.parsed_sections:
                 sections[section.get("heading", "").lower()] = section.get("content", "")
 
+        # T-2091/T-2092/T-2093: apply this org's rule/agent/scoring customization
+        # (app/admin/customization.py) -- previously persisted but never enforced.
+        from app.admin.customization import get_agent_config, get_rule_config, get_scoring_weights
+
+        rule_config = await get_rule_config(db, doc.org_id)
+        agent_config = await get_agent_config(db, doc.org_id)
+        scoring_weights = await get_scoring_weights(db, doc.org_id)
+        enabled_rule_ids = {rule_id for rule_id, enabled in rule_config.items() if enabled}
+        enabled_agent_names = {name for name, enabled in agent_config.items() if enabled}
+
         # Run orchestrated review
         orchestrated_result = await orchestrator.review(
             str(doc_id),
             doc.parsed_text or "",
             document_type=doc.document_type or "SOW",
             sections=sections,
+            enabled_agent_names=enabled_agent_names,
+            enabled_rule_ids=enabled_rule_ids,
         )
 
         # Store results in database
@@ -113,7 +125,7 @@ async def trigger_review(
         # T-618: Calculate scores using scoring algorithm
         from app.scoring import DocumentScorer
 
-        scorer = DocumentScorer()
+        scorer = DocumentScorer(weight_overrides=scoring_weights)
 
         # Collect all findings for scoring
         all_findings = []

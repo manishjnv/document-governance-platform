@@ -72,15 +72,22 @@ class RuleExecutor:
         document_text: str,
         document_type: str,
         sections: Optional[dict[str, str]] = None,
+        enabled_rule_ids: Optional[set[str]] = None,
     ) -> list[RuleViolation]:
         """
         Validate document against all applicable rules.
+
+        enabled_rule_ids: T-2091 per-org rule enable/disable
+        (app/admin/customization.py). None means unrestricted (all rules).
 
         Returns list of violations found.
         """
         violations = []
 
         for rule in self.rules:
+            if enabled_rule_ids is not None and rule.rule_id not in enabled_rule_ids:
+                continue
+
             # Check if rule applies to this document type
             if rule.document_types and document_type not in rule.document_types and "*" not in rule.document_types:
                 continue

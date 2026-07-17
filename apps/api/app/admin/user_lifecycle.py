@@ -119,7 +119,7 @@ async def bulk_import_users(db: AsyncSession, org_id: uuid.UUID, csv_content: st
     reader = csv.DictReader(StringIO(csv_content))
 
     # Verify header
-    if reader.fieldnames is None or reader.fieldnames != ("email", "full_name", "role"):
+    if reader.fieldnames is None or list(reader.fieldnames) != ["email", "full_name", "role"]:
         return {
             "created": 0,
             "skipped": [],

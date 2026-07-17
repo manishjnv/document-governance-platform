@@ -53,7 +53,11 @@ class DocumentScorer:
         "security": 0.05,  # 5%
     }
 
-    def __init__(self):
+    def __init__(self, weight_overrides: Optional[dict[str, float]] = None):
+        # T-2093: per-org scoring weight customization (app/admin/customization.py).
+        # WEIGHTS stays the untouched platform default (tests read it directly);
+        # self.weights is what scoring actually uses.
+        self.weights = {**self.WEIGHTS, **(weight_overrides or {})}
         self.max_points = {
             "completeness": 100,
             "clarity": 100,
@@ -332,7 +336,7 @@ class DocumentScorer:
         """
         total = 0.0
         for category, score_obj in category_scores.items():
-            weight = self.WEIGHTS.get(category, 0.0)
+            weight = self.weights.get(category, 0.0)
             total += score_obj.score * weight
 
         return round(total, 2)

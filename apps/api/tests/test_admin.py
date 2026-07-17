@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 
 import pytest
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 
 from app.db.session import get_db
 from app.dependencies import get_current_user
@@ -37,7 +37,7 @@ def _token(org_id: uuid.UUID, role: str, user_id: uuid.UUID | None = None) -> To
     )
 
 
-def _make_client(db_session, org_id: uuid.UUID, role: str, user_id: uuid.UUID | None = None) -> TestClient:
+def _make_client(db_session, org_id: uuid.UUID, role: str, user_id: uuid.UUID | None = None) -> AsyncClient:
     app = FastAPI()
     app.include_router(admin_router)
 
@@ -46,7 +46,7 @@ def _make_client(db_session, org_id: uuid.UUID, role: str, user_id: uuid.UUID | 
 
     app.dependency_overrides[get_db] = _override_get_db
     app.dependency_overrides[get_current_user] = lambda: _token(org_id, role, user_id)
-    return TestClient(app)
+    return AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver")
 
 
 async def _seed_org(db_session) -> Organization:
@@ -70,7 +70,7 @@ async def test_branding_update_roundtrips(db_session):
     org = await _seed_org(db_session)
     client = _make_client(db_session, org.org_id, role="admin")
 
-    resp = client.patch(
+    resp = await client.patch(
         "/api/v1/admin/organization",
         json={
             "name": "Acme Corp",
@@ -87,7 +87,7 @@ async def test_branding_update_roundtrips(db_session):
     assert body["brand_secondary_color"] == "#AABBCC"
 
     # Round-trip via GET
-    resp = client.get("/api/v1/admin/organization")
+    resp = await client.get("/api/v1/admin/organization")
     assert resp.status_code == 200
     body = resp.json()
     assert body["brand_primary_color"] == "#112233"
@@ -99,7 +99,7 @@ async def test_branding_update_rejects_bad_color(db_session):
     org = await _seed_org(db_session)
     client = _make_client(db_session, org.org_id, role="admin")
 
-    resp = client.patch(
+    resp = await client.patch(
         "/api/v1/admin/organization",
         json={"brand_primary_color": "not-a-color"},
     )
@@ -113,14 +113,14 @@ async def test_role_update_works(db_session):
     reviewer = await _seed_user(db_session, org.org_id, "reviewer", "reviewer@example.com")
     client = _make_client(db_session, org.org_id, role="admin")
 
-    resp = client.patch(
+    resp = await client.patch(
         f"/api/v1/admin/users/{reviewer.user_id}/role",
         json={"role": "admin"},
     )
     assert resp.status_code == 200
     assert resp.json()["role"] == "admin"
 
-    resp = client.get("/api/v1/admin/users")
+    resp = await client.get("/api/v1/admin/users")
     assert resp.status_code == 200
     roles = {u["user_id"]: u["role"] for u in resp.json()}
     assert roles[str(reviewer.user_id)] == "admin"
@@ -132,7 +132,7 @@ async def test_cannot_demote_last_admin(db_session):
     admin = await _seed_user(db_session, org.org_id, "admin", "solo-admin@example.com")
     client = _make_client(db_session, org.org_id, role="admin")
 
-    resp = client.patch(
+    resp = await client.patch(
         f"/api/v1/admin/users/{admin.user_id}/role",
         json={"role": "reviewer"},
     )
@@ -140,7 +140,7 @@ async def test_cannot_demote_last_admin(db_session):
     assert "last" in resp.json()["detail"].lower()
 
     # Role unchanged
-    resp = client.get("/api/v1/admin/users")
+    resp = await client.get("/api/v1/admin/users")
     roles = {u["user_id"]: u["role"] for u in resp.json()}
     assert roles[str(admin.user_id)] == "admin"
 
@@ -152,7 +152,7 @@ async def test_can_demote_admin_when_another_remains(db_session):
     await _seed_user(db_session, org.org_id, "admin", "admin2@example.com")
     client = _make_client(db_session, org.org_id, role="admin")
 
-    resp = client.patch(
+    resp = await client.patch(
         f"/api/v1/admin/users/{admin1.user_id}/role",
         json={"role": "viewer"},
     )
@@ -166,9 +166,13 @@ async def test_non_admin_gets_403_on_all_admin_endpoints(db_session):
     target = await _seed_user(db_session, org.org_id, "reviewer", "target@example.com")
     client = _make_client(db_session, org.org_id, role="reviewer")
 
-    assert client.get("/api/v1/admin/organization").status_code == 403
-    assert client.patch("/api/v1/admin/organization", json={"name": "x"}).status_code == 403
-    assert client.get("/api/v1/admin/users").status_code == 403
-    assert client.patch(
-        f"/api/v1/admin/users/{target.user_id}/role", json={"role": "admin"}
+    assert (await client.get("/api/v1/admin/organization")).status_code == 403
+    assert (
+        await client.patch("/api/v1/admin/organization", json={"name": "x"})
+    ).status_code == 403
+    assert (await client.get("/api/v1/admin/users")).status_code == 403
+    assert (
+        await client.patch(
+            f"/api/v1/admin/users/{target.user_id}/role", json={"role": "admin"}
+        )
     ).status_code == 403

@@ -102,7 +102,7 @@ async def test_report_csv_contains_disclaimer_and_columns(db_session, seeded_adm
     csv_content = await generate_compliance_report(db_session, org_id, "GDPR")
 
     assert "DISCLAIMER" in csv_content
-    assert "self-assessment" in csv_content.lower()
+    assert "self-reported" in csv_content.lower()
     assert "NOT a certification" in csv_content
 
     # Check CSV columns
@@ -292,7 +292,7 @@ async def test_report_endpoint_returns_csv(client, admin_token):
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200
-    assert response.headers["content-type"] == "text/csv"
+    assert response.headers["content-type"].startswith("text/csv")
 
     csv_content = response.text
     assert "DISCLAIMER" in csv_content

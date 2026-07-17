@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import CheckConstraint, String
+from sqlalchemy import CheckConstraint, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -42,6 +42,10 @@ class Organization(Base, TimestampMixin, SoftDeleteMixin):
             "(length(brand_secondary_color) = 7 AND substr(brand_secondary_color, 1, 1) = '#'))",
             name="ck_organizations_brand_colors_format",
         ),
+        CheckConstraint(
+            "audit_retention_days IN (30, 90, 365)",
+            name="ck_organizations_audit_retention_days",
+        ),
     )
 
     org_id: Mapped[uuid.UUID] = mapped_column(
@@ -54,6 +58,7 @@ class Organization(Base, TimestampMixin, SoftDeleteMixin):
     logo_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
     brand_primary_color: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)
     brand_secondary_color: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)
+    audit_retention_days: Mapped[int] = mapped_column(Integer, nullable=False, default=90)
 
     users: Mapped[list["User"]] = relationship(
         back_populates="organization", cascade="all, delete-orphan"

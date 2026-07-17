@@ -4,7 +4,6 @@ T-920-T-926: Test infrastructure
 """
 
 import pytest
-import asyncio
 import os
 
 # Point Settings.database_url (and therefore app/db/session.py's module-level
@@ -36,15 +35,6 @@ os.environ["ALLOWED_HOSTS"] = "localhost,127.0.0.1,testserver"
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-
-# Setup async event loop
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create event loop for async tests."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
 
 # Database fixtures
 #

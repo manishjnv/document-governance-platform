@@ -8,7 +8,7 @@ import pytest
 from datetime import datetime, timedelta
 from uuid import uuid4
 
-from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -102,7 +102,8 @@ async def test_audit_logs(db_session: AsyncSession, test_db_with_admin: dict):
     await db_session.commit()
 
 
-def test_get_subscription_tier_admin(test_db_with_admin: dict):
+@pytest.mark.asyncio
+async def test_get_subscription_tier_admin(test_db_with_admin: dict):
     """Test subscription tier endpoint returns correct tier for admin."""
     from main import app
 
@@ -114,11 +115,11 @@ def test_get_subscription_tier_admin(test_db_with_admin: dict):
         role="admin",
     )
 
-    client = TestClient(app)
-    response = client.get(
-        "/api/v1/admin/subscription",
-        headers={"Authorization": f"Bearer {access_token}"},
-    )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+        response = await client.get(
+            "/api/v1/admin/subscription",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
 
     assert response.status_code == 200
     data = response.json()
@@ -126,7 +127,8 @@ def test_get_subscription_tier_admin(test_db_with_admin: dict):
     assert data["org_id"] == str(test_db_with_admin["org_id"])
 
 
-def test_get_subscription_tier_non_admin(test_db_with_admin: dict):
+@pytest.mark.asyncio
+async def test_get_subscription_tier_non_admin(test_db_with_admin: dict):
     """Test subscription tier endpoint rejects non-admin users."""
     from main import app
 
@@ -138,27 +140,29 @@ def test_get_subscription_tier_non_admin(test_db_with_admin: dict):
         role="viewer",
     )
 
-    client = TestClient(app)
-    response = client.get(
-        "/api/v1/admin/subscription",
-        headers={"Authorization": f"Bearer {access_token}"},
-    )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+        response = await client.get(
+            "/api/v1/admin/subscription",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
 
     assert response.status_code == 403
     assert "Insufficient permissions" in response.json()["detail"]
 
 
-def test_get_subscription_tier_no_auth():
+@pytest.mark.asyncio
+async def test_get_subscription_tier_no_auth():
     """Test subscription tier endpoint requires authentication."""
     from main import app
 
-    client = TestClient(app)
-    response = client.get("/api/v1/admin/subscription")
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+        response = await client.get("/api/v1/admin/subscription")
 
     assert response.status_code == 401
 
 
-def test_get_user_activity_admin(test_db_with_admin: dict, test_audit_logs):
+@pytest.mark.asyncio
+async def test_get_user_activity_admin(test_db_with_admin: dict, test_audit_logs):
     """Test activity endpoint returns correct logs for target user."""
     from main import app
 
@@ -169,11 +173,11 @@ def test_get_user_activity_admin(test_db_with_admin: dict, test_audit_logs):
         role="admin",
     )
 
-    client = TestClient(app)
-    response = client.get(
-        f"/api/v1/admin/users/{test_db_with_admin['user_id']}/activity?days=30",
-        headers={"Authorization": f"Bearer {access_token}"},
-    )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+        response = await client.get(
+            f"/api/v1/admin/users/{test_db_with_admin['user_id']}/activity?days=30",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
 
     assert response.status_code == 200
     data = response.json()
@@ -184,7 +188,8 @@ def test_get_user_activity_admin(test_db_with_admin: dict, test_audit_logs):
     assert data["logs"][4]["action"] == "test_action_4"
 
 
-def test_get_user_activity_with_custom_days(test_db_with_admin: dict, test_audit_logs):
+@pytest.mark.asyncio
+async def test_get_user_activity_with_custom_days(test_db_with_admin: dict, test_audit_logs):
     """Test activity endpoint respects days parameter."""
     from main import app
 
@@ -195,19 +200,20 @@ def test_get_user_activity_with_custom_days(test_db_with_admin: dict, test_audit
         role="admin",
     )
 
-    client = TestClient(app)
-    # Request with 50 day window to include the old log
-    response = client.get(
-        f"/api/v1/admin/users/{test_db_with_admin['user_id']}/activity?days=50",
-        headers={"Authorization": f"Bearer {access_token}"},
-    )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+        # Request with 50 day window to include the old log
+        response = await client.get(
+            f"/api/v1/admin/users/{test_db_with_admin['user_id']}/activity?days=50",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
 
     assert response.status_code == 200
     data = response.json()
     assert data["count"] == 6  # Now includes the old log
 
 
-def test_get_user_activity_non_admin(test_db_with_admin: dict):
+@pytest.mark.asyncio
+async def test_get_user_activity_non_admin(test_db_with_admin: dict):
     """Test activity endpoint rejects non-admin users."""
     from main import app
 
@@ -218,17 +224,18 @@ def test_get_user_activity_non_admin(test_db_with_admin: dict):
         role="viewer",
     )
 
-    client = TestClient(app)
-    response = client.get(
-        f"/api/v1/admin/users/{test_db_with_admin['admin_id']}/activity",
-        headers={"Authorization": f"Bearer {access_token}"},
-    )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+        response = await client.get(
+            f"/api/v1/admin/users/{test_db_with_admin['admin_id']}/activity",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
 
     assert response.status_code == 403
     assert "Insufficient permissions" in response.json()["detail"]
 
 
-def test_get_user_activity_user_not_found(test_db_with_admin: dict):
+@pytest.mark.asyncio
+async def test_get_user_activity_user_not_found(test_db_with_admin: dict):
     """Test activity endpoint returns 404 for non-existent user."""
     from main import app
 
@@ -239,12 +246,12 @@ def test_get_user_activity_user_not_found(test_db_with_admin: dict):
         role="admin",
     )
 
-    client = TestClient(app)
-    fake_user_id = uuid4()
-    response = client.get(
-        f"/api/v1/admin/users/{fake_user_id}/activity",
-        headers={"Authorization": f"Bearer {access_token}"},
-    )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+        fake_user_id = uuid4()
+        response = await client.get(
+            f"/api/v1/admin/users/{fake_user_id}/activity",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
 
     assert response.status_code == 404
     assert "User not found" in response.json()["detail"]
@@ -287,18 +294,19 @@ async def test_get_user_activity_cross_org_isolation(
         role="admin",
     )
 
-    client = TestClient(app)
-    response = client.get(
-        f"/api/v1/admin/users/{user2_id}/activity",
-        headers={"Authorization": f"Bearer {access_token}"},
-    )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+        response = await client.get(
+            f"/api/v1/admin/users/{user2_id}/activity",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
 
     # Should be 404, not 200 (doesn't leak that user exists in another org)
     assert response.status_code == 404
     assert "User not found" in response.json()["detail"]
 
 
-def test_get_user_activity_no_logs(test_db_with_admin: dict):
+@pytest.mark.asyncio
+async def test_get_user_activity_no_logs(test_db_with_admin: dict):
     """Test activity endpoint returns empty list when user has no activity."""
     from main import app
 
@@ -309,11 +317,11 @@ def test_get_user_activity_no_logs(test_db_with_admin: dict):
         role="admin",
     )
 
-    client = TestClient(app)
-    response = client.get(
-        f"/api/v1/admin/users/{test_db_with_admin['user_id']}/activity?days=30",
-        headers={"Authorization": f"Bearer {access_token}"},
-    )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+        response = await client.get(
+            f"/api/v1/admin/users/{test_db_with_admin['user_id']}/activity?days=30",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
 
     assert response.status_code == 200
     data = response.json()

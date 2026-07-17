@@ -12,10 +12,12 @@ from migrations/012_phase2_admin_config.sql, matching the pattern
 app/compliance/retention.py used for organizations.audit_retention_days
 -- no ORM models needed for tables this small.
 
-ponytail: this module only reads/writes the config rows. Nothing in the
-rule engine (app/rules/*), scoring algorithm (app/scoring/algorithm.py),
-or AI orchestrator (app/ai/orchestrator.py) reads these tables yet -- see
-the router/test report for the full "not wired up" caveat.
+Enforced by app/routers/reviews.py::trigger_review, which reads all three
+config sets per-request and passes them into ReviewOrchestrator.review()
+(rule/agent filtering) and DocumentScorer (weight overrides) -- rules and
+agents stay global singletons; org customization is applied per-call, not
+by mutating shared state. app/routers/documents_bulk.py's bulk-trigger path
+does not yet read this config (still unrestricted defaults there).
 """
 
 import logging

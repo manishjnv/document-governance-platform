@@ -68,7 +68,15 @@ class ReviewOrchestrator:
         self.initialized = True
         logger.info(f"Orchestrator initialized with {len(self.agents)} agents")
 
-    async def review(self, doc_id: str, document_text: str, document_type: str = "SOW", sections: Optional[dict] = None) -> OrchestratedReview:
+    async def review(
+        self,
+        doc_id: str,
+        document_text: str,
+        document_type: str = "SOW",
+        sections: Optional[dict] = None,
+        enabled_agent_names: Optional[set[str]] = None,
+        enabled_rule_ids: Optional[set[str]] = None,
+    ) -> OrchestratedReview:
         """
         Run all agents in parallel and orchestrate results.
 
@@ -77,6 +85,11 @@ class ReviewOrchestrator:
         **T-450: Async review task**
         **T-451: Review status tracking**
         **T-509: Run rule engine in parallel with AI agents**
+
+        enabled_agent_names / enabled_rule_ids: T-2091/T-2092 per-org
+        customization (app/admin/customization.py). None means unrestricted
+        (all agents/rules) -- this is a shared global instance across orgs,
+        so filtering happens per-call, never by mutating self.agents.
         """
         if not self.initialized:
             await self.initialize()
@@ -84,9 +97,17 @@ class ReviewOrchestrator:
         start_time = time.time()
         logger.info(f"Starting orchestrated review for {doc_id}")
 
+        active_agents = (
+            self.agents
+            if enabled_agent_names is None
+            else [a for a in self.agents if a.name in enabled_agent_names]
+        )
+
         # Run all agents AND rule engine in parallel
-        agent_tasks = [self._run_agent(agent, document_text) for agent in self.agents]
-        rule_task = self._run_rule_engine(document_text, document_type, sections or {})
+        agent_tasks = [self._run_agent(agent, document_text) for agent in active_agents]
+        rule_task = self._run_rule_engine(
+            document_text, document_type, sections or {}, enabled_rule_ids
+        )
 
         all_tasks = agent_tasks + [rule_task]
         all_results = await asyncio.gather(*all_tasks, return_exceptions=False)
@@ -97,7 +118,7 @@ class ReviewOrchestrator:
 
         # Determine overall status
         successful = sum(1 for r in results if r.error is None)
-        total_agents = len(self.agents)
+        total_agents = len(active_agents)
 
         if successful == total_agents:
             status = "success"
@@ -143,7 +164,13 @@ class ReviewOrchestrator:
 
         return orchestrated_result
 
-    async def _run_rule_engine(self, document_text: str, document_type: str, sections: dict) -> list:
+    async def _run_rule_engine(
+        self,
+        document_text: str,
+        document_type: str,
+        sections: dict,
+        enabled_rule_ids: Optional[set[str]] = None,
+    ) -> list:
         """
         Run rule engine to validate document against configured rules.
 
@@ -155,7 +182,9 @@ class ReviewOrchestrator:
             from app.rules import get_rule_executor
 
             executor = await get_rule_executor()
-            violations = await executor.validate(document_text, document_type, sections)
+            violations = await executor.validate(
+                document_text, document_type, sections, enabled_rule_ids
+            )
 
             duration = time.time() - start_time
             logger.info(f"Rule engine complete: {len(violations)} violations found in {duration:.1f}s")
