@@ -1,0 +1,10 @@
+# T-1011-T-1020: Kubernetes configuration
+# EDGP Production Namespace
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: edgp-prod
+  labels:
+    name: edgp-prod
+    environment: production

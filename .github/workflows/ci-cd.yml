@@ -1,0 +1,309 @@
+# T-1025-T-1035: CI/CD Pipeline
+# GitHub Actions workflow for testing, building, and deploying
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'apps/api/**'
+      - 'apps/web/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  GITHUB_OWNER: manishjnv
+
+jobs:
+  # T-1025: Test Job
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: edgp_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install dependencies
+      working-directory: ./apps/api
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run linting
+      working-directory: ./apps/api
+      run: |
+        flake8 app --count --select=E9,F63,F7,F82 --show-source --statistics
+        isort --check-only app
+        black --check app
+
+    - name: Run type checking
+      working-directory: ./apps/api
+      run: mypy app --ignore-missing-imports
+
+    - name: Run unit tests
+      working-directory: ./apps/api
+      env:
+        DATABASE_URL: postgresql://test:test@localhost:5432/edgp_test
+        REDIS_URL: redis://localhost:6379/0
+      run: |
+        pytest tests/test_rules.py -v --cov=app/rules
+        pytest tests/test_scoring.py -v --cov=app/scoring
+
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage.xml
+        flags: unittests
+
+  # T-1028: Build API Docker Image
+  build-api:
+    name: Build API Docker Image
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.GITHUB_OWNER }}/edgp-api
+        tags: |
+          type=ref,event=branch
+          type=sha,prefix={{branch}}-
+          type=semver,pattern={{version}}
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push API image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./apps/api
+        file: ./apps/api/Dockerfile.prod
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # T-1029: Build Web Docker Image
+  build-web:
+    name: Build Web Docker Image
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.GITHUB_OWNER }}/edgp-web
+        tags: |
+          type=ref,event=branch
+          type=sha,prefix={{branch}}-
+          type=semver,pattern={{version}}
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Web image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./apps/web
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          NEXT_PUBLIC_API_URL=${{ secrets.API_URL }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # T-1032: Deploy to Kubernetes
+  deploy:
+    name: Deploy to Kubernetes
+    needs: [build-api, build-web]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+
+    - name: Set kubeconfig
+      run: |
+        mkdir -p $HOME/.kube
+        echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+        chmod 600 $HOME/.kube/config
+
+    - name: Update Kubernetes manifests
+      run: |
+        # Update image tags in deployments
+        sed -i "s|edgp/api:latest|${{ env.REGISTRY }}/${{ env.GITHUB_OWNER }}/edgp-api:${{ github.sha }}|g" k8s/api-deployment.yaml
+        sed -i "s|edgp/web:latest|${{ env.REGISTRY }}/${{ env.GITHUB_OWNER }}/edgp-web:${{ github.sha }}|g" k8s/web-deployment.yaml
+
+    - name: Apply Kubernetes manifests
+      run: |
+        kubectl apply -f k8s/namespace.yaml
+        kubectl apply -f k8s/configmap.yaml
+        kubectl apply -f k8s/api-deployment.yaml
+        kubectl apply -f k8s/web-deployment.yaml
+        kubectl apply -f k8s/postgres-statefulset.yaml
+        kubectl apply -f k8s/redis-deployment.yaml
+
+    - name: Wait for rollout
+      run: |
+        kubectl rollout status deployment/edgp-api -n edgp-prod --timeout=5m
+        kubectl rollout status deployment/edgp-web -n edgp-prod --timeout=5m
+
+    - name: Verify deployment
+      run: |
+        kubectl get pods -n edgp-prod
+        kubectl get services -n edgp-prod
+        kubectl logs -n edgp-prod -l app=edgp-api --tail=20
+
+    - name: Run smoke tests
+      run: |
+        # Wait for API to be ready
+        sleep 30
+
+        # Test API health
+        API_URL=$(kubectl get svc edgp-api -n edgp-prod -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        curl -f http://$API_URL:8000/health || exit 1
+
+  # T-1034: Security scanning
+  security:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Run Python security check
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install and run bandit
+      run: |
+        pip install bandit
+        bandit -r apps/api/app -f json -o bandit-report.json || true
+
+  # T-1035: Notify on completion
+  notify:
+    name: Notify
+    needs: [test, build-api, build-web, security]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - name: Determine status
+      run: |
+        if [ "${{ needs.test.result }}" == "failure" ] || [ "${{ needs.build-api.result }}" == "failure" ] || [ "${{ needs.build-web.result }}" == "failure" ]; then
+          echo "Pipeline FAILED"
+          exit 1
+        else
+          echo "Pipeline PASSED"
+        fi
+
+    - name: Slack notification
+      uses: slackapi/slack-github-action@v1
+      if: always()
+      with:
+        payload: |
+          {
+            "text": "EDGP CI/CD Pipeline",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "Pipeline: ${{ github.workflow }}\nStatus: ${{ job.status }}\nRef: ${{ github.ref }}"
+                }
+              }
+            ]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

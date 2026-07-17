@@ -1,0 +1,152 @@
+# T-1005: Production Docker Compose
+# Production-grade setup with persistence, health checks, and scaling
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: edgp-postgres-prod
+    environment:
+      POSTGRES_USER: ${DB_USER:-edgp_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_me_in_prod}
+      POSTGRES_DB: ${DB_NAME:-edgp_prod}
+      POSTGRES_INITDB_ARGS: "-c max_connections=200 -c shared_buffers=256MB"
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-edgp_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - edgp-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: edgp-redis-prod
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-change_me_in_prod}
+    volumes:
+      - redis_data_prod:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - edgp-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # FastAPI Application
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile.prod
+    container_name: edgp-api-prod
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-edgp_user}:${DB_PASSWORD:-change_me_in_prod}@postgres:5432/${DB_NAME:-edgp_prod}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-change_me_in_prod}@redis:6379/0
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://edgp.example.com}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-edgp.example.com,api.edgp.example.com}
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      SECRET_KEY: ${SECRET_KEY:-change_me_in_prod}
+      STORAGE_TYPE: ${STORAGE_TYPE:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./apps/api/uploads:/app/uploads
+    restart: unless-stopped
+    networks:
+      - edgp-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Next.js Frontend
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${API_URL:-https://api.edgp.example.com}
+    container_name: edgp-web-prod
+    environment:
+      NEXT_PUBLIC_API_URL: ${API_URL:-https://api.edgp.example.com}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - edgp-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: edgp-nginx-prod
+    volumes:
+      - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - api
+      - web
+    restart: unless-stopped
+    networks:
+      - edgp-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  edgp-network:
+    driver: bridge
+
+volumes:
+  postgres_data_prod:
+    driver: local
+  redis_data_prod:
+    driver: local
