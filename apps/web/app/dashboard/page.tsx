@@ -5,10 +5,26 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Link from 'next/link';
+import {
+  type ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from '@tanstack/react-table';
+import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { AppShell } from '@/components/AppShell';
 
 interface Document {
   doc_id: string;
@@ -89,127 +105,141 @@ export default function DashboardPage() {
     }
   };
 
+  const columns = useMemo<ColumnDef<Document>[]>(
+    () => [
+      {
+        id: 'filename',
+        header: 'Filename',
+        accessorFn: (doc) => doc.original_filename || doc.filename,
+        cell: (info) => (
+          <span className="font-medium">{info.getValue<string>()}</span>
+        ),
+      },
+      {
+        id: 'document_type',
+        header: 'Type',
+        accessorFn: (doc) => doc.document_type || 'Unknown',
+      },
+      {
+        id: 'page_count',
+        header: 'Pages',
+        accessorFn: (doc) => doc.page_count || '-',
+      },
+      {
+        id: 'created_at',
+        header: 'Uploaded',
+        accessorFn: (doc) => new Date(doc.created_at).toLocaleDateString(),
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="link"
+              size="sm"
+              className="h-auto p-0"
+              onClick={() => handleReview(row.original.doc_id)}
+            >
+              Review
+            </Button>
+            <span className="text-muted-foreground">•</span>
+            <Button variant="link" size="sm" className="h-auto p-0" asChild>
+              <Link href={`/document/${row.original.doc_id}`}>View</Link>
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
+  const table = useReactTable({
+    data: documents,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">Documents</h1>
-            <Link
-              href="/upload"
-              className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition"
-            >
-              Upload Document
-            </Link>
-          </div>
-        </div>
+    <AppShell>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Documents</h1>
+        <Button asChild>
+          <Link href="/upload">Upload Document</Link>
+        </Button>
       </div>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Filters */}
-        <div className="mb-8">
-          <label htmlFor="filterType" className="block text-sm font-medium text-gray-700 mb-2">
-            Filter by Type
-          </label>
-          <select
-            id="filterType"
-            value={filterType}
-            onChange={(e) => {
-              setFilterType(e.target.value);
-              setLoading(true);
-            }}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-          >
-            <option value="">All Types</option>
-            <option value="SOW">Statement of Work</option>
-            <option value="Proposal">Proposal</option>
-            <option value="ProjectPlan">Project Plan</option>
-          </select>
-        </div>
-
-        {/* Error Message */}
-        {error && (
-          <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-800">{error}</p>
-          </div>
-        )}
-
-        {/* Documents Table */}
-        {loading ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">Loading documents...</p>
-          </div>
-        ) : documents.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <p className="text-gray-500 mb-4">No documents uploaded yet</p>
-            <Link
-              href="/upload"
-              className="inline-block bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg"
-            >
-              Upload Your First Document
-            </Link>
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Filename
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Pages
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Uploaded
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {documents.map((doc) => (
-                  <tr key={doc.doc_id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {doc.original_filename || doc.filename}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {doc.document_type || 'Unknown'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {doc.page_count || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {new Date(doc.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <button
-                        onClick={() => handleReview(doc.doc_id)}
-                        className="text-purple-600 hover:text-purple-700 font-medium"
-                      >
-                        Review
-                      </button>
-                      <span className="text-gray-300 mx-2">•</span>
-                      <Link
-                        href={`/document/${doc.doc_id}`}
-                        className="text-blue-600 hover:text-blue-700 font-medium"
-                      >
-                        View
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      {/* Filters */}
+      <div className="mb-6">
+        <label htmlFor="filterType" className="block text-sm font-medium mb-2">
+          Filter by Type
+        </label>
+        <select
+          id="filterType"
+          value={filterType}
+          onChange={(e) => {
+            setFilterType(e.target.value);
+            setLoading(true);
+          }}
+          className="px-3 py-1.5 text-sm border border-input rounded-md focus:ring-2 focus:ring-ring bg-background"
+        >
+          <option value="">All Types</option>
+          <option value="SOW">Statement of Work</option>
+          <option value="Proposal">Proposal</option>
+          <option value="ProjectPlan">Project Plan</option>
+        </select>
       </div>
-    </div>
+
+      {/* Error Message */}
+      {error && (
+        <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <p className="text-red-800">{error}</p>
+        </div>
+      )}
+
+      {/* Documents Table */}
+      {loading ? (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Loading documents...</p>
+        </div>
+      ) : documents.length === 0 ? (
+        <div className="rounded-lg border p-8 text-center">
+          <p className="text-muted-foreground mb-4">No documents uploaded yet</p>
+          <Button asChild>
+            <Link href="/upload">Upload Your First Document</Link>
+          </Button>
+        </div>
+      ) : (
+        <div className="rounded-lg border overflow-hidden">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </AppShell>
   );
 }

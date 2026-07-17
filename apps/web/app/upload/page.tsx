@@ -8,6 +8,11 @@
 import { useState, useRef } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
+import { UploadCloud } from 'lucide-react';
+import { AppShell } from '@/components/AppShell';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 export default function UploadPage() {
   const [dragActive, setDragActive] = useState(false);
@@ -115,119 +120,106 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
+    <AppShell>
       <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Upload Document</h1>
-          <p className="text-gray-600 mb-8">Upload a SOW, Proposal, or other document for review</p>
-
-          <form onSubmit={handleUpload} className="space-y-6">
-            {/* Organization ID */}
-            <div>
-              <label htmlFor="orgId" className="block text-sm font-medium text-gray-700 mb-2">
-                Organization ID
-              </label>
-              <input
-                id="orgId"
-                type="text"
-                value={orgId}
-                onChange={(e) => setOrgId(e.target.value)}
-                placeholder="Enter your organization UUID"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                required
-              />
-            </div>
-
-            {/* Drag and Drop Area */}
-            <div
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-lg p-12 text-center transition cursor-pointer ${
-                dragActive
-                  ? 'border-purple-500 bg-purple-50'
-                  : 'border-gray-300 hover:border-gray-400'
-              }`}
-              onClick={() => fileInputRef.current?.click()}
-              role="button"
-              tabIndex={0}
-              aria-label="Choose a document to upload, or drag and drop it here"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  fileInputRef.current?.click();
-                }
-              }}
-            >
-              <div className="mb-4">
-                <svg
-                  className="mx-auto h-12 w-12 text-gray-400"
-                  stroke="currentColor"
-                  fill="none"
-                  viewBox="0 0 48 48"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M28 8H12a4 4 0 00-4 4v20a4 4 0 004 4h24a4 4 0 004-4V20m-8-12v12m0 0l-3-3m3 3l3-3"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+        <Card>
+          <CardHeader>
+            <CardTitle>Upload Document</CardTitle>
+            <CardDescription>Upload a SOW, Proposal, or other document for review</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleUpload} className="space-y-4">
+              {/* Organization ID */}
+              <div>
+                <label htmlFor="orgId" className="block text-sm font-medium mb-2">
+                  Organization ID
+                </label>
+                <input
+                  id="orgId"
+                  type="text"
+                  value={orgId}
+                  onChange={(e) => setOrgId(e.target.value)}
+                  placeholder="Enter your organization UUID"
+                  className="w-full px-4 py-2 border border-input rounded-md bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors duration-150 ease-out"
+                  required
+                />
               </div>
 
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Drag and drop your document
-              </h3>
-              <p className="text-gray-600 mb-2">or click to select</p>
-              <p className="text-sm text-gray-500">PDF or DOCX • up to 50MB</p>
+              {/* Drag and Drop Area */}
+              <div
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                className={cn(
+                  'border-2 border-dashed rounded-md p-12 text-center cursor-pointer transition-colors duration-150 ease-out',
+                  dragActive
+                    ? 'border-primary bg-primary/5'
+                    : 'border-input hover:bg-muted/50'
+                )}
+                onClick={() => fileInputRef.current?.click()}
+                role="button"
+                tabIndex={0}
+                aria-label="Choose a document to upload, or drag and drop it here"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    fileInputRef.current?.click();
+                  }
+                }}
+              >
+                <div className="mb-4">
+                  <UploadCloud className="mx-auto h-10 w-10 text-muted-foreground" aria-hidden="true" />
+                </div>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleFileInput}
-                accept=".pdf,.docx"
-                className="hidden"
-                aria-label="Document file"
-                tabIndex={-1}
-              />
-            </div>
+                <h3 className="text-lg font-medium mb-2">
+                  Drag and drop your document
+                </h3>
+                <p className="text-muted-foreground mb-2">or click to select</p>
+                <p className="text-sm text-muted-foreground">PDF or DOCX • up to 50MB</p>
 
-            {/* Selected File */}
-            {file && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-green-800">
-                  <strong>Selected:</strong> {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                </p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={handleFileInput}
+                  accept=".pdf,.docx"
+                  className="hidden"
+                  aria-label="Document file"
+                  tabIndex={-1}
+                />
               </div>
-            )}
 
-            {/* Error Message */}
-            {error && (
-              <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-800">{error}</p>
-              </div>
-            )}
+              {/* Selected File */}
+              {file && (
+                <div className="border border-[#28A745]/30 bg-[#28A745]/10 rounded-md p-4">
+                  <p className="text-[#28A745]">
+                    <strong>Selected:</strong> {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                  </p>
+                </div>
+              )}
 
-            {/* Success Message */}
-            {success && (
-              <div role="status" className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-green-800">{success}</p>
-              </div>
-            )}
+              {/* Error Message */}
+              {error && (
+                <div role="alert" className="bg-destructive/10 border border-destructive/30 rounded-md p-4">
+                  <p className="text-destructive">{error}</p>
+                </div>
+              )}
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={!file || uploading}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {uploading ? 'Uploading...' : 'Upload Document'}
-            </button>
-          </form>
-        </div>
+              {/* Success Message */}
+              {success && (
+                <div role="status" className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-md p-4">
+                  <p>{success}</p>
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <Button type="submit" disabled={!file || uploading} className="w-full">
+                {uploading ? 'Uploading...' : 'Upload Document'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
-    </div>
+    </AppShell>
   );
 }

@@ -6,6 +6,8 @@
   :root {
     --background: 0 0% 100%;
     --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
     --primary: 210 100% 40%;
     --primary-foreground: 0 0% 100%;
     --secondary: 210 9% 45%;

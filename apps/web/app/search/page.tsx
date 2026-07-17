@@ -9,6 +9,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { Download } from 'lucide-react';
+import { AppShell } from '@/components/AppShell';
+import { Button } from '@/components/ui/button';
 import SearchFilter from '@/components/SearchFilter';
 import SearchResults from '@/components/SearchResults';
 import AnalyticsChart from '@/components/AnalyticsChart';
@@ -143,73 +146,65 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold text-gray-900">Search Documents</h1>
-          <p className="text-gray-600 text-sm mt-1">
-            Full-text search with filtering and analytics
-          </p>
-        </div>
+    <AppShell>
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold">Search Documents</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Full-text search with filtering and analytics
+        </p>
       </div>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Error Message */}
-        {error && (
-          <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-800">{error}</p>
+      {/* Error Message */}
+      {error && (
+        <div role="alert" className="bg-destructive/10 text-destructive border border-destructive/30 rounded-md p-4 mb-6">
+          <p>{error}</p>
+        </div>
+      )}
+
+      {/* Search Filter */}
+      <SearchFilter onSearch={handleSearch} loading={loading} />
+
+      {/* Results Section (only show if search has been performed) */}
+      {total > 0 || lastQuery ? (
+        <>
+          {/* Results Header with Export Button */}
+          <div className="flex items-center justify-between mb-4 mt-6">
+            <h2 className="text-lg font-semibold">
+              Results {lastQuery && `for "${lastQuery}"`}
+            </h2>
+            {results.length > 0 && (
+              <Button variant="outline" size="sm" onClick={handleExportCsv} className="gap-2">
+                <Download size={16} strokeWidth={2} aria-hidden="true" />
+                Export to CSV
+              </Button>
+            )}
           </div>
-        )}
 
-        {/* Search Filter */}
-        <SearchFilter onSearch={handleSearch} loading={loading} />
+          {/* Search Results */}
+          <div className="mb-8">
+            <SearchResults
+              results={results}
+              total={total}
+              loading={loading}
+              onDocumentClick={handleDocumentClick}
+            />
+          </div>
 
-        {/* Results Section (only show if search has been performed) */}
-        {total > 0 || lastQuery ? (
-          <>
-            {/* Results Header with Export Button */}
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Results {lastQuery && `for "${lastQuery}"`}
-              </h2>
-              {results.length > 0 && (
-                <button
-                  onClick={handleExportCsv}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition"
-                >
-                  Export to CSV
-                </button>
-              )}
-            </div>
-
-            {/* Search Results */}
+          {/* Analytics Chart (only if results exist) */}
+          {results.length > 0 && docTypeDistribution.labels.length > 0 && (
             <div className="mb-8">
-              <SearchResults
-                results={results}
-                total={total}
-                loading={loading}
-                onDocumentClick={handleDocumentClick}
+              <h2 className="text-lg font-semibold mb-4">Analytics</h2>
+              <AnalyticsChart
+                title="Document Type Distribution"
+                labels={docTypeDistribution.labels}
+                datasets={docTypeDistribution.datasets}
+                type="bar"
+                height={300}
               />
             </div>
-
-            {/* Analytics Chart (only if results exist) */}
-            {results.length > 0 && docTypeDistribution.labels.length > 0 && (
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Analytics</h2>
-                <AnalyticsChart
-                  title="Document Type Distribution"
-                  labels={docTypeDistribution.labels}
-                  datasets={docTypeDistribution.datasets}
-                  type="bar"
-                  height={300}
-                />
-              </div>
-            )}
-          </>
-        ) : null}
-      </div>
-    </div>
+          )}
+        </>
+      ) : null}
+    </AppShell>
   );
 }

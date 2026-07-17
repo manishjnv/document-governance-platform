@@ -85,7 +85,7 @@ export default function SearchFilter({ onSearch, loading = false }: SearchFilter
       <div className="space-y-4">
         {/* Query Input */}
         <div>
-          <label htmlFor="query" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="query" className="block text-sm font-medium text-foreground mb-1">
             Search Query
           </label>
           <input
@@ -94,7 +94,7 @@ export default function SearchFilter({ onSearch, loading = false }: SearchFilter
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="e.g., contract, amendment, termination..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
             disabled={loading}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           />
@@ -102,14 +102,14 @@ export default function SearchFilter({ onSearch, loading = false }: SearchFilter
 
         {/* Document Type Select */}
         <div>
-          <label htmlFor="documentType" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="documentType" className="block text-sm font-medium text-foreground mb-1">
             Document Type
           </label>
           <select
             id="documentType"
             value={documentType || ''}
             onChange={(e) => setDocumentType(e.target.value || null)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
             disabled={loading}
           >
             <option value="">All Types</option>
@@ -124,7 +124,7 @@ export default function SearchFilter({ onSearch, loading = false }: SearchFilter
         {/* Date Range */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor="dateFrom" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="dateFrom" className="block text-sm font-medium text-foreground mb-1">
               From Date
             </label>
             <input
@@ -132,12 +132,12 @@ export default function SearchFilter({ onSearch, loading = false }: SearchFilter
               type="date"
               value={dateFrom || ''}
               onChange={(e) => setDateFrom(e.target.value || null)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
               disabled={loading}
             />
           </div>
           <div>
-            <label htmlFor="dateTo" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="dateTo" className="block text-sm font-medium text-foreground mb-1">
               To Date
             </label>
             <input
@@ -145,7 +145,7 @@ export default function SearchFilter({ onSearch, loading = false }: SearchFilter
               type="date"
               value={dateTo || ''}
               onChange={(e) => setDateTo(e.target.value || null)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
               disabled={loading}
             />
           </div>
@@ -156,7 +156,7 @@ export default function SearchFilter({ onSearch, loading = false }: SearchFilter
           <button
             onClick={handleSearch}
             disabled={loading}
-            className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition"
+            className="flex-1 bg-primary hover:bg-primary/90 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition"
           >
             {loading ? 'Searching...' : 'Search'}
           </button>

@@ -75,7 +75,7 @@ export default function AnalyticsChart({
     datasets: enrichedDatasets,
   };
 
-  const chartOptions: ChartOptions = {
+  const chartOptions: ChartOptions<'line' | 'bar'> = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -84,7 +84,7 @@ export default function AnalyticsChart({
         labels: {
           usePointStyle: true,
           padding: 15,
-          font: { size: 12, weight: '500' },
+          font: { size: 12, weight: 500 },
         },
       },
       title: title
@@ -122,9 +122,9 @@ export default function AnalyticsChart({
     <div className="bg-white rounded-lg shadow p-6">
       <div style={{ height }} role="img" aria-label={title || 'Chart'}>
         {type === 'line' ? (
-          <Line data={chartData} options={chartOptions} />
+          <Line data={chartData} options={chartOptions as ChartOptions<'line'>} />
         ) : (
-          <Bar data={chartData} options={chartOptions} />
+          <Bar data={chartData} options={chartOptions as ChartOptions<'bar'>} />
         )}
       </div>
     </div>
