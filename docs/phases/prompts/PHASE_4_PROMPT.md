@@ -11,11 +11,13 @@
 
 Phase 3 (100 tasks) delivered performance & mobile. Phase 4 adds:
 
-1. **ML Model Development** (T-4001-T-4020) - Document classification, entity extraction
-2. **Predictive Analytics** (T-4021-T-4040) - Predict scores, risks, missing sections
-3. **Anomaly Detection** (T-4041-T-4060) - Unusual patterns, fraud detection
-4. **Recommendation Engine** (T-4061-T-4080) - Smart suggestions, learning
-5. **Advanced NLP** (T-4081-T-4100) - Embeddings, semantic search, summarization
+> **Scope decision (2026-07-17, revised):** Entire phase now DEFERRED. Original plan kept classification + embeddings, but ML has a cold-start problem — there's no labeled review history yet to train or evaluate against, and Phase 1/2's rule-based scoring already covers document review. Building ML infra (even "just" embeddings/classification) before there's enough real usage data burns effort on models with nothing to learn from. **Revisit Phase 4 once**: (a) there's a meaningful volume of real reviews/documents to train and validate on, and (b) rule-based scoring is demonstrably hitting a ceiling it can't fix with more rules. Until then, all 100 tasks are deferred, no exceptions.
+
+1. ~~**ML Model Development** (T-4001-T-4020)~~ - **DEFERRED** — no labeled data to train classification/NER on
+2. ~~**Predictive Analytics** (T-4021-T-4040)~~ - **DEFERRED** — no history to forecast from
+3. ~~**Anomaly Detection** (T-4041-T-4060)~~ - **DEFERRED** — rule-based checks from Phase 2 suffice for now
+4. ~~**Recommendation Engine** (T-4061-T-4080)~~ - **DEFERRED** — no user base to train on
+5. ~~**Advanced NLP** (T-4081-T-4100)~~ - **DEFERRED** — even semantic search needs enough indexed real documents to be worth the infra; Postgres full-text search covers the interim need
 
 ---
 

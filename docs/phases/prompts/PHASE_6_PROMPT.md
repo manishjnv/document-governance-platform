@@ -11,11 +11,13 @@
 
 Phase 5 (100 tasks) delivered integrations. Phase 6 adds:
 
-1. **SLA Management** (T-6001-T-6020) - Service level agreements, tracking
-2. **Support Ticketing** (T-6021-T-6040) - Help desk, ticket management
-3. **Knowledge Base** (T-6041-T-6060) - Searchable help articles
-4. **Video Tutorials & Training** (T-6061-T-6070) - Video library
-5. **Partner Program** (T-6071-T-6080) - Certification, partner portal
+> **Scope decision (2026-07-17, revised):** No signed SLA contracts, no partners, no training-video need yet — build support infra once there are real users generating real tickets. **Kept, bare minimum only**: ticket creation/routing/status + KB article creation/search. **Deferred**: SLA credits/penalty system (T-6001-6020), video tutorials/training (T-6061-6070), partner program (T-6071-6080), AND within the kept sections — ticket automation/analytics (T-6031-6040: ML auto-categorization, CSAT surveys, team metrics — polish for support volume you don't have) and KB maintenance/analytics (T-6056-6060: freshness indicators, view analytics — nothing to analyze without traffic). Effective scope: ~80 → ~20 tasks.
+
+1. ~~**SLA Management** (T-6001-T-6020)~~ - **DEFERRED** — no SLA-bearing contracts yet
+2. **Support Ticketing** (T-6021-T-6040) - **Keep**: T-6021-6030 (creation, assignment, routing, communication). **Defer**: T-6031-6040 (analytics, ML auto-categorization, automation)
+3. **Knowledge Base** (T-6041-T-6060) - **Keep**: T-6041-6050 (content mgmt, search). **Defer**: T-6051-6060 (ratings/votes/comments UX, maintenance analytics)
+4. ~~**Video Tutorials & Training** (T-6061-T-6070)~~ - **DEFERRED** — docs/FAQ cover this for now
+5. ~~**Partner Program** (T-6071-T-6080)~~ - **DEFERRED** — no partner ecosystem to serve
 
 ---
 

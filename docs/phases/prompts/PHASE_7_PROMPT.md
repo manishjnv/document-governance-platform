@@ -11,11 +11,13 @@
 
 Phase 6 (80 tasks) delivered enterprise features. Phase 7 adds:
 
-1. **Bug Fixes & Stability** (T-7001-T-7020) - Reported issues, edge cases
-2. **Technical Debt Reduction** (T-7021-T-7040) - Refactoring, cleanup
-3. **Performance Tuning** (T-7041-T-7060) - Ongoing optimization
-4. **Security Hardening** (T-7061-T-7080) - Vulnerability patching, compliance
-5. **User Feedback Implementation** (T-7081-T-7100) - Feature requests, UX improvements
+> **Scope decision (2026-07-17):** This phase is mostly an ongoing engineering *practice* (triage, patching, monitoring), not a 100-task build-out — treat it as such rather than scheduling all of it as work items pre-launch. **Kept as informal, continuous practice**: bug triage/fixes, security patching, basic perf monitoring. **Deferred entirely** until a customer contract or real scale demands it: SOC 2 / pen-testing / compliance dashboard (T-7066-7070 — real audit cost, only justified by a contractual requirement), feature-voting/NPS/changelog automation (T-7081-7090 — premature pre-launch, no user base to poll). Effective scope: ~100 → informal practice + ~15 concrete deferred-until-needed tasks.
+
+1. **Bug Fixes & Stability** (T-7001-T-7020) - **Keep** as ongoing practice, not scheduled tasks
+2. **Technical Debt Reduction** (T-7021-T-7040) - **Keep** as ongoing practice, opportunistic
+3. **Performance Tuning** (T-7041-T-7060) - **Keep**: basic monitoring only. **Defer**: dedicated profiling cadence until real load exists
+4. **Security Hardening** (T-7061-T-7080) - **Keep**: T-7061-7065 (dependency/CVE patching), T-7071-7075 (access control). **Defer**: T-7066-7070 (SOC 2/pen-testing/compliance — needs a contract to justify cost)
+5. ~~**User Feedback Implementation** (T-7081-T-7100)~~ - **DEFERRED** — no user base yet to collect feedback from
 
 ---
 

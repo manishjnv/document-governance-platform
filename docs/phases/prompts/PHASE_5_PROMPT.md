@@ -11,11 +11,13 @@
 
 Phase 4 (100 tasks) delivered ML & analytics. Phase 5 adds:
 
-1. **Salesforce Integration** (T-5001-T-5020) - CRM sync, opportunity tracking
-2. **NetSuite Integration** (T-5021-T-5040) - ERP sync, financial data
-3. **Jira Integration** (T-5041-T-5060) - Issue tracking, automation
-4. **File Storage Integration** (T-5061-T-5080) - Box, Sharepoint, OneDrive
-5. **Communication Platforms** (T-5081-T-5100) - Slack, Teams, webhooks
+> **Scope decision (2026-07-17, revised):** Entire phase now DEFERRED, including the previously "kept" Salesforce/Box/Slack. None of them has a signed customer contract behind it — building any integration on spec risks guessing wrong about what a real customer actually needs (auth scope, field mapping, sync direction). Build the specific integration a signed contract requires, when it's required, not before. Revisit per-integration the moment a deal needs one.
+
+1. ~~**Salesforce Integration** (T-5001-T-5020)~~ - **DEFERRED** — no signed CRM-sync customer yet
+2. ~~**NetSuite Integration** (T-5021-T-5040)~~ - **DEFERRED**
+3. ~~**Jira Integration** (T-5041-T-5060)~~ - **DEFERRED**
+4. ~~**File Storage Integration** (T-5061-T-5080)~~ - **DEFERRED** (Box, Sharepoint, OneDrive all)
+5. ~~**Communication Platforms** (T-5081-T-5100)~~ - **DEFERRED** (Slack, Teams, webhooks, marketplace all)
 
 ---
 

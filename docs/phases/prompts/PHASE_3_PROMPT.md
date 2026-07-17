@@ -12,10 +12,10 @@
 Phase 2 (100 tasks) delivered advanced features. Phase 3 adds:
 
 1. **Performance Optimization** (T-3001-T-3020) - Database, caching, queries
-2. **Scalability & Infrastructure** (T-3021-T-3040) - Database sharding, load balancing
-3. **Mobile App (iOS/Android)** (T-3041-T-3060) - React Native cross-platform
+2. **Scalability & Infrastructure** (T-3021-T-3040) - **Scope cut (2026-07-17)**: no real traffic to justify most of this yet. Keep: Celery queue (built), rate limiting/circuit breaker (built), backup automation (safety-critical, never defer), basic Prometheus metrics (T-3036). Defer: read replicas (T-3021), table partitioning (T-3023), K8s ingress/autoscaling/sticky sessions (T-3031-3035), ELK distributed logging (T-3038), distributed tracing/OpenTelemetry (T-3030) — add when load data actually says you need them
+3. **Mobile App (iOS/Android)** (T-3041-T-3060) - React Native cross-platform — **DEFERRED**, see note below
 4. **Progressive Web App** (T-3061-T-3075) - Offline support, installable
-5. **Accessibility & i18n** (T-3076-T-3100) - WCAG 2.1, multi-language
+5. **Accessibility (bare minimum)** (T-3076-T-3085, T-3096) - keyboard nav, ARIA, contrast, focus; i18n dropped, no compliance/localization need today
 
 ---
 
@@ -56,42 +56,42 @@ Phase 2 (100 tasks) delivered advanced features. Phase 3 adds:
 
 ---
 
-### **T-3021-T-3040: Scalability & Infrastructure (20 tasks)**
+### **T-3021-T-3040: Scalability & Infrastructure (20 tasks) — mostly DEFERRED (2026-07-17)**
+
+> No production traffic yet to justify replicas/partitioning/K8s autoscaling/tracing. Build these when metrics say you need them, not speculatively.
 
 #### T-3021-T-3025: Database Scaling
-- **T-3021**: Read replicas setup (PostgreSQL streaming replication)
-- **T-3022**: Write scaling with connection pooling (PgBouncer)
-- **T-3023**: Table partitioning (partition audit_logs, findings by date)
-- **T-3024**: Archival strategy (move old data to cold storage)
-- **T-3025**: Backup & restore automation (daily snapshots to S3)
+- ~~T-3021: Read replicas setup~~ — **DEFERRED**, no read-load pressure yet
+- **T-3022**: Write scaling with connection pooling (PgBouncer) — **Keep** (cheap, already using pooling)
+- ~~T-3023: Table partitioning~~ — **DEFERRED**, revisit at real data volume
+- ~~T-3024: Archival strategy~~ — **DEFERRED**
+- **T-3025**: Backup & restore automation (daily snapshots to S3) — **Keep, safety-critical, never defer**
 
 #### T-3026-T-3030: Application Scaling
-- **T-3026**: Async task queue setup (Celery + Redis)
-- **T-3027**: Background jobs (document parsing, PDF generation)
-- **T-3028**: Rate limiting & throttling (token bucket algorithm)
-- **T-3029**: Circuit breaker pattern (fail gracefully under load)
-- **T-3030**: Distributed tracing (OpenTelemetry, Jaeger)
+- **T-3026**: Async task queue setup (Celery + Redis) — **Keep** (already built, Wave 2)
+- **T-3027**: Background jobs (document parsing, PDF generation) — **Keep** (already built, Wave 2)
+- **T-3028**: Rate limiting & throttling — **Keep** (already built, Wave 2)
+- **T-3029**: Circuit breaker pattern — **Keep** (already built, Wave 2)
+- ~~T-3030: Distributed tracing (OpenTelemetry, Jaeger)~~ — **DEFERRED**, add when debugging multi-service latency is an actual problem
 
-#### T-3031-T-3035: Load Balancing
-- **T-3031**: Kubernetes Ingress configuration (path-based routing)
-- **T-3032**: Load balancer health checks (aggressive timeouts)
-- **T-3033**: Sticky sessions (affinity for WebSocket connections)
-- **T-3034**: Rate limiting by IP/user (prevent abuse)
-- **T-3035**: Auto-scaling policies (aggressive scale-up, gradual scale-down)
+#### T-3031-T-3035: Load Balancing — **all DEFERRED**
+- ~~T-3031-T-3035~~ (K8s Ingress, LB health checks, sticky sessions, IP rate limiting, auto-scaling) — no multi-instance deployment yet to load-balance across
 
 #### T-3036-T-3040: Monitoring & Observability
-- **T-3036**: Prometheus metrics (request latency, error rates, queue depth)
-- **T-3037**: Grafana dashboards (performance, health, utilization)
-- **T-3038**: Distributed logging (ELK stack integration)
-- **T-3039**: Error tracking & alerting (Sentry with PagerDuty)
-- **T-3040**: Performance profiling (py-spy, flamegraphs)
+- **T-3036**: Prometheus metrics (request latency, error rates) — **Keep**, cheap and useful from day one
+- ~~T-3037: Grafana dashboards~~ — **DEFERRED**, revisit once there's enough metric volume to warrant dashboards
+- ~~T-3038: Distributed logging (ELK stack)~~ — **DEFERRED**, single-instance logs suffice for now
+- **T-3039**: Error tracking & alerting (Sentry) — **Keep**, cheap and catches real bugs early
+- ~~T-3040: Performance profiling~~ — **DEFERRED**, do this on-demand when a perf issue is reported, not as scheduled work
 
-**Sonnet5 Tasks**: T-3021, T-3022, T-3023, T-3026, T-3027, T-3031, T-3032, T-3036, T-3039  
-**Haiku Tasks**: T-3024, T-3025, T-3028, T-3029, T-3030, T-3033, T-3034, T-3035, T-3037, T-3038, T-3040
+**Sonnet5 Tasks (kept)**: T-3022, T-3025, T-3026, T-3027, T-3036  
+**Haiku Tasks (kept)**: T-3028, T-3029, T-3039
 
 ---
 
-### **T-3041-T-3060: Mobile App (iOS/Android) (20 tasks)**
+### **T-3041-T-3060: Mobile App (iOS/Android) (20 tasks) — DEFERRED (2026-07-17)**
+
+> **Deferred to future improvement.** Doc review/approval workflow is desktop-first; PWA (T-3061-3075) covers offline + installable + mobile-browser use at a fraction of the cost. Revisit only if there's concrete demand for app-store presence or native push notifications. Skip these 20 tasks in this phase.
 
 #### T-3041-T-3045: React Native Setup
 - **T-3041**: React Native project scaffolding (Expo or bare workflow)
@@ -154,41 +154,23 @@ Phase 2 (100 tasks) delivered advanced features. Phase 3 adds:
 
 ---
 
-### **T-3076-T-3100: Accessibility & Internationalization (25 tasks)**
+### **T-3076-T-3085: Accessibility (bare minimum) (10 tasks) — i18n DROPPED (2026-07-17)**
 
-#### T-3076-T-3085: WCAG 2.1 Compliance
+> **Scope cut.** No compliance mandate and no non-English users today — full WCAG 2.1 audit (screen reader testing, formal certification) and i18n (translations, RTL, locale routing) are not worth the cost. Keep only the free/cheap wins that shadcn + semantic markup mostly give you already. Revisit full a11y/i18n if a real compliance or localization requirement shows up.
+
 - **T-3076**: Semantic HTML (proper heading hierarchy, alt text)
 - **T-3077**: Keyboard navigation (Tab, Enter, Esc)
 - **T-3078**: Focus indicators (visible focus ring)
 - **T-3079**: Color contrast (4.5:1 minimum)
 - **T-3080**: ARIA labels (landmarks, live regions)
-- **T-3081**: Screen reader testing (NVDA, JAWS, VoiceOver)
 - **T-3082**: Form accessibility (labels, error messages, hints)
 - **T-3083**: Modal dialogs (trap focus, restore on close)
 - **T-3084**: Skip links (skip to main content)
 - **T-3085**: Accessibility audit (Lighthouse, axe)
-
-#### T-3086-T-3095: Internationalization (i18n)
-- **T-3086**: i18n setup (react-i18next, next-i18next)
-- **T-3087**: Translation files structure (en, es, fr, de, ja, zh)
-- **T-3088**: Date/time localization (format by locale)
-- **T-3089**: Number & currency formatting (locale-aware)
-- **T-3090**: RTL support (Arabic, Hebrew right-to-left)
-- **T-3091**: Translated error messages (all user-facing text)
-- **T-3092**: Translated email templates (multi-language emails)
-- **T-3093**: Language switcher UI (easy language selection)
-- **T-3094**: URL-based language routing (/en/docs, /es/docs)
-- **T-3095**: Translation management (Crowdin or similar)
-
-#### T-3096-T-3100: Testing & Compliance
 - **T-3096**: Accessibility unit tests (jest-axe)
-- **T-3097**: Accessibility E2E tests (axe in Cypress)
-- **T-3098**: i18n unit tests (translation key coverage)
-- **T-3099**: i18n E2E tests (test each language)
-- **T-3100**: Accessibility compliance report (WCAG 2.1 AA certified)
 
-**Sonnet5 Tasks**: T-3076, T-3077, T-3079, T-3082, T-3086, T-3088, T-3090, T-3093, T-3096, T-3099  
-**Haiku Tasks**: T-3078, T-3080, T-3081, T-3083, T-3084, T-3085, T-3087, T-3089, T-3091, T-3092, T-3094, T-3095, T-3097, T-3098, T-3100
+**Sonnet5 Tasks**: T-3076, T-3077, T-3079, T-3082, T-3096  
+**Haiku Tasks**: T-3078, T-3080, T-3083, T-3084, T-3085
 
 ---
 
@@ -204,10 +186,10 @@ Run in parallel:
 - **Sonnet5**: T-3021, T-3022, T-3026, T-3027, T-3031, T-3032, T-3036
 - **Haiku**: T-3023, T-3024, T-3025, T-3028, T-3029, T-3033, T-3034, T-3037
 
-### **Wave 3 (Days 3+): Mobile, PWA & Accessibility**
+### **Wave 3 (Days 3+): PWA & Accessibility**
 Run in parallel:
-- **Sonnet5**: T-3041, T-3042, T-3043, T-3061, T-3062, T-3076, T-3077, T-3086
-- **Haiku**: T-3044, T-3045, T-3046, T-3063, T-3064, T-3078, T-3080, T-3087, T-3089
+- **Sonnet5**: T-3061, T-3062, T-3076, T-3077
+- **Haiku**: T-3063, T-3064, T-3078, T-3080
 
 ---
 

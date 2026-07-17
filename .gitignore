@@ -33,6 +33,7 @@ yarn-error.log*
 out/
 .env.local
 .env.*.local
+*.tsbuildinfo
 
 # IDE
 .vscode/
