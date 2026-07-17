@@ -21,10 +21,15 @@ import re
 from typing import Any, Optional
 
 from app.config import settings
+from app.core.circuit_breaker import CircuitBreaker
 
 logger = logging.getLogger(__name__)
 
 _JSON_BLOCK_RE = re.compile(r"```json\s*(.*?)\s*```", re.DOTALL)
+
+# T-3029: trips after 5 consecutive Claude API failures, fails fast for 30s
+# rather than letting every request queue up against a downed provider.
+claude_breaker = CircuitBreaker(failure_threshold=5, reset_timeout=30.0)
 
 
 def _get_client(claude_client: Optional[Any]):
@@ -34,6 +39,12 @@ def _get_client(claude_client: Optional[Any]):
     import anthropic
 
     return anthropic.AsyncAnthropic()
+
+
+async def _create_message(client, **kwargs):
+    """Circuit-breaker-wrapped call to the Claude messages API — shared by
+    all three call sites below."""
+    return await claude_breaker.call(client.messages.create, **kwargs)
 
 
 def _parse_json_response(response_text: str) -> Any:
@@ -48,7 +59,8 @@ async def generate_summary(document_text: str, claude_client: Optional[Any] = No
     """3-5 sentence executive summary of a document, via Claude."""
     client = _get_client(claude_client)
 
-    response = await client.messages.create(
+    response = await _create_message(
+        client,
         model=settings.claude_model,
         max_tokens=500,
         system=(
@@ -70,7 +82,8 @@ async def extract_key_risks(
     client = _get_client(claude_client)
 
     findings_json = json.dumps(findings, default=str)
-    response = await client.messages.create(
+    response = await _create_message(
+        client,
         model=settings.claude_model,
         max_tokens=1000,
         system=(
@@ -110,7 +123,8 @@ async def compare_documents(
     additions/removals/changes, not a naive line diff."""
     client = _get_client(claude_client)
 
-    response = await client.messages.create(
+    response = await _create_message(
+        client,
         model=settings.claude_model,
         max_tokens=1500,
         system=(

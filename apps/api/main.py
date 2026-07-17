@@ -8,6 +8,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
+from app.core.rate_limit import RateLimitMiddleware
 from app.core.timing import ResponseTimeMiddleware
 from app.routers import (
     access_control,
@@ -89,6 +90,9 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Middleware: X-Response-Time-Ms header (T-3008)
 app.add_middleware(ResponseTimeMiddleware)
+
+# Middleware: token-bucket rate limiting (T-3028)
+app.add_middleware(RateLimitMiddleware)
 
 # Include routers
 # NOTE: documents_extra / documents_bulk register static paths under
