@@ -1,67 +1,57 @@
 """Tests for search history and saved searches endpoints.
 
-NOTE: These are integration-style tests that require the main.app to be properly
-registered with the search_history router. See main.py registration note in report.
+Uses httpx.AsyncClient(transport=ASGITransport(...)) rather than starlette's
+sync TestClient -- see test_auth.py's module docstring for why: TestClient
+drives the ASGI app on its own thread/event loop, decoupled from whatever
+loop pytest-asyncio hands each test, which raises "RuntimeError: Event loop
+is closed" past the first test. auth_headers previously tried to obtain a
+token by POSTing to /api/v1/auth/signup and /api/v1/organizations, neither of
+which exist in this API (see app/routers/auth.py, which has no signup route,
+and there is no organizations router) -- it seeds an org/user directly via
+db_session and mints a token with create_access_token instead, matching
+test_teams.py's _make_org_and_user + create_access_token pattern.
 """
 
+import uuid
+
 import pytest
-from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth import create_access_token
+from app.models.organization import Organization
+from app.models.user import User
 from main import app
-from app.models.search_history import SavedSearch, SearchHistory
-from app.schemas.search import SearchFilters
-
-client = TestClient(app)
 
 
-# Helper fixture: create test user and return auth headers
 @pytest.fixture
-def auth_headers():
-    """
-    Create a test organization and user, return Bearer token.
-    Requires the app to have auth endpoints properly configured.
-    """
-    # Create org
-    org_resp = client.post(
-        "/api/v1/organizations",
-        json={"name": f"Test Org {id(object())}"},
+async def client():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as c:
+        yield c
+
+
+# Helper fixture: create test org/user and return auth headers
+@pytest.fixture
+async def auth_headers(db_session: AsyncSession):
+    """Create a test organization and user, return Bearer token."""
+    org = Organization(org_id=uuid.uuid4(), name=f"Test Org {uuid.uuid4()}")
+    user = User(user_id=uuid.uuid4(), org_id=org.org_id, email=f"test-{uuid.uuid4()}@example.com")
+    db_session.add_all([org, user])
+    await db_session.commit()
+
+    token, _ = create_access_token(
+        user_id=user.user_id, email=user.email, org_id=org.org_id, role="admin"
     )
-    org_id = org_resp.json()["org_id"] if org_resp.status_code == 201 else None
-
-    # Create user (exact endpoint depends on existing auth implementation)
-    signup_resp = client.post(
-        "/api/v1/auth/signup",
-        json={
-            "email": f"test-{id(object())}@example.com",
-            "password": "test123456",
-            "full_name": "Test User",
-            "org_id": org_id,
-        },
-    )
-
-    if signup_resp.status_code in (201, 200):
-        token = signup_resp.json().get("access_token")
-    else:
-        # Fallback: try login (if user already exists)
-        login_resp = client.post(
-            "/api/v1/auth/login",
-            json={
-                "email": f"test-{id(object())}@example.com",
-                "password": "test123456",
-            },
-        )
-        token = login_resp.json().get("access_token", "mock-token")
-
     return {"Authorization": f"Bearer {token}"}
 
 
 class TestSearchHistory:
     """Search history endpoint tests."""
 
-    def test_create_search_history_success(self, auth_headers):
+    async def test_create_search_history_success(self, client, auth_headers):
         """Test creating a search history entry."""
-        response = client.post(
+        response = await client.post(
             "/api/v1/search/history",
             json={
                 "query": "contract",
@@ -80,9 +70,9 @@ class TestSearchHistory:
         assert "history_id" in data
         assert "created_at" in data
 
-    def test_create_search_history_minimal(self, auth_headers):
+    async def test_create_search_history_minimal(self, client, auth_headers):
         """Test creating search history with just a query."""
-        response = client.post(
+        response = await client.post(
             "/api/v1/search/history",
             json={"query": "test", "filters": {}},
             headers=auth_headers,
@@ -92,33 +82,33 @@ class TestSearchHistory:
         assert data["query"] == "test"
         assert data["filters"] == {}
 
-    def test_create_search_history_no_auth(self):
+    async def test_create_search_history_no_auth(self, client):
         """Test creating search history without auth."""
-        response = client.post(
+        response = await client.post(
             "/api/v1/search/history",
             json={"query": "test", "filters": {}},
         )
         assert response.status_code == 401
 
-    def test_list_search_history_empty(self, auth_headers):
+    async def test_list_search_history_empty(self, client, auth_headers):
         """Test listing search history when empty."""
-        response = client.get("/api/v1/search/history", headers=auth_headers)
+        response = await client.get("/api/v1/search/history", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
         assert len(data) == 0
 
-    def test_list_search_history_success(self, auth_headers):
+    async def test_list_search_history_success(self, client, auth_headers):
         """Test listing search history after creating entries."""
         # Create a few searches
         for i in range(3):
-            client.post(
+            await client.post(
                 "/api/v1/search/history",
                 json={"query": f"search-{i}", "filters": {}},
                 headers=auth_headers,
             )
 
-        response = client.get("/api/v1/search/history", headers=auth_headers)
+        response = await client.get("/api/v1/search/history", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 3
@@ -127,17 +117,17 @@ class TestSearchHistory:
         assert data[1]["query"] == "search-1"
         assert data[2]["query"] == "search-0"
 
-    def test_list_search_history_limit(self, auth_headers):
+    async def test_list_search_history_limit(self, client, auth_headers):
         """Test pagination with limit parameter."""
         # Create 5 searches
         for i in range(5):
-            client.post(
+            await client.post(
                 "/api/v1/search/history",
                 json={"query": f"search-{i}", "filters": {}},
                 headers=auth_headers,
             )
 
-        response = client.get("/api/v1/search/history?limit=2", headers=auth_headers)
+        response = await client.get("/api/v1/search/history?limit=2", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 2
@@ -146,9 +136,9 @@ class TestSearchHistory:
 class TestSavedSearches:
     """Saved searches endpoint tests."""
 
-    def test_create_saved_search_success(self, auth_headers):
+    async def test_create_saved_search_success(self, client, auth_headers):
         """Test creating a saved search."""
-        response = client.post(
+        response = await client.post(
             "/api/v1/search/saved",
             json={
                 "name": "My Contracts",
@@ -165,10 +155,10 @@ class TestSavedSearches:
         assert "saved_id" in data
         assert "created_at" in data
 
-    def test_create_saved_search_duplicate_name(self, auth_headers):
+    async def test_create_saved_search_duplicate_name(self, client, auth_headers):
         """Test that duplicate names per user return 409."""
         # Create first
-        response = client.post(
+        response = await client.post(
             "/api/v1/search/saved",
             json={
                 "name": "My Contracts",
@@ -180,7 +170,7 @@ class TestSavedSearches:
         assert response.status_code == 201
 
         # Try to create with same name
-        response = client.post(
+        response = await client.post(
             "/api/v1/search/saved",
             json={
                 "name": "My Contracts",
@@ -192,26 +182,26 @@ class TestSavedSearches:
         assert response.status_code == 409
         assert "already exists" in response.json()["detail"]
 
-    def test_create_saved_search_no_auth(self):
+    async def test_create_saved_search_no_auth(self, client):
         """Test creating saved search without auth."""
-        response = client.post(
+        response = await client.post(
             "/api/v1/search/saved",
             json={"name": "Test", "query": "test", "filters": {}},
         )
         assert response.status_code == 401
 
-    def test_list_saved_searches_empty(self, auth_headers):
+    async def test_list_saved_searches_empty(self, client, auth_headers):
         """Test listing saved searches when empty."""
-        response = client.get("/api/v1/search/saved", headers=auth_headers)
+        response = await client.get("/api/v1/search/saved", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
         assert len(data) == 0
 
-    def test_list_saved_searches_success(self, auth_headers):
+    async def test_list_saved_searches_success(self, client, auth_headers):
         """Test listing saved searches after creating."""
         for i in range(3):
-            client.post(
+            await client.post(
                 "/api/v1/search/saved",
                 json={
                     "name": f"Saved-{i}",
@@ -221,7 +211,7 @@ class TestSavedSearches:
                 headers=auth_headers,
             )
 
-        response = client.get("/api/v1/search/saved", headers=auth_headers)
+        response = await client.get("/api/v1/search/saved", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 3
@@ -230,10 +220,10 @@ class TestSavedSearches:
         assert data[1]["name"] == "Saved-1"
         assert data[2]["name"] == "Saved-0"
 
-    def test_get_saved_search_success(self, auth_headers):
+    async def test_get_saved_search_success(self, client, auth_headers):
         """Test retrieving a saved search by ID."""
         # Create
-        create_resp = client.post(
+        create_resp = await client.post(
             "/api/v1/search/saved",
             json={"name": "Test", "query": "test", "filters": {}},
             headers=auth_headers,
@@ -241,24 +231,24 @@ class TestSavedSearches:
         saved_id = create_resp.json()["saved_id"]
 
         # Retrieve
-        response = client.get(f"/api/v1/search/saved/{saved_id}", headers=auth_headers)
+        response = await client.get(f"/api/v1/search/saved/{saved_id}", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert data["saved_id"] == saved_id
         assert data["name"] == "Test"
 
-    def test_get_saved_search_not_found(self, auth_headers):
+    async def test_get_saved_search_not_found(self, client, auth_headers):
         """Test retrieving non-existent saved search."""
         import uuid
 
         fake_id = str(uuid.uuid4())
-        response = client.get(f"/api/v1/search/saved/{fake_id}", headers=auth_headers)
+        response = await client.get(f"/api/v1/search/saved/{fake_id}", headers=auth_headers)
         assert response.status_code == 404
 
-    def test_update_saved_search_success(self, auth_headers):
+    async def test_update_saved_search_success(self, client, auth_headers):
         """Test updating a saved search."""
         # Create
-        create_resp = client.post(
+        create_resp = await client.post(
             "/api/v1/search/saved",
             json={
                 "name": "Original",
@@ -270,7 +260,7 @@ class TestSavedSearches:
         saved_id = create_resp.json()["saved_id"]
 
         # Update
-        response = client.patch(
+        response = await client.patch(
             f"/api/v1/search/saved/{saved_id}",
             json={"name": "Updated", "query": "new query"},
             headers=auth_headers,
@@ -282,10 +272,10 @@ class TestSavedSearches:
         # Filters should remain unchanged
         assert data["filters"]["document_type"] == "SOW"
 
-    def test_update_saved_search_partial(self, auth_headers):
+    async def test_update_saved_search_partial(self, client, auth_headers):
         """Test partial update (only some fields)."""
         # Create
-        create_resp = client.post(
+        create_resp = await client.post(
             "/api/v1/search/saved",
             json={
                 "name": "Original",
@@ -297,7 +287,7 @@ class TestSavedSearches:
         saved_id = create_resp.json()["saved_id"]
 
         # Update only name
-        response = client.patch(
+        response = await client.patch(
             f"/api/v1/search/saved/{saved_id}",
             json={"name": "NewName"},
             headers=auth_headers,
@@ -307,10 +297,10 @@ class TestSavedSearches:
         assert data["name"] == "NewName"
         assert data["query"] == "original query"  # Unchanged
 
-    def test_delete_saved_search_success(self, auth_headers):
+    async def test_delete_saved_search_success(self, client, auth_headers):
         """Test deleting a saved search."""
         # Create
-        create_resp = client.post(
+        create_resp = await client.post(
             "/api/v1/search/saved",
             json={"name": "ToDelete", "query": "test", "filters": {}},
             headers=auth_headers,
@@ -318,25 +308,25 @@ class TestSavedSearches:
         saved_id = create_resp.json()["saved_id"]
 
         # Delete
-        response = client.delete(f"/api/v1/search/saved/{saved_id}", headers=auth_headers)
+        response = await client.delete(f"/api/v1/search/saved/{saved_id}", headers=auth_headers)
         assert response.status_code == 204
 
         # Verify deleted
-        response = client.get(f"/api/v1/search/saved/{saved_id}", headers=auth_headers)
+        response = await client.get(f"/api/v1/search/saved/{saved_id}", headers=auth_headers)
         assert response.status_code == 404
 
-    def test_delete_saved_search_not_found(self, auth_headers):
+    async def test_delete_saved_search_not_found(self, client, auth_headers):
         """Test deleting non-existent saved search."""
         import uuid
 
         fake_id = str(uuid.uuid4())
-        response = client.delete(f"/api/v1/search/saved/{fake_id}", headers=auth_headers)
+        response = await client.delete(f"/api/v1/search/saved/{fake_id}", headers=auth_headers)
         assert response.status_code == 404
 
-    def test_isolation_between_users(self, auth_headers):
+    async def test_isolation_between_users(self, client, auth_headers):
         """Test that users see only their own saved searches."""
         # User 1: Create a saved search
-        client.post(
+        await client.post(
             "/api/v1/search/saved",
             json={"name": "User1Search", "query": "test", "filters": {}},
             headers=auth_headers,
@@ -344,7 +334,7 @@ class TestSavedSearches:
 
         # User 2: Should not see User1's searches (would need separate auth_headers)
         # For now, just verify User1 sees their own
-        response = client.get("/api/v1/search/saved", headers=auth_headers)
+        response = await client.get("/api/v1/search/saved", headers=auth_headers)
         data = response.json()
         assert len(data) == 1
         assert data[0]["name"] == "User1Search"

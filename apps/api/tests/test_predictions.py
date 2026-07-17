@@ -7,6 +7,7 @@ T-2035: Confidence intervals
 """
 
 import pytest
+from datetime import datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -175,6 +176,7 @@ class TestAnomalyDetection:
             file_type="pdf",
             file_size_bytes=1000,
             document_type="SOW",
+            s3_path=f"s3://bucket/{uuid4()}",
         )
         db_session.add(doc)
         await db_session.flush()
@@ -188,6 +190,7 @@ class TestAnomalyDetection:
                 document_version=1,
                 status="completed",
                 overall_score=Decimal("70.00"),
+                completed_at=datetime.utcnow(),
             )
             db_session.add(review)
         await db_session.flush()
@@ -199,6 +202,7 @@ class TestAnomalyDetection:
             document_version=1,
             status="completed",
             overall_score=Decimal("30.00"),
+            completed_at=datetime.utcnow(),
         )
         db_session.add(target_review)
         await db_session.commit()
@@ -239,6 +243,7 @@ class TestAnomalyDetection:
             file_type="pdf",
             file_size_bytes=1000,
             document_type="SOW",
+            s3_path=f"s3://bucket/{uuid4()}",
         )
         db_session.add(doc)
         await db_session.flush()
@@ -252,6 +257,7 @@ class TestAnomalyDetection:
                 document_version=1,
                 status="completed",
                 overall_score=Decimal("70.00"),
+                completed_at=datetime.utcnow(),
             )
             db_session.add(review)
         await db_session.flush()
@@ -263,6 +269,7 @@ class TestAnomalyDetection:
             document_version=1,
             status="completed",
             overall_score=Decimal("72.00"),
+            completed_at=datetime.utcnow(),
         )
         db_session.add(target_review)
         await db_session.commit()
@@ -299,6 +306,7 @@ class TestAnomalyDetection:
             file_type="pdf",
             file_size_bytes=1000,
             document_type="SOW",
+            s3_path=f"s3://bucket/{uuid4()}",
         )
         db_session.add(doc)
         await db_session.flush()
@@ -311,6 +319,7 @@ class TestAnomalyDetection:
             document_version=1,
             status="completed",
             overall_score=Decimal("70.00"),
+            completed_at=datetime.utcnow(),
         )
         db_session.add(historical)
         await db_session.flush()
@@ -322,6 +331,7 @@ class TestAnomalyDetection:
             document_version=1,
             status="completed",
             overall_score=Decimal("30.00"),
+            completed_at=datetime.utcnow(),
         )
         db_session.add(target_review)
         await db_session.commit()

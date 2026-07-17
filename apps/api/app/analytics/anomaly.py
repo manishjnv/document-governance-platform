@@ -110,8 +110,13 @@ async def detect_score_anomalies(
     mean = statistics.mean(scores)
     stdev = statistics.stdev(scores)
 
-    # Detect anomaly: >2 standard deviations from mean
-    deviation = abs(float(target_score) - mean) / stdev if stdev > 0 else 0
+    # Detect anomaly: >2 standard deviations from mean.
+    # A zero-variance historical baseline (all scores identical) makes the
+    # raw z-score undefined -- floor stdev at 2.0 (score points) so a small
+    # difference from a constant baseline isn't flagged, while a large one
+    # still is, instead of the previous "stdev==0 -> never an anomaly" bug.
+    effective_stdev = max(stdev, 2.0)
+    deviation = abs(float(target_score) - mean) / effective_stdev
     is_anomaly = deviation > 2.0
 
     logger.debug(

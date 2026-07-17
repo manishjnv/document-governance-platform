@@ -64,6 +64,26 @@ def _register_clock_timestamp(dbapi_connection, connection_record):
         pass
 
 
+async def _make_org_and_user(db_session, *, role="admin"):
+    """Insert a real Organization + User row.
+
+    AuditLog.org_id (NOT NULL) and .user_id both carry a real FK to
+    organizations/users -- unlike resource_id, which is a bare UUID with no
+    FK. A fabricated uuid4() for org_id/user_id fails ForeignKeyViolationError
+    at commit, same gap as the fabricated Review.doc_id bug fixed elsewhere.
+
+    commit (not flush): test_log_action_writes_org_scoped_row_committed_by_caller
+    does an intermediate db_session.rollback() to prove log_action() itself
+    doesn't commit -- a merely-flushed org/user would be wiped out by that
+    same rollback, taking the FK target down with it.
+    """
+    org = Organization(org_id=uuid4(), name=f"org-{uuid4()}")
+    user = User(user_id=uuid4(), org_id=org.org_id, email=f"user-{uuid4()}@example.com", role=role)
+    db_session.add_all([org, user])
+    await db_session.commit()
+    return org, user
+
+
 def _user(org_id, role="admin"):
     """Duck-typed stand-in for TokenData.
 
@@ -80,8 +100,9 @@ def _user(org_id, role="admin"):
 
 @pytest.mark.asyncio
 async def test_log_action_writes_org_scoped_row_committed_by_caller(db_session):
-    org_id = uuid4()
-    user_id = uuid4()
+    org, user = await _make_org_and_user(db_session)
+    org_id = org.org_id
+    user_id = user.user_id
     resource_id = uuid4()
 
     await log_action(
@@ -137,9 +158,11 @@ async def test_log_action_raises_on_invalid_resource_type(db_session):
 
 @pytest.mark.asyncio
 async def test_search_audit_logs_filters_and_is_org_scoped(db_session):
-    org_a = uuid4()
-    org_b = uuid4()
-    user_a = uuid4()
+    org_a_row, user_a_row = await _make_org_and_user(db_session)
+    org_b_row, user_b_row = await _make_org_and_user(db_session)
+    org_a = org_a_row.org_id
+    org_b = org_b_row.org_id
+    user_a = user_a_row.user_id
 
     await log_action(
         db_session,
@@ -160,7 +183,7 @@ async def test_search_audit_logs_filters_and_is_org_scoped(db_session):
     await log_action(
         db_session,
         org_id=org_b,
-        user_id=uuid4(),
+        user_id=user_b_row.user_id,
         action="document.uploaded",
         resource_type="document",
         resource_id=uuid4(),

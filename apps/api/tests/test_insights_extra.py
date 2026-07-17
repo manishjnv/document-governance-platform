@@ -108,6 +108,7 @@ async def analytics_db():
                 logo_url TEXT,
                 brand_primary_color TEXT,
                 brand_secondary_color TEXT,
+                audit_retention_days INTEGER NOT NULL DEFAULT 90,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 deleted_at TIMESTAMP

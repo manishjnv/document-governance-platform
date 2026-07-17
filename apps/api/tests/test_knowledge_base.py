@@ -344,9 +344,12 @@ class TestSearchArticles:
         org1, user1 = kb_articles["org1"]
         org2, user2 = kb_articles["org2"]
 
-        # Org 2 FAQ should not appear in org1 search
-        org1_results = await search_articles(db_session, org1.org_id, "only")
-        org2_results = await search_articles(db_session, org2.org_id, "only")
+        # Org 2 FAQ should not appear in org1 search. Note: "only" is an
+        # English full-text stopword (websearch_to_tsquery('english', 'only')
+        # returns an empty tsquery, so it can never match anything) -- use
+        # "appear" instead, a real lexeme unique to org2's article content.
+        org1_results = await search_articles(db_session, org1.org_id, "appear")
+        org2_results = await search_articles(db_session, org2.org_id, "appear")
 
         assert len(org1_results) == 0
         assert len(org2_results) >= 1
@@ -457,18 +460,13 @@ class TestHTTPEndpoints:
     async def authenticated_client(self, client, orgs_and_users, db_session):
         """Return authenticated client and user fixture."""
         org, user = orgs_and_users[0]
-        # Generate a real JWT token
-        from datetime import datetime, timedelta
-        from jose import jwt
-        from app.config import settings
+        # Build a real access token via the production helper (app/auth.py) --
+        # matches what app/dependencies.py's get_current_user actually expects
+        # (user_id/org_id/role/type claims, jwt_secret_key/jwt_algorithm), same
+        # pattern as tests/test_auth.py.
+        from app.auth import create_access_token
 
-        payload = {
-            "sub": str(user.user_id),
-            "email": user.email,
-            "org_id": str(org.org_id),
-            "exp": datetime.utcnow() + timedelta(hours=1),
-        }
-        token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+        token, _ = create_access_token(user.user_id, user.email, org.org_id, user.role)
         client.headers.update({"Authorization": f"Bearer {token}"})
         return client, org, user
 

@@ -13,9 +13,27 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.collab.approvals import create_approval_request, decide_approval, list_approvals_for_review
+from app.models.document import Document
 from app.models.organization import Organization
 from app.models.review import Review
 from app.models.user import User
+
+
+async def _make_document(db_session: AsyncSession, org_id):
+    doc = Document(
+        doc_id=uuid.uuid4(),
+        document_group_id=uuid.uuid4(),
+        org_id=org_id,
+        filename="f.pdf",
+        original_filename="f.pdf",
+        file_size_bytes=100,
+        file_type="pdf",
+        s3_path=f"s3://bucket/{uuid.uuid4()}",
+        version=1,
+    )
+    db_session.add(doc)
+    await db_session.flush()
+    return doc
 
 
 async def _make_org_users_review(db_session: AsyncSession, *, n_approvers: int = 2):
@@ -26,8 +44,12 @@ async def _make_org_users_review(db_session: AsyncSession, *, n_approvers: int =
         User(user_id=uuid.uuid4(), org_id=org.org_id, email=f"approver{i}@example.com")
         for i in range(n_approvers)
     ]
-    review = Review(review_id=uuid.uuid4(), org_id=org.org_id, doc_id=uuid.uuid4())
-    db_session.add_all([org, review, *approvers])
+    db_session.add_all([org, *approvers])
+    # reviews.doc_id has a real FK to documents -- a fabricated uuid4() here
+    # fails ForeignKeyViolationError at commit. Insert a real Document first.
+    doc = await _make_document(db_session, org.org_id)
+    review = Review(review_id=uuid.uuid4(), org_id=org.org_id, doc_id=doc.doc_id)
+    db_session.add(review)
     await db_session.commit()
     return org, approvers, review
 

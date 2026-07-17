@@ -11,9 +11,27 @@ from app.collab.approval_notify import notify_approvers
 from app.collab.mentions import extract_mentions
 from app.models.approval import Approval
 from app.models.approval_template import ApprovalTemplate
+from app.models.document import Document
 from app.models.organization import Organization
 from app.models.review import Review
 from app.models.user import User
+
+
+async def _make_document(db_session: AsyncSession, org_id):
+    doc = Document(
+        doc_id=uuid.uuid4(),
+        document_group_id=uuid.uuid4(),
+        org_id=org_id,
+        filename="f.pdf",
+        original_filename="f.pdf",
+        file_size_bytes=100,
+        file_type="pdf",
+        s3_path=f"s3://bucket/{uuid.uuid4()}",
+        version=1,
+    )
+    db_session.add(doc)
+    await db_session.flush()
+    return doc
 
 
 async def _make_org_users_review(
@@ -25,8 +43,12 @@ async def _make_org_users_review(
         User(user_id=uuid.uuid4(), org_id=org.org_id, email=f"user{i}@example.com")
         for i in range(n_users)
     ]
-    review = Review(review_id=uuid.uuid4(), org_id=org.org_id, doc_id=uuid.uuid4())
-    db_session.add_all([org, *users, review])
+    db_session.add_all([org, *users])
+    # reviews.doc_id has a real FK to documents -- a fabricated uuid4() here
+    # fails ForeignKeyViolationError at commit. Insert a real Document first.
+    doc = await _make_document(db_session, org.org_id)
+    review = Review(review_id=uuid.uuid4(), org_id=org.org_id, doc_id=doc.doc_id)
+    db_session.add(review)
     await db_session.commit()
     return org, users, review
 

@@ -4,7 +4,7 @@ import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -39,11 +39,19 @@ async def bulk_trigger_review(
             detail="doc_ids must be a non-empty list",
         )
 
-    # Fetch all docs in one query to verify org_id and existence
+    # Fetch all docs in one query to verify org_id and existence. Ignore
+    # malformed doc_ids here -- the per-item loop below reports them as
+    # "Invalid UUID format" instead of 500ing the whole batch.
+    parsed_ids = []
+    for doc_id in doc_ids:
+        try:
+            parsed_ids.append(UUID(doc_id))
+        except (ValueError, AttributeError, TypeError):
+            continue
+
     result = await db.execute(
         select(Document).where(
-            (Document.doc_id.in_([UUID(doc_id) for doc_id in doc_ids]))
-            & (Document.deleted_at.is_(None))
+            (Document.doc_id.in_(parsed_ids)) & (Document.deleted_at.is_(None))
         )
     )
     docs_by_id = {doc.doc_id: doc for doc in result.scalars().all()}
@@ -66,6 +74,16 @@ async def bulk_trigger_review(
 
         doc = docs_by_id.get(doc_id)
 
+        # A prior doc in this batch may have hit a DB error and rolled back
+        # the shared session -- rollback() expires every ORM object attached
+        # to it (SQLAlchemy default), including docs already fetched above
+        # but not yet processed. Touching an expired attribute (doc.org_id
+        # below) would otherwise make the async ORM try a synchronous
+        # lazy-refresh outside of greenlet context and blow up with
+        # "greenlet_spawn has not been called". Refresh eagerly first.
+        if doc is not None and inspect(doc).expired:
+            await db.refresh(doc)
+
         # Document not found or doesn't belong to org
         if not doc or doc.org_id != UUID(str(current_user.org_id)):
             status_list.append({
@@ -77,7 +95,7 @@ async def bulk_trigger_review(
 
         # Trigger review (reuse the orchestrator pattern from reviews.py)
         try:
-            from datetime import datetime
+            from datetime import datetime, timezone
             from uuid import uuid4
 
             from app.models.review import Review
@@ -115,6 +133,12 @@ async def bulk_trigger_review(
 
                 # Store results (abbreviated; full flow in reviews.py)
                 review.status = "completed"
+                # ck_reviews_completed_has_timestamp requires completed_at
+                # whenever status='completed' -- omitting it made every
+                # successful review fail its commit with a CheckViolation,
+                # which triggered the rollback (and the expired-attribute
+                # crash above) on the next doc in the batch.
+                review.completed_at = datetime.now(timezone.utc)
                 review.overall_score = orchestrated_result.overall_confidence * 100
                 review.processing_time_seconds = int(orchestrated_result.total_duration_seconds)
 

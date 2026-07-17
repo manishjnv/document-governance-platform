@@ -99,6 +99,7 @@ async def post_article(
 
     return {
         "article_id": str(article.article_id),
+        "org_id": str(article.org_id),
         "article_type": article.article_type,
         "title": article.title,
         "content": article.content,

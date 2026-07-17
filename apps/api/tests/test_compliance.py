@@ -36,6 +36,10 @@ async def test_purge_expired_audit_logs_deletes_old_rows(db_session: AsyncSessio
         audit_retention_days=30,
     )
     db_session.add(org)
+    # AuditLog.org_id is a bare FK column (no ORM relationship() to
+    # Organization), so the unit-of-work can't infer insert order between
+    # them -- flush the org first or the audit_logs insert can run before it.
+    await db_session.flush()
 
     # Create audit logs: 1 within retention window, 1 past it
     now = datetime.utcnow()
@@ -104,6 +108,7 @@ async def test_purge_expired_audit_logs_respects_org_isolation(db_session: Async
     )
     db_session.add(org1)
     db_session.add(org2)
+    await db_session.flush()  # see note above: no relationship() to order on
 
     # Create expired logs in both orgs
     cutoff = datetime.utcnow() - timedelta(days=30)
@@ -199,6 +204,7 @@ async def test_export_audit_logs_csv(db_session: AsyncSession):
         subscription_tier="pro",
     )
     db_session.add(org)
+    await db_session.flush()  # see note above: no relationship() to order on
 
     # Create audit logs
     now = datetime.utcnow()
@@ -259,6 +265,7 @@ async def test_export_audit_logs_csv_with_date_filter(db_session: AsyncSession):
         subscription_tier="pro",
     )
     db_session.add(org)
+    await db_session.flush()  # see note above: no relationship() to order on
 
     now = datetime.utcnow()
 

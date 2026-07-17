@@ -454,7 +454,7 @@ bob@example.com,Bob,reviewer
         reviewer = User(
             org_id=org.org_id,
             email="reviewer@example.com",
-            password_hash=hash_password("pass123"),
+            password_hash=hash_password("pass12345"),
             full_name="Reviewer",
             role="reviewer",
             is_active=True,
@@ -465,7 +465,7 @@ bob@example.com,Bob,reviewer
         # Login as reviewer
         login_response = await client.post(
             "/api/v1/auth/login",
-            json={"email": "reviewer@example.com", "password": "pass123"},
+            json={"email": "reviewer@example.com", "password": "pass12345"},
         )
         token = login_response.json()["access_token"]
 
