@@ -1,9 +1,12 @@
 # AI Agent Specifications - Phase 1
 
 **Model:** Claude 3.5 Sonnet
-**Parallelization:** All 5 agents run concurrently (max 30 seconds total)
+**Parallelization:** All 6 agents + 1 rule-based scan run concurrently (max 30 seconds total)
 **Output Format:** Structured JSON (Pydantic validated)
 **Confidence Scoring:** 0-100, derived from agent reasoning
+**Document Types:** SOW, RFP (see Document Type Coverage below)
+
+> **Status update (2026-07-17):** PMOReviewer was spec'd here but never implemented in code (`orchestrator.py` only wires 4 of the original 5 agents). LegalReviewer and the ambiguous-language scan are net-new additions to close gaps against launch requirements (legal risk, open-ended statements). RFP support did not exist at all — `DocumentType` enum and the rule engine were SOW-only. All of this is spec-only until implemented; see `2_MASTER_TASKS.md` for build tracking.
 
 ---
 
@@ -15,17 +18,34 @@ DocumentAnalyzer (orchestrator)
 ├── DeliveryReviewer (parallel)
 ├── CommercialReviewer (parallel)
 ├── SecurityReviewer (parallel)
-└── PMOReviewer (parallel)
+├── PMOReviewer (parallel)        # spec'd, not yet built — includes entry/exit + fallback plan checks (2026-07-17)
+├── LegalReviewer (parallel)      # net-new (2026-07-17)
+└── AmbiguousLanguageScan (rule-based, not an LLM agent, runs in same fan-out)
 ```
 
 Each agent:
-1. Receives document text + sections
+1. Receives document text + sections + document_type (SOW | RFP)
 2. Runs inference (max 30 seconds timeout)
 3. Returns structured JSON
 4. Applies confidence scoring
 5. Detects findings (issues)
 
 **Coordinator:** Aggregates all agent outputs, deduplicates, returns combined findings.
+
+---
+
+## Document Type Coverage: SOW vs RFP (added 2026-07-17)
+
+RFPs are not SOWs with different labels — they evaluate vendors rather than define delivered work, so agent prompts and the rule engine need doc-type-aware branches, not just a new enum value.
+
+| Concept | SOW | RFP |
+|---|---|---|
+| Scope agent asks for | Deliverables + acceptance criteria | Evaluation criteria + scope of requested proposal |
+| Delivery agent asks for | Project timeline/milestones | Submission deadline, Q&A window, award date |
+| Commercial agent asks for | Fixed pricing/payment terms | Budget range disclosure, pricing format required from vendors |
+| Rule engine | 20 built-in SOW rules (`app/rules/builtin.py`) | New ~15-20 RFP rule set: evaluation criteria defined, vendor qualification requirements, submission format/deadline, Q&A process, award criteria |
+
+**Implementation requirement:** add `RFP` to `app/models/enums.py::DocumentType` + the `ck_documents_document_type` check constraint in `app/models/document.py`, tag new rules `document_types: ["RFP"]`, and give each agent's system prompt a document_type-conditional instruction block rather than duplicating agent classes.
 
 ---
 
@@ -515,16 +535,24 @@ You are an expert project operations and governance analyst. Your task is to:
    - Is there a change request process?
    - Are there change windows defined?
 
-5. Identify OPERATIONAL RISKS
+5. Extract ENTRY & EXIT CRITERIA (added 2026-07-17)
+   - Are entry criteria defined? (what must be true before work starts)
+   - Are exit/completion criteria defined? (what must be true to consider work done/accepted)
+   - Is there a documented fallback, contingency, or rollback plan if the engagement fails or is terminated early?
+
+6. Identify OPERATIONAL RISKS
    - Is RACI matrix missing?
    - Is escalation path undefined?
    - Are decision authorities unclear?
    - Are SLAs missing (for ongoing services)?
    - Is change process undefined?
    - Are support responsibilities unclear?
+   - Are entry/exit criteria missing?
+   - Is there no fallback/contingency plan?
 
 IMPORTANT:
 - RACI is critical. Missing RACI = major risk.
+- Entry/exit criteria and fallback plan are critical for fixed-scope engagements; major for ongoing/retainer engagements.
 - Quote governance language.
 - Rate confidence in each finding.
 
@@ -547,7 +575,7 @@ class OperationsExtractions(BaseModel):
     change_management_process: Optional[str]
 
 class OperationsRisk(BaseModel):
-    category: str  # "missing_raci" | "undefined_escalation" | "unclear_decision_authority" | "missing_sla"
+    category: str  # "missing_raci" | "undefined_escalation" | "unclear_decision_authority" | "missing_sla" | "missing_entry_exit_criteria" | "missing_fallback_plan"
     severity: str
     title: str
     evidence: str
@@ -589,23 +617,115 @@ def calculate_pmo_confidence(finding: OperationsRisk) -> float:
 
 ---
 
+## Agent 6: Legal Reviewer (added 2026-07-17)
+
+**Purpose:** Identify legal risk — liability, IP, indemnification, termination, governing law. Distinct from Commercial (pricing/payment) and PMO (governance/operations).
+
+**System Prompt:**
+
+```
+You are an expert commercial-contracts lawyer reviewing this document. Your task is to:
+
+1. Extract LIABILITY & INDEMNIFICATION
+   - Is there a limitation of liability clause? What is the cap?
+   - Is indemnification defined? Which party indemnifies whom, for what?
+
+2. Extract INTELLECTUAL PROPERTY
+   - Who owns work product / deliverables IP?
+   - Are pre-existing IP rights (background IP) addressed?
+   - Are third-party/open-source license obligations addressed?
+
+3. Extract TERMINATION
+   - Termination for cause: defined, with cure period?
+   - Termination for convenience: defined, with notice period?
+   - What happens to in-progress work / payment on termination?
+
+4. Extract GOVERNING LAW & DISPUTE RESOLUTION
+   - Governing law / jurisdiction specified?
+   - Arbitration or litigation? Venue specified?
+
+5. Extract WARRANTY
+   - Is there a warranty clause? Disclaimer of implied warranties?
+
+6. Identify LEGAL RISKS
+   - Missing or uncapped liability
+   - Ambiguous or missing IP ownership
+   - Missing termination-for-cause or cure period
+   - No governing law / venue specified
+   - No warranty or warranty disclaimer
+
+IMPORTANT:
+- Flag ambiguous legal language explicitly (e.g., "reasonable efforts", "as applicable") as a finding, not just missing clauses.
+- Quote the exact clause language as evidence.
+- Rate confidence in each finding.
+
+Output ONLY valid JSON.
+```
+
+**Output Schema:**
+
+```python
+class LegalExtractions(BaseModel):
+    liability_cap: Optional[str]
+    indemnification_defined: bool
+    ip_ownership: Optional[str]  # "vendor" | "customer" | "joint" | "undefined"
+    termination_for_cause: bool
+    termination_cure_period: Optional[str]
+    governing_law: Optional[str]
+    warranty_defined: bool
+
+class LegalRisk(BaseModel):
+    category: str  # "missing_liability_cap" | "undefined_ip_ownership" | "missing_termination_clause" | "no_governing_law" | "missing_warranty" | "ambiguous_legal_language"
+    severity: str
+    title: str
+    evidence: str
+    explanation: str
+    recommendation: str
+    confidence: float
+
+class LegalReviewerOutput(BaseModel):
+    extractions: LegalExtractions
+    risks: List[LegalRisk]
+    summary: str
+```
+
+---
+
+## Cross-Cutting: Ambiguous Language Detector (added 2026-07-17)
+
+**Purpose:** Catch vague/open-ended statements anywhere in the document, independent of which agent or section they fall under. Rule-based (deterministic, not an LLM agent) — runs once against the full document text, applies to every document type.
+
+**Mechanism:** regex/keyword scan for weasel phrases, with the matched sentence + location returned as evidence. Not a severity-critical check on its own (context-dependent), but surfaces every instance for human triage rather than requiring reviewers to hunt manually.
+
+**Phrase families to flag:**
+- Vague effort/quality: "reasonable efforts", "best effort", "commercially reasonable", "industry standard" (undefined)
+- Unresolved placeholders: "TBD", "TBC", "to be determined", "to be confirmed"
+- Open-ended scope: "including but not limited to", "as needed", "as appropriate", "may include", "etc.", "and so on"
+- Unquantified terms: "promptly", "in a timely manner", "as soon as possible" (without a defined SLA)
+
+**Output:** list of `{phrase, matched_sentence, section, char_offset}` — surfaced as low/medium severity findings, deduplicated per sentence.
+
+---
+
 ## Orchestrator: Coordinator
 
-**Purpose:** Aggregate all 5 agent outputs, deduplicate findings, calculate overall scores.
+**Purpose:** Aggregate all 6 agent outputs + ambiguous-language rule scan, deduplicate findings, calculate overall scores.
 
 **Algorithm:**
 
 ```python
 async def orchestrate_review(document_text: str, parsed_sections: List[dict]) -> ReviewResult:
-    # 1. Call all 5 agents in parallel
+    # 1. Call all 6 agents in parallel + ambiguous-language rule scan
     results = await asyncio.gather(
         scope_reviewer.review(document_text, parsed_sections),
         delivery_reviewer.review(document_text, parsed_sections),
         commercial_reviewer.review(document_text, parsed_sections),
         security_reviewer.review(document_text, parsed_sections),
         pmo_reviewer.review(document_text, parsed_sections),
+        legal_reviewer.review(document_text, parsed_sections),
         timeout=30
     )
+    ambiguous_language_findings = scan_ambiguous_language(document_text, parsed_sections)
     
     # 2. Flatten findings from all agents
     all_findings = []

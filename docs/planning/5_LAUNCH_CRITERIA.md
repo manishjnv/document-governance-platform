@@ -4,6 +4,8 @@
 **Test Date:** 1 week before planned production launch.
 **Stakeholder Sign-off:** Required before proceeding to production.
 
+> **Scope update (2026-07-17):** Two spec'd-but-unbuilt agents (PMOReviewer) and net-new additions (LegalReviewer, ambiguous-language scan, RFP document-type support — see `4_AI_AGENT_SPECS.md`) are being added ahead of launch to cover legal/financial/functional/scope/entry-exit/fallback-plan review, which is the core value proposition (reduce manual SOW/RFP review) — this is a prerequisite for launch, not a post-launch add-on. Each addition must independently pass Metrics 1.1-1.4 below (precision ≥92%, recall ≥80%, calibration <5% error, dedup ≥99%) on its own test set before it counts toward "launch ready" — a 6th/7th agent that hallucinates findings actively erodes trust in the tool. RFP test set: minimum 10 real/representative RFPs, evaluated the same way as the existing 20-SOW set. Do not assume an addition is accurate because SOW review already passed the bar; test each new agent and the RFP rule set independently.
+
 ---
 
 ## Category 1: AI Agent Accuracy
@@ -197,7 +199,8 @@ Document Management
 
 Review Engine
   [ ] Review starts on click
-  [ ] All 5 agents run
+  [ ] All 6 agents run (Scope, Delivery, Commercial, Security, PMO, Legal) + ambiguous-language scan
+  [ ] RFP document type reviews correctly (distinct rule set + agent branches from SOW)
   [ ] Findings generated and stored
   [ ] Scores calculated (7 categories + overall)
   [ ] Risk score calculated
