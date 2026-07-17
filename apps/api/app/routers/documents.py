@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analytics.aggregator import record_document_view
 from app.compliance.audit import log_action
+from app.core.cache import invalidate_cache
 from app.db.session import get_db
 from app.dependencies import get_current_user, verify_org_access
 from app.models.document import Document
@@ -170,6 +171,9 @@ async def upload_document(
     )
     await db.commit()
 
+    # T-3019: this org's cached analytics/dashboard are stale now
+    await invalidate_cache(f"cache:*:{doc.org_id}:*")
+
     logger.info(f"Document {doc_id} uploaded by user {current_user.user_id}")
 
     return DocumentRead.from_orm(doc)
@@ -208,6 +212,51 @@ async def list_documents(
     query = query.offset(skip).limit(limit).order_by(Document.created_at.desc())
 
     result = await db.execute(query)
+    documents = result.scalars().all()
+
+    return [DocumentRead.from_orm(doc) for doc in documents]
+
+
+@router.get(
+    "/batch",
+    response_model=list[DocumentRead],
+    summary="Get multiple documents by id",
+)
+async def get_documents_batch(
+    ids: str = Query(..., description="Comma-separated document UUIDs"),
+    current_user: TokenData = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Fetch multiple documents in one query.
+
+    **T-3010: Batch document fetch**
+
+    Invalid/malformed UUIDs in `ids` are skipped rather than erroring the
+    whole request. Only documents in the caller's org are returned.
+    """
+    from sqlalchemy import select
+
+    doc_ids = []
+    for raw in ids.split(","):
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            doc_ids.append(UUID(raw))
+        except ValueError:
+            continue
+
+    if not doc_ids:
+        return []
+
+    result = await db.execute(
+        select(Document).where(
+            Document.doc_id.in_(doc_ids)
+            & (Document.org_id == current_user.org_id)
+            & Document.deleted_at.is_(None)
+        )
+    )
     documents = result.scalars().all()
 
     return [DocumentRead.from_orm(doc) for doc in documents]

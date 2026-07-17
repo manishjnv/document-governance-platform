@@ -126,6 +126,15 @@ async def bulk_import_users(db: AsyncSession, org_id: uuid.UUID, csv_content: st
             "errors": [{"row": 1, "reason": "Invalid header; expected: email,full_name,role"}],
         }
 
+    # T-3003: prefetch every existing email in this org once, instead of one
+    # SELECT per CSV row -- a 500-row import used to be 500 queries.
+    existing_emails_result = await db.execute(
+        select(func.lower(User.email)).where(
+            and_(User.org_id == org_id, User.deleted_at.is_(None))
+        )
+    )
+    existing_emails = {row[0] for row in existing_emails_result.all()}
+
     for row_num, row in enumerate(reader, start=2):  # Start at 2 (header is row 1)
         email = (row.get("email") or "").strip()
         full_name = (row.get("full_name") or "").strip()
@@ -143,17 +152,11 @@ async def bulk_import_users(db: AsyncSession, org_id: uuid.UUID, csv_content: st
             )
             continue
 
-        # Check if user already exists (case-insensitive email)
-        existing_result = await db.execute(
-            select(User).where(
-                and_(
-                    User.org_id == org_id,
-                    func.lower(User.email) == email.lower(),
-                    User.deleted_at.is_(None),
-                )
-            )
-        )
-        if existing_result.scalar_one_or_none() is not None:
+        # Check if user already exists (case-insensitive email), against the
+        # prefetched set -- also catches duplicate emails within this same
+        # CSV, since we add each created email to the set below.
+        email_lower = email.lower()
+        if email_lower in existing_emails:
             skipped.append(
                 {"row": row_num, "reason": f"User with email {email!r} already exists"}
             )
@@ -172,6 +175,7 @@ async def bulk_import_users(db: AsyncSession, org_id: uuid.UUID, csv_content: st
             )
             db.add(user)
             await db.flush()
+            existing_emails.add(email_lower)
             created += 1
         except Exception as e:
             errors.append({"row": row_num, "reason": f"Database error: {str(e)}"})

@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     # rejects the plain psycopg2-style "postgresql://" scheme at startup.
     database_url: str = "postgresql+asyncpg://edgp_user:edgp_password@localhost:5432/edgp_dev"
     database_echo: bool = False
+    database_pool_size: int = 10
+    database_max_overflow: int = 20
+    database_pool_recycle: int = 1800
 
     # Redis
     redis_url: str = "redis://localhost:6379"

@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.pagination import PaginationParams, paginate
 from app.db.session import get_db
 from app.dependencies import get_current_user, require_role
 from app.models.audit_log import AuditLog
@@ -37,6 +38,9 @@ class ActivityListResponse(BaseModel):
 
     logs: list[AuditLogRead]
     count: int
+    page: int = 1
+    page_size: int = 50
+    total_pages: int = 1
 
 
 @router.get(
@@ -96,6 +100,7 @@ async def get_subscription_tier(
 async def get_user_activity(
     user_id: UUID,
     days: int = Query(30, ge=1, le=365, description="Number of days to look back"),
+    pagination: PaginationParams = Depends(),
     current_user: TokenData = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ):
@@ -152,12 +157,14 @@ async def get_user_activity(
         )
         .order_by(AuditLog.created_at.desc())
     )
-    result = await db.execute(stmt)
-    logs = result.scalars().all()
+    page = await paginate(stmt, db, pagination)
 
-    log_responses = [AuditLogRead.model_validate(log) for log in logs]
+    log_responses = [AuditLogRead.model_validate(log) for log in page["items"]]
 
     return ActivityListResponse(
         logs=log_responses,
-        count=len(log_responses),
+        count=page["total"],
+        page=page["page"],
+        page_size=page["page_size"],
+        total_pages=page["total_pages"],
     )

@@ -16,7 +16,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,6 +30,7 @@ from app.analytics.reports import (
     list_report_archive,
     save_report_to_archive,
 )
+from app.core.cache import cached
 from app.db.session import get_db
 from app.dependencies import get_current_user
 from app.models.document import Document
@@ -51,13 +52,15 @@ class CustomReportRequest(BaseModel):
 
 
 @router.get("/documents/{doc_id}")
+@cached(ttl_seconds=60)
 async def document_analytics(
     doc_id: UUID,
+    response: Response,
     current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """T-2006: view_count, unique_viewer_count, and latest review outcome
-    for one document."""
+    for one document. T-3005: cached 60s per doc_id+org."""
     doc = await db.scalar(
         select(Document).where(
             Document.doc_id == doc_id,
@@ -72,22 +75,28 @@ async def document_analytics(
 
 
 @router.get("/reviews/metrics")
+@cached(ttl_seconds=300)
 async def review_metrics(
+    response: Response,
     category: Optional[str] = None,
     months: int = Query(6, ge=1, le=36),
     current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """T-2007: average review scores by category, grouped by month."""
+    """T-2007: average review scores by category, grouped by month.
+    T-3005: cached 5min per org+category+months (aggregates over all reviews)."""
     return await get_review_metrics(db, current_user.org_id, category=category, months=months)
 
 
 @router.get("/dashboard")
+@cached(ttl_seconds=300)
 async def performance_dashboard(
+    response: Response,
     current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """T-2008: org-wide performance summary in one payload."""
+    """T-2008: org-wide performance summary in one payload.
+    T-3005: cached 5min per org (aggregates over every doc/review)."""
     return await get_performance_dashboard(db, current_user.org_id)
 
 

@@ -4,9 +4,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
+from app.core.timing import ResponseTimeMiddleware
 from app.routers import (
     access_control,
     admin,
@@ -81,6 +83,12 @@ app.add_middleware(
     TrustedHostMiddleware,
     allowed_hosts=os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 )
+
+# Middleware: gzip response compression (T-3007)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Middleware: X-Response-Time-Ms header (T-3008)
+app.add_middleware(ResponseTimeMiddleware)
 
 # Include routers
 # NOTE: documents_extra / documents_bulk register static paths under

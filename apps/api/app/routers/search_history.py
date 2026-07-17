@@ -14,6 +14,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.pagination import PaginationParams, paginate
 from app.db.session import get_db
 from app.dependencies import get_current_user
 from app.models.search_history import SavedSearch, SearchHistory
@@ -145,6 +146,7 @@ async def create_saved_search(
     summary="List saved searches for current user",
 )
 async def list_saved_searches(
+    pagination: PaginationParams = Depends(),
     current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -154,6 +156,7 @@ async def list_saved_searches(
     **T-2005: Saved search list**
     - Scoped to current user and org
     - Returns newest first (created_at DESC)
+    - Paginated (page/page_size query params), default page_size 50
     """
     stmt = (
         select(SavedSearch)
@@ -163,8 +166,8 @@ async def list_saved_searches(
         )
         .order_by(desc(SavedSearch.created_at))
     )
-    result = await db.execute(stmt)
-    return result.scalars().all()
+    page = await paginate(stmt, db, pagination)
+    return page["items"]
 
 
 @router.get(

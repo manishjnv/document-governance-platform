@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.orchestrator import ReviewOrchestrator
 from app.compliance.audit import log_action
+from app.core.cache import invalidate_cache
 from app.db.session import get_db
 from app.dependencies import get_current_user, verify_org_access
 from app.models.document import Document
@@ -247,6 +248,9 @@ async def trigger_review(
         )
 
         await db.commit()
+
+        # T-3019: this org's cached analytics/dashboard/metrics are stale now
+        await invalidate_cache(f"cache:*:{review.org_id}:*")
 
         logger.info(
             f"Review {review_id} completed for doc {doc_id}: "

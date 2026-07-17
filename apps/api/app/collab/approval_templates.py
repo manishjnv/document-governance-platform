@@ -104,8 +104,15 @@ async def apply_template(
         ]
         db.add_all(approvals)
         await db.commit()
-        for approval in approvals:
-            await db.refresh(approval)
+        # T-3003: one SELECT to reload every row's server-generated
+        # created_at/updated_at, instead of a db.refresh() per approver
+        # (N approvers used to mean N post-commit queries).
+        refreshed = await db.execute(
+            select(Approval).where(
+                Approval.approval_id.in_([a.approval_id for a in approvals])
+            )
+        )
+        approvals = list(refreshed.scalars().all())
 
     elif template.mode == "serial":
         # Only create first approver's row; log intent for remainder

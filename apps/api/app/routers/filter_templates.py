@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.pagination import PaginationParams, paginate
 from app.db.session import get_db
 from app.dependencies import get_current_user
 from app.models.filter_template import FilterTemplate
@@ -75,16 +76,17 @@ async def save_filter_template(
 
 @router.get("", summary="List filter templates")
 async def list_filter_templates(
+    pagination: PaginationParams = Depends(),
     current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """List all filter templates for the current user."""
-    result = await db.execute(
+    """List all filter templates for the current user (paginated)."""
+    query = (
         select(FilterTemplate)
         .where(FilterTemplate.user_id == UUID(str(current_user.user_id)))
         .order_by(FilterTemplate.created_at.desc())
     )
-    templates = result.scalars().all()
+    page = await paginate(query, db, pagination)
 
     return [
         {
@@ -93,7 +95,7 @@ async def list_filter_templates(
             "filters": t.filters,
             "created_at": t.created_at.isoformat(),
         }
-        for t in templates
+        for t in page["items"]
     ]
 
 
