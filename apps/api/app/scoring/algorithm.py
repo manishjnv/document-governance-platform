@@ -53,6 +53,18 @@ class DocumentScorer:
         "security": 0.05,  # 5%
     }
 
+    # Points deducted per finding/violation whose description/rule_id
+    # matched a category's specific keywords, scaled by severity -- replaces
+    # the old flat per-category constants (10, 8, 12, 15, 20...) that ignored
+    # severity entirely, so 5 findings all marked "critical" but generically
+    # worded could score a perfect 100 if none happened to contain a
+    # trigger word like "missing" or "ambiguous".
+    _SPECIFIC_SEVERITY_PENALTY = {"critical": 25, "major": 15, "medium": 8, "low": 4, "info": 0}
+    # Smaller points deducted from EVERY category per finding/violation,
+    # regardless of whether it matched any category's keywords -- ensures
+    # severity always affects scoring, not just specifically-worded findings.
+    _GENERAL_SEVERITY_PENALTY = {"critical": 12, "major": 6, "medium": 3, "low": 1, "info": 0}
+
     def __init__(self, weight_overrides: Optional[dict[str, float]] = None):
         # T-2093: per-org scoring weight customization (app/admin/customization.py).
         # WEIGHTS stays the untouched platform default (tests read it directly);
@@ -93,6 +105,18 @@ class DocumentScorer:
         category_scores["operations"] = self._score_operations(findings, rule_violations)
         category_scores["security"] = self._score_security(findings, rule_violations)
 
+        # Apply the general severity penalty to every category, on top of
+        # whatever category-specific keyword matches already deducted.
+        general_penalty = self._general_penalty(findings, rule_violations)
+        if general_penalty:
+            for cat_score in category_scores.values():
+                cat_score.score = max(0.0, cat_score.score - general_penalty)
+                cat_score.points_earned = int(cat_score.score)
+                cat_score.status = (
+                    "green" if cat_score.score >= 80
+                    else ("yellow" if cat_score.score >= 50 else "red")
+                )
+
         # Calculate overall score (weighted average)
         overall_score = self._calculate_overall_score(category_scores)
 
@@ -114,6 +138,15 @@ class DocumentScorer:
             next_steps=next_steps,
         )
 
+    def _severity(self, item: dict) -> str:
+        return str(item.get("severity", "")).lower()
+
+    def _general_penalty(self, findings: list[dict], violations: list[dict]) -> float:
+        return sum(
+            self._GENERAL_SEVERITY_PENALTY.get(self._severity(item), 0)
+            for item in findings + violations
+        )
+
     def _score_completeness(self, findings: list[dict], violations: list[dict]) -> CategoryScore:
         """
         T-602: Score completeness (sections, deliverables, requirements).
@@ -126,15 +159,15 @@ class DocumentScorer:
         missing_sections = [f for f in findings if "missing" in str(f).lower() and "section" in str(f).lower()]
         missing_sections += [v for v in violations if "missing section" in v.get("description", "").lower()]
 
-        points -= len(missing_sections) * 10
+        points -= sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 10) for i in missing_sections)
 
         # Count missing-criteria findings
         missing_criteria = [f for f in findings if "acceptance" in str(f).lower() or "criteria" in str(f).lower()]
-        points -= len(missing_criteria) * 8
+        points -= sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 8) for i in missing_criteria)
 
         # Count incomplete-field findings
         incomplete = [v for v in violations if "incomplete" in v.get("description", "").lower()]
-        points -= len(incomplete) * 5
+        points -= sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 5) for i in incomplete)
 
         points = max(0, min(100, points))
 
@@ -165,7 +198,7 @@ class DocumentScorer:
             if any(x in v.get("description", "").lower() for x in ["ambiguous", "unclear", "vague"])
         ]
 
-        points -= len(ambiguous) * 12
+        points -= sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 12) for i in ambiguous)
 
         points = max(0, min(100, points))
 
@@ -192,7 +225,7 @@ class DocumentScorer:
             if any(x in str(f).lower() for x in ["conflict", "contradict", "inconsistent", "duplicate"])
         ]
 
-        points -= len(inconsistent) * 15
+        points -= sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 15) for i in inconsistent)
 
         points = max(0, min(100, points))
 
@@ -223,7 +256,7 @@ class DocumentScorer:
             if any(x in v.get("rule_id", "").lower() for x in ["sow-005", "sow-011"])  # Pricing rules
         ]
 
-        points -= len(commercial_findings) * 20
+        points -= sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 20) for i in commercial_findings)
 
         points = max(0, min(100, points))
 
@@ -254,7 +287,7 @@ class DocumentScorer:
             if any(x in v.get("rule_id", "").lower() for x in ["sow-004", "sow-017", "sow-018"])  # Timeline rules
         ]
 
-        points -= len(delivery_findings) * 15
+        points -= sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 15) for i in delivery_findings)
 
         points = max(0, min(100, points))
 
@@ -285,7 +318,7 @@ class DocumentScorer:
             if any(x in v.get("rule_id", "").lower() for x in ["sow-007", "sow-014", "sow-019"])
         ]
 
-        points -= len(operations_findings) * 12
+        points -= sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 12) for i in operations_findings)
 
         points = max(0, min(100, points))
 
@@ -317,7 +350,7 @@ class DocumentScorer:
         ]
 
         # Security issues are more critical
-        points -= len(security_findings) * 25
+        points -= sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 25) for i in security_findings)
 
         points = max(0, min(100, points))
 
@@ -434,8 +467,13 @@ class DocumentScorer:
                 elif category == "security":
                     steps.append(f"Add security requirements and compliance clauses")
 
-        # Add critical issue steps
-        critical = [v for v in violations if v.get("severity", "").lower() == "critical"]
+        # Add critical issue steps. Checks both findings and rule_violations --
+        # a critical AI-agent finding is just as urgent as a critical rule
+        # violation, but only violations were checked here before.
+        critical = [
+            item for item in findings + violations
+            if item.get("severity", "").lower() == "critical"
+        ]
         if critical:
             steps.insert(0, f"Address {len(critical)} critical finding(s)")
 

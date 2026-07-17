@@ -43,10 +43,6 @@ class Settings(BaseSettings):
     storage_local_path: str = "./data/uploads"
     max_document_size_mb: int = 50
 
-    # CORS
-    cors_origins: list = ["http://localhost:3000"]
-    allowed_hosts: list = ["localhost", "127.0.0.1"]
-
     # Rate Limiting
     rate_limit_requests_per_minute: int = 60
     rate_limit_login_attempts: int = 5

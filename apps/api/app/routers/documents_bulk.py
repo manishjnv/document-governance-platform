@@ -59,6 +59,19 @@ async def bulk_trigger_review(
     # Verify org access for all docs
     await verify_org_access(str(current_user.org_id), current_user)
 
+    # T-2091/T-2092/T-2093: apply this org's rule/agent/scoring customization
+    # (app/admin/customization.py), same as the single-document path in
+    # reviews.py. Every doc in this batch belongs to the same org, so fetch
+    # it once rather than per-document.
+    from app.admin.customization import get_agent_config, get_rule_config, get_scoring_weights
+
+    org_id = UUID(str(current_user.org_id))
+    rule_config = await get_rule_config(db, org_id)
+    agent_config = await get_agent_config(db, org_id)
+    scoring_weights = await get_scoring_weights(db, org_id)
+    enabled_rule_ids = {rule_id for rule_id, enabled in rule_config.items() if enabled}
+    enabled_agent_names = {name for name, enabled in agent_config.items() if enabled}
+
     status_list = []
 
     for doc_id_str in doc_ids:
@@ -129,6 +142,8 @@ async def bulk_trigger_review(
                     doc.parsed_text or "",
                     document_type=doc.document_type or "SOW",
                     sections=sections,
+                    enabled_agent_names=enabled_agent_names,
+                    enabled_rule_ids=enabled_rule_ids,
                 )
 
                 # Store results (abbreviated; full flow in reviews.py)
@@ -146,7 +161,7 @@ async def bulk_trigger_review(
                 from app.models.finding import Finding
                 from app.scoring import DocumentScorer
 
-                scorer = DocumentScorer()
+                scorer = DocumentScorer(weight_overrides=scoring_weights)
                 all_findings = []
                 for agent_name, agent_info in orchestrated_result.merged_findings.get("agents", {}).items():
                     if agent_info.get("status") == "success":

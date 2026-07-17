@@ -19,18 +19,14 @@ _TEST_DATABASE_URL_DEFAULT = (
 )
 os.environ["DATABASE_URL"] = os.getenv("TEST_DATABASE_URL", _TEST_DATABASE_URL_DEFAULT)
 
-# TestClient sends Host: testserver by default; TrustedHostMiddleware (main.py)
-# only allows ALLOWED_HOSTS (localhost,127.0.0.1 by default), so every request
-# through the full app 400s before reaching a route. main.py reads this via a
-# raw os.getenv().split(",") call (not through Settings), so import app.config
-# FIRST — that constructs the Settings() singleton against the *original* env
-# — then set ALLOWED_HOSTS to a comma string afterward. Setting it before that
-# import instead makes pydantic-settings choke: Settings also declares an
-# (unused — nothing reads settings.allowed_hosts) `allowed_hosts: list` field,
-# and env-binds list-typed fields by json.loads()'ing the value, which a plain
-# comma string isn't.
 import app.config  # noqa: F401,E402
 
+# TestClient sends Host: testserver by default; TrustedHostMiddleware (main.py)
+# only allows ALLOWED_HOSTS (localhost,127.0.0.1 by default), so every request
+# through the full app would 400 before reaching a route without this. main.py
+# reads it via a raw os.getenv().split(",") call, not through Settings (the
+# dead Settings.allowed_hosts/cors_origins fields that used to collide with
+# this were removed -- see app/config.py).
 os.environ["ALLOWED_HOSTS"] = "localhost,127.0.0.1,testserver"
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession

@@ -28,10 +28,12 @@ def test_section_presence_violation(executor):
 
     executor.register_rule(rule)
 
-    # Document missing section
-    violations = executor._check_section_presence(rule, {})
-    assert len(violations) > 0
-    assert "missing section" in violations[0].evidence.lower()
+    # Document missing section. _check_section_presence returns a single
+    # Optional[RuleViolation] (see test_section_presence_pass below), not a
+    # list -- matching every other _check_* method's contract with validate().
+    violation = executor._check_section_presence(rule, {})
+    assert violation is not None
+    assert "missing section" in violation.evidence.lower()
 
 
 def test_section_presence_pass(executor):
@@ -246,7 +248,10 @@ def test_rule_document_type_filtering(executor):
 
     executor.register_rule(rule)
 
-    doc_text = "This is a proposal without deliverables"
+    # Must genuinely lack the keyword "deliverables" -- the original text
+    # ironically contained it as a substring, so _check_keyword (correctly)
+    # found no violation and this test failed on its own broken fixture.
+    doc_text = "This is a proposal that lacks a concrete outputs section"
     sections = {}
 
     # Should not apply to Proposal type
