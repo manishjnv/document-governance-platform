@@ -29,19 +29,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Python packages from builder
-COPY --from=builder /root/.local /root/.local
+# Create non-root user first so the copied packages can be owned by it --
+# packages were installed as root (--user) in the builder stage, but this
+# stage drops to a non-root user; without the chown, appuser gets a
+# Permission denied trying to exec anything under /root/.local/bin.
+RUN useradd -m -u 1000 appuser
+
+# Copy Python packages from builder, owned by appuser
+COPY --from=builder --chown=appuser:appuser /root/.local /home/appuser/.local
 
 # Set environment path
-ENV PATH=/root/.local/bin:$PATH \
+ENV PATH=/home/appuser/.local/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
 # Copy application
-COPY . .
+COPY --chown=appuser:appuser . .
 
-# Create non-root user
-RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
 # Health check
