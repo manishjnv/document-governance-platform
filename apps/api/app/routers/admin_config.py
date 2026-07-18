@@ -9,7 +9,8 @@ T-2095: Field mappings
 
 All admin-only, scoped to current_user.org_id. Separate router file/prefix
 from app/routers/admin.py and admin_extra.py (which already own other
-/api/v1/admin paths) -- not wired into main.py here, see T-2091 report.
+/api/v1/admin paths). Mounted in main.py (2026-07-18 router audit confirmed
+this) with real test coverage in test_admin_config.py.
 """
 
 import logging

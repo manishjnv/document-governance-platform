@@ -4,10 +4,9 @@ T-2046: document/review data retention policy
 T-2047: GDPR data export
 T-2048: GDPR right-to-be-forgotten
 
-# ponytail: not wired into main.py this wave -- main.py is off-limits (a
-# parallel access-control agent also touches it this wave); registration
-# (`from app.routers import governance` + `app.include_router(governance.router)`)
-# is a follow-up one-line addition once the parallel change lands.
+Mounted in main.py (2026-07-18 router audit confirmed this). No router-level
+test exists yet -- test_gdpr.py exercises the underlying service functions
+(app.compliance.gdpr / data_retention) directly, not these HTTP endpoints.
 """
 
 import logging
