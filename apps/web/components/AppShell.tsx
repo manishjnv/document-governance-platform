@@ -57,7 +57,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-56 flex-col border-r bg-background px-3 py-4 md:flex">
         <Link href="/dashboard" className="flex items-center gap-2 px-3 pb-1">
           <FileText size={18} strokeWidth={2} className="text-primary" aria-hidden="true" />
-          <span className="text-sm font-semibold">Scopewise</span>
+          <span className="text-sm font-semibold">ScopeWise</span>
         </Link>
         <p className="px-3 pb-5 text-xs text-muted-foreground">
           Catch contract risk before you sign.
@@ -75,7 +75,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="flex items-center justify-between border-b bg-background px-4 py-3 md:hidden">
         <Link href="/dashboard" className="flex items-center gap-2">
           <FileText size={18} strokeWidth={2} className="text-primary" aria-hidden="true" />
-          <span className="text-sm font-semibold">Scopewise</span>
+          <span className="text-sm font-semibold">ScopeWise</span>
         </Link>
         <Button variant="ghost" size="icon" aria-label="Open navigation menu" onClick={() => setMobileOpen(true)}>
           <Menu size={20} strokeWidth={2} />
@@ -86,7 +86,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SheetContent side="left" className="w-64 p-4">
           <SheetTitle className="mb-4 flex items-center gap-2 text-sm">
             <FileText size={18} strokeWidth={2} className="text-primary" aria-hidden="true" />
-            Scopewise
+            ScopeWise
           </SheetTitle>
           <NavLinks onNavigate={() => setMobileOpen(false)} />
           <Button

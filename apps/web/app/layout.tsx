@@ -4,7 +4,7 @@ import { ServiceWorkerRegister } from '@/components/service-worker-register'
 import { InstallPrompt } from '@/components/install-prompt'
 
 export const metadata: Metadata = {
-  title: 'Scopewise',
+  title: 'ScopeWise',
   description: 'Catch contract risk before you sign.',
   manifest: '/manifest.json',
   themeColor: '#0066cc',

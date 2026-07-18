@@ -57,7 +57,7 @@ fixed across upload, review pipeline, event-loop blocking, and dead
 frontend routes — see `docs/RCA_LOG.md` for full root-cause detail on
 each. Dashboard/search: sortable table, working type filter, stats row,
 Accuracy/Completeness/Project columns, review-in-progress loading state.
-Branding: renamed from "EDGP" to "Scopewise" with a tagline and new
+Branding: renamed from "EDGP" to "ScopeWise" with a tagline and new
 favicon/logo across the app.
 
 ---
