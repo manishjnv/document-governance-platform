@@ -37,7 +37,15 @@ def _locate_finding(evidence, document_text, sections):
     if not evidence or not document_text or not sections:
         return None
 
-    idx = document_text.find(evidence.strip())
+    # Agents are prompted to "quote exactly" but often drop/add a trailing
+    # period or the surrounding quote marks (e.g. quoting `"apply"` for
+    # text that actually reads `"apply."` -- period inside the quote).
+    # Strip both before matching instead of requiring byte-exact equality.
+    normalized = evidence.strip().strip("\"'“”").rstrip(".,;: ")
+    if not normalized:
+        return None
+
+    idx = document_text.find(normalized)
     if idx == -1:
         return None
 
