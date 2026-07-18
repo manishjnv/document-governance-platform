@@ -14,7 +14,7 @@ FROM node:20-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-RUN useradd -m -u 1000 appuser
+RUN useradd -m -u 1001 appuser
 COPY --from=builder /build/public ./public
 COPY --from=builder --chown=appuser:appuser /build/.next/standalone ./
 COPY --from=builder --chown=appuser:appuser /build/.next/static ./.next/static
