@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import axios from 'axios';
 import Link from 'next/link';
-import { ArrowLeft, ChevronDown, FileText, Check, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ChevronDown, FileText, Check, RotateCcw, MapPin } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -78,8 +78,11 @@ export default function ResultsPage() {
   const [severityFilter, setSeverityFilter] = useState<string | null>(null);
   const [showDocument, setShowDocument] = useState(false);
   const [highlightedSection, setHighlightedSection] = useState<string | null>(null);
+  const [splitPercent, setSplitPercent] = useState(50);
+  const [resizingSplit, setResizingSplit] = useState(false);
   const router = useRouter();
   const docPaneRef = useRef<HTMLDivElement>(null);
+  const splitContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -164,6 +167,31 @@ export default function ResultsPage() {
     }
   };
 
+  const startSplitResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setResizingSplit(true);
+  };
+
+  useEffect(() => {
+    if (!resizingSplit) return;
+
+    const onMouseMove = (e: MouseEvent) => {
+      const container = splitContainerRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const pct = ((e.clientX - rect.left) / rect.width) * 100;
+      setSplitPercent(Math.min(80, Math.max(20, pct)));
+    };
+    const onMouseUp = () => setResizingSplit(false);
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [resizingSplit]);
+
   const sectionIndexByHeading = useMemo(() => {
     const map = new Map<string, number>();
     docInfo?.parsed_sections?.forEach((s, i) => {
@@ -230,24 +258,39 @@ export default function ResultsPage() {
   const severityColor = (severity: string) => {
     switch (severity.toLowerCase()) {
       case 'critical':
-        return 'bg-red-50 text-red-900 border-red-300';
+        return 'bg-red-100 text-red-950 border-red-400';
       case 'major':
-        return 'bg-orange-50 text-orange-900 border-orange-300';
+        return 'bg-orange-100 text-orange-950 border-orange-400';
       case 'medium':
-        return 'bg-yellow-50 text-yellow-900 border-yellow-300';
+        return 'bg-yellow-100 text-yellow-950 border-yellow-400';
       case 'low':
-        return 'bg-blue-50 text-blue-900 border-blue-300';
+        return 'bg-blue-100 text-blue-950 border-blue-400';
       default:
-        return 'bg-gray-50 text-gray-900 border-gray-300';
+        return 'bg-gray-100 text-gray-950 border-gray-400';
+    }
+  };
+
+  const severityBadge = (severity: string) => {
+    switch (severity.toLowerCase()) {
+      case 'critical':
+        return 'bg-red-700 text-white';
+      case 'major':
+        return 'bg-orange-700 text-white';
+      case 'medium':
+        return 'bg-yellow-700 text-white';
+      case 'low':
+        return 'bg-blue-700 text-white';
+      default:
+        return 'bg-gray-700 text-white';
     }
   };
 
   const STAT_STYLES: Record<(typeof SEVERITIES)[number], { bg: string; text: string; label: string }> = {
-    critical: { bg: 'bg-red-50', text: 'text-red-700', label: 'Critical' },
-    major: { bg: 'bg-orange-50', text: 'text-orange-700', label: 'Major' },
-    medium: { bg: 'bg-yellow-50', text: 'text-yellow-700', label: 'Medium' },
-    low: { bg: 'bg-blue-50', text: 'text-blue-700', label: 'Low' },
-    info: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Info' },
+    critical: { bg: 'bg-red-100', text: 'text-red-800', label: 'Critical' },
+    major: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Major' },
+    medium: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Medium' },
+    low: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Low' },
+    info: { bg: 'bg-gray-200', text: 'text-gray-800', label: 'Info' },
   };
 
   const findingsPanel = (
@@ -315,7 +358,7 @@ export default function ResultsPage() {
           {visibleFindings.length === 0 ? (
             <p className="text-muted-foreground text-sm">No findings in this filter.</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1">
               {visibleFindings.map((finding) => {
                 const title = finding.title || finding.category?.replace(/_/g, ' ') || 'Finding';
                 const fixed = finding.status === 'resolved';
@@ -336,18 +379,18 @@ export default function ResultsPage() {
                       }
                       aria-expanded={expandedFinding === finding.finding_id}
                       aria-controls={`finding-detail-${finding.finding_id}`}
-                      className="w-full py-2.5 px-3 text-left flex justify-between items-center gap-3 hover:brightness-95"
+                      className="w-full py-1.5 px-2.5 text-left flex justify-between items-center gap-2 hover:brightness-95"
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-black/10">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className={cn('shrink-0 text-[9px] font-bold uppercase tracking-wide px-1 py-0.5 rounded leading-none', severityBadge(finding.severity))}>
                           {finding.severity}
                         </span>
                         {fixed && (
-                          <span className="shrink-0 flex items-center gap-0.5 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-green-600 text-white">
-                            <Check size={10} strokeWidth={3} /> Fixed
+                          <span className="shrink-0 flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide px-1 py-0.5 rounded leading-none bg-green-700 text-white">
+                            <Check size={9} strokeWidth={3} /> Fixed
                           </span>
                         )}
-                        <h3 className={cn('font-semibold text-sm truncate', fixed && 'line-through')}>
+                        <h3 className={cn('font-semibold text-xs truncate', fixed && 'line-through')}>
                           {title}
                         </h3>
                         {finding.section_ref && (
@@ -357,24 +400,25 @@ export default function ResultsPage() {
                               e.stopPropagation();
                               handleLocateInDoc(finding.section_ref);
                             }}
-                            className="shrink-0 text-xs font-normal text-primary hover:underline"
+                            className="shrink-0 flex items-center gap-0.5 text-[11px] font-semibold text-primary hover:underline"
                           >
-                            &middot; {finding.section_ref}
+                            <MapPin size={10} strokeWidth={2.5} aria-hidden="true" />
+                            {finding.section_ref}
                           </button>
                         )}
                       </div>
                       <ChevronDown
-                        size={16}
+                        size={14}
                         strokeWidth={2}
                         aria-hidden="true"
-                        className={`ml-4 shrink-0 transition-transform duration-150 ${
+                        className={`ml-2 shrink-0 transition-transform duration-150 ${
                           expandedFinding === finding.finding_id ? 'rotate-180' : ''
                         }`}
                       />
                     </button>
 
                     {expandedFinding === finding.finding_id && (
-                      <div id={`finding-detail-${finding.finding_id}`} className="border-t px-3 py-3 space-y-3 text-sm">
+                      <div id={`finding-detail-${finding.finding_id}`} className="border-t px-2.5 py-2 space-y-2 text-xs">
                         <div>
                           <h4 className="font-semibold mb-1 text-xs uppercase tracking-wide text-muted-foreground">Description</h4>
                           <p>{finding.description}</p>
@@ -418,7 +462,7 @@ export default function ResultsPage() {
 
   return (
     <AppShell fullWidth>
-      <div className="max-w-[1600px] mx-auto">
+      <div className="w-full">
         <div className="flex items-center justify-between mb-1">
           <h1 className="text-xl font-bold text-foreground">Review Results</h1>
           <Link
@@ -518,40 +562,51 @@ export default function ResultsPage() {
         </div>
 
         {showDocument && docInfo?.parsed_sections ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-            <div>{findingsPanel}</div>
-            <Card className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] flex flex-col">
-              <CardHeader className="pb-1 pt-3">
-                <CardTitle className="text-base">Document</CardTitle>
-              </CardHeader>
-              <CardContent className="overflow-y-auto pb-3" ref={docPaneRef}>
-                <div className="space-y-4 text-sm">
-                  {docInfo.parsed_sections.map((section, i) => {
-                    const slug = sectionSlug(section.heading, i);
-                    return (
-                      <div
-                        key={slug}
-                        id={slug}
-                        className={cn(
-                          'rounded-md p-2 -m-2 transition-colors duration-500',
-                          highlightedSection === slug && 'bg-yellow-100'
-                        )}
-                      >
-                        <h4 className="font-semibold text-foreground mb-1">
-                          {section.heading}
-                          {section.page_number != null && (
-                            <span className="ml-2 text-xs font-normal text-muted-foreground">
-                              p.{section.page_number}
-                            </span>
+          <div ref={splitContainerRef} className={cn('flex items-start gap-0', resizingSplit && 'select-none')}>
+            <div style={{ width: `${splitPercent}%` }} className="min-w-0 pr-2">
+              {findingsPanel}
+            </div>
+
+            {/* Drag-to-resize divider */}
+            <div
+              onMouseDown={startSplitResize}
+              className="w-1.5 shrink-0 self-stretch cursor-col-resize rounded-full bg-border hover:bg-primary/50 active:bg-primary transition-colors"
+            />
+
+            <div style={{ width: `${100 - splitPercent}%` }} className="min-w-0 pl-2">
+              <Card className="sticky top-4 max-h-[calc(100vh-2rem)] flex flex-col">
+                <CardHeader className="pb-1 pt-3">
+                  <CardTitle className="text-base">Document</CardTitle>
+                </CardHeader>
+                <CardContent className="overflow-y-auto pb-3" ref={docPaneRef}>
+                  <div className="space-y-4 text-sm">
+                    {docInfo.parsed_sections.map((section, i) => {
+                      const slug = sectionSlug(section.heading, i);
+                      return (
+                        <div
+                          key={slug}
+                          id={slug}
+                          className={cn(
+                            'rounded-md p-2 -m-2 transition-colors duration-500',
+                            highlightedSection === slug && 'bg-yellow-100'
                           )}
-                        </h4>
-                        <p className="whitespace-pre-wrap text-muted-foreground">{section.content}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+                        >
+                          <h4 className="font-semibold text-foreground mb-1">
+                            {section.heading}
+                            {section.page_number != null && (
+                              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                                p.{section.page_number}
+                              </span>
+                            )}
+                          </h4>
+                          <p className="whitespace-pre-wrap text-muted-foreground">{section.content}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         ) : (
           findingsPanel
