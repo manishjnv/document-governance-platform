@@ -46,6 +46,14 @@ ENV PATH=/home/appuser/.local/bin:$PATH \
 # Copy application
 COPY --chown=appuser:appuser . .
 
+# Pre-create the upload dir owned by appuser so that when docker-compose
+# mounts a fresh named volume here, Docker copies this directory's
+# existing ownership into the new volume (documented behavior for a
+# volume mount over a path that already has content in the image) --
+# without this, a brand-new volume defaults to root:root and appuser
+# gets Permission denied trying to write an uploaded file.
+RUN mkdir -p /app/data/uploads && chown -R appuser:appuser /app/data
+
 USER appuser
 
 # Health check
