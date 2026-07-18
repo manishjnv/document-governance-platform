@@ -82,6 +82,7 @@ def _sanitize_filename(raw_filename: str) -> str:
 async def upload_document(
     file: UploadFile = File(...),
     org_id: UUID = Query(..., description="Organization ID"),
+    project_name: Optional[str] = Query(None, description="Optional project label"),
     current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -171,8 +172,10 @@ async def upload_document(
         uploaded_by_user_id=UUID(str(current_user.user_id)),
         filename=filename,
         original_filename=raw_filename,
+        project_name=project_name,
         file_size_bytes=len(content),
-        file_type=file_type.upper(),
+        file_type=file_type,
+        s3_path=storage_path,
         version=1,
         document_type=detected_type,
         page_count=page_count,
@@ -242,7 +245,37 @@ async def list_documents(
     result = await db.execute(query)
     documents = result.scalars().all()
 
-    return [DocumentRead.from_orm(doc) for doc in documents]
+    # Attach each document's latest review score (accuracy/completeness
+    # columns on the dashboard) -- one query for the whole page, not N+1.
+    from app.models.review import Review
+
+    doc_ids = [doc.doc_id for doc in documents]
+    latest_review_by_doc: dict = {}
+    if doc_ids:
+        review_result = await db.execute(
+            select(Review)
+            .where(Review.doc_id.in_(doc_ids) & (Review.deleted_at.is_(None)))
+            .order_by(Review.doc_id, Review.created_at.desc())
+        )
+        for review in review_result.scalars().all():
+            latest_review_by_doc.setdefault(review.doc_id, review)
+
+    reads = []
+    for doc in documents:
+        read = DocumentRead.from_orm(doc)
+        latest_review = latest_review_by_doc.get(doc.doc_id)
+        if latest_review and latest_review.status == "completed":
+            read.latest_overall_score = (
+                float(latest_review.overall_score) if latest_review.overall_score is not None else None
+            )
+            read.latest_completeness_score = (
+                float(latest_review.score_completeness)
+                if latest_review.score_completeness is not None
+                else None
+            )
+        reads.append(read)
+
+    return reads
 
 
 @router.get(

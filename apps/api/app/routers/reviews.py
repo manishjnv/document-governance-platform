@@ -123,6 +123,7 @@ async def trigger_review(
 
         # Store results in database
         review.status = "completed"
+        review.completed_at = datetime.utcnow()
         review.overall_score = orchestrated_result.overall_confidence * 100
         review.processing_time_seconds = int(orchestrated_result.total_duration_seconds)
 
@@ -131,11 +132,10 @@ async def trigger_review(
 
         scorer = DocumentScorer(weight_overrides=scoring_weights)
 
-        # Collect all findings for scoring
-        all_findings = []
-        for agent_name, agent_info in orchestrated_result.merged_findings.get("agents", {}).items():
-            if agent_info.get("status") == "success":
-                all_findings.extend(agent_info.get("findings", []))
+        # Collect all findings for scoring (already flattened by
+        # orchestrator._merge_findings -- agent_info["findings"] per-agent is
+        # the raw agent JSON dict, not a list; using that here was the bug).
+        all_findings = orchestrated_result.merged_findings.get("findings", [])
 
         scoring_result = await scorer.score_document(
             str(doc_id),
@@ -163,39 +163,41 @@ async def trigger_review(
         low_count = 0
         info_count = 0
 
-        # Store individual findings
-        for agent_name, agent_info in orchestrated_result.merged_findings.get("agents", {}).items():
-            if agent_info.get("status") == "success":
-                for finding_data in agent_info.get("findings", []):
-                    finding = Finding(
-                        finding_id=uuid4(),
-                        org_id=doc.org_id,
-                        review_id=review_id,
-                        finding_source="agent",
-                        agent_name=agent_name,
-                        category=finding_data.get("type", "unknown"),
-                        title=finding_data.get("description", "")[:255],
-                        description=finding_data.get("description", ""),
-                        evidence=finding_data.get("evidence"),
-                        severity=finding_data.get("severity", "medium"),
-                        confidence=int((finding_data.get("confidence", 0.5) * 100)),
-                        recommendation=finding_data.get("recommendation", ""),
-                    )
+        # Store individual findings (already flattened by
+        # orchestrator._merge_findings, source_agent tagged per item --
+        # iterating agent_info["findings"] directly was the bug: that's the
+        # raw per-agent JSON dict, not a list, so it yielded dict KEYS as
+        # strings instead of finding objects)
+        for finding_data in orchestrated_result.merged_findings.get("findings", []):
+            finding = Finding(
+                finding_id=uuid4(),
+                org_id=doc.org_id,
+                review_id=review_id,
+                finding_source="agent",
+                agent_name=finding_data.get("source_agent", "unknown"),
+                category=finding_data.get("type", "unknown"),
+                title=finding_data.get("description", "")[:255],
+                description=finding_data.get("description", ""),
+                evidence=finding_data.get("evidence"),
+                severity=finding_data.get("severity", "medium"),
+                confidence=int((finding_data.get("confidence", 0.5) * 100)),
+                recommendation=finding_data.get("recommendation", ""),
+            )
 
-                    db.add(finding)
+            db.add(finding)
 
-                    # Count by severity
-                    severity = finding_data.get("severity", "medium").lower()
-                    if severity == "critical":
-                        critical_count += 1
-                    elif severity == "major":
-                        major_count += 1
-                    elif severity == "medium":
-                        medium_count += 1
-                    elif severity == "low":
-                        low_count += 1
-                    else:
-                        info_count += 1
+            # Count by severity
+            severity = finding_data.get("severity", "medium").lower()
+            if severity == "critical":
+                critical_count += 1
+            elif severity == "major":
+                major_count += 1
+            elif severity == "medium":
+                medium_count += 1
+            elif severity == "low":
+                low_count += 1
+            else:
+                info_count += 1
 
         # Store rule violations as findings
         for violation in orchestrated_result.rule_violations:
@@ -273,7 +275,7 @@ async def trigger_review(
         }
 
     except Exception as e:
-        logger.error(f"Review failed for doc {doc_id}: {e}")
+        logger.exception(f"Review failed for doc {doc_id}: {e}")
         review.status = "failed"
         review.error_message = str(e)
         await db.commit()

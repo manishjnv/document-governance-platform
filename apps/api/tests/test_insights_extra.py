@@ -142,6 +142,7 @@ async def analytics_db():
                 uploaded_by_user_id TEXT,
                 filename TEXT NOT NULL,
                 original_filename TEXT NOT NULL,
+                project_name TEXT,
                 file_size_bytes INTEGER NOT NULL,
                 file_type TEXT NOT NULL,
                 s3_path TEXT NOT NULL,

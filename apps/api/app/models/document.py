@@ -50,6 +50,7 @@ class Document(Base, TimestampMixin, SoftDeleteMixin):
     )
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    project_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     file_size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
     file_type: Mapped[str] = mapped_column(String(20), nullable=False)
     s3_path: Mapped[str] = mapped_column(String(512), nullable=False)

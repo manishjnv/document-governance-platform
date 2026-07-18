@@ -1,5 +1,6 @@
 """Base AI agent class for document review."""
 
+import asyncio
 import json
 import logging
 from abc import ABC, abstractmethod
@@ -106,7 +107,13 @@ class ReviewAgent(ABC):
         try:
             logger.info(f"{self.name}: Starting review...")
 
-            response = self.client.messages.create(
+            # to_thread: self.client (Anthropic or the OpenRouter adapter) is
+            # a synchronous SDK call -- awaiting it directly would block the
+            # whole event loop for the entire ~10-90s request, freezing every
+            # other concurrent request (login, search, dashboard) on this
+            # single-worker dev server until it returns.
+            response = await asyncio.to_thread(
+                self.client.messages.create,
                 model=self.model,
                 max_tokens=2000,
                 temperature=0.7,

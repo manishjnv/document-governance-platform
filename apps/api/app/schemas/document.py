@@ -163,6 +163,7 @@ class DocumentRead(BaseModel):
     uploaded_by_user_id: Optional[UUID] = None
     filename: str
     original_filename: str
+    project_name: Optional[str] = None
     file_size_bytes: int
     file_type: FileType
     version: int
@@ -172,3 +173,5 @@ class DocumentRead(BaseModel):
     storage_status: StorageStatus
     created_at: datetime
     updated_at: datetime
+    latest_overall_score: Optional[float] = None
+    latest_completeness_score: Optional[float] = None

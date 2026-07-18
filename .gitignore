@@ -59,5 +59,8 @@ Thumbs.db
 logs/
 *.log
 
+# Local document storage backend (LocalStorage dev default, app/config.py)
+apps/api/data/
+
 # Claude Code local settings (personal, not shared)
 .claude/settings.local.json

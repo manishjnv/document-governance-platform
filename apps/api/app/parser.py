@@ -58,10 +58,12 @@ class DocxParser:
     async def parse(file_content: bytes) -> ParseResult:
         """Parse DOCX file."""
         try:
+            from io import BytesIO
+
             from docx import Document
             from docx.enum.style import WD_STYLE_TYPE
 
-            doc = Document(file_content)
+            doc = Document(BytesIO(file_content))
             raw_text = []
             sections = []
             page_count = 1  # DOCX doesn't have built-in page info
