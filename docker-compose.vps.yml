@@ -1,0 +1,88 @@
+# Deployment for a SHARED VPS that already runs other projects' containers.
+# Distinct from docker-compose.prod.yml (that one assumes a dedicated host
+# with standard ports 80/443/5432/6379/3000/8000 -- all in use here by
+# other projects). Everything below is isolated: own network, own named
+# volumes, own container names (all "scopewise-" prefixed), and only two
+# host ports published (9094 web, 9095 api) -- chosen because they were
+# free at deploy time (see `ss -tlnp` against the host before adding more).
+# No postgres/redis ports are published to the host at all.
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: scopewise-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - scopewise_postgres_data:/var/lib/postgresql/data
+    networks:
+      - scopewise-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: scopewise-redis
+    volumes:
+      - scopewise_redis_data:/data
+    networks:
+      - scopewise-net
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile.prod
+    container_name: scopewise-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      STORAGE_TYPE: local
+      STORAGE_LOCAL_PATH: /app/data/uploads
+    volumes:
+      - scopewise_uploads:/app/data/uploads
+    ports:
+      - "9095:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - scopewise-net
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile.prod
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    container_name: scopewise-web
+    restart: unless-stopped
+    ports:
+      - "9094:3000"
+    depends_on:
+      - api
+    networks:
+      - scopewise-net
+
+networks:
+  scopewise-net:
+    name: scopewise-net
+
+volumes:
+  scopewise_postgres_data:
+    name: scopewise_postgres_data
+  scopewise_redis_data:
+    name: scopewise_redis_data
+  scopewise_uploads:
+    name: scopewise_uploads
