@@ -47,6 +47,7 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       CORS_ORIGINS: ${CORS_ORIGINS}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       STORAGE_TYPE: local
       STORAGE_LOCAL_PATH: /app/data/uploads
