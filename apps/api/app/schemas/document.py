@@ -175,3 +175,12 @@ class DocumentRead(BaseModel):
     updated_at: datetime
     latest_overall_score: Optional[float] = None
     latest_completeness_score: Optional[float] = None
+
+
+class DocumentDetail(DocumentRead):
+    """Single-document fetch -- includes parsed content for the side-by-side
+    document viewer on the results page. Deliberately NOT part of
+    DocumentRead/list_documents: that response is paginated and would bloat
+    every row with full document text for no reason."""
+
+    parsed_sections: Optional[Any] = None

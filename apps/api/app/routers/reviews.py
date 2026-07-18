@@ -23,6 +23,38 @@ from app.schemas.auth import TokenData
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/reviews", tags=["reviews"])
 
+
+def _locate_finding(evidence, document_text, sections):
+    """Best-effort: which section/page a finding's evidence text falls in.
+
+    Matches the finding's `evidence` (agents are prompted to quote clause
+    language directly) against the document's parsed_sections content, same
+    substring-position approach as app/rules/ambiguous_language.py's
+    _find_section. Findings without evidence, or where the evidence text
+    doesn't match verbatim, simply get no location -- not every agent
+    quotes evidence as strictly as Legal/PMO do.
+    """
+    if not evidence or not document_text or not sections:
+        return None
+
+    idx = document_text.find(evidence.strip())
+    if idx == -1:
+        return None
+
+    for section in sections:
+        content = section.get("content") or ""
+        if not content:
+            continue
+        start = document_text.find(content)
+        if start == -1:
+            continue
+        if start <= idx < start + len(content):
+            heading = section.get("heading") or "Unknown section"
+            page = section.get("page_number")
+            return f"{heading} (p.{page})" if page else heading
+
+    return None
+
 # Global orchestrator instance
 _orchestrator: ReviewOrchestrator | None = None
 
@@ -184,6 +216,9 @@ async def trigger_review(
                 title=finding_type.replace("_", " ").title()[:255],
                 description=finding_data.get("description", ""),
                 evidence=finding_data.get("evidence"),
+                section_ref=_locate_finding(
+                    finding_data.get("evidence"), doc.parsed_text, doc.parsed_sections or []
+                ),
                 severity=finding_data.get("severity", "medium"),
                 confidence=int((finding_data.get("confidence", 0.5) * 100)),
                 recommendation=finding_data.get("recommendation", ""),
@@ -216,6 +251,9 @@ async def trigger_review(
                 title=violation.get("rule_name", "")[:255],
                 description=violation.get("description", ""),
                 evidence=violation.get("evidence"),
+                section_ref=_locate_finding(
+                    violation.get("evidence"), doc.parsed_text, doc.parsed_sections or []
+                ),
                 severity=violation.get("severity", "medium"),
                 confidence=100,
                 recommendation=violation.get("recommendation", ""),
@@ -350,6 +388,7 @@ async def get_review(
                 "title": f.title,
                 "description": f.description,
                 "evidence": f.evidence,
+                "section_ref": f.section_ref,
                 "severity": f.severity,
                 "confidence": int(f.confidence),
                 "recommendation": f.recommendation,
@@ -530,3 +569,44 @@ async def list_reviews(
         }
         for r in reviews
     ]
+
+
+@router.patch(
+    "/{review_id}/findings/{finding_id}",
+    summary="Update a finding's status (e.g. mark fixed)",
+)
+async def update_finding_status(
+    review_id: UUID,
+    finding_id: UUID,
+    body: dict,
+    current_user: TokenData = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Mark a finding acknowledged/resolved/dismissed/reopened (open)."""
+    from sqlalchemy import select
+
+    allowed = {"open", "acknowledged", "resolved", "dismissed"}
+    new_status = body.get("status")
+    if new_status not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"status must be one of {sorted(allowed)}",
+        )
+
+    result = await db.execute(
+        select(Finding).where(
+            (Finding.finding_id == finding_id)
+            & (Finding.review_id == review_id)
+            & (Finding.deleted_at.is_(None))
+        )
+    )
+    finding = result.scalar_one_or_none()
+    if not finding:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Finding not found")
+
+    await verify_org_access(str(finding.org_id), current_user)
+
+    finding.status = new_status
+    await db.commit()
+
+    return {"finding_id": str(finding.finding_id), "status": finding.status}

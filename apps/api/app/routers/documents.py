@@ -26,6 +26,7 @@ from app.parser import parse_document
 from app.schemas.auth import TokenData
 from app.schemas.document import (
     DocumentCreate,
+    DocumentDetail,
     DocumentRead,
     DocumentUpdate,
 )
@@ -325,7 +326,7 @@ async def get_documents_batch(
 
 @router.get(
     "/{doc_id}",
-    response_model=DocumentRead,
+    response_model=DocumentDetail,
     summary="Get document metadata",
 )
 async def get_document(
@@ -359,7 +360,7 @@ async def get_document(
     await record_document_view(db, doc.org_id, doc.doc_id, current_user.user_id)
     await db.commit()
 
-    return DocumentRead.from_orm(doc)
+    return DocumentDetail.from_orm(doc)
 
 
 @router.delete(
