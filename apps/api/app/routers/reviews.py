@@ -169,14 +169,19 @@ async def trigger_review(
         # raw per-agent JSON dict, not a list, so it yielded dict KEYS as
         # strings instead of finding objects)
         for finding_data in orchestrated_result.merged_findings.get("findings", []):
+            finding_type = finding_data.get("type", "unknown")
             finding = Finding(
                 finding_id=uuid4(),
                 org_id=doc.org_id,
                 review_id=review_id,
                 finding_source="agent",
                 agent_name=finding_data.get("source_agent", "unknown"),
-                category=finding_data.get("type", "unknown"),
-                title=finding_data.get("description", "")[:255],
+                category=finding_type,
+                # Derived from `type` (e.g. "missing_liability_cap" -> "Missing
+                # Liability Cap"), not copied from `description` -- title used
+                # to be description[:255], so every finding card showed the
+                # same text twice (title, then "Description" repeating it).
+                title=finding_type.replace("_", " ").title()[:255],
                 description=finding_data.get("description", ""),
                 evidence=finding_data.get("evidence"),
                 severity=finding_data.get("severity", "medium"),
