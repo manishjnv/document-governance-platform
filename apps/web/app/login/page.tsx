@@ -53,9 +53,9 @@ export default function LoginPage() {
         <CardHeader className="text-center space-y-1">
           <div className="flex items-center justify-center gap-2">
             <ShieldCheck className="h-5 w-5 text-primary" />
-            <CardTitle>EDGP</CardTitle>
+            <CardTitle>Scopewise</CardTitle>
           </div>
-          <CardDescription>Enterprise Document Governance Platform</CardDescription>
+          <CardDescription>Catch contract risk before you sign.</CardDescription>
         </CardHeader>
 
         <CardContent>
