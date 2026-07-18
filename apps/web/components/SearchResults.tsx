@@ -19,6 +19,8 @@ interface SearchResultsProps {
   total: number;
   loading?: boolean;
   onDocumentClick?: (docId: string) => void;
+  onReviewClick?: (docId: string) => void;
+  reviewingDocId?: string | null;
 }
 
 export default function SearchResults({
@@ -26,6 +28,8 @@ export default function SearchResults({
   total,
   loading = false,
   onDocumentClick,
+  onReviewClick,
+  reviewingDocId = null,
 }: SearchResultsProps) {
   if (loading) {
     return (
@@ -100,6 +104,15 @@ export default function SearchResults({
             <span className="text-xs text-gray-500">
               {new Date(result.created_at).toLocaleDateString()}
             </span>
+            {onReviewClick && (
+              <button
+                onClick={() => onReviewClick(result.doc_id)}
+                disabled={reviewingDocId === result.doc_id}
+                className="text-xs font-medium text-purple-600 hover:underline ml-auto disabled:opacity-50 disabled:no-underline"
+              >
+                {reviewingDocId === result.doc_id ? 'Reviewing... (~20s)' : 'Review'}
+              </button>
+            )}
           </div>
 
           {/* Snippet */}

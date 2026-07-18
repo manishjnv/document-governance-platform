@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { UploadCloud } from 'lucide-react';
@@ -21,8 +21,25 @@ export default function UploadPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [orgId, setOrgId] = useState('');
+  const [projectName, setProjectName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    axios
+      .get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => setOrgId(res.data.org_id))
+      .catch(() => setError('Failed to load user info'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -80,7 +97,7 @@ export default function UploadPage() {
     }
 
     if (!orgId) {
-      setError('Please enter organization ID');
+      setError('Unable to determine your organization -- try refreshing the page');
       return;
     }
 
@@ -93,8 +110,11 @@ export default function UploadPage() {
       const formData = new FormData();
       formData.append('file', file);
 
+      const params = new URLSearchParams({ org_id: orgId });
+      if (projectName) params.append('project_name', projectName);
+
       const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/upload?org_id=${orgId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/upload?${params.toString()}`,
         formData,
         {
           headers: {
@@ -129,19 +149,18 @@ export default function UploadPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleUpload} className="space-y-4">
-              {/* Organization ID */}
+              {/* Project (optional label) */}
               <div>
-                <label htmlFor="orgId" className="block text-sm font-medium mb-2">
-                  Organization ID
+                <label htmlFor="projectName" className="block text-sm font-medium mb-2">
+                  Project <span className="text-muted-foreground font-normal">(optional)</span>
                 </label>
                 <input
-                  id="orgId"
+                  id="projectName"
                   type="text"
-                  value={orgId}
-                  onChange={(e) => setOrgId(e.target.value)}
-                  placeholder="Enter your organization UUID"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  placeholder="e.g. Acme Cloud Migration"
                   className="w-full px-4 py-2 border border-input rounded-md bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors duration-150 ease-out"
-                  required
                 />
               </div>
 

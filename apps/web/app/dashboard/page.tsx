@@ -9,10 +9,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Link from 'next/link';
+import { ArrowUpDown } from 'lucide-react';
 import {
   type ColumnDef,
+  type SortingState,
   flexRender,
   getCoreRowModel,
+  getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
@@ -26,13 +29,39 @@ import {
 } from '@/components/ui/table';
 import { AppShell } from '@/components/AppShell';
 
+const DOCUMENT_TYPES = ['SOW', 'Proposal', 'RFP', 'Other'];
+
 interface Document {
   doc_id: string;
   filename: string;
   original_filename: string;
+  project_name: string | null;
   document_type: string;
   page_count: number;
   created_at: string;
+  latest_overall_score: number | null;
+  latest_completeness_score: number | null;
+}
+
+function SortableHeader({ label, column }: { label: string; column: any }) {
+  return (
+    <button
+      className="flex items-center gap-1 font-medium hover:text-foreground"
+      onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+    >
+      {label}
+      <ArrowUpDown size={14} strokeWidth={2} aria-hidden="true" />
+    </button>
+  );
+}
+
+function ScoreCell({ value }: { value: number | null }) {
+  if (value === null || value === undefined) {
+    return <span className="text-muted-foreground">-</span>;
+  }
+  const color =
+    value >= 80 ? 'text-green-600' : value >= 50 ? 'text-yellow-600' : 'text-red-600';
+  return <span className={`font-medium ${color}`}>{value.toFixed(0)}</span>;
 }
 
 export default function DashboardPage() {
@@ -41,20 +70,29 @@ export default function DashboardPage() {
   const [error, setError] = useState('');
   const [orgId, setOrgId] = useState('');
   const [filterType, setFilterType] = useState('');
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [reviewingDocId, setReviewingDocId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (!token) {
       router.push('/login');
-      return;
     }
-
-    fetchDocuments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
+
+  // Fetches on mount and re-fetches whenever the type filter changes.
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    fetchDocuments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterType]);
 
   const fetchDocuments = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem('access_token');
 
       // Get current user to get org_id
@@ -89,6 +127,8 @@ export default function DashboardPage() {
 
   const handleReview = async (docId: string) => {
     try {
+      setError('');
+      setReviewingDocId(docId);
       const token = localStorage.getItem('access_token');
 
       const response = await axios.post(
@@ -102,63 +142,129 @@ export default function DashboardPage() {
       router.push(`/results/${response.data.review_id}`);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to trigger review');
+    } finally {
+      setReviewingDocId(null);
     }
   };
+
+  const handleView = async (docId: string) => {
+    try {
+      const token = localStorage.getItem('access_token');
+
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/reviews`,
+        {
+          params: { doc_id: docId, org_id: orgId },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      const latest = response.data[0];
+      if (!latest) {
+        setError('No review yet for this document -- click Review first');
+        return;
+      }
+      router.push(`/results/${latest.review_id}`);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to load review');
+    }
+  };
+
+  // Stats: computed client-side from the currently-loaded (filtered) page of documents.
+  const stats = useMemo(() => {
+    const byType: Record<string, number> = {};
+    for (const doc of documents) {
+      const type = doc.document_type || 'Unknown';
+      byType[type] = (byType[type] || 0) + 1;
+    }
+    return { total: documents.length, byType };
+  }, [documents]);
 
   const columns = useMemo<ColumnDef<Document>[]>(
     () => [
       {
         id: 'filename',
-        header: 'Filename',
+        header: ({ column }) => <SortableHeader label="Filename" column={column} />,
         accessorFn: (doc) => doc.original_filename || doc.filename,
         cell: (info) => (
           <span className="font-medium">{info.getValue<string>()}</span>
         ),
       },
       {
+        id: 'project_name',
+        header: ({ column }) => <SortableHeader label="Project" column={column} />,
+        accessorFn: (doc) => doc.project_name || '-',
+      },
+      {
         id: 'document_type',
-        header: 'Type',
+        header: ({ column }) => <SortableHeader label="Type" column={column} />,
         accessorFn: (doc) => doc.document_type || 'Unknown',
       },
       {
+        id: 'latest_completeness_score',
+        header: ({ column }) => <SortableHeader label="Completeness" column={column} />,
+        accessorFn: (doc) => doc.latest_completeness_score,
+        cell: (info) => <ScoreCell value={info.getValue<number | null>()} />,
+      },
+      {
+        id: 'latest_overall_score',
+        header: ({ column }) => <SortableHeader label="Accuracy" column={column} />,
+        accessorFn: (doc) => doc.latest_overall_score,
+        cell: (info) => <ScoreCell value={info.getValue<number | null>()} />,
+      },
+      {
         id: 'page_count',
-        header: 'Pages',
+        header: ({ column }) => <SortableHeader label="Pages" column={column} />,
         accessorFn: (doc) => doc.page_count || '-',
       },
       {
         id: 'created_at',
-        header: 'Uploaded',
-        accessorFn: (doc) => new Date(doc.created_at).toLocaleDateString(),
+        header: ({ column }) => <SortableHeader label="Uploaded" column={column} />,
+        accessorFn: (doc) => doc.created_at,
+        cell: (info) => new Date(info.getValue<string>()).toLocaleDateString(),
       },
       {
         id: 'actions',
         header: 'Actions',
-        cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="link"
-              size="sm"
-              className="h-auto p-0"
-              onClick={() => handleReview(row.original.doc_id)}
-            >
-              Review
-            </Button>
-            <span className="text-muted-foreground">•</span>
-            <Button variant="link" size="sm" className="h-auto p-0" asChild>
-              <Link href={`/document/${row.original.doc_id}`}>View</Link>
-            </Button>
-          </div>
-        ),
+        cell: ({ row }) => {
+          const isReviewing = reviewingDocId === row.original.doc_id;
+          return (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0"
+                disabled={isReviewing}
+                onClick={() => handleReview(row.original.doc_id)}
+              >
+                {isReviewing ? 'Reviewing... (~20s)' : 'Review'}
+              </Button>
+              <span className="text-muted-foreground">•</span>
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0"
+                disabled={isReviewing}
+                onClick={() => handleView(row.original.doc_id)}
+              >
+                View
+              </Button>
+            </div>
+          );
+        },
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [orgId, reviewingDocId]
   );
 
   const table = useReactTable({
     data: documents,
     columns,
+    state: { sorting },
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
   });
 
   return (
@@ -170,25 +276,39 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      {/* Filters */}
-      <div className="mb-6">
-        <label htmlFor="filterType" className="block text-sm font-medium mb-2">
-          Filter by Type
-        </label>
-        <select
-          id="filterType"
-          value={filterType}
-          onChange={(e) => {
-            setFilterType(e.target.value);
-            setLoading(true);
-          }}
-          className="px-3 py-1.5 text-sm border border-input rounded-md focus:ring-2 focus:ring-ring bg-background"
-        >
-          <option value="">All Types</option>
-          <option value="SOW">Statement of Work</option>
-          <option value="Proposal">Proposal</option>
-          <option value="ProjectPlan">Project Plan</option>
-        </select>
+      {/* Stats + Filter row */}
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
+        <div className="flex flex-wrap gap-3">
+          <div className="rounded-lg border px-4 py-2">
+            <p className="text-xs text-muted-foreground">Total</p>
+            <p className="text-lg font-semibold">{stats.total}</p>
+          </div>
+          {DOCUMENT_TYPES.map((type) => (
+            <div key={type} className="rounded-lg border px-4 py-2">
+              <p className="text-xs text-muted-foreground">{type}</p>
+              <p className="text-lg font-semibold">{stats.byType[type] || 0}</p>
+            </div>
+          ))}
+        </div>
+
+        <div>
+          <label htmlFor="filterType" className="block text-sm font-medium mb-2">
+            Filter by Type
+          </label>
+          <select
+            id="filterType"
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="px-3 py-1.5 text-sm border border-input rounded-md focus:ring-2 focus:ring-ring bg-background"
+          >
+            <option value="">All Types</option>
+            {DOCUMENT_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Error Message */}

@@ -41,12 +41,22 @@ export default function SearchPage() {
   const [error, setError] = useState('');
   const [total, setTotal] = useState(0);
   const [lastQuery, setLastQuery] = useState('');
+  const [orgId, setOrgId] = useState('');
+  const [reviewingDocId, setReviewingDocId] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (!token) {
       router.push('/login');
+      return;
     }
+
+    axios
+      .get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => setOrgId(res.data.org_id))
+      .catch(() => setError('Failed to load user info'));
   }, [router]);
 
   const handleSearch = async (filters: {
@@ -113,8 +123,44 @@ export default function SearchPage() {
     }
   };
 
-  const handleDocumentClick = (docId: string) => {
-    router.push(`/document/${docId}`);
+  const handleDocumentClick = async (docId: string) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/reviews`,
+        {
+          params: { doc_id: docId, org_id: orgId },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      const latest = response.data[0];
+      if (!latest) {
+        setError('No review yet for this document -- click Review first');
+        return;
+      }
+      router.push(`/results/${latest.review_id}`);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to load review');
+    }
+  };
+
+  const handleReviewClick = async (docId: string) => {
+    try {
+      setError('');
+      setReviewingDocId(docId);
+      const token = localStorage.getItem('access_token');
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/reviews/${docId}/trigger`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      router.push(`/results/${response.data.review_id}`);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to trigger review');
+    } finally {
+      setReviewingDocId(null);
+    }
   };
 
   const handleExportCsv = () => {
@@ -187,6 +233,8 @@ export default function SearchPage() {
               total={total}
               loading={loading}
               onDocumentClick={handleDocumentClick}
+              onReviewClick={handleReviewClick}
+              reviewingDocId={reviewingDocId}
             />
           </div>
 
