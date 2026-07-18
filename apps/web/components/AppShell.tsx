@@ -197,12 +197,13 @@ export function AppShell({
         </SheetContent>
       </Sheet>
 
-      <main style={{ paddingLeft: 0 }} className="md:[padding-left:var(--sidebar-w)]" data-shell-main>
-        <style jsx>{`
-          main {
-            --sidebar-w: ${effectiveWidth}px;
-          }
-        `}</style>
+      <main
+        style={{ '--sidebar-w': `${effectiveWidth}px` } as React.CSSProperties}
+        className={cn(
+          'md:[padding-left:var(--sidebar-w)]',
+          !resizing && 'transition-[padding-left] duration-150 ease-out'
+        )}
+      >
         <div className={cn('py-6 px-4 sm:px-6', fullWidth ? 'w-full' : 'mx-auto max-w-7xl')}>{children}</div>
       </main>
     </div>
