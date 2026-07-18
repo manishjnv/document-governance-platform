@@ -69,7 +69,11 @@ export default function ResultsPage() {
         }
       );
 
-      setReview(response.data);
+      setReview({
+        ...response.data,
+        overall_score: response.data.overall_score ?? 0,
+        risk_score: response.data.risk_score ?? 0,
+      });
       setError('');
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to fetch review');

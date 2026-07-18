@@ -325,8 +325,8 @@ async def get_review(
         "review_id": str(review.review_id),
         "doc_id": str(review.doc_id),
         "status": review.status,
-        "overall_score": float(review.overall_score) if review.overall_score else None,
-        "risk_score": float(review.risk_score) if review.risk_score else None,
+        "overall_score": float(review.overall_score) if review.overall_score is not None else None,
+        "risk_score": float(review.risk_score) if review.risk_score is not None else None,
         "processing_time_seconds": review.processing_time_seconds,
         "findings_count": {
             "critical": review.critical_finding_count,
@@ -429,8 +429,8 @@ async def generate_report(
 
     scoring_result = ScoringResult(
         doc_id=str(review.doc_id),
-        overall_score=float(review.overall_score) if review.overall_score else 0.0,
-        risk_score=float(review.risk_score) if review.risk_score else 0.0,
+        overall_score=float(review.overall_score) if review.overall_score is not None else 0.0,
+        risk_score=float(review.risk_score) if review.risk_score is not None else 0.0,
         category_scores=category_scores,
         summary=review.executive_summary or "Review complete.",
         next_steps=[],
@@ -513,7 +513,7 @@ async def list_reviews(
             "review_id": str(r.review_id),
             "doc_id": str(r.doc_id),
             "status": r.status,
-            "overall_score": float(r.overall_score) if r.overall_score else None,
+            "overall_score": float(r.overall_score) if r.overall_score is not None else None,
             "findings_count": {
                 "critical": r.critical_finding_count,
                 "major": r.major_finding_count,
