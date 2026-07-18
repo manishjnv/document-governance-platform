@@ -99,6 +99,50 @@
 
 ---
 
+### Measured Results (2026-07-18, PRELAUNCH_FIX_PLAN_PROMPT.md Step 2)
+
+**Test set:** SYNTHETIC, 12 documents (6 SOW + 6 RFP), mechanically-defined
+ground truth (which canonical section headings are deliberately present vs.
+omitted, verified against exact aliases in `apps/api/app/rules/builtin.py`).
+**This is a stopgap per the fix plan, NOT launch-gate-final evidence** — no
+real historical SOW/RFP documents were used. Full methodology and raw
+per-document log: `docs/RCA_LOG.md` entries + scratch harness (not
+committed — ad hoc validation script, not a permanent test).
+
+| Metric | Result | Target | Status |
+|---|---|---|---|
+| 1.1 Precision (rule engine, section-presence rules only) | **100%** (12/12) | ≥92% | ✅ PASS |
+| 1.2 Recall (rule engine, section-presence rules only) | **100%** (12/12) | ≥80% | ✅ PASS |
+| 1.3 Calibration error (LegalReviewer governing_law + PMOReviewer governance structured-field extraction) | **17.95%** | <5% | ❌ FAIL |
+| 1.4 Deduplication | **NOT MEASURABLE** | ≥99% | ⚠️ BLOCKED — see below |
+
+**Important scope caveat on 1.1/1.2:** only the rule engine's 13
+section-presence checks (7 SOW + 6 RFP) were graded with rigorous
+mechanical ground truth. Full precision/recall across all 6 agents' free-text
+findings (the harder, more valuable measurement) was NOT comprehensively
+scored — that requires per-document ground truth for every possible finding
+type across all agents, which is a substantially larger effort than this
+pass covered. Treat 1.1/1.2 as "the deterministic rule layer is accurate,"
+not "the whole AI review pipeline is accurate."
+
+**1.3 failure detail:** structured-field extraction (does LegalReviewer
+correctly detect governing-law disclosure; does PMOReviewer correctly detect
+governance structure) was right 75% of the time (9/12 each) while the
+agents' stated `overall_confidence` clustered at 80-100%. That's real
+overconfidence on this specific narrow check, not calibration across all
+finding types — but it's a genuine, reproducible signal, not noise.
+
+**1.4 finding — architectural gap, not just an unmet target:**
+`apps/api/app/ai/orchestrator.py`'s `_merge_findings()` concatenates every
+agent's findings with a `source_agent` tag and does NOT perform any
+cross-agent duplicate detection or merging. There is no dedup logic to
+measure — this metric cannot pass or fail today because the feature it
+measures was never built. This needs to be either (a) implemented before
+launch, or (b) explicitly descoped from the launch gate with sign-off,
+not silently left as an "in progress" line.
+
+---
+
 ## Category 2: Performance & Scalability
 
 ### Metric 2.1: Review Completion Time
