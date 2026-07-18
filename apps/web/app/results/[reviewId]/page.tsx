@@ -41,12 +41,21 @@ interface ReviewData {
   findings: Finding[];
 }
 
+interface DocumentInfo {
+  original_filename: string;
+  project_name: string | null;
+  document_type: string | null;
+  page_count: number | null;
+  created_at: string;
+}
+
 const SEVERITIES = ['critical', 'major', 'medium', 'low', 'info'] as const;
 
 export default function ResultsPage() {
   const params = useParams();
   const reviewId = params.reviewId;
   const [review, setReview] = useState<ReviewData | null>(null);
+  const [document, setDocument] = useState<DocumentInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expandedFinding, setExpandedFinding] = useState<string | null>(null);
@@ -80,6 +89,13 @@ export default function ResultsPage() {
         risk_score: response.data.risk_score ?? 0,
       });
       setError('');
+
+      axios
+        .get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/${response.data.doc_id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then((res) => setDocument(res.data))
+        .catch(() => {});
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to fetch review');
     } finally {
@@ -150,7 +166,7 @@ export default function ResultsPage() {
   return (
     <AppShell fullWidth>
       <div className="max-w-[1400px] mx-auto">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-1">
           <h1 className="text-xl font-bold text-foreground">Review Results</h1>
           <Link
             href="/dashboard"
@@ -160,6 +176,16 @@ export default function ResultsPage() {
             Back to Dashboard
           </Link>
         </div>
+
+        {document && (
+          <p className="text-sm text-muted-foreground mb-4">
+            <span className="font-medium text-foreground">{document.original_filename}</span>
+            {document.project_name && <> &middot; Project: {document.project_name}</>}
+            {document.document_type && <> &middot; {document.document_type}</>}
+            {document.page_count != null && <> &middot; {document.page_count} page{document.page_count === 1 ? '' : 's'}</>}
+            {' '}&middot; Uploaded {new Date(document.created_at).toLocaleDateString()}
+          </p>
+        )}
 
         {/* Overall Score Card */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
