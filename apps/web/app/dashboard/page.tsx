@@ -5,19 +5,11 @@
 
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Link from 'next/link';
-import { ArrowUpDown } from 'lucide-react';
-import {
-  type ColumnDef,
-  type SortingState,
-  flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
+import { ArrowDown, ArrowUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -36,6 +28,9 @@ interface Document {
   filename: string;
   original_filename: string;
   project_name: string | null;
+  project_id: string | null;
+  document_group_id: string;
+  version: number;
   document_type: string;
   page_count: number;
   created_at: string;
@@ -43,16 +38,22 @@ interface Document {
   latest_completeness_score: number | null;
 }
 
-function SortableHeader({ label, column }: { label: string; column: any }) {
-  return (
-    <button
-      className="flex items-center gap-1 font-medium hover:text-foreground"
-      onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-    >
-      {label}
-      <ArrowUpDown size={14} strokeWidth={2} aria-hidden="true" />
-    </button>
-  );
+interface ProjectSummary {
+  project_id: string;
+  name: string;
+  document_count: number;
+  average_latest_score: number | null;
+  open_critical_count: number;
+}
+
+interface LinkSuggestion {
+  suggestion_id: string;
+  doc_id: string;
+  filename: string;
+  suggested_doc_id: string;
+  suggested_filename: string;
+  suggested_version: number;
+  similarity_score: number;
 }
 
 function ScoreCell({ value }: { value: number | null }) {
@@ -64,14 +65,187 @@ function ScoreCell({ value }: { value: number | null }) {
   return <span className={`font-medium ${color}`}>{value.toFixed(0)}</span>;
 }
 
+function TrendIndicator({ current, previous }: { current: number | null; previous: number | null }) {
+  if (current === null || previous === null) return null;
+  const delta = current - previous;
+  if (Math.abs(delta) < 0.5) return null;
+  const Icon = delta > 0 ? ArrowUp : ArrowDown;
+  const color = delta > 0 ? 'text-green-600' : 'text-red-600';
+  return (
+    <span className={`inline-flex items-center ${color}`} title={`${delta > 0 ? '+' : ''}${delta.toFixed(0)} vs previous version`}>
+      <Icon size={14} strokeWidth={2} aria-hidden="true" />
+    </span>
+  );
+}
+
+function DocumentsTable({
+  documents,
+  reviewingDocId,
+  onReview,
+  onView,
+}: {
+  documents: Document[];
+  reviewingDocId: string | null;
+  onReview: (docId: string) => void;
+  onView: (docId: string) => void;
+}) {
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  // Group by document_group_id -- each group is one logical document's
+  // version history, newest first.
+  const versionGroups = useMemo(() => {
+    const byGroup = new Map<string, Document[]>();
+    for (const doc of documents) {
+      const bucket = byGroup.get(doc.document_group_id) ?? [];
+      bucket.push(doc);
+      byGroup.set(doc.document_group_id, bucket);
+    }
+    return Array.from(byGroup.values())
+      .map((versions) => versions.sort((a, b) => b.version - a.version))
+      .sort((a, b) => new Date(b[0].created_at).getTime() - new Date(a[0].created_at).getTime());
+  }, [documents]);
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  };
+
+  const renderActions = (doc: Document, compareToVersion?: number) => {
+    const isReviewing = reviewingDocId === doc.doc_id;
+    return (
+      <div className="flex items-center gap-2">
+        <button
+          className="text-primary hover:underline disabled:opacity-50"
+          disabled={isReviewing}
+          onClick={() => onReview(doc.doc_id)}
+        >
+          {isReviewing ? 'Reviewing... (~20s)' : 'Review'}
+        </button>
+        <span className="text-muted-foreground">•</span>
+        <button
+          className="text-primary hover:underline disabled:opacity-50"
+          disabled={isReviewing}
+          onClick={() => onView(doc.doc_id)}
+        >
+          View
+        </button>
+        <span className="text-muted-foreground">•</span>
+        <Link href={`/upload?version_of=${doc.doc_id}`} className="text-primary hover:underline">
+          New version
+        </Link>
+        {compareToVersion !== undefined && (
+          <>
+            <span className="text-muted-foreground">•</span>
+            <Link
+              href={`/versions/diff?doc_id=${doc.doc_id}&other_version=${compareToVersion}`}
+              className="text-primary hover:underline"
+            >
+              Compare vs v{compareToVersion}
+            </Link>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="rounded-lg border overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Filename</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Completeness</TableHead>
+            <TableHead>Accuracy</TableHead>
+            <TableHead>Uploaded</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {versionGroups.map((versions) => {
+            const latest = versions[0];
+            const previous = versions[1];
+            const isExpanded = expandedGroups.has(latest.document_group_id);
+            const hasHistory = versions.length > 1;
+            return (
+              <Fragment key={latest.document_group_id}>
+                <TableRow>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {hasHistory && (
+                        <button
+                          onClick={() => toggleGroup(latest.document_group_id)}
+                          className="text-muted-foreground hover:text-foreground w-4"
+                          aria-label={isExpanded ? 'Collapse versions' : 'Expand versions'}
+                        >
+                          {isExpanded ? '▾' : '▸'}
+                        </button>
+                      )}
+                      <span>{latest.original_filename || latest.filename}</span>
+                      {hasHistory && (
+                        <span className="text-xs text-muted-foreground">
+                          v{latest.version} ({versions.length} versions)
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>{latest.document_type || 'Unknown'}</TableCell>
+                  <TableCell>
+                    <ScoreCell value={latest.latest_completeness_score} />
+                  </TableCell>
+                  <TableCell>
+                    <span className="flex items-center gap-1">
+                      <ScoreCell value={latest.latest_overall_score} />
+                      {previous && (
+                        <TrendIndicator
+                          current={latest.latest_overall_score}
+                          previous={previous.latest_overall_score}
+                        />
+                      )}
+                    </span>
+                  </TableCell>
+                  <TableCell>{new Date(latest.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell>{renderActions(latest, previous?.version)}</TableCell>
+                </TableRow>
+                {isExpanded &&
+                  versions.slice(1).map((doc) => (
+                    <TableRow key={doc.doc_id} className="bg-muted/30">
+                      <TableCell className="pl-10 text-sm text-muted-foreground">
+                        v{doc.version} -- {doc.original_filename || doc.filename}
+                      </TableCell>
+                      <TableCell>{doc.document_type || 'Unknown'}</TableCell>
+                      <TableCell>
+                        <ScoreCell value={doc.latest_completeness_score} />
+                      </TableCell>
+                      <TableCell>
+                        <ScoreCell value={doc.latest_overall_score} />
+                      </TableCell>
+                      <TableCell>{new Date(doc.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell>{renderActions(doc, latest.version)}</TableCell>
+                    </TableRow>
+                  ))}
+              </Fragment>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [orgId, setOrgId] = useState('');
   const [filterType, setFilterType] = useState('');
-  const [sorting, setSorting] = useState<SortingState>([]);
   const [reviewingDocId, setReviewingDocId] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<LinkSuggestion[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -112,16 +286,41 @@ export default function DashboardPage() {
         url += `&document_type=${filterType}`;
       }
 
-      const response = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const [documentsResponse, projectsResponse, suggestionsResponse] = await Promise.all([
+        axios.get(url, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/projects`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { org_id: org },
+        }),
+        axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/suggestions`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { org_id: org },
+        }),
+      ]);
 
-      setDocuments(response.data);
+      setDocuments(documentsResponse.data);
+      setProjects(projectsResponse.data);
+      setSuggestions(suggestionsResponse.data);
       setError('');
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to fetch documents');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSuggestion = async (suggestionId: string, action: 'accept' | 'dismiss') => {
+    try {
+      const token = localStorage.getItem('access_token');
+      await axios.patch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/suggestions/${suggestionId}`,
+        { action },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSuggestions((prev) => prev.filter((s) => s.suggestion_id !== suggestionId));
+      if (action === 'accept') fetchDocuments();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to update suggestion');
     }
   };
 
@@ -180,92 +379,27 @@ export default function DashboardPage() {
     return { total: documents.length, byType };
   }, [documents]);
 
-  const columns = useMemo<ColumnDef<Document>[]>(
-    () => [
-      {
-        id: 'filename',
-        header: ({ column }) => <SortableHeader label="Filename" column={column} />,
-        accessorFn: (doc) => doc.original_filename || doc.filename,
-        cell: (info) => (
-          <span className="font-medium">{info.getValue<string>()}</span>
-        ),
-      },
-      {
-        id: 'project_name',
-        header: ({ column }) => <SortableHeader label="Project" column={column} />,
-        accessorFn: (doc) => doc.project_name || '-',
-      },
-      {
-        id: 'document_type',
-        header: ({ column }) => <SortableHeader label="Type" column={column} />,
-        accessorFn: (doc) => doc.document_type || 'Unknown',
-      },
-      {
-        id: 'latest_completeness_score',
-        header: ({ column }) => <SortableHeader label="Completeness" column={column} />,
-        accessorFn: (doc) => doc.latest_completeness_score,
-        cell: (info) => <ScoreCell value={info.getValue<number | null>()} />,
-      },
-      {
-        id: 'latest_overall_score',
-        header: ({ column }) => <SortableHeader label="Accuracy" column={column} />,
-        accessorFn: (doc) => doc.latest_overall_score,
-        cell: (info) => <ScoreCell value={info.getValue<number | null>()} />,
-      },
-      {
-        id: 'page_count',
-        header: ({ column }) => <SortableHeader label="Pages" column={column} />,
-        accessorFn: (doc) => doc.page_count || '-',
-      },
-      {
-        id: 'created_at',
-        header: ({ column }) => <SortableHeader label="Uploaded" column={column} />,
-        accessorFn: (doc) => doc.created_at,
-        cell: (info) => new Date(info.getValue<string>()).toLocaleDateString(),
-      },
-      {
-        id: 'actions',
-        header: 'Actions',
-        cell: ({ row }) => {
-          const isReviewing = reviewingDocId === row.original.doc_id;
-          return (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="link"
-                size="sm"
-                className="h-auto p-0"
-                disabled={isReviewing}
-                onClick={() => handleReview(row.original.doc_id)}
-              >
-                {isReviewing ? 'Reviewing... (~20s)' : 'Review'}
-              </Button>
-              <span className="text-muted-foreground">•</span>
-              <Button
-                variant="link"
-                size="sm"
-                className="h-auto p-0"
-                disabled={isReviewing}
-                onClick={() => handleView(row.original.doc_id)}
-              >
-                View
-              </Button>
-            </div>
-          );
-        },
-      },
-    ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [orgId, reviewingDocId]
-  );
+  // Group documents by project for the collapsible dashboard sections.
+  // Documents with no project_id land in a single "Ungrouped" bucket.
+  const groups = useMemo(() => {
+    const byProjectId = new Map<string, Document[]>();
+    const ungrouped: Document[] = [];
+    for (const doc of documents) {
+      if (!doc.project_id) {
+        ungrouped.push(doc);
+        continue;
+      }
+      const bucket = byProjectId.get(doc.project_id) ?? [];
+      bucket.push(doc);
+      byProjectId.set(doc.project_id, bucket);
+    }
 
-  const table = useReactTable({
-    data: documents,
-    columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
+    const projectGroups = projects
+      .filter((p) => byProjectId.has(p.project_id))
+      .map((p) => ({ project: p, documents: byProjectId.get(p.project_id)! }));
+
+    return { projectGroups, ungrouped };
+  }, [documents, projects]);
 
   return (
     <AppShell>
@@ -275,6 +409,41 @@ export default function DashboardPage() {
           <Link href="/upload">Upload Document</Link>
         </Button>
       </div>
+
+      {/* Version-link suggestions: dismissible, persist until acted on */}
+      {suggestions.length > 0 && (
+        <div className="space-y-2 mb-6">
+          {suggestions.map((s) => (
+            <div
+              key={s.suggestion_id}
+              className="flex items-center justify-between gap-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3"
+            >
+              <p className="text-sm text-blue-900">
+                <strong>{s.filename}</strong> looks like it could be a new version of{' '}
+                <strong>{s.suggested_filename}</strong> (v{s.suggested_version}) --
+                link as v{s.suggested_version + 1}?{' '}
+                <span className="text-blue-700">
+                  ({Math.round(s.similarity_score * 100)}% similar)
+                </span>
+              </p>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  className="text-sm font-medium text-blue-700 hover:underline"
+                  onClick={() => handleSuggestion(s.suggestion_id, 'accept')}
+                >
+                  Link as v{s.suggested_version + 1}
+                </button>
+                <button
+                  className="text-sm text-muted-foreground hover:underline"
+                  onClick={() => handleSuggestion(s.suggestion_id, 'dismiss')}
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Stats + Filter row */}
       <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
@@ -331,33 +500,63 @@ export default function DashboardPage() {
           </Button>
         </div>
       ) : (
-        <div className="rounded-lg border overflow-hidden">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <div className="space-y-4">
+          {groups.projectGroups.map(({ project, documents: projectDocs }) => (
+            <details key={project.project_id} className="rounded-lg border" open>
+              <summary className="cursor-pointer select-none px-4 py-3 flex items-center justify-between gap-4">
+                <span className="font-medium">
+                  {project.name}{' '}
+                  <span className="text-muted-foreground font-normal">
+                    ({projectDocs.length} document{projectDocs.length === 1 ? '' : 's'})
+                  </span>
+                </span>
+                <span className="flex items-center gap-4 text-sm text-muted-foreground">
+                  {project.average_latest_score !== null && (
+                    <span>Avg score: {project.average_latest_score.toFixed(0)}</span>
+                  )}
+                  {project.open_critical_count > 0 && (
+                    <span className="text-red-600 font-medium">
+                      {project.open_critical_count} critical
+                    </span>
+                  )}
+                  <Link
+                    href={`/projects/${project.project_id}`}
+                    className="text-primary hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    View project
+                  </Link>
+                </span>
+              </summary>
+              <div className="px-4 pb-4">
+                <DocumentsTable
+                  documents={projectDocs}
+                  reviewingDocId={reviewingDocId}
+                  onReview={handleReview}
+                  onView={handleView}
+                />
+              </div>
+            </details>
+          ))}
+
+          {groups.ungrouped.length > 0 && (
+            <details className="rounded-lg border" open>
+              <summary className="cursor-pointer select-none px-4 py-3 font-medium">
+                No Project{' '}
+                <span className="text-muted-foreground font-normal">
+                  ({groups.ungrouped.length} document{groups.ungrouped.length === 1 ? '' : 's'})
+                </span>
+              </summary>
+              <div className="px-4 pb-4">
+                <DocumentsTable
+                  documents={groups.ungrouped}
+                  reviewingDocId={reviewingDocId}
+                  onReview={handleReview}
+                  onView={handleView}
+                />
+              </div>
+            </details>
+          )}
         </div>
       )}
     </AppShell>

@@ -22,8 +22,19 @@ export default function UploadPage() {
   const [success, setSuccess] = useState('');
   const [orgId, setOrgId] = useState('');
   const [projectName, setProjectName] = useState('');
+  const [projectOptions, setProjectOptions] = useState<{ project_id: string; name: string }[]>([]);
+  const [presetProjectId, setPresetProjectId] = useState('');
+  const [versionOfDocId, setVersionOfDocId] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const search = new URLSearchParams(window.location.search);
+    const preset = search.get('project_id');
+    if (preset) setPresetProjectId(preset);
+    const versionOf = search.get('version_of');
+    if (versionOf) setVersionOfDocId(versionOf);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -36,7 +47,16 @@ export default function UploadPage() {
       .get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      .then((res) => setOrgId(res.data.org_id))
+      .then((res) => {
+        setOrgId(res.data.org_id);
+        axios
+          .get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/projects`, {
+            headers: { Authorization: `Bearer ${token}` },
+            params: { org_id: res.data.org_id },
+          })
+          .then((r) => setProjectOptions(r.data))
+          .catch(() => {});
+      })
       .catch(() => setError('Failed to load user info'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -110,21 +130,31 @@ export default function UploadPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const params = new URLSearchParams({ org_id: orgId });
-      if (projectName) params.append('project_name', projectName);
-
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/upload?${params.toString()}`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data',
-          },
+      let uploadUrl: string;
+      if (versionOfDocId) {
+        uploadUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/${versionOfDocId}/versions`;
+      } else {
+        const params = new URLSearchParams({ org_id: orgId });
+        if (presetProjectId) {
+          params.append('project_id', presetProjectId);
+        } else if (projectName) {
+          params.append('project_name', projectName);
         }
-      );
+        uploadUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/upload?${params.toString()}`;
+      }
 
-      setSuccess(`Document uploaded successfully: ${response.data.filename}`);
+      const response = await axios.post(uploadUrl, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      setSuccess(
+        versionOfDocId
+          ? `Uploaded as version ${response.data.version}`
+          : `Document uploaded successfully: ${response.data.filename}`
+      );
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
 
@@ -144,25 +174,58 @@ export default function UploadPage() {
       <div className="max-w-2xl mx-auto">
         <Card>
           <CardHeader>
-            <CardTitle>Upload Document</CardTitle>
-            <CardDescription>Upload a SOW, Proposal, or other document for review</CardDescription>
+            <CardTitle>{versionOfDocId ? 'Upload New Version' : 'Upload Document'}</CardTitle>
+            <CardDescription>
+              {versionOfDocId
+                ? 'This file will be linked as the next version of the source document.'
+                : 'Upload a SOW, Proposal, or other document for review'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleUpload} className="space-y-4">
-              {/* Project (optional label) */}
+              {/* Project (optional label) -- inherited automatically when uploading a new version */}
+              {!versionOfDocId && (
               <div>
                 <label htmlFor="projectName" className="block text-sm font-medium mb-2">
                   Project <span className="text-muted-foreground font-normal">(optional)</span>
                 </label>
-                <input
-                  id="projectName"
-                  type="text"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                  placeholder="e.g. Acme Cloud Migration"
-                  className="w-full px-4 py-2 border border-input rounded-md bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors duration-150 ease-out"
-                />
+                {presetProjectId ? (
+                  <div className="flex items-center justify-between px-4 py-2 border border-input rounded-md bg-muted/50">
+                    <span>
+                      {projectOptions.find((p) => p.project_id === presetProjectId)?.name ??
+                        'Selected project'}
+                    </span>
+                    <button
+                      type="button"
+                      className="text-sm text-primary hover:underline"
+                      onClick={() => setPresetProjectId('')}
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      id="projectName"
+                      type="text"
+                      list="project-options"
+                      value={projectName}
+                      onChange={(e) => setProjectName(e.target.value)}
+                      placeholder="Select existing or type a new project name"
+                      className="w-full px-4 py-2 border border-input rounded-md bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors duration-150 ease-out"
+                    />
+                    <datalist id="project-options">
+                      {projectOptions.map((p) => (
+                        <option key={p.project_id} value={p.name} />
+                      ))}
+                    </datalist>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Pick an existing project from the list, or type a new name to create one.
+                    </p>
+                  </>
+                )}
               </div>
+              )}
 
               {/* Drag and Drop Area */}
               <div
