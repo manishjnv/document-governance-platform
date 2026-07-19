@@ -24,6 +24,10 @@ class UserRole(str, Enum):
 class FileType(str, Enum):
     PDF = "pdf"
     DOCX = "docx"
+    DOC = "doc"
+    XLSX = "xlsx"
+    XLS = "xls"
+    CSV = "csv"
 
 
 class DocumentType(str, Enum):

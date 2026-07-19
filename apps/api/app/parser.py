@@ -160,6 +160,210 @@ class DocxParser:
         return DocumentType.OTHER
 
 
+class DocParser:
+    """Parse legacy binary .doc files via the `antiword` CLI.
+
+    # ponytail: shells out to antiword rather than a pure-Python OLE parser
+    # -- legacy .doc's binary format has no good pure-Python extractor;
+    # antiword is a small, purpose-built tool (not a full LibreOffice/
+    # pandoc conversion chain). No section/heading detection (antiword
+    # only gives flat text) -- upgrade to a heading-aware extractor if
+    # section-level review accuracy on .doc files becomes a problem.
+    """
+
+    @staticmethod
+    async def parse(file_content: bytes) -> ParseResult:
+        import asyncio
+        import subprocess
+        import tempfile
+
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".doc", delete=False) as tmp:
+                tmp.write(file_content)
+                tmp_path = tmp.name
+
+            try:
+                proc = await asyncio.create_subprocess_exec(
+                    "antiword",
+                    tmp_path,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                stdout, stderr = await proc.communicate()
+            finally:
+                Path(tmp_path).unlink(missing_ok=True)
+
+            if proc.returncode != 0:
+                raise RuntimeError(stderr.decode("utf-8", errors="replace") or "antiword failed")
+
+            full_text = stdout.decode("utf-8", errors="replace")
+            tokens = len(full_text) // 4
+            detected_type = DocxParser._detect_type(full_text)
+
+            return ParseResult(
+                status="success" if full_text.strip() else "partial",
+                raw_text=full_text,
+                sections=[],
+                page_count=1,
+                detected_type=detected_type,
+                tokens_estimated=tokens,
+            )
+
+        except FileNotFoundError:
+            logger.error("DOC parsing error: antiword is not installed")
+            return ParseResult(
+                status="failed",
+                raw_text="",
+                sections=[],
+                page_count=0,
+                error_message="Legacy .doc parsing requires antiword, which isn't installed",
+            )
+        except Exception as e:
+            logger.error(f"DOC parsing error: {e}")
+            return ParseResult(
+                status="failed",
+                raw_text="",
+                sections=[],
+                page_count=0,
+                error_message=str(e),
+            )
+
+
+class ExcelParser:
+    """Parse .xlsx files -- each sheet becomes a section, cell values
+    joined row by row into that section's content."""
+
+    @staticmethod
+    async def parse(file_content: bytes) -> ParseResult:
+        try:
+            from io import BytesIO
+
+            from openpyxl import load_workbook
+
+            workbook = load_workbook(BytesIO(file_content), data_only=True, read_only=True)
+            raw_text = []
+            sections = []
+
+            for sheet in workbook.worksheets:
+                sheet_lines = []
+                for row in sheet.iter_rows(values_only=True):
+                    cells = [str(v) for v in row if v is not None]
+                    if cells:
+                        sheet_lines.append("\t".join(cells))
+
+                sheet_text = "\n".join(sheet_lines)
+                raw_text.append(f"--- Sheet: {sheet.title} ---\n{sheet_text}")
+                sections.append(ParsedSection(heading=sheet.title, level=1, content=sheet_text))
+
+            full_text = "\n".join(raw_text)
+            tokens = len(full_text) // 4
+            detected_type = DocxParser._detect_type(full_text)
+
+            return ParseResult(
+                status="success" if full_text.strip() else "partial",
+                raw_text=full_text,
+                sections=sections,
+                page_count=len(workbook.worksheets),
+                detected_type=detected_type,
+                tokens_estimated=tokens,
+            )
+
+        except Exception as e:
+            logger.error(f"Excel parsing error: {e}")
+            return ParseResult(
+                status="failed",
+                raw_text="",
+                sections=[],
+                page_count=0,
+                error_message=str(e),
+            )
+
+
+class CsvParser:
+    """Parse .csv files via the stdlib csv module -- rows joined with tabs,
+    no section detection (flat tabular data has no headings)."""
+
+    @staticmethod
+    async def parse(file_content: bytes) -> ParseResult:
+        try:
+            import csv
+            from io import StringIO
+
+            text = file_content.decode("utf-8-sig", errors="replace")
+            reader = csv.reader(StringIO(text))
+            lines = ["\t".join(row) for row in reader if row]
+            full_text = "\n".join(lines)
+            tokens = len(full_text) // 4
+            detected_type = DocxParser._detect_type(full_text)
+
+            return ParseResult(
+                status="success" if full_text.strip() else "partial",
+                raw_text=full_text,
+                sections=[],
+                page_count=1,
+                detected_type=detected_type,
+                tokens_estimated=tokens,
+            )
+        except Exception as e:
+            logger.error(f"CSV parsing error: {e}")
+            return ParseResult(
+                status="failed",
+                raw_text="",
+                sections=[],
+                page_count=0,
+                error_message=str(e),
+            )
+
+
+class XlsParser:
+    """Parse legacy binary .xls files via xlrd (openpyxl only reads the
+    modern .xlsx format). Same sheet-as-section shape as ExcelParser."""
+
+    @staticmethod
+    async def parse(file_content: bytes) -> ParseResult:
+        try:
+            from io import BytesIO
+
+            import xlrd
+
+            workbook = xlrd.open_workbook(file_contents=file_content)
+            raw_text = []
+            sections = []
+
+            for sheet in workbook.sheets():
+                sheet_lines = []
+                for row_idx in range(sheet.nrows):
+                    cells = [str(v) for v in sheet.row_values(row_idx) if v not in (None, "")]
+                    if cells:
+                        sheet_lines.append("\t".join(cells))
+
+                sheet_text = "\n".join(sheet_lines)
+                raw_text.append(f"--- Sheet: {sheet.name} ---\n{sheet_text}")
+                sections.append(ParsedSection(heading=sheet.name, level=1, content=sheet_text))
+
+            full_text = "\n".join(raw_text)
+            tokens = len(full_text) // 4
+            detected_type = DocxParser._detect_type(full_text)
+
+            return ParseResult(
+                status="success" if full_text.strip() else "partial",
+                raw_text=full_text,
+                sections=sections,
+                page_count=workbook.nsheets,
+                detected_type=detected_type,
+                tokens_estimated=tokens,
+            )
+        except Exception as e:
+            logger.error(f"XLS parsing error: {e}")
+            return ParseResult(
+                status="failed",
+                raw_text="",
+                sections=[],
+                page_count=0,
+                error_message=str(e),
+            )
+
+
 class PdfParser:
     """Parse PDF files."""
 
@@ -266,6 +470,21 @@ async def parse_document(
 
     elif file_type in ("pdf", "application/pdf"):
         return await PdfParser.parse(file_content)
+
+    elif file_type in ("doc", "application/msword"):
+        return await DocParser.parse(file_content)
+
+    elif file_type in (
+        "xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ):
+        return await ExcelParser.parse(file_content)
+
+    elif file_type in ("xls", "application/vnd.ms-excel"):
+        return await XlsParser.parse(file_content)
+
+    elif file_type in ("csv", "text/csv"):
+        return await CsvParser.parse(file_content)
 
     else:
         return ParseResult(

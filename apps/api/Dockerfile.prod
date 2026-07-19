@@ -24,9 +24,12 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install runtime dependencies only
+# antiword: legacy binary .doc text extraction (app/parser.py DocParser) --
+# small purpose-built tool, not a full LibreOffice/pandoc conversion chain.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     curl \
+    antiword \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user first so the copied packages can be owned by it --

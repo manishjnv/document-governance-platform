@@ -23,7 +23,10 @@ class Document(Base, TimestampMixin, SoftDeleteMixin):
 
     __tablename__ = "documents"
     __table_args__ = (
-        CheckConstraint("file_type IN ('pdf', 'docx')", name="ck_documents_file_type"),
+        CheckConstraint(
+            "file_type IN ('pdf', 'docx', 'doc', 'xlsx', 'xls', 'csv')",
+            name="ck_documents_file_type",
+        ),
         CheckConstraint(
             "document_type IS NULL OR document_type IN ('SOW', 'Proposal', 'RFP', 'Other')",
             name="ck_documents_document_type",

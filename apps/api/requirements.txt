@@ -36,6 +36,12 @@ python-multipart==0.0.6
 # the PdfReader/.pages/.extract_text() surface this app actually uses.
 pypdf==6.14.2
 python-docx==0.8.11
+# .xlsx parsing (pure Python, no system deps).
+openpyxl==3.1.2
+# Legacy binary .xls parsing -- xlrd 2.x intentionally dropped .xlsx
+# support and now only handles the legacy format, which is exactly what's
+# needed here (openpyxl above covers .xlsx).
+xlrd==2.0.1
 
 # PDF report generation (app/scoring/report.py::ReportGenerator.generate_pdf_report).
 # Pure Python, wraps reportlab -- no system libs (Pango/Cairo) required,
