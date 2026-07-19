@@ -35,6 +35,7 @@ from app.routers import (
     knowledge,
     notifications,
     predictions,
+    projects,
     reviews,
     search,
     search_history,
@@ -126,6 +127,7 @@ app.include_router(insights_extra.router)
 app.include_router(knowledge.router)
 app.include_router(notifications.router)
 app.include_router(predictions.router)
+app.include_router(projects.router)
 app.include_router(reviews.router)
 app.include_router(search.router)
 app.include_router(search_history.router)

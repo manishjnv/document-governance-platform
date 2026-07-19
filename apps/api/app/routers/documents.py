@@ -70,6 +70,103 @@ def _sanitize_filename(raw_filename: str) -> str:
     return name[:255]
 
 
+async def _store_uploaded_document(
+    db: AsyncSession,
+    current_user: TokenData,
+    org_id: UUID,
+    content: bytes,
+    file_type: str,
+    raw_filename: str,
+    document_group_id: UUID,
+    version: int,
+    project_id: Optional[UUID],
+    project_name: Optional[str],
+) -> Document:
+    """Shared by both a normal upload (new document_group_id, version=1) and
+    an explicit "upload new version of..." action (existing
+    document_group_id, version=max+1) -- storage upload, parsing, and the
+    Document row. Caller validates file type/size before calling this."""
+    from datetime import datetime
+    from uuid import uuid4
+
+    storage = await get_storage_instance()
+
+    doc_id = uuid4()
+    filename = _sanitize_filename(raw_filename)
+    storage_path = f"org/{org_id}/doc/{doc_id}/v{version}/{filename}"
+
+    try:
+        await storage.upload(storage_path, content)
+    except Exception as e:
+        logger.error(f"Storage upload failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to upload file",
+        )
+
+    try:
+        parse_result = await parse_document(content, file_type)
+        parsed_text = parse_result.raw_text
+        parsed_sections = [
+            {
+                "heading": s.heading,
+                "level": s.level,
+                "content": s.content,
+                "page_number": s.page_number,
+            }
+            for s in parse_result.sections
+        ]
+        page_count = parse_result.page_count
+        detected_type = parse_result.detected_type.value if parse_result.detected_type else None
+    except Exception as e:
+        logger.error(f"Parsing failed: {e}")
+        parsed_text = None
+        parsed_sections = None
+        page_count = None
+        detected_type = None
+
+    resolved_project_id = project_id
+    if resolved_project_id is None and project_name:
+        from app.routers.projects import get_or_create_project
+
+        project = await get_or_create_project(db, org_id, project_name)
+        resolved_project_id = project.project_id
+
+    doc = Document(
+        doc_id=doc_id,
+        document_group_id=document_group_id,
+        org_id=current_user.org_id,
+        uploaded_by_user_id=UUID(str(current_user.user_id)),
+        filename=filename,
+        original_filename=raw_filename,
+        project_name=project_name,
+        project_id=resolved_project_id,
+        file_size_bytes=len(content),
+        file_type=file_type,
+        s3_path=storage_path,
+        version=version,
+        document_type=detected_type,
+        page_count=page_count,
+        language="en",
+        storage_status="uploaded",
+        parsed_text=parsed_text,
+        parsed_sections=parsed_sections,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+    )
+
+    db.add(doc)
+    await db.commit()
+    await db.refresh(doc)
+
+    from app.insights.similarity import suggest_version_link
+
+    await suggest_version_link(db, org_id, doc)
+    await db.commit()
+
+    return doc
+
+
 @router.post(
     "/upload",
     status_code=status.HTTP_202_ACCEPTED,
@@ -83,7 +180,10 @@ def _sanitize_filename(raw_filename: str) -> str:
 async def upload_document(
     file: UploadFile = File(...),
     org_id: UUID = Query(..., description="Organization ID"),
-    project_name: Optional[str] = Query(None, description="Optional project label"),
+    project_id: Optional[UUID] = Query(None, description="Existing project to attach to"),
+    project_name: Optional[str] = Query(
+        None, description="Project label -- creates the project if it doesn't exist yet"
+    ),
     current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -117,80 +217,22 @@ async def upload_document(
             detail=f"File too large. Max size: {MAX_UPLOAD_SIZE / (1024*1024)}MB",
         )
 
-    # Get storage backend
-    storage = await get_storage_instance()
-
-    # Create document record
     from uuid import uuid4
 
-    doc_id = uuid4()
-    document_group_id = uuid4()
-    raw_filename = file.filename or f"document_{doc_id}"
-    filename = _sanitize_filename(raw_filename)
+    raw_filename = file.filename or f"document_{uuid4()}"
 
-    # Generate storage path
-    storage_path = f"org/{org_id}/doc/{doc_id}/v1/{filename}"
-
-    # Upload to storage
-    try:
-        await storage.upload(storage_path, content)
-    except Exception as e:
-        logger.error(f"Storage upload failed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to upload file",
-        )
-
-    # Parse document asynchronously
-    try:
-        parse_result = await parse_document(content, file_type)
-        parsed_text = parse_result.raw_text
-        parsed_sections = [
-            {
-                "heading": s.heading,
-                "level": s.level,
-                "content": s.content,
-                "page_number": s.page_number,
-            }
-            for s in parse_result.sections
-        ]
-        page_count = parse_result.page_count
-        detected_type = parse_result.detected_type.value if parse_result.detected_type else None
-    except Exception as e:
-        logger.error(f"Parsing failed: {e}")
-        parsed_text = None
-        parsed_sections = None
-        page_count = None
-        detected_type = None
-
-    # Create database record
-    from datetime import datetime
-
-    doc = Document(
-        doc_id=doc_id,
-        document_group_id=document_group_id,
-        org_id=current_user.org_id,
-        uploaded_by_user_id=UUID(str(current_user.user_id)),
-        filename=filename,
-        original_filename=raw_filename,
-        project_name=project_name,
-        file_size_bytes=len(content),
-        file_type=file_type,
-        s3_path=storage_path,
+    doc = await _store_uploaded_document(
+        db,
+        current_user,
+        org_id,
+        content,
+        file_type,
+        raw_filename,
+        document_group_id=uuid4(),
         version=1,
-        document_type=detected_type,
-        page_count=page_count,
-        language="en",
-        storage_status="uploaded",
-        parsed_text=parsed_text,
-        parsed_sections=parsed_sections,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        project_id=project_id,
+        project_name=project_name,
     )
-
-    db.add(doc)
-    await db.commit()
-    await db.refresh(doc)
 
     # T-2041: audit trail
     await log_action(

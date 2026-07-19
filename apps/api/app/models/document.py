@@ -14,6 +14,7 @@ from app.models.enums import FileType, StorageStatus
 
 if TYPE_CHECKING:
     from app.models.organization import Organization
+    from app.models.project import Project
     from app.models.review import Review
 
 
@@ -51,6 +52,9 @@ class Document(Base, TimestampMixin, SoftDeleteMixin):
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
     project_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.project_id", ondelete="SET NULL"), nullable=True
+    )
     file_size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
     file_type: Mapped[str] = mapped_column(String(20), nullable=False)
     s3_path: Mapped[str] = mapped_column(String(512), nullable=False)
@@ -66,6 +70,7 @@ class Document(Base, TimestampMixin, SoftDeleteMixin):
     )
 
     organization: Mapped["Organization"] = relationship(back_populates="documents")
+    project: Mapped[Optional["Project"]] = relationship(back_populates="documents")
     reviews: Mapped[list["Review"]] = relationship(
         back_populates="document", cascade="all, delete-orphan"
     )

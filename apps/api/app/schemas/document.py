@@ -164,6 +164,7 @@ class DocumentRead(BaseModel):
     filename: str
     original_filename: str
     project_name: Optional[str] = None
+    project_id: Optional[UUID] = None
     file_size_bytes: int
     file_type: FileType
     version: int

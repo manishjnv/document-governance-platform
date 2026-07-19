@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import CheckConstraint, Integer, String
+from sqlalchemy import CheckConstraint, Integer, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -59,6 +60,9 @@ class Organization(Base, TimestampMixin, SoftDeleteMixin):
     brand_primary_color: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)
     brand_secondary_color: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)
     audit_retention_days: Mapped[int] = mapped_column(Integer, nullable=False, default=90)
+    similarity_suggestion_threshold: Mapped[Decimal] = mapped_column(
+        Numeric(3, 2), nullable=False, default=Decimal("0.55")
+    )
 
     users: Mapped[list["User"]] = relationship(
         back_populates="organization", cascade="all, delete-orphan"

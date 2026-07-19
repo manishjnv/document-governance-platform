@@ -109,6 +109,7 @@ async def analytics_db():
                 brand_primary_color TEXT,
                 brand_secondary_color TEXT,
                 audit_retention_days INTEGER NOT NULL DEFAULT 90,
+                similarity_suggestion_threshold REAL NOT NULL DEFAULT 0.55,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 deleted_at TIMESTAMP
@@ -143,6 +144,7 @@ async def analytics_db():
                 filename TEXT NOT NULL,
                 original_filename TEXT NOT NULL,
                 project_name TEXT,
+                project_id TEXT,
                 file_size_bytes INTEGER NOT NULL,
                 file_type TEXT NOT NULL,
                 s3_path TEXT NOT NULL,
