@@ -1,7 +1,7 @@
 # EDGP Implementation Progress
 
-**Last Updated:** 2026-07-19 23:50 GMT+5:30
-**Current Phase:** Phase 1-2 core product complete + deployed live; pre-launch fix plan Steps 1-2 done, Step 3 pending SME. Document Lifecycle & Multi-Project plan (Projects/Versioning/Fix-verification) — **all three phases implemented this session**, see entry below.
+**Last Updated:** 2026-07-20 03:20 GMT+5:30
+**Current Phase:** Phase 1-2 core product complete + deployed live; pre-launch fix plan Steps 1-2 done, Step 3 pending SME. Document Lifecycle & Multi-Project plan (Projects/Versioning/Fix-verification) — all three phases implemented, deployed. Project is now mandatory on upload (see entry below) — closes the gap left by the Phase A backfill.
 
 > Previous version of this doc (dated 07-17 02:00, showing "14% overall") was
 > stale from early Phase 1 and did not reflect Phase 2/3 or the pre-launch
@@ -165,6 +165,32 @@ one session.
   one session; state this explicitly rather than claim it. VPS deployment
   of these changes: see next action.
 
+**OpenRouter model routing upgrade (2026-07-19/20):** benchmarked GLM-5.2,
+MiniMax M3, Qwen3.7-Plus, and Kimi K3 as candidates on top of the existing
+DeepSeek-only setup, using `LegalReviewer` against a sample SOW with
+planted legal gaps. Found and fixed a real bug in the process: the
+inherited `max_tokens=2000` (from the original Claude 3.5 Sonnet
+integration) silently truncated 3 of 5 candidates because reasoning-mode
+models spend completion tokens on hidden thinking before the visible
+answer — see RCA_LOG.md entry #14. Raised to 4000, which fixed GLM-5.2
+and MiniMax M3; Kimi K3 needed 8000 to complete but at ~$0.086/call
+(10-15x the alternatives) so it was excluded on cost/latency grounds, not
+quality. New chain: GLM-5.2 (primary) → MiniMax M3 → Qwen3.7-Plus →
+DeepSeek (fallback, in order). Full methodology, per-model results, and
+known gaps (only Legal reviewer tested, only one sample doc, no
+long-document token-scaling test) in `docs/planning/AI_MODEL_ROUTING.md`.
+Deployed to production (`apps/api` container rebuilt on the VPS).
+
+**Project made mandatory on upload (2026-07-19/20):** `POST
+/api/v1/documents` now 422s if neither `project_id` nor `project_name` is
+given (upload form's client-side validation mirrors this); previously
+project was optional, which is what produced the "unprojected documents"
+case the Phase A backfill had to flag as near-duplicates rather than
+auto-map. Added `PATCH /documents/{id}/project` to retroactively assign a
+project to any document left unprojected by that backfill. 422/422 tests
+still passing, `tsc --noEmit` clean. Deployed to production (both `api`
+and `web` containers rebuilt).
+
 **Sample documents (2026-07-19):** replaced the 2 generic placeholder
 samples (`sample_rfp.docx`, `sample_sow.docx`) with real-world SOW/RFP
 template sets under `docs/sample/{RFP_Sample,RFP_template,SOW_Template}/`
@@ -209,19 +235,25 @@ prevention), `docs/phases/prompts/PHASE_{3-7}_PROMPT.md` (scope-trim rationale p
 
 ## Next action
 
-1. **Document Lifecycle & Multi-Project plan — done, not yet deployed.**
-   Manual browser click-through of Projects/Versioning/Fix-verification
-   flows on a running dev server is still open (this session verified via
-   backend HTTP tests + `tsc --noEmit` only).
-2. **Build finding deduplication** — currently doesn't exist at all;
+1. **Manual browser click-through still open** for Projects/Versioning/
+   Fix-verification flows and the new mandatory-project upload validation
+   — deployed and backend/type-checked, but not yet driven through the
+   live UI in a browser.
+2. **Model routing: only spot-tested.** `AI_MODEL_ROUTING.md`'s benchmark
+   covered one reviewer type (Legal) on one sample document. Worth a
+   broader sweep (other 5 reviewer types, RFP docs, longer documents)
+   before fully trusting GLM-5.2/MiniMax M3 output in production —
+   current confidence is "fixed a real bug, spot-checked the fix," not a
+   full accuracy validation.
+3. **Build finding deduplication** — currently doesn't exist at all;
    Metric 1.4 is structurally unmeasurable until this is built.
-3. Fix confidence calibration (17.95% error vs. <5% target) — likely needs
+4. Fix confidence calibration (17.95% error vs. <5% target) — likely needs
    agent prompt tuning per `docs/RCA_LOG.md`-style root-cause approach, not
    a blind confidence-score rescale.
-4. Get a real ≥10-doc test set (user-supplied or approved synthetic) and
+5. Get a real ≥10-doc test set (user-supplied or approved synthetic) and
    re-run the full Metrics 1.1-1.4 validation against it — the 2026-07-18
    synthetic pass is a stopgap, not launch-gate evidence.
-5. Get legal SME sign-off on `LEGAL_SEVERITY_CALIBRATION.md`.
-6. Everything else in Phase 1-2 core scope (including the 16 "extra"
+6. Get legal SME sign-off on `LEGAL_SEVERITY_CALIBRATION.md`.
+7. Everything else in Phase 1-2 core scope (including the 16 "extra"
    routers, confirmed real 2026-07-18) is done and live in production;
    Phase 3-7 items are deliberately deferred, not blockers.

@@ -185,6 +185,34 @@ listed below — several of these are copy-pasted patterns that recur.
   TABLE <model>` in `tests/test_insights_extra.py` for EVERY table a new
   column touches**, not just the one from the last incident.
 
+### 14. OpenRouter model swap silently broke 3 of 5 candidate models: `max_tokens=2000` too small for reasoning-mode models (2026-07-19)
+
+- **Symptom:** when benchmarking GLM-5.2, MiniMax M3, and Kimi K3 as
+  cheaper OpenRouter alternatives, all three either returned truncated/
+  unparseable JSON or `content: None` from `ReviewAgent.review()`
+  (`apps/api/app/ai/agent.py`) — while DeepSeek and Qwen3.7-Plus worked
+  fine on the identical prompt/document.
+- **Root cause:** `max_tokens=2000` in the `messages.create(...)` call
+  was inherited from the original Claude 3.5 Sonnet integration.
+  GLM-5.2, MiniMax M3, and Kimi K3 all run "always-on thinking"/hidden-
+  reasoning modes that consume completion tokens before the visible
+  answer — confirmed directly on Kimi K3: `reasoning_tokens: 1997` out
+  of a 2000-token budget, leaving 0 for actual output
+  (`finish_reason: "length"`). Not a model-quality problem.
+- **Fix:** raised `max_tokens` to 4000 (`apps/api/app/ai/agent.py`).
+  Fixed GLM-5.2 and MiniMax M3 immediately. Kimi K3 still failed at
+  4000 and needed 8000 to complete reliably — at that budget it cost
+  ~$0.086/call (10-15x DeepSeek/GLM-5.2) due to reasoning overhead, so
+  it was dropped from the fallback chain on cost/latency grounds
+  instead of raising the ceiling further.
+- **Prevention:** when adding any new OpenRouter model to the chain,
+  don't assume a token budget tuned for one model family transfers to
+  another — reasoning-mode models need meaningfully more headroom.
+  Check `usage.completion_tokens_details.reasoning_tokens` in the raw
+  response before trusting a `content: None` failure is a provider
+  outage rather than a budget problem. Full benchmark methodology and
+  per-model results in `docs/planning/AI_MODEL_ROUTING.md`.
+
 ---
 
 *(Append new entries above this line, most recent first is NOT required —
