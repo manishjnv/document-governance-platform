@@ -9,6 +9,12 @@ volumes/difficulty below are qualitative estimates from category knowledge,
 not tool-verified. Re-run with real keyword data (GSC + Ahrefs/SEMrush/
 DataForSEO) before finalizing budget commitments.
 
+**Companion docs (full detail behind this summary):**
+- `docs/planning/seo/COMPETITOR_ANALYSIS.md` — full competitor breakdown by category
+- `docs/planning/seo/SITE_STRUCTURE.md` — complete URL list + internal-linking matrix
+- `docs/planning/seo/CONTENT_CALENDAR.md` — 22 titled posts/guides across 6 months
+- `docs/planning/seo/IMPLEMENTATION_ROADMAP.md` — task-level checklist per phase
+
 ---
 
 ## 1. Baseline assessment (as of this session)
