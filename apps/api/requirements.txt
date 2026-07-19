@@ -57,6 +57,13 @@ aiohttp==3.9.1
 anthropic==0.7.1
 openai==1.3.6
 
+# Google Sign-In: verifies ID tokens issued by Google Identity Services.
+# google-auth's default transport needs `requests` explicitly (not pulled
+# in by its own dependency graph); a transitive copy already existed via
+# other SDKs, but this is now a direct import so it's pinned directly.
+google-auth==2.35.0
+requests==2.31.0
+
 # Utilities
 python-dotenv==1.0.0
 

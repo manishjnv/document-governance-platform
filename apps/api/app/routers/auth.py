@@ -23,8 +23,11 @@ from app.models.user import User
 from app.schemas.auth import (
     ChangePasswordRequest,
     CurrentUserResponse,
+    GoogleLoginRequest,
     LoginRequest,
     LoginResponse,
+    OtpRequestRequest,
+    OtpVerifyRequest,
     PasswordResetConfirm,
     PasswordResetRequest,
     RefreshTokenData,
@@ -136,6 +139,15 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)) -> Lo
     user = matches[0]
     record_success(request.email)
 
+    response = await _issue_login_response(db, user, action="user.login")
+    logger.info(f"Successful login for {request.email}")
+    return response
+
+
+async def _issue_login_response(db: AsyncSession, user: User, action: str) -> LoginResponse:
+    """Shared by password login, OTP-verify, and Google Sign-In: mint
+    tokens, record last_login, write the audit trail, and build the
+    response. An audit-log failure must never break login."""
     access_token, access_expires = create_access_token(
         user_id=user.user_id,
         email=user.email,
@@ -152,25 +164,22 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)) -> Lo
     user.last_login = datetime.utcnow()
 
     # T-2041: audit trail -- user_id/org_id are now real FKs, so this
-    # commits for real (see app/compliance/audit.py's log_action). Still
-    # wrapped defensively: an audit-log failure must never break login.
+    # commits for real (see app/compliance/audit.py's log_action).
     try:
         await log_action(
             db,
             org_id=user.org_id,
             user_id=user.user_id,
-            action="user.login",
+            action=action,
             resource_type="user",
             resource_id=user.user_id,
         )
         await db.commit()
     except Exception as e:
         await db.rollback()
-        logger.warning(f"Audit log write failed for login of {request.email}: {e}")
+        logger.warning(f"Audit log write failed for {action} of {user.email}: {e}")
         user.last_login = datetime.utcnow()
         await db.commit()
-
-    logger.info(f"Successful login for {request.email}")
 
     first_name, last_name = _split_name(user.full_name)
 
@@ -185,6 +194,159 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)) -> Lo
         org_id=user.org_id,
         role=user.role,
     )
+
+
+@router.post(
+    "/otp/request",
+    status_code=status.HTTP_200_OK,
+    summary="Request an email login code",
+    response_model=dict,
+)
+async def request_otp(request: OtpRequestRequest, db: AsyncSession = Depends(get_db)) -> dict:
+    """Step 1 of passwordless email login. Always returns the same generic
+    message regardless of whether the email is registered (don't leak)."""
+    import secrets
+
+    from app.email import send_email
+    from app.models.otp_code import OtpCode
+
+    candidates = await _find_candidate_users_by_email(db, request.email)
+    if candidates:
+        code = f"{secrets.randbelow(1_000_000):06d}"
+        otp = OtpCode(
+            email=request.email.lower(),
+            code_hash=hash_password(code),
+            expires_at=datetime.utcnow() + timedelta(minutes=10),
+        )
+        db.add(otp)
+        await db.commit()
+
+        await send_email(
+            request.email,
+            "Your ScopeWise login code",
+            f"Your login code is {code}. It expires in 10 minutes.",
+        )
+
+    return {"message": "If this email is registered, a login code has been sent"}
+
+
+@router.post(
+    "/otp/verify",
+    response_model=LoginResponse,
+    summary="Verify an email login code",
+    responses={401: {"description": "Invalid or expired code"}},
+)
+async def verify_otp(request: OtpVerifyRequest, db: AsyncSession = Depends(get_db)) -> LoginResponse:
+    """Step 2 of passwordless email login."""
+    from app.models.otp_code import OtpCode
+
+    invalid = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired code"
+    )
+
+    result = await db.execute(
+        select(OtpCode)
+        .where(OtpCode.email == request.email.lower(), OtpCode.consumed_at.is_(None))
+        .order_by(OtpCode.created_at.desc())
+    )
+    otp = result.scalars().first()
+
+    if otp is None or otp.expires_at < datetime.utcnow():
+        raise invalid
+
+    if otp.attempts >= 5:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many attempts -- request a new code",
+        )
+
+    if not verify_password(request.code, otp.code_hash):
+        otp.attempts += 1
+        await db.commit()
+        raise invalid
+
+    otp.consumed_at = datetime.utcnow()
+    await db.commit()
+
+    # Same ambiguous-email-across-orgs handling as password login (T-103):
+    # a code alone can't disambiguate which org's account was meant.
+    candidates = await _find_candidate_users_by_email(db, request.email)
+    if len(candidates) != 1:
+        raise invalid
+
+    response = await _issue_login_response(db, candidates[0], action="user.login.otp")
+    logger.info(f"Successful OTP login for {request.email}")
+    return response
+
+
+@router.post(
+    "/google",
+    response_model=LoginResponse,
+    summary="Sign in with Google",
+    responses={
+        401: {"description": "Invalid Google token"},
+        404: {"description": "No matching ScopeWise account"},
+        503: {"description": "Google Sign-In not configured"},
+    },
+)
+async def google_login(
+    request: GoogleLoginRequest, db: AsyncSession = Depends(get_db)
+) -> LoginResponse:
+    """Verifies the Google ID token from the frontend's Google Identity
+    Services button, then links/logs in an EXISTING ScopeWise user matched
+    by email -- like signup, this app has no self-serve org provisioning
+    via SSO, so an unmatched email is a 404, not an auto-created account."""
+    from google.auth.transport import requests as google_requests
+    from google.oauth2 import id_token as google_id_token
+
+    from app.config import settings
+
+    if not settings.google_client_id:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google Sign-In is not configured",
+        )
+
+    try:
+        payload = google_id_token.verify_oauth2_token(
+            request.id_token, google_requests.Request(), settings.google_client_id
+        )
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Google token"
+        )
+
+    google_sub = payload["sub"]
+    email = payload.get("email")
+    if not email or not payload.get("email_verified"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Google account email is not verified",
+        )
+
+    result = await db.execute(
+        select(User).where(User.google_sub == google_sub, User.deleted_at.is_(None))
+    )
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        candidates = await _find_candidate_users_by_email(db, email)
+        if len(candidates) != 1:
+            detail = (
+                "No ScopeWise account found for this Google email -- ask an admin to "
+                "create one first"
+                if not candidates
+                else "This email exists in multiple organizations -- contact support "
+                "to link your Google account"
+            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
+        user = candidates[0]
+        user.google_sub = google_sub
+        await db.commit()
+
+    response = await _issue_login_response(db, user, action="user.login.google")
+    logger.info(f"Successful Google login for {email}")
+    return response
 
 
 @router.post(

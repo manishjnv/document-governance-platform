@@ -101,6 +101,27 @@ class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(..., description="Current refresh token")
 
 
+class OtpRequestRequest(BaseModel):
+    """Request an email login code."""
+
+    email: EmailStr = Field(..., description="User email")
+
+
+class OtpVerifyRequest(BaseModel):
+    """Verify an email login code -- same response shape as password login."""
+
+    email: EmailStr = Field(..., description="User email")
+    code: str = Field(..., pattern=r"^\d{6}$", description="6-digit code from email")
+
+
+class GoogleLoginRequest(BaseModel):
+    """Google Sign-In: the ID token credential returned by Google Identity
+    Services on the frontend, verified server-side against Google's public
+    keys and GOOGLE_CLIENT_ID."""
+
+    id_token: str = Field(..., description="Google-issued ID token (JWT)")
+
+
 class PasswordResetRequest(BaseModel):
     """Password reset request."""
 

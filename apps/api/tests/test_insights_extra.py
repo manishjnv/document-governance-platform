@@ -123,6 +123,7 @@ async def analytics_db():
                 org_id TEXT NOT NULL,
                 email TEXT NOT NULL,
                 password_hash TEXT,
+                google_sub TEXT,
                 full_name TEXT,
                 role TEXT NOT NULL DEFAULT 'viewer',
                 is_active BOOLEAN NOT NULL DEFAULT 1,

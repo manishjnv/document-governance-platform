@@ -61,6 +61,22 @@ class Settings(BaseSettings):
     rate_limit_requests_per_minute: int = 60
     rate_limit_login_attempts: int = 5
 
+    # Email (SMTP) -- delivers OTP login codes. If smtp_server is empty the
+    # code is logged instead of sent (same fallback the existing password-
+    # reset flow already uses), so local dev works without real
+    # credentials. A Gmail account + App Password works fine here.
+    smtp_server: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = "noreply@scopewise.app"
+
+    # Google Sign-In -- verifies ID tokens issued by Google Identity
+    # Services on the frontend. Only the Client ID is needed (no client
+    # secret): this is the token-verification flow, not a server-side
+    # OAuth authorization-code redirect.
+    google_client_id: str = ""
+
     class Config:
         env_file = ".env"
         case_sensitive = False

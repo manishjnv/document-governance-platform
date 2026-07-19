@@ -16,6 +16,7 @@ from app.models.ip_allowlist import IPAllowlistEntry
 from app.models.kb_article import KBArticle
 from app.models.notification import Notification, NotificationPreference
 from app.models.organization import Organization
+from app.models.otp_code import OtpCode
 from app.models.project import Project
 from app.models.report_archive import ReportArchive
 from app.models.resource_grant import ResourceGrant
@@ -47,6 +48,7 @@ __all__ = [
     "KBArticle",
     "Notification",
     "NotificationPreference",
+    "OtpCode",
     "ReportArchive",
     "ResourceGrant",
     "Team",

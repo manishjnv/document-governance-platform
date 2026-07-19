@@ -33,6 +33,7 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
     )
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    google_sub: Mapped[Optional[str]] = mapped_column(String(255), unique=True, nullable=True)
     full_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     role: Mapped[str] = mapped_column(String(50), nullable=False, default=UserRole.VIEWER.value)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
