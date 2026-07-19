@@ -1,7 +1,7 @@
 # EDGP Implementation Progress
 
-**Last Updated:** 2026-07-20 03:20 GMT+5:30
-**Current Phase:** Phase 1-2 core product complete + deployed live; pre-launch fix plan Steps 1-2 done, Step 3 pending SME. Document Lifecycle & Multi-Project plan (Projects/Versioning/Fix-verification) — all three phases implemented, deployed. Project is now mandatory on upload (see entry below) — closes the gap left by the Phase A backfill.
+**Last Updated:** 2026-07-20 04:55 GMT+5:30
+**Current Phase:** Phase 1-2 core product complete + deployed live; pre-launch fix plan Steps 1-2 done, Step 3 pending SME. Document Lifecycle & Multi-Project plan (Projects/Versioning/Fix-verification) — all three phases implemented, deployed, mandatory-project + fuzzy name matching added on top. Google Sign-In + email-OTP login shipped and verified live. New file types (.doc/.xlsx/.xls/.csv) supported. Enterprise SEO strategy planned, Phase 1 ready to kick off in a new session. Full detail: `docs/phases/summaries/SESSION_HANDOFF_2026_07_20_LIFECYCLE_SSO_SEO.md`.
 
 > Previous version of this doc (dated 07-17 02:00, showing "14% overall") was
 > stale from early Phase 1 and did not reflect Phase 2/3 or the pre-launch
