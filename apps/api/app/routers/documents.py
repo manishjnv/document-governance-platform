@@ -199,6 +199,15 @@ async def upload_document(
     # Verify user has access to org
     await verify_org_access(str(org_id), current_user)
 
+    # Project is mandatory: either an existing project_id or a project_name
+    # (which creates the project on the fly) -- every document must belong
+    # to a project, not just "labeled" by one.
+    if project_id is None and not (project_name and project_name.strip()):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="A project is required -- pass project_id (existing) or project_name (new)",
+        )
+
     # Validate file type
     content_type = file.content_type or ""
     file_type = MIME_TO_TYPE.get(content_type, "").lower()
@@ -364,6 +373,58 @@ async def get_documents_batch(
     documents = result.scalars().all()
 
     return [DocumentRead.from_orm(doc) for doc in documents]
+
+
+@router.patch(
+    "/{doc_id}/project",
+    response_model=DocumentRead,
+    summary="Assign or change a document's project",
+)
+async def set_document_project(
+    doc_id: UUID,
+    project_id: Optional[UUID] = Query(None, description="Existing project to attach to"),
+    project_name: Optional[str] = Query(
+        None, description="Project label -- creates the project if it doesn't exist yet"
+    ),
+    current_user: TokenData = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retroactively tag a document (e.g. one left unprojected by the Phase A
+    migration's near-duplicate flagging) into a project -- same
+    project_id-wins/project_name-creates resolution as upload."""
+    from sqlalchemy import select
+
+    if project_id is None and not (project_name and project_name.strip()):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="A project is required -- pass project_id (existing) or project_name (new)",
+        )
+
+    result = await db.execute(
+        select(Document).where((Document.doc_id == doc_id) & (Document.deleted_at.is_(None)))
+    )
+    doc = result.scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+
+    await verify_org_access(str(doc.org_id), current_user)
+
+    resolved_project_id = project_id
+    if resolved_project_id is None:
+        from app.routers.projects import get_or_create_project
+
+        project = await get_or_create_project(db, doc.org_id, project_name)
+        resolved_project_id = project.project_id
+
+    doc.project_id = resolved_project_id
+    if project_name:
+        doc.project_name = project_name
+    await db.commit()
+    await db.refresh(doc)
+
+    await invalidate_cache(f"cache:*:{doc.org_id}:*")
+
+    return DocumentRead.from_orm(doc)
 
 
 @router.get(

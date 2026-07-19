@@ -121,6 +121,11 @@ export default function UploadPage() {
       return;
     }
 
+    if (!versionOfDocId && !presetProjectId && !projectName.trim()) {
+      setError('Choose an existing project or type a new project name');
+      return;
+    }
+
     setUploading(true);
     setError('');
     setSuccess('');
@@ -187,7 +192,7 @@ export default function UploadPage() {
               {!versionOfDocId && (
               <div>
                 <label htmlFor="projectName" className="block text-sm font-medium mb-2">
-                  Project <span className="text-muted-foreground font-normal">(optional)</span>
+                  Project <span className="text-destructive">*</span>
                 </label>
                 {presetProjectId ? (
                   <div className="flex items-center justify-between px-4 py-2 border border-input rounded-md bg-muted/50">
@@ -295,7 +300,15 @@ export default function UploadPage() {
               )}
 
               {/* Submit Button */}
-              <Button type="submit" disabled={!file || uploading} className="w-full">
+              <Button
+                type="submit"
+                disabled={
+                  !file ||
+                  uploading ||
+                  (!versionOfDocId && !presetProjectId && !projectName.trim())
+                }
+                className="w-full"
+              >
                 {uploading ? 'Uploading...' : 'Upload Document'}
               </Button>
             </form>
