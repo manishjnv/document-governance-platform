@@ -226,7 +226,7 @@ function DocumentsTable({
 
   return (
     <div className="rounded-lg border overflow-hidden">
-      <Table>
+      <Table className="text-xs [&_th]:h-8 [&_th]:py-1.5 [&_th]:px-3 [&_td]:py-1.5 [&_td]:px-3">
         <TableHeader>
           <TableRow>
             <TableHead>Filename</TableHead>
@@ -286,7 +286,7 @@ function DocumentsTable({
                 {isExpanded &&
                   versions.slice(1).map((doc) => (
                     <TableRow key={doc.doc_id} className="bg-muted/30">
-                      <TableCell className="pl-10 text-sm text-muted-foreground">
+                      <TableCell className="pl-8 text-muted-foreground">
                         v{doc.version} -- {doc.original_filename || doc.filename}
                       </TableCell>
                       <TableCell>{doc.document_type || 'Unknown'}</TableCell>
@@ -497,7 +497,7 @@ export default function DashboardPage() {
   return (
     <AppShell>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Documents</h1>
+        <h1 className="text-2xl font-medium">Documents</h1>
         <Button asChild>
           <Link href="/upload">Upload Document</Link>
         </Button>
@@ -539,20 +539,20 @@ export default function DashboardPage() {
       )}
 
       {/* Stats + Filter row */}
-      <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border px-3 py-1.5 text-sm">
+      <div className="flex flex-nowrap items-center justify-between gap-4 mb-6">
+        <div className="flex flex-wrap items-center gap-x-3 rounded-lg border text-sm min-w-0">
           <span className="text-slate-700">
-            Total <span className="font-medium text-slate-900">{stats.total}</span>
+            Total <span className="font-normal text-slate-900">{stats.total}</span>
           </span>
           {DOCUMENT_TYPES.map((type) => (
             <span key={type} className="text-slate-700">
-              {type} <span className="font-medium text-slate-900">{stats.byType[type] || 0}</span>
+              {type} <span className="font-normal text-slate-900">{stats.byType[type] || 0}</span>
             </span>
           ))}
         </div>
 
-        <div>
-          <label htmlFor="filterType" className="block text-sm font-medium mb-2">
+        <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
+          <label htmlFor="filterType" className="text-sm font-medium">
             Filter by Type
           </label>
           <select
@@ -591,17 +591,17 @@ export default function DashboardPage() {
           </Button>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-2">
           {groups.projectGroups.map(({ project, documents: projectDocs }) => (
             <details key={project.project_id} className="rounded-lg border" open>
-              <summary className="cursor-pointer select-none px-4 py-3 flex items-center justify-between gap-4">
+              <summary className="cursor-pointer select-none px-3 py-2 text-sm flex items-center justify-between gap-4">
                 <span className="font-medium">
                   {project.name}{' '}
                   <span className="text-muted-foreground font-normal">
                     ({projectDocs.length} document{projectDocs.length === 1 ? '' : 's'})
                   </span>
                 </span>
-                <span className="flex items-center gap-4 text-sm text-muted-foreground">
+                <span className="flex items-center gap-4 text-xs text-muted-foreground">
                   {project.average_latest_score !== null && (
                     <span>Avg score: {project.average_latest_score.toFixed(0)}</span>
                   )}
@@ -619,7 +619,7 @@ export default function DashboardPage() {
                   </Link>
                 </span>
               </summary>
-              <div className="px-4 pb-4">
+              <div className="px-2 pb-2">
                 <DocumentsTable
                   documents={projectDocs}
                   reviewingDocId={reviewingDocId}
@@ -634,13 +634,13 @@ export default function DashboardPage() {
 
           {groups.ungrouped.length > 0 && (
             <details className="rounded-lg border" open>
-              <summary className="cursor-pointer select-none px-4 py-3 font-medium">
+              <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium">
                 No Project{' '}
                 <span className="text-muted-foreground font-normal">
                   ({groups.ungrouped.length} document{groups.ungrouped.length === 1 ? '' : 's'})
                 </span>
               </summary>
-              <div className="px-4 pb-4">
+              <div className="px-2 pb-2">
                 <DocumentsTable
                   documents={groups.ungrouped}
                   reviewingDocId={reviewingDocId}
