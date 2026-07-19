@@ -42,6 +42,15 @@ async def seeded_user(db_session):
     return user
 
 
+class TestOtpEmailBranding:
+    def test_html_template_includes_brand_and_code(self):
+        from app.email import otp_email_html
+
+        html = otp_email_html("123456")
+        assert "ScopeWise" in html
+        assert "123456" in html
+
+
 class TestOtpLogin:
     async def test_request_otp_for_unknown_email_still_returns_generic_success(self, client):
         response = await client.post(
@@ -56,14 +65,14 @@ class TestOtpLogin:
         # knows what code was generated instead of racing a second row
         # against it (both would get the identical transaction-scoped
         # `now()` from Postgres, making ORDER BY created_at nondeterministic).
-        with patch("secrets.randbelow", return_value=654321):
+        with patch("secrets.randbelow", return_value=6543):
             response = await client.post(
                 "/api/v1/auth/otp/request", json={"email": seeded_user.email}
             )
         assert response.status_code == 200
 
         verify_response = await client.post(
-            "/api/v1/auth/otp/verify", json={"email": seeded_user.email, "code": "654321"}
+            "/api/v1/auth/otp/verify", json={"email": seeded_user.email, "code": "6543"}
         )
         assert verify_response.status_code == 200
         body = verify_response.json()
@@ -73,33 +82,33 @@ class TestOtpLogin:
     async def test_verify_wrong_code_rejected(self, client, seeded_user, db_session):
         otp = OtpCode(
             email=seeded_user.email.lower(),
-            code_hash=hash_password("111111"),
+            code_hash=hash_password("1111"),
             expires_at=datetime.utcnow() + timedelta(minutes=10),
         )
         db_session.add(otp)
         await db_session.commit()
 
         response = await client.post(
-            "/api/v1/auth/otp/verify", json={"email": seeded_user.email, "code": "222222"}
+            "/api/v1/auth/otp/verify", json={"email": seeded_user.email, "code": "2222"}
         )
         assert response.status_code == 401
 
     async def test_verify_expired_code_rejected(self, client, seeded_user, db_session):
         otp = OtpCode(
             email=seeded_user.email.lower(),
-            code_hash=hash_password("333333"),
+            code_hash=hash_password("3333"),
             expires_at=datetime.utcnow() - timedelta(minutes=1),
         )
         db_session.add(otp)
         await db_session.commit()
 
         response = await client.post(
-            "/api/v1/auth/otp/verify", json={"email": seeded_user.email, "code": "333333"}
+            "/api/v1/auth/otp/verify", json={"email": seeded_user.email, "code": "3333"}
         )
         assert response.status_code == 401
 
     async def test_verify_code_cannot_be_reused(self, client, seeded_user, db_session):
-        code = "444444"
+        code = "4444"
         otp = OtpCode(
             email=seeded_user.email.lower(),
             code_hash=hash_password(code),

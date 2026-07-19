@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
@@ -86,6 +86,7 @@ function OtpLogin({ onError }: { onError: (msg: string) => void }) {
   const [code, setCode] = useState('');
   const [codeRequested, setCodeRequested] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showCode, setShowCode] = useState(false);
   const router = useRouter();
 
   const requestCode = async (e: React.FormEvent) => {
@@ -102,22 +103,31 @@ function OtpLogin({ onError }: { onError: (msg: string) => void }) {
     }
   };
 
-  const verifyCode = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const verifyCode = async (submittedCode: string) => {
     setLoading(true);
     onError('');
     try {
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/otp/verify`,
-        { email, code }
+        { email, code: submittedCode }
       );
       storeTokensAndRedirect(router, response.data);
     } catch (err: any) {
-      onError(err.response?.data?.detail || 'Invalid or expired code');
+      onError(err.response?.data?.detail || 'Incorrect code -- please try again');
+      setCode('');
     } finally {
       setLoading(false);
     }
   };
+
+  // Auto-submit as soon as all 4 digits are entered -- no separate
+  // "Verify" click needed.
+  useEffect(() => {
+    if (code.length === 4 && !loading) {
+      verifyCode(code);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code]);
 
   if (!codeRequested) {
     return (
@@ -138,32 +148,44 @@ function OtpLogin({ onError }: { onError: (msg: string) => void }) {
   }
 
   return (
-    <form onSubmit={verifyCode} className="space-y-3">
+    <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        Enter the 6-digit code sent to <strong>{email}</strong>.
+        Enter the 4-digit code sent to <strong>{email}</strong>.
       </p>
-      <input
-        type="text"
-        inputMode="numeric"
-        pattern="\d{6}"
-        maxLength={6}
-        value={code}
-        onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-        placeholder="123456"
-        className="w-full px-3 py-2 border border-input rounded-md text-sm tracking-widest text-center transition duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-        required
-      />
-      <Button type="submit" disabled={loading || code.length !== 6} className="w-full">
-        {loading ? 'Verifying...' : 'Verify code'}
-      </Button>
+      <div className="relative">
+        <input
+          type={showCode ? 'text' : 'password'}
+          inputMode="numeric"
+          pattern="\d{4}"
+          maxLength={4}
+          value={code}
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+          placeholder="1234"
+          disabled={loading}
+          autoFocus
+          className="w-full px-3 py-2 pr-10 border border-input rounded-md text-lg tracking-[0.5em] text-center transition duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:opacity-50"
+        />
+        <button
+          type="button"
+          onClick={() => setShowCode((v) => !v)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          aria-label={showCode ? 'Hide code' : 'Show code'}
+        >
+          {showCode ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
+      </div>
+      {loading && <p className="text-xs text-muted-foreground text-center">Verifying...</p>}
       <button
         type="button"
         className="text-sm text-primary hover:underline w-full text-center"
-        onClick={() => setCodeRequested(false)}
+        onClick={() => {
+          setCodeRequested(false);
+          setCode('');
+        }}
       >
         Use a different email
       </button>
-    </form>
+    </div>
   );
 }
 

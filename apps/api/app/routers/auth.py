@@ -207,12 +207,12 @@ async def request_otp(request: OtpRequestRequest, db: AsyncSession = Depends(get
     message regardless of whether the email is registered (don't leak)."""
     import secrets
 
-    from app.email import send_email
+    from app.email import otp_email_html, send_email
     from app.models.otp_code import OtpCode
 
     candidates = await _find_candidate_users_by_email(db, request.email)
     if candidates:
-        code = f"{secrets.randbelow(1_000_000):06d}"
+        code = f"{secrets.randbelow(10_000):04d}"
         otp = OtpCode(
             email=request.email.lower(),
             code_hash=hash_password(code),
@@ -225,6 +225,7 @@ async def request_otp(request: OtpRequestRequest, db: AsyncSession = Depends(get
             request.email,
             "Your ScopeWise login code",
             f"Your login code is {code}. It expires in 10 minutes.",
+            html_body=otp_email_html(code),
         )
 
     return {"message": "If this email is registered, a login code has been sent"}

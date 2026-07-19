@@ -111,7 +111,7 @@ class OtpVerifyRequest(BaseModel):
     """Verify an email login code -- same response shape as password login."""
 
     email: EmailStr = Field(..., description="User email")
-    code: str = Field(..., pattern=r"^\d{6}$", description="6-digit code from email")
+    code: str = Field(..., pattern=r"^\d{4}$", description="4-digit code from email")
 
 
 class GoogleLoginRequest(BaseModel):
