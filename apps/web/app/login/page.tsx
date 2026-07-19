@@ -1,6 +1,8 @@
 /**
  * T-701: Login page component
- * Email/password, Google Sign-In, and email one-time-code login.
+ * Seamless sign-in/sign-up via Google or an emailed one-time code -- no
+ * password, no separate signup screen. A new email creates the account
+ * on the spot (see app/routers/auth.py::_get_or_create_user).
  */
 
 'use client';
@@ -132,16 +134,22 @@ function OtpLogin({ onError }: { onError: (msg: string) => void }) {
   if (!codeRequested) {
     return (
       <form onSubmit={requestCode} className="space-y-3">
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@example.com"
-          className="w-full px-3 py-2 border border-input rounded-md text-sm transition duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-          required
-        />
-        <Button type="submit" variant="outline" disabled={loading} className="w-full">
-          {loading ? 'Sending...' : 'Email me a login code'}
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium mb-2">
+            Email Address
+          </label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            className="w-full px-3 py-2 border border-input rounded-md text-sm transition duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+            required
+          />
+        </div>
+        <Button type="submit" disabled={loading} className="w-full">
+          {loading ? 'Sending...' : 'Continue with email'}
         </Button>
       </form>
     );
@@ -190,32 +198,7 @@ function OtpLogin({ onError }: { onError: (msg: string) => void }) {
 }
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showOtp, setShowOtp] = useState(false);
-  const router = useRouter();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    try {
-      // Backend expects JSON { email, password } (app/schemas/auth.py::LoginRequest),
-      // not an OAuth2-style form-urlencoded username/password body.
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/login`,
-        { email, password }
-      );
-      storeTokensAndRedirect(router, response.data);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Login failed');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-muted flex items-center justify-center p-4">
@@ -237,82 +220,16 @@ export default function LoginPage() {
 
           <GoogleSignInButton onError={setError} />
 
-          {showOtp ? (
-            <>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">Email code</span>
-                </div>
-              </div>
-              <OtpLogin onError={setError} />
-              <button
-                type="button"
-                className="text-sm text-primary hover:underline w-full text-center"
-                onClick={() => setShowOtp(false)}
-              >
-                Use password instead
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">Or</span>
-                </div>
-              </div>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">Or</span>
+            </div>
+          </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium mb-2">
-                    Email Address
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full px-3 py-2 border border-input rounded-md text-sm transition duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="password" className="block text-sm font-medium mb-2">
-                    Password
-                  </label>
-                  <input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full px-3 py-2 border border-input rounded-md text-sm transition duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-                    required
-                  />
-                </div>
-
-                <Button type="submit" disabled={loading} className="w-full">
-                  {loading ? 'Signing in...' : 'Sign In'}
-                </Button>
-              </form>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => setShowOtp(true)}
-              >
-                Sign in with an email code instead
-              </Button>
-            </>
-          )}
+          <OtpLogin onError={setError} />
         </CardContent>
       </Card>
     </div>

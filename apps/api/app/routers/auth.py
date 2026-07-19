@@ -196,6 +196,42 @@ async def _issue_login_response(db: AsyncSession, user: User, action: str) -> Lo
     )
 
 
+async def _get_or_create_user(
+    db: AsyncSession, email: str, full_name: str | None = None
+) -> User:
+    """Seamless signup+login (used by both OTP-verify and Google login):
+    an existing account logs straight in; an unrecognized email creates a
+    brand-new org + admin user on the spot, no separate signup step. A
+    same email spread across >1 org is still ambiguous with no way to
+    disambiguate from just an email, so that stays a hard error."""
+    candidates = await _find_candidate_users_by_email(db, email)
+    if len(candidates) == 1:
+        return candidates[0]
+    if len(candidates) > 1:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="This email exists in multiple organizations -- contact support",
+        )
+
+    org_name = f"{email.split('@')[0]}'s Workspace"
+    org = Organization(name=org_name, subscription_tier="free")
+    db.add(org)
+    await db.flush()
+
+    user = User(
+        org_id=org.org_id,
+        email=email,
+        password_hash=None,
+        full_name=full_name,
+        role="admin",
+        is_active=True,
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
 @router.post(
     "/otp/request",
     status_code=status.HTTP_200_OK,
@@ -203,32 +239,32 @@ async def _issue_login_response(db: AsyncSession, user: User, action: str) -> Lo
     response_model=dict,
 )
 async def request_otp(request: OtpRequestRequest, db: AsyncSession = Depends(get_db)) -> dict:
-    """Step 1 of passwordless email login. Always returns the same generic
-    message regardless of whether the email is registered (don't leak)."""
+    """Step 1 of seamless email login -- works for both an existing account
+    (logs in) and a brand-new one (creates it on verify, see
+    _get_or_create_user). A code is sent for any syntactically valid
+    email; there's no "is this registered" distinction to leak anymore."""
     import secrets
 
     from app.email import otp_email_html, send_email
     from app.models.otp_code import OtpCode
 
-    candidates = await _find_candidate_users_by_email(db, request.email)
-    if candidates:
-        code = f"{secrets.randbelow(10_000):04d}"
-        otp = OtpCode(
-            email=request.email.lower(),
-            code_hash=hash_password(code),
-            expires_at=datetime.utcnow() + timedelta(minutes=10),
-        )
-        db.add(otp)
-        await db.commit()
+    code = f"{secrets.randbelow(10_000):04d}"
+    otp = OtpCode(
+        email=request.email.lower(),
+        code_hash=hash_password(code),
+        expires_at=datetime.utcnow() + timedelta(minutes=10),
+    )
+    db.add(otp)
+    await db.commit()
 
-        await send_email(
-            request.email,
-            "Your ScopeWise login code",
-            f"Your login code is {code}. It expires in 10 minutes.",
-            html_body=otp_email_html(code),
-        )
+    await send_email(
+        request.email,
+        "Your ScopeWise login code",
+        f"Your login code is {code}. It expires in 10 minutes.",
+        html_body=otp_email_html(code),
+    )
 
-    return {"message": "If this email is registered, a login code has been sent"}
+    return {"message": "A login code has been sent to this email"}
 
 
 @router.post(
@@ -269,13 +305,8 @@ async def verify_otp(request: OtpVerifyRequest, db: AsyncSession = Depends(get_d
     otp.consumed_at = datetime.utcnow()
     await db.commit()
 
-    # Same ambiguous-email-across-orgs handling as password login (T-103):
-    # a code alone can't disambiguate which org's account was meant.
-    candidates = await _find_candidate_users_by_email(db, request.email)
-    if len(candidates) != 1:
-        raise invalid
-
-    response = await _issue_login_response(db, candidates[0], action="user.login.otp")
+    user = await _get_or_create_user(db, request.email.lower())
+    response = await _issue_login_response(db, user, action="user.login.otp")
     logger.info(f"Successful OTP login for {request.email}")
     return response
 
@@ -286,7 +317,6 @@ async def verify_otp(request: OtpVerifyRequest, db: AsyncSession = Depends(get_d
     summary="Sign in with Google",
     responses={
         401: {"description": "Invalid Google token"},
-        404: {"description": "No matching ScopeWise account"},
         503: {"description": "Google Sign-In not configured"},
     },
 )
@@ -294,9 +324,9 @@ async def google_login(
     request: GoogleLoginRequest, db: AsyncSession = Depends(get_db)
 ) -> LoginResponse:
     """Verifies the Google ID token from the frontend's Google Identity
-    Services button, then links/logs in an EXISTING ScopeWise user matched
-    by email -- like signup, this app has no self-serve org provisioning
-    via SSO, so an unmatched email is a 404, not an auto-created account."""
+    Services button, then seamlessly logs in an existing user matched by
+    email or google_sub, or creates a brand-new account on the spot (see
+    _get_or_create_user) -- same seamless signup+login as OTP."""
     from google.auth.transport import requests as google_requests
     from google.oauth2 import id_token as google_id_token
 
@@ -331,17 +361,7 @@ async def google_login(
     user = result.scalar_one_or_none()
 
     if user is None:
-        candidates = await _find_candidate_users_by_email(db, email)
-        if len(candidates) != 1:
-            detail = (
-                "No ScopeWise account found for this Google email -- ask an admin to "
-                "create one first"
-                if not candidates
-                else "This email exists in multiple organizations -- contact support "
-                "to link your Google account"
-            )
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
-        user = candidates[0]
+        user = await _get_or_create_user(db, email.lower(), full_name=payload.get("name"))
         user.google_sub = google_sub
         await db.commit()
 

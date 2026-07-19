@@ -1,12 +1,15 @@
-"""Tests for Google Sign-In and email-OTP login (both alternative login
-paths for an EXISTING user matched by email -- neither self-provisions a
-new org/user, same design constraint as signup())."""
+"""Tests for Google Sign-In and email-OTP login -- both are seamless
+signup+login: an existing user matched by email/google_sub logs straight
+in, an unrecognized email creates a brand-new org+admin account on the
+spot (see app/routers/auth.py::_get_or_create_user). There's no separate
+signup screen/endpoint in this flow."""
 
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 
 from app.auth import hash_password
 from app.models.organization import Organization
@@ -52,12 +55,37 @@ class TestOtpEmailBranding:
 
 
 class TestOtpLogin:
-    async def test_request_otp_for_unknown_email_still_returns_generic_success(self, client):
+    async def test_request_otp_for_any_email_returns_success(self, client):
         response = await client.post(
             "/api/v1/auth/otp/request", json={"email": "nobody@example.com"}
         )
         assert response.status_code == 200
-        assert "registered" in response.json()["message"].lower()
+        assert "sent" in response.json()["message"].lower()
+
+    async def test_verify_otp_for_new_email_creates_account(self, client, db_session):
+        code = "9999"
+        otp = OtpCode(
+            email="brandnew@example.com",
+            code_hash=hash_password(code),
+            expires_at=datetime.utcnow() + timedelta(minutes=10),
+        )
+        db_session.add(otp)
+        await db_session.commit()
+
+        response = await client.post(
+            "/api/v1/auth/otp/verify", json={"email": "brandnew@example.com", "code": code}
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["email"] == "brandnew@example.com"
+        assert body["role"] == "admin"
+
+        result = await db_session.execute(
+            select(User).where(User.email == "brandnew@example.com")
+        )
+        user = result.scalar_one()
+        assert user.org_id is not None
+        assert user.password_hash is None
 
     async def test_request_and_verify_otp_success(self, client, seeded_user, db_session):
         # /otp/request doesn't return the plaintext code (it's emailed, or
@@ -151,18 +179,28 @@ class TestGoogleLogin:
         await db_session.refresh(seeded_user)
         assert seeded_user.google_sub == "google-sub-123"
 
-    async def test_google_login_unknown_email_returns_404(self, client):
+    async def test_google_login_unknown_email_creates_account(self, client, db_session):
         fake_payload = {
             "sub": "google-sub-999",
             "email": "unknown@example.com",
             "email_verified": True,
+            "name": "New Googler",
         }
         with patch("app.config.settings.google_client_id", "fake-client-id"), patch(
             "google.oauth2.id_token.verify_oauth2_token", return_value=fake_payload
         ):
             response = await client.post("/api/v1/auth/google", json={"id_token": "fake"})
 
-        assert response.status_code == 404
+        assert response.status_code == 200
+        body = response.json()
+        assert body["email"] == "unknown@example.com"
+
+        result = await db_session.execute(
+            select(User).where(User.email == "unknown@example.com")
+        )
+        user = result.scalar_one()
+        assert user.google_sub == "google-sub-999"
+        assert user.full_name == "New Googler"
 
     async def test_google_login_unverified_email_rejected(self, client, seeded_user):
         fake_payload = {
