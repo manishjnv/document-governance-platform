@@ -303,13 +303,14 @@ export default function LoginPage() {
                 </Button>
               </form>
 
-              <button
+              <Button
                 type="button"
-                className="text-sm text-primary hover:underline w-full text-center"
+                variant="outline"
+                className="w-full"
                 onClick={() => setShowOtp(true)}
               >
                 Sign in with an email code instead
-              </button>
+              </Button>
             </>
           )}
         </CardContent>
