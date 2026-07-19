@@ -213,6 +213,36 @@ listed below — several of these are copy-pasted patterns that recur.
   outage rather than a budget problem. Full benchmark methodology and
   per-model results in `docs/planning/AI_MODEL_ROUTING.md`.
 
+### 15. Every real upload crashed with `NameError: name 'doc_id' is not defined` (2026-07-20)
+
+- **Symptom:** `POST /api/v1/documents/upload` 500'd on every successful
+  upload (file validated, stored, parsed, `Document` row committed — then
+  crashed on the final log line before returning a response). Deployed to
+  prod as part of the Document Lifecycle session's Phase B commit and went
+  undetected through that session's full test suite (405/2 → 422/2, all
+  green) because no test exercised the real HTTP upload success path —
+  `test_documents.py` only covers delete, and the versioning tests
+  construct `Document` rows directly via the ORM instead of calling
+  `POST /upload`.
+- **Root cause:** `apps/api/app/routers/documents.py::upload_document` was
+  refactored (Phase B, moving the storage/parsing logic into a shared
+  `_store_uploaded_document` helper) so `doc_id` became a local variable
+  *inside* the helper, not in `upload_document` itself anymore. A leftover
+  `logger.info(f"Document {doc_id} uploaded...")` at the end of
+  `upload_document` still referenced the now-out-of-scope name.
+- **Fix:** `apps/api/app/routers/documents.py` — changed the log line to
+  `doc.doc_id` (the `Document` object returned by the helper, already in
+  scope).
+- **Prevention:** a refactor that moves a variable into a helper function
+  must be verified against every reference to that variable in the
+  *caller*, not just the lines directly touched by the diff — grep the old
+  variable name across the whole function after any such extraction, not
+  just the block that was cut. Also: this class of bug (crash only on the
+  success path, after every side effect has already committed) is
+  invisible to tests that never hit a real success response — a new
+  endpoint/refactor needs at least one HTTP-level test of the happy path,
+  not just the validation/error branches, before being considered covered.
+
 ---
 
 *(Append new entries above this line, most recent first is NOT required —
