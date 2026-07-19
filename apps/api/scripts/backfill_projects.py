@@ -23,8 +23,19 @@ from app.db.session import AsyncSessionLocal
 from app.models.document import Document
 from app.models.project import Project
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-REPORT_PATH = REPO_ROOT / "docs" / "phases" / "summaries" / "PROJECT_MIGRATION_REPORT.md"
+def _find_report_path() -> Path | None:
+    """Walk up from this file looking for a docs/phases/summaries dir (the
+    full repo checkout, local dev layout). Returns None in an environment
+    that only has the api app copied in (e.g. the production container
+    image) -- report then just prints to stdout instead of writing a file."""
+    for ancestor in Path(__file__).resolve().parents:
+        candidate = ancestor / "docs" / "phases" / "summaries"
+        if candidate.is_dir():
+            return candidate / "PROJECT_MIGRATION_REPORT.md"
+    return None
+
+
+REPORT_PATH = _find_report_path()
 
 
 def _normalize(name: str) -> str:
@@ -130,9 +141,13 @@ def _write_report(auto_mapped: list[tuple], flagged: list[tuple], already_migrat
         lines.append("None.")
     lines.append("")
 
-    REPORT_PATH.write_text("\n".join(lines), encoding="utf-8")
-
-    print(f"Report written to {REPORT_PATH}")
+    report_text = "\n".join(lines)
+    if REPORT_PATH is None:
+        print("No repo checkout found (running from a standalone app image) -- printing report:\n")
+        print(report_text)
+    else:
+        REPORT_PATH.write_text(report_text, encoding="utf-8")
+        print(f"Report written to {REPORT_PATH}")
 
 
 if __name__ == "__main__":
