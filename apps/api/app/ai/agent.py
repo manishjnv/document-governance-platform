@@ -54,6 +54,7 @@ class ReviewAgent(ABC):
         self.name = name
         self.model = model
         self.client = None
+        self._fallback_models: list[str] = []
 
     async def initialize(self):
         """Initialize agent with API client.
@@ -65,6 +66,7 @@ class ReviewAgent(ABC):
 
         if settings.openrouter_api_key:
             self.model = settings.openrouter_model
+            self._fallback_models = list(settings.openrouter_fallback_models)
             self.client = _OpenRouterClient(settings.openrouter_api_key)
             logger.info(f"Agent '{self.name}' initialized with OpenRouter model {self.model}")
             return
@@ -107,24 +109,41 @@ class ReviewAgent(ABC):
         try:
             logger.info(f"{self.name}: Starting review...")
 
-            # to_thread: self.client (Anthropic or the OpenRouter adapter) is
-            # a synchronous SDK call -- awaiting it directly would block the
-            # whole event loop for the entire ~10-90s request, freezing every
-            # other concurrent request (login, search, dashboard) on this
-            # single-worker dev server until it returns.
-            response = await asyncio.to_thread(
-                self.client.messages.create,
-                model=self.model,
-                max_tokens=2000,
-                temperature=0.7,
-                system=self.get_system_prompt(document_type),
-                messages=[
-                    {
-                        "role": "user",
-                        "content": f"Please review this document and provide findings in JSON format:\n\n{document_text}",
-                    }
-                ],
-            )
+            # Primary model + fallback chain (customer is waiting on this
+            # call, so a single provider hiccup/429 shouldn't fail the
+            # review outright).
+            models_to_try = [self.model, *self._fallback_models]
+            response = None
+            last_error = None
+            for attempt, model in enumerate(models_to_try):
+                try:
+                    # to_thread: self.client (Anthropic or the OpenRouter
+                    # adapter) is a synchronous SDK call -- awaiting it
+                    # directly would block the whole event loop for the
+                    # entire ~10-90s request, freezing every other
+                    # concurrent request (login, search, dashboard) on
+                    # this single-worker dev server until it returns.
+                    response = await asyncio.to_thread(
+                        self.client.messages.create,
+                        model=model,
+                        max_tokens=4000,
+                        temperature=0.7,
+                        system=self.get_system_prompt(document_type),
+                        messages=[
+                            {
+                                "role": "user",
+                                "content": f"Please review this document and provide findings in JSON format:\n\n{document_text}",
+                            }
+                        ],
+                    )
+                    if attempt > 0:
+                        logger.warning(f"{self.name}: succeeded on fallback model {model}")
+                    break
+                except Exception as e:
+                    last_error = e
+                    logger.warning(f"{self.name}: model {model} failed ({e}), trying next")
+            if response is None:
+                raise last_error
 
             # Extract text response
             response_text = response.content[0].text

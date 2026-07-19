@@ -41,10 +41,16 @@ class Settings(BaseSettings):
     ai_max_retries: int = 3
     ai_timeout_seconds: int = 60
 
-    # OpenRouter (ponytail: dev/test-only alt provider, picked over
-    # Anthropic/OpenAI/Google per user request for cheap agent testing)
+    # OpenRouter (non-Anthropic/OpenAI/Google provider, used for the
+    # customer-facing document review). Primary + fallback chain: if the
+    # primary model errors or 429s, agent.py retries against the next.
     openrouter_api_key: str = ""
-    openrouter_model: str = "deepseek/deepseek-chat"
+    openrouter_model: str = "z-ai/glm-5.2"
+    openrouter_fallback_models: list[str] = [
+        "minimax/minimax-m3",
+        "qwen/qwen3.7-plus",
+        "deepseek/deepseek-chat",
+    ]
 
     # Storage
     storage_type: str = "local"

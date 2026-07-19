@@ -27,6 +27,12 @@ RFP-branching system prompts. Cross-cutting ambiguous-language regex scan.
 Rule engine (20 SOW rules + 7 RFP rules). RFP is a first-class
 `DocumentType` (enum + migration + rule set + agent prompts).
 
+**OpenRouter model routing (2026-07-19):** primary/fallback chain
+(GLM-5.2 → MiniMax M3 → Qwen3.7-Plus → DeepSeek) replaces the single
+`deepseek-chat` default; fixed a `max_tokens=2000` truncation bug that
+was silently breaking 3 of 5 candidate models. Full benchmark results
+and rationale in `docs/planning/AI_MODEL_ROUTING.md`.
+
 **Scoring & reporting:** 7-category weighted scoring, severity now actually
 read from findings (was keyword-matching only — fixed), PDF report
 generation via `xhtml2pdf` (was a placeholder), stored-XSS fix in HTML
