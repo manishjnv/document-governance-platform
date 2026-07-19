@@ -24,6 +24,65 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/reviews", tags=["reviews"])
 
 
+async def _verify_against_previous_version(db: AsyncSession, doc: Document, review: Review) -> None:
+    """Phase C (Document Lifecycle plan): if `doc` has an earlier version in
+    the same document_group_id with a completed review, diff that review's
+    findings against `review`'s (just-added, not yet committed -- flushed
+    here so they're queryable) findings and update the previous findings'
+    resolved/still-present status accordingly. No-op if there's no earlier
+    version or it has no completed review."""
+    from sqlalchemy import select
+
+    from app.insights.fix_verification import apply_verification, diff_findings
+
+    prev_doc_result = await db.execute(
+        select(Document)
+        .where(
+            (Document.document_group_id == doc.document_group_id)
+            & (Document.org_id == doc.org_id)
+            & (Document.version < doc.version)
+            & (Document.deleted_at.is_(None))
+        )
+        .order_by(Document.version.desc())
+    )
+    prev_doc = prev_doc_result.scalars().first()
+    if prev_doc is None:
+        return
+
+    prev_review_result = await db.execute(
+        select(Review)
+        .where(
+            (Review.doc_id == prev_doc.doc_id)
+            & (Review.status == "completed")
+            & (Review.deleted_at.is_(None))
+        )
+        .order_by(Review.created_at.desc())
+    )
+    prev_review = prev_review_result.scalars().first()
+    if prev_review is None:
+        return
+
+    prev_findings_result = await db.execute(
+        select(Finding).where(
+            (Finding.review_id == prev_review.review_id) & (Finding.deleted_at.is_(None))
+        )
+    )
+    previous_findings = list(prev_findings_result.scalars().all())
+    if not previous_findings:
+        return
+
+    await db.flush()
+    new_findings_result = await db.execute(
+        select(Finding).where(
+            (Finding.review_id == review.review_id) & (Finding.deleted_at.is_(None))
+        )
+    )
+    new_findings = list(new_findings_result.scalars().all())
+
+    diff = diff_findings(previous_findings, new_findings)
+    apply_verification(previous_findings, diff, review.review_id)
+
+
 def _locate_finding(evidence, document_text, sections):
     """Best-effort: which section/page a finding's evidence text falls in.
 
@@ -294,6 +353,11 @@ async def trigger_review(
         review.medium_finding_count = medium_count
         review.low_finding_count = low_count
         review.info_finding_count = info_count
+
+        # Phase C (Document Lifecycle plan): if this document has an earlier
+        # version with a completed review, verify that version's findings
+        # against what this re-review actually found.
+        await _verify_against_previous_version(db, doc, review)
 
         # T-2041: audit trail
         await log_action(
