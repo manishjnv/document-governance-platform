@@ -61,6 +61,9 @@ VALID_AGENT_NAMES = {
 # Real scoring categories (app/scoring/algorithm.py DocumentScorer.WEIGHTS).
 VALID_SCORING_CATEGORIES = set(DocumentScorer.WEIGHTS.keys())
 
+# Real risk-model severities (app/scoring/algorithm.py DocumentScorer.RISK_SEVERITY_WEIGHTS).
+VALID_RISK_SEVERITIES = set(DocumentScorer.RISK_SEVERITY_WEIGHTS.keys())
+
 
 # ---------------------------------------------------------------------------
 # T-2091: rule config
@@ -164,6 +167,49 @@ async def set_scoring_weight(db: AsyncSession, org_id: UUID, category: str, weig
             """
         ),
         {"org_id": org_id, "category": category, "weight": weight},
+    )
+    await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# T-2101: risk-model severity weights (2026-07-19 risk-score redesign)
+# ---------------------------------------------------------------------------
+
+
+async def get_risk_weights(db: AsyncSession, org_id: UUID) -> dict[str, float]:
+    """All real risk severities -> weight. Defaults to the platform weight
+    (DocumentScorer.RISK_SEVERITY_WEIGHTS) unless the org has overridden it.
+    Same override pattern as get_scoring_weights -- lets an org tune how
+    much a critical vs. major finding contributes to risk_score without a
+    code change, e.g. an org that considers "major" findings just as
+    business-critical as "critical" ones."""
+    result = await db.execute(
+        text("SELECT severity, weight FROM org_risk_weights WHERE org_id = :org_id"),
+        {"org_id": org_id},
+    )
+    overrides = {row[0]: float(row[1]) for row in result.all()}
+    return {
+        severity: overrides.get(severity, DocumentScorer.RISK_SEVERITY_WEIGHTS[severity])
+        for severity in sorted(VALID_RISK_SEVERITIES)
+    }
+
+
+async def set_risk_weight(db: AsyncSession, org_id: UUID, severity: str, weight: float) -> None:
+    """Raises ValueError if severity isn't a real risk severity or weight < 0."""
+    if severity not in VALID_RISK_SEVERITIES:
+        raise ValueError(f"Unknown risk severity: {severity!r}")
+    if weight < 0:
+        raise ValueError(f"weight must be >= 0, got {weight}")
+
+    await db.execute(
+        text(
+            """
+            INSERT INTO org_risk_weights (org_id, severity, weight)
+            VALUES (:org_id, :severity, :weight)
+            ON CONFLICT (org_id, severity) DO UPDATE SET weight = :weight
+            """
+        ),
+        {"org_id": org_id, "severity": severity, "weight": weight},
     )
     await db.commit()
 

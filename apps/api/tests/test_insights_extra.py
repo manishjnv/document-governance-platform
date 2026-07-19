@@ -173,6 +173,7 @@ async def analytics_db():
                 status TEXT NOT NULL DEFAULT 'pending',
                 overall_score NUMERIC(5, 2),
                 risk_score NUMERIC(5, 2),
+                risk_breakdown TEXT,
                 score_completeness NUMERIC(5, 2),
                 score_clarity NUMERIC(5, 2),
                 score_consistency NUMERIC(5, 2),

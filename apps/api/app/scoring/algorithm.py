@@ -4,7 +4,8 @@ T-601-T-619: Scoring system with 7 categories + risk calculation
 """
 
 import logging
-from dataclasses import dataclass
+import math
+from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Optional
 
@@ -33,6 +34,10 @@ class ScoringResult:
     category_scores: dict[str, CategoryScore]
     summary: str
     next_steps: list[str]
+    # Per-axis risk (Scope/Delivery/Commercial/Security/Governance/Legal/
+    # Compliance), same 0-100 saturating scale as risk_score -- lets a
+    # customer see WHICH kind of risk is high instead of one blended number.
+    risk_breakdown: dict[str, float] = field(default_factory=dict)
 
 
 class DocumentScorer:
@@ -65,11 +70,51 @@ class DocumentScorer:
     # severity always affects scoring, not just specifically-worded findings.
     _GENERAL_SEVERITY_PENALTY = {"critical": 12, "major": 6, "medium": 3, "low": 1, "info": 0}
 
-    def __init__(self, weight_overrides: Optional[dict[str, float]] = None):
+    # Risk model (2026-07-19 redesign): the old risk score was a flat
+    # additive sum (critical*15 + major*10 + total_count) capped at 100,
+    # which saturated to 100 for almost any real document with 4-5
+    # critical findings -- every test document showed "100% High" with no
+    # way to tell a somewhat-risky doc from an extremely-risky one.
+    #
+    # New model: each finding contributes RISK_SEVERITY_WEIGHTS[severity]
+    # points to a raw sum, then a saturating curve
+    # (100 * (1 - e^(-k * raw_sum))) maps that sum to 0-100. This has real
+    # headroom in the middle of the range (2 criticals reads meaningfully
+    # lower than 8 criticals) while still asymptotically approaching 100
+    # for a genuinely bad document, instead of a hard cliff.
+    RISK_SEVERITY_WEIGHTS = {"critical": 30, "major": 14, "medium": 5, "low": 1, "info": 0}
+    # Calibrated against real review volume: a 6-agent + rule-engine review
+    # on an actual SOW/RFP typically raises 30-400 raw severity points
+    # (30-40+ findings is normal). k=0.0086 keeps meaningful separation
+    # across that whole range instead of pinning everything past ~10
+    # findings to 100 -- see docs/planning/SCORING_METHODOLOGY.md.
+    RISK_SATURATION_K = 0.0086
+
+    # Maps each finding to a customer-facing risk axis instead of one
+    # blended number. Agent names match app/ai/agent.py; rule-engine
+    # findings carry no agent_name, hence the "Compliance" fallback.
+    _AXIS_BY_AGENT = {
+        "ScopeReviewer": "Scope",
+        "DeliveryReviewer": "Delivery",
+        "CommercialReviewer": "Commercial",
+        "SecurityReviewer": "Security",
+        "PMOReviewer": "Governance",
+        "LegalReviewer": "Legal",
+    }
+
+    def __init__(
+        self,
+        weight_overrides: Optional[dict[str, float]] = None,
+        risk_weight_overrides: Optional[dict[str, float]] = None,
+    ):
         # T-2093: per-org scoring weight customization (app/admin/customization.py).
         # WEIGHTS stays the untouched platform default (tests read it directly);
         # self.weights is what scoring actually uses.
         self.weights = {**self.WEIGHTS, **(weight_overrides or {})}
+        # Same override pattern for the risk model (app/admin/customization.py
+        # get_risk_weights) -- RISK_SEVERITY_WEIGHTS stays the platform
+        # default, self.risk_weights is what risk scoring actually uses.
+        self.risk_weights = {**self.RISK_SEVERITY_WEIGHTS, **(risk_weight_overrides or {})}
         self.max_points = {
             "completeness": 100,
             "clarity": 100,
@@ -120,8 +165,9 @@ class DocumentScorer:
         # Calculate overall score (weighted average)
         overall_score = self._calculate_overall_score(category_scores)
 
-        # Calculate risk score
+        # Calculate risk score (overall + per-axis breakdown)
         risk_score = self._calculate_risk_score(findings, rule_violations)
+        risk_breakdown = self._calculate_risk_breakdown(findings, rule_violations)
 
         # Generate summary
         summary = self._generate_summary(overall_score, risk_score, category_scores)
@@ -136,6 +182,7 @@ class DocumentScorer:
             category_scores=category_scores,
             summary=summary,
             next_steps=next_steps,
+            risk_breakdown=risk_breakdown,
         )
 
     def _severity(self, item: dict) -> str:
@@ -386,46 +433,54 @@ class DocumentScorer:
 
         return round(total, 2)
 
+    def _risk_raw_sum(self, items: list[dict]) -> float:
+        """Sum of severity-weighted points across findings/violations."""
+        return sum(self.risk_weights.get(self._severity(item), 0) for item in items)
+
+    def _saturate(self, raw_sum: float) -> float:
+        """Map a raw severity-weighted sum to 0-100 with diminishing returns.
+
+        100 * (1 - e^(-k * raw_sum)) instead of a linear sum capped at 100:
+        a linear+cap model saturates to the cap after just 4-5 critical
+        findings (30 pts each already exceeds most reasonable caps), so
+        every real-world document with several critical issues reads
+        identically as "100, High" -- no signal left to distinguish "bad"
+        from "catastrophic." The exponential curve keeps climbing (slower)
+        past that point, so a 15-critical-finding document still scores
+        visibly worse than a 5-critical-finding one instead of both
+        pinning at the ceiling.
+        """
+        return round(100.0 * (1.0 - math.exp(-self.RISK_SATURATION_K * raw_sum)), 2)
+
     def _calculate_risk_score(self, findings: list[dict], violations: list[dict]) -> float:
         """
         T-614: Calculate risk score (0-100, higher = worse).
 
-        Based on: number of critical findings, rule violations, and severity distribution.
+        Redesigned 2026-07-19 -- see RISK_SEVERITY_WEIGHTS/_saturate for why
+        the old flat-sum-capped-at-100 model was replaced. Conceptually
+        this approximates likelihood x impact (ISO 31000 / NIST SP 800-30
+        risk-assessment framing): severity ~ impact, finding count ~
+        likelihood signal, combined non-linearly rather than added and
+        clipped.
         """
-        risk = 0.0
+        return self._saturate(self._risk_raw_sum(findings + violations))
 
-        # Count critical findings
-        critical_findings = [
-            f for f in findings
-            if f.get("severity", "").lower() == "critical"
-        ]
-        critical_findings += [
-            v for v in violations
-            if v.get("severity", "").lower() == "critical"
-        ]
+    def _calculate_risk_breakdown(self, findings: list[dict], violations: list[dict]) -> dict[str, float]:
+        """Per-axis risk (Scope/Delivery/Commercial/Security/Governance/
+        Legal/Compliance) so a customer can see WHICH kind of risk is high
+        instead of one blended number. Same saturating curve as the
+        overall risk score, computed independently per axis.
+        """
+        by_axis: dict[str, list[dict]] = {}
 
-        risk += len(critical_findings) * 15
+        for f in findings:
+            axis = self._AXIS_BY_AGENT.get(f.get("source_agent", ""), "Other")
+            by_axis.setdefault(axis, []).append(f)
 
-        # Count major findings
-        major_findings = [
-            f for f in findings
-            if f.get("severity", "").lower() == "major"
-        ]
-        major_findings += [
-            v for v in violations
-            if v.get("severity", "").lower() == "major"
-        ]
+        for v in violations:
+            by_axis.setdefault("Compliance", []).append(v)
 
-        risk += len(major_findings) * 10
-
-        # Count total violations
-        total_findings = len(findings) + len(violations)
-        risk += total_findings
-
-        # Cap at 100
-        risk = min(100.0, risk)
-
-        return round(risk, 2)
+        return {axis: self._saturate(self._risk_raw_sum(items)) for axis, items in by_axis.items()}
 
     def _generate_summary(
         self,

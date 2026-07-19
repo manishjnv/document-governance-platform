@@ -143,11 +143,17 @@ async def trigger_review(
 
         # T-2091/T-2092/T-2093: apply this org's rule/agent/scoring customization
         # (app/admin/customization.py) -- previously persisted but never enforced.
-        from app.admin.customization import get_agent_config, get_rule_config, get_scoring_weights
+        from app.admin.customization import (
+            get_agent_config,
+            get_risk_weights,
+            get_rule_config,
+            get_scoring_weights,
+        )
 
         rule_config = await get_rule_config(db, doc.org_id)
         agent_config = await get_agent_config(db, doc.org_id)
         scoring_weights = await get_scoring_weights(db, doc.org_id)
+        risk_weights = await get_risk_weights(db, doc.org_id)
         enabled_rule_ids = {rule_id for rule_id, enabled in rule_config.items() if enabled}
         enabled_agent_names = {name for name, enabled in agent_config.items() if enabled}
 
@@ -170,7 +176,7 @@ async def trigger_review(
         # T-618: Calculate scores using scoring algorithm
         from app.scoring import DocumentScorer
 
-        scorer = DocumentScorer(weight_overrides=scoring_weights)
+        scorer = DocumentScorer(weight_overrides=scoring_weights, risk_weight_overrides=risk_weights)
 
         # Collect all findings for scoring (already flattened by
         # orchestrator._merge_findings -- agent_info["findings"] per-agent is
@@ -189,6 +195,7 @@ async def trigger_review(
         review.executive_summary = scoring_result.summary
         review.overall_score = scoring_result.overall_score
         review.risk_score = scoring_result.risk_score
+        review.risk_breakdown = scoring_result.risk_breakdown
 
         # Store category scores
         for category, score_obj in scoring_result.category_scores.items():
@@ -378,6 +385,7 @@ async def get_review(
         "status": review.status,
         "overall_score": float(review.overall_score) if review.overall_score is not None else None,
         "risk_score": float(review.risk_score) if review.risk_score is not None else None,
+        "risk_breakdown": review.risk_breakdown,
         "processing_time_seconds": review.processing_time_seconds,
         "findings_count": {
             "critical": review.critical_finding_count,

@@ -9,11 +9,30 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import axios from 'axios';
 import Link from 'next/link';
-import { ArrowLeft, ChevronDown, FileText, Check, RotateCcw, MapPin } from 'lucide-react';
+import { ArrowLeft, ChevronDown, FileText, Check, RotateCcw, MapPin, HelpCircle } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+
+// Short, plain-English explanation shown on hover/focus of the "?" icon
+// next to a metric -- see docs/planning/SCORING_METHODOLOGY.md for the
+// full methodology and the frameworks it's grounded in (ISO 31000/NIST
+// risk framing, PMBOK scope-completeness structure, IACCM's most-
+// negotiated-terms research).
+function InfoTip({ text }: { text: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button type="button" className="ml-1 align-middle text-muted-foreground hover:text-foreground">
+          <HelpCircle size={13} strokeWidth={2} aria-label="What does this mean?" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-[240px] text-xs">{text}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 interface Finding {
   finding_id: string;
@@ -42,6 +61,7 @@ interface ReviewData {
     info: number;
   };
   findings: Finding[];
+  risk_breakdown: Record<string, number> | null;
 }
 
 interface DocSection {
@@ -308,7 +328,10 @@ export default function ResultsPage() {
       <div className="grid grid-cols-2 gap-1.5 mb-2">
         <Card>
           <CardHeader className="text-center pb-0.5 pt-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Overall Score</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground">
+              Overall Score
+              <InfoTip text="How complete and well-written this document is (0-100), across scope, clarity, commercial terms, delivery, and more. Higher is better." />
+            </CardTitle>
           </CardHeader>
           <CardContent className="text-center pb-2">
             <div
@@ -346,7 +369,10 @@ export default function ResultsPage() {
 
         <Card>
           <CardHeader className="text-center pb-0.5 pt-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Risk Level</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground">
+              Risk Level
+              <InfoTip text="How much this document could hurt you if signed as-is -- combines how severe the issues are and how many there are. Higher is worse." />
+            </CardTitle>
           </CardHeader>
           <CardContent className="text-center pb-2">
             <div
@@ -375,11 +401,47 @@ export default function ResultsPage() {
         </Card>
       </div>
 
+      {/* Risk breakdown by axis -- which KIND of risk is driving the score */}
+      {review.risk_breakdown && Object.keys(review.risk_breakdown).length > 0 && (
+        <Card className="mb-2">
+          <CardHeader className="pb-0.5 pt-2">
+            <CardTitle className="text-sm">
+              Risk by Area
+              <InfoTip text="The same risk score, split by area (Legal, Commercial, Delivery, etc.) so you can see what's actually driving it." />
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pb-2">
+            <div className="space-y-1.5">
+              {Object.entries(review.risk_breakdown)
+                .sort((a, b) => b[1] - a[1])
+                .map(([axis, score]) => (
+                  <div key={axis} className="flex items-center gap-2 text-xs">
+                    <span className="w-20 shrink-0 text-foreground font-medium truncate">{axis}</span>
+                    <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                      <div
+                        className={cn(
+                          'h-1.5 rounded-full transition-[width] duration-500 ease-out',
+                          score > 70 ? 'bg-red-600' : score > 40 ? 'bg-yellow-600' : 'bg-green-600'
+                        )}
+                        style={{ width: `${score}%` }}
+                      />
+                    </div>
+                    <span className="w-9 shrink-0 text-right text-muted-foreground">{score.toFixed(0)}%</span>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Document X-Ray: sections found + rule-engine gaps at a glance */}
       {docInfo?.parsed_sections && docInfo.parsed_sections.length > 0 && (
         <Card className="mb-2">
           <CardHeader className="pb-0.5 pt-2">
-            <CardTitle className="text-sm">Document X-Ray</CardTitle>
+            <CardTitle className="text-sm">
+              Document X-Ray
+              <InfoTip text="A quick scan of the document itself: which sections it has, and which required sections/checks are missing." />
+            </CardTitle>
           </CardHeader>
           <CardContent className="pb-2">
             <div className="grid grid-cols-2 gap-3 text-xs">
@@ -422,6 +484,7 @@ export default function ResultsPage() {
         <CardHeader className="pb-0.5 pt-2">
           <CardTitle className="text-sm">
             Findings Summary
+            <InfoTip text="Every issue found, grouped by how serious it is. Click a number to filter the list below to just that severity." />
             {severityFilter && (
               <button
                 onClick={() => setSeverityFilter(null)}
@@ -584,6 +647,7 @@ export default function ResultsPage() {
 
   return (
     <AppShell fullWidth>
+      <TooltipProvider delayDuration={200}>
       <div className="w-full">
         <div className="flex items-center justify-between mb-1">
           <h1 className="text-xl font-bold text-foreground">Review Results</h1>
@@ -657,6 +721,7 @@ export default function ResultsPage() {
           findingsPanel
         )}
       </div>
+      </TooltipProvider>
     </AppShell>
   );
 }

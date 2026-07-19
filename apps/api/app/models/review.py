@@ -69,6 +69,7 @@ class Review(Base, TimestampMixin, SoftDeleteMixin):
     )
     overall_score: Mapped[Optional[Decimal]] = mapped_column(Numeric(5, 2), nullable=True)
     risk_score: Mapped[Optional[Decimal]] = mapped_column(Numeric(5, 2), nullable=True)
+    risk_breakdown: Mapped[Optional[Any]] = mapped_column(JSONB, nullable=True)
 
     score_completeness: Mapped[Optional[Decimal]] = mapped_column(Numeric(5, 2), nullable=True)
     score_clarity: Mapped[Optional[Decimal]] = mapped_column(Numeric(5, 2), nullable=True)

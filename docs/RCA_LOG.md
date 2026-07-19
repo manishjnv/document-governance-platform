@@ -173,6 +173,18 @@ listed below — several of these are copy-pasted patterns that recur.
   the tests directory before considering a migration complete. This is a
   third location beyond entry #11's two databases.
 
+### 13. Same class recurred for `reviews.risk_breakdown` (2026-07-19)
+- **Symptom:** adding `Review.risk_breakdown` (migration 022, risk-model
+  redesign) broke `TestAnalyticsTrends` again with
+  `no such column: reviews.risk_breakdown` — identical shape to #12, just
+  the `reviews` table's `CREATE TABLE` in the same fixture this time.
+- **Fix:** added `risk_breakdown TEXT` to the raw `CREATE TABLE reviews`
+  in `tests/test_insights_extra.py`.
+- **Prevention:** entry #12's rule applies to `reviews`/any other model
+  this fixture mirrors too, not just `documents` — **grep for `CREATE
+  TABLE <model>` in `tests/test_insights_extra.py` for EVERY table a new
+  column touches**, not just the one from the last incident.
+
 ---
 
 *(Append new entries above this line, most recent first is NOT required —
