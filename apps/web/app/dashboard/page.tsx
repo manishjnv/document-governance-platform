@@ -78,16 +78,82 @@ function TrendIndicator({ current, previous }: { current: number | null; previou
   );
 }
 
+function AssignProjectControl({
+  doc,
+  projectOptions,
+  onAssign,
+}: {
+  doc: Document;
+  projectOptions: ProjectSummary[];
+  onAssign: (docId: string, projectId: string | null, projectName: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState('');
+
+  if (!open) {
+    return (
+      <button className="text-primary hover:underline" onClick={() => setOpen(true)}>
+        Assign project
+      </button>
+    );
+  }
+
+  const submit = () => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    const existing = projectOptions.find((p) => p.name === trimmed);
+    onAssign(doc.doc_id, existing ? existing.project_id : null, existing ? null : trimmed);
+    setOpen(false);
+    setValue('');
+  };
+
+  return (
+    <span className="inline-flex items-center gap-1">
+      <input
+        autoFocus
+        type="text"
+        list={`assign-project-options-${doc.doc_id}`}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            submit();
+          }
+          if (e.key === 'Escape') setOpen(false);
+        }}
+        placeholder="Project name"
+        className="px-2 py-1 text-sm border border-input rounded-md bg-background w-40"
+      />
+      <datalist id={`assign-project-options-${doc.doc_id}`}>
+        {projectOptions.map((p) => (
+          <option key={p.project_id} value={p.name} />
+        ))}
+      </datalist>
+      <button className="text-primary hover:underline text-sm" onClick={submit}>
+        Save
+      </button>
+      <button className="text-muted-foreground hover:underline text-sm" onClick={() => setOpen(false)}>
+        Cancel
+      </button>
+    </span>
+  );
+}
+
 function DocumentsTable({
   documents,
   reviewingDocId,
   onReview,
   onView,
+  projectOptions,
+  onAssignProject,
 }: {
   documents: Document[];
   reviewingDocId: string | null;
   onReview: (docId: string) => void;
   onView: (docId: string) => void;
+  projectOptions: ProjectSummary[];
+  onAssignProject: (docId: string, projectId: string | null, projectName: string | null) => void;
 }) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
@@ -137,6 +203,12 @@ function DocumentsTable({
         <Link href={`/upload?version_of=${doc.doc_id}`} className="text-primary hover:underline">
           New version
         </Link>
+        {!doc.project_id && (
+          <>
+            <span className="text-muted-foreground">•</span>
+            <AssignProjectControl doc={doc} projectOptions={projectOptions} onAssign={onAssignProject} />
+          </>
+        )}
         {compareToVersion !== undefined && (
           <>
             <span className="text-muted-foreground">•</span>
@@ -324,6 +396,27 @@ export default function DashboardPage() {
     }
   };
 
+  const handleAssignProject = async (
+    docId: string,
+    projectId: string | null,
+    projectName: string | null
+  ) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const params = new URLSearchParams();
+      if (projectId) params.append('project_id', projectId);
+      if (projectName) params.append('project_name', projectName);
+      await axios.patch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/${docId}/project?${params.toString()}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchDocuments();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to assign project');
+    }
+  };
+
   const handleReview = async (docId: string) => {
     try {
       setError('');
@@ -447,16 +540,14 @@ export default function DashboardPage() {
 
       {/* Stats + Filter row */}
       <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
-        <div className="flex flex-wrap gap-3">
-          <div className="rounded-lg border px-4 py-2">
-            <p className="text-xs text-muted-foreground">Total</p>
-            <p className="text-lg font-semibold">{stats.total}</p>
-          </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border px-3 py-1.5 text-sm">
+          <span className="text-slate-700">
+            Total <span className="font-medium text-slate-900">{stats.total}</span>
+          </span>
           {DOCUMENT_TYPES.map((type) => (
-            <div key={type} className="rounded-lg border px-4 py-2">
-              <p className="text-xs text-muted-foreground">{type}</p>
-              <p className="text-lg font-semibold">{stats.byType[type] || 0}</p>
-            </div>
+            <span key={type} className="text-slate-700">
+              {type} <span className="font-medium text-slate-900">{stats.byType[type] || 0}</span>
+            </span>
           ))}
         </div>
 
@@ -534,6 +625,8 @@ export default function DashboardPage() {
                   reviewingDocId={reviewingDocId}
                   onReview={handleReview}
                   onView={handleView}
+                  projectOptions={projects}
+                  onAssignProject={handleAssignProject}
                 />
               </div>
             </details>
@@ -553,6 +646,8 @@ export default function DashboardPage() {
                   reviewingDocId={reviewingDocId}
                   onReview={handleReview}
                   onView={handleView}
+                  projectOptions={projects}
+                  onAssignProject={handleAssignProject}
                 />
               </div>
             </details>

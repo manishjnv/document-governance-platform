@@ -37,10 +37,15 @@ router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
 
 # Constants
 MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50MB
-ALLOWED_TYPES = {"pdf", "docx"}
+ALLOWED_TYPES = {"pdf", "docx", "doc", "xlsx", "xls", "csv"}
 MIME_TO_TYPE = {
     "application/pdf": "pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+    "application/msword": "doc",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+    "application/vnd.ms-excel": "xls",
+    "text/csv": "csv",
+    "application/csv": "csv",
 }
 
 _UNSAFE_FILENAME_CHARS = re.compile(r"[^A-Za-z0-9._-]")
@@ -257,7 +262,7 @@ async def upload_document(
     # T-3019: this org's cached analytics/dashboard are stale now
     await invalidate_cache(f"cache:*:{doc.org_id}:*")
 
-    logger.info(f"Document {doc_id} uploaded by user {current_user.user_id}")
+    logger.info(f"Document {doc.doc_id} uploaded by user {current_user.user_id}")
 
     return DocumentRead.from_orm(doc)
 

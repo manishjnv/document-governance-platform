@@ -81,12 +81,28 @@ export default function UploadPage() {
     }
   };
 
-  const validateFile = (f: File): boolean => {
-    const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    const maxSize = 50 * 1024 * 1024; // 50MB
+  const validTypes = [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel',
+    'text/csv',
+    'application/csv',
+  ];
+  const validExtensions = ['.pdf', '.docx', '.doc', '.xlsx', '.xls', '.csv'];
 
-    if (!validTypes.includes(f.type)) {
-      setError('Only PDF and DOCX files are supported');
+  const validateFile = (f: File): boolean => {
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    // Some browsers/OSes report an empty or generic MIME type for
+    // .doc/.csv -- fall back to the extension so a real supported file
+    // isn't rejected client-side (the backend still re-validates by MIME).
+    const hasValidExtension = validExtensions.some((ext) =>
+      f.name.toLowerCase().endsWith(ext)
+    );
+
+    if (!validTypes.includes(f.type) && !hasValidExtension) {
+      setError('Only PDF, DOCX, DOC, XLSX, XLS, and CSV files are supported');
       return false;
     }
 
@@ -263,13 +279,13 @@ export default function UploadPage() {
                   Drag and drop your document
                 </h3>
                 <p className="text-muted-foreground mb-2">or click to select</p>
-                <p className="text-sm text-muted-foreground">PDF or DOCX • up to 50MB</p>
+                <p className="text-sm text-muted-foreground">PDF, DOCX, DOC, XLSX, XLS, or CSV • up to 50MB</p>
 
                 <input
                   ref={fileInputRef}
                   type="file"
                   onChange={handleFileInput}
-                  accept=".pdf,.docx"
+                  accept=".pdf,.docx,.doc,.xlsx,.xls,.csv"
                   className="hidden"
                   aria-label="Document file"
                   tabIndex={-1}
