@@ -1,7 +1,9 @@
 """Project endpoints (Phase A of Document Lifecycle plan): list with
 per-project rollup stats, and create."""
 
+import difflib
 import logging
+import re
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -19,6 +21,65 @@ from app.schemas.project import ProjectCreate, ProjectRead
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
+
+# A typed project name is considered "the same project" as an existing one
+# when either: the names are equal ignoring case (capitalization alone
+# never creates a new project), or they're >=90% similar after stripping
+# generic company-type/descriptor words (typo/whitespace/punctuation drift,
+# and "Acme Corporation" vs "Acme Ltd" vs "Acme" all being the same
+# customer). Matches the fuzzy-match approach already used for filename
+# similarity in app/insights/similarity.py.
+PROJECT_NAME_MATCH_THRESHOLD = 0.9
+
+# Legal-entity suffixes and generic business descriptors -- not part of a
+# company's distinctive identity, so ignored when deciding whether two
+# project names refer to the same underlying project/customer.
+_COMPANY_SUFFIX_RE = re.compile(
+    r"\b("
+    r"corp|corporation|inc|incorporated|llc|ltd|limited|llp|plc|co|company|"
+    r"technologies|technology|tech|solutions|systems|services|software|"
+    r"labs|laboratories|group|holdings|enterprises|industries|"
+    r"international|global"
+    r")\.?\b",
+    re.IGNORECASE,
+)
+
+
+def _normalize_project_name(name: str) -> str:
+    """Lowercased, company-suffix-stripped, whitespace-collapsed name used
+    for both the exact and fuzzy match comparisons below. Falls back to the
+    plain lowercased name if stripping suffixes would eat the whole name
+    (e.g. a project literally named "Technologies") -- an empty normalized
+    string would otherwise make every such name match every other one."""
+    lowered = name.lower()
+    stripped = re.sub(r"\s+", " ", _COMPANY_SUFFIX_RE.sub("", lowered)).strip()
+    return stripped or lowered.strip()
+
+
+async def find_matching_project(db: AsyncSession, org_id: UUID, name: str) -> Project | None:
+    """Case-insensitive exact match first, then >=90% fuzzy match against
+    every existing project name in the org -- both comparisons run on
+    company-suffix-normalized names. Returns the best match or None."""
+    result = await db.execute(select(Project).where(Project.org_id == org_id))
+    candidates = result.scalars().all()
+
+    normalized_name = _normalize_project_name(name)
+    for candidate in candidates:
+        if _normalize_project_name(candidate.name) == normalized_name:
+            return candidate
+
+    best_match, best_score = None, 0.0
+    for candidate in candidates:
+        score = difflib.SequenceMatcher(
+            None, normalized_name, _normalize_project_name(candidate.name)
+        ).ratio()
+        if score > best_score:
+            best_match, best_score = candidate, score
+
+    if best_match is not None and best_score >= PROJECT_NAME_MATCH_THRESHOLD:
+        return best_match
+
+    return None
 
 
 @router.get("", response_model=list[ProjectRead], summary="List organization projects")
@@ -108,13 +169,11 @@ async def create_project(
     await verify_org_access(str(org_id), current_user)
 
     name = payload.name.strip()
-    existing = await db.execute(
-        select(Project).where(and_(Project.org_id == org_id, Project.name == name))
-    )
-    if existing.scalar_one_or_none() is not None:
+    existing = await find_matching_project(db, org_id, name)
+    if existing is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Project '{name}' already exists in this organization",
+            detail=f"A matching project already exists in this organization: '{existing.name}'",
         )
 
     project = Project(org_id=org_id, name=name)
@@ -138,14 +197,13 @@ async def get_or_create_project(
 ) -> Project:
     """Used by the upload endpoint's project_name fallback -- creates the
     Project row on the fly if it doesn't exist yet (keeps 'create new' a
-    one-round-trip flow), or reuses the existing one on a name collision."""
+    one-round-trip flow), or reuses an existing project that matches by
+    case-insensitive/fuzzy name (find_matching_project) so a typo or a
+    different capitalization doesn't silently fork a new project."""
     name = name.strip()
-    existing = await db.execute(
-        select(Project).where(and_(Project.org_id == org_id, Project.name == name))
-    )
-    project = existing.scalar_one_or_none()
-    if project is not None:
-        return project
+    existing = await find_matching_project(db, org_id, name)
+    if existing is not None:
+        return existing
 
     project = Project(org_id=org_id, name=name)
     db.add(project)

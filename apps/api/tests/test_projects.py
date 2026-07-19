@@ -65,6 +65,129 @@ class TestCreateProject:
         )
         assert response.status_code == 409
 
+    async def test_case_variant_name_rejected(self, client, org_with_admin, db_session):
+        """Capitalization alone must never be treated as a distinct project."""
+        db_session.add(Project(org_id=org_with_admin["org"].org_id, name="Acme Corp"))
+        await db_session.commit()
+
+        token = await _login(client, "admin@projecttest.com")
+        response = await client.post(
+            f"/api/v1/projects?org_id={org_with_admin['org'].org_id}",
+            json={"name": "ACME CORP"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 409
+
+    async def test_fuzzy_near_duplicate_name_rejected(self, client, org_with_admin, db_session):
+        db_session.add(Project(org_id=org_with_admin["org"].org_id, name="Acme Cloud Migration"))
+        await db_session.commit()
+
+        token = await _login(client, "admin@projecttest.com")
+        response = await client.post(
+            f"/api/v1/projects?org_id={org_with_admin['org'].org_id}",
+            json={"name": "Acme Cloud Migration."},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 409
+
+    async def test_company_type_suffix_ignored(self, client, org_with_admin, db_session):
+        """Corp/Ltd/LLP/Technologies/Tech etc. are company-type descriptors,
+        not part of the distinctive name -- "Acme Corporation" and "Acme
+        Ltd" are the same project."""
+        db_session.add(Project(org_id=org_with_admin["org"].org_id, name="Acme Corporation"))
+        await db_session.commit()
+
+        token = await _login(client, "admin@projecttest.com")
+        response = await client.post(
+            f"/api/v1/projects?org_id={org_with_admin['org'].org_id}",
+            json={"name": "Acme Ltd"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 409
+
+    async def test_tech_technologies_treated_as_same_suffix(self, client, org_with_admin, db_session):
+        db_session.add(Project(org_id=org_with_admin["org"].org_id, name="ABC Technologies"))
+        await db_session.commit()
+
+        token = await _login(client, "admin@projecttest.com")
+        response = await client.post(
+            f"/api/v1/projects?org_id={org_with_admin['org'].org_id}",
+            json={"name": "ABC Tech"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 409
+
+    async def test_distinct_name_not_rejected(self, client, org_with_admin, db_session):
+        db_session.add(Project(org_id=org_with_admin["org"].org_id, name="Acme Corp"))
+        await db_session.commit()
+
+        token = await _login(client, "admin@projecttest.com")
+        response = await client.post(
+            f"/api/v1/projects?org_id={org_with_admin['org'].org_id}",
+            json={"name": "Globex Corp"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 201
+
+
+class TestNormalizeProjectName:
+    def test_company_suffix_stripped(self):
+        from app.routers.projects import _normalize_project_name
+
+        assert _normalize_project_name("Acme Corporation") == "acme"
+        assert _normalize_project_name("Acme Ltd") == "acme"
+        assert _normalize_project_name("ABC Technologies") == "abc"
+        assert _normalize_project_name("ABC Tech") == "abc"
+
+    def test_name_entirely_suffix_falls_back_to_full_name(self):
+        """Stripping shouldn't eat the whole name -- a project literally
+        named "Technologies" must not become empty (which would otherwise
+        match every other all-suffix name)."""
+        from app.routers.projects import _normalize_project_name
+
+        assert _normalize_project_name("Technologies") == "technologies"
+
+
+class TestGetOrCreateProjectMatching:
+    async def test_case_variant_reuses_existing_project(self, org_with_admin, db_session):
+        from app.routers.projects import get_or_create_project
+
+        org = org_with_admin["org"]
+        existing = Project(org_id=org.org_id, name="Acme Corp")
+        db_session.add(existing)
+        await db_session.commit()
+
+        project = await get_or_create_project(db_session, org.org_id, "acme corp")
+        await db_session.commit()
+
+        assert project.project_id == existing.project_id
+
+    async def test_fuzzy_match_reuses_existing_project(self, org_with_admin, db_session):
+        from app.routers.projects import get_or_create_project
+
+        org = org_with_admin["org"]
+        existing = Project(org_id=org.org_id, name="Acme Cloud Migration")
+        db_session.add(existing)
+        await db_session.commit()
+
+        project = await get_or_create_project(db_session, org.org_id, "Acme Cloud Migration.")
+        await db_session.commit()
+
+        assert project.project_id == existing.project_id
+
+    async def test_distinct_name_creates_new_project(self, org_with_admin, db_session):
+        from app.routers.projects import get_or_create_project
+
+        org = org_with_admin["org"]
+        existing = Project(org_id=org.org_id, name="Acme Corp")
+        db_session.add(existing)
+        await db_session.commit()
+
+        project = await get_or_create_project(db_session, org.org_id, "Totally Different Name")
+        await db_session.commit()
+
+        assert project.project_id != existing.project_id
+
 
 class TestListProjectsRollup:
     async def test_rollup_stats(self, client, org_with_admin, db_session):
