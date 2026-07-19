@@ -1,7 +1,7 @@
 # EDGP Implementation Progress
 
-**Last Updated:** 2026-07-19 21:10 GMT+5:30
-**Current Phase:** Phase 1-2 core product complete + deployed live; pre-launch fix plan Steps 1-2 done, Step 3 pending SME. Document Lifecycle & Multi-Project plan (Projects/Versioning/Fix-verification) is planned and prompted but **not yet implemented** — see "Next action".
+**Last Updated:** 2026-07-19 23:50 GMT+5:30
+**Current Phase:** Phase 1-2 core product complete + deployed live; pre-launch fix plan Steps 1-2 done, Step 3 pending SME. Document Lifecycle & Multi-Project plan (Projects/Versioning/Fix-verification) — **all three phases implemented this session**, see entry below.
 
 > Previous version of this doc (dated 07-17 02:00, showing "14% overall") was
 > stale from early Phase 1 and did not reflect Phase 2/3 or the pre-launch
@@ -108,6 +108,63 @@ rule, testing baselines, and VPS deployment specifics — written after a
 process mistake (a "next session" prompt doc was saved to a scratch temp
 directory instead of the established `docs/phases/prompts/` location).
 
+**Document Lifecycle & Multi-Project implementation (2026-07-19):** all three
+phases from `docs/phases/prompts/DOCUMENT_LIFECYCLE_PLAN_PROMPT.md` built in
+one session.
+- **Phase A (Projects):** new `projects` table (migration 023), `project_id`
+  FK on `documents` alongside the existing free-text `project_name` (kept,
+  not dropped — open question #3 resolved as "keep read-only" since the
+  backfill script re-derives project_id from it and a human may still want
+  the original label). `GET/POST /api/v1/projects` with per-project rollup
+  stats (doc count, avg latest score, open-critical count). Upload accepts
+  `project_id` or falls back to `project_name` (creates-on-the-fly).
+  `scripts/backfill_projects.py` did the one-off data migration — exact
+  `project_name` matches auto-map, near-duplicates flagged (not auto-merged)
+  into `docs/phases/summaries/PROJECT_MIGRATION_REPORT.md` (open question #1
+  resolved as a markdown report, not an admin endpoint — no admin UI exists
+  yet to surface one). Dashboard groups by project (collapsible `<details>`
+  sections — native HTML, no new dependency); new `/projects/[id]` detail
+  page. Upload page's project field is a native `<datalist>` autocomplete +
+  free-text create-new.
+- **Phase B (Versioning):** discovered mid-session that backend primitives
+  (`app/insights/similarity.py`, `app/routers/documents_extra.py` — T-2026
+  through T-2029: similarity scoring, duplicate detection, version list,
+  line-level text diff) already existed from an earlier, unrelated "Phase 2
+  Wave 2" commit, wired into `main.py` but with no upload-flow trigger and
+  no frontend. Reused rather than rebuilt. Added: migration 024
+  (`document_link_suggestions` table +
+  `organizations.similarity_suggestion_threshold`, open question #2 resolved
+  as a per-org scalar column rather than the keyed
+  `app/admin/customization.py` pattern — there's only one value to tune, a
+  keyed table would be over-engineering); `suggest_version_link()` runs
+  after every upload (text-similarity via existing cosine function OR
+  filename similarity with version-suffix noise stripped —
+  `_v2`/`(revised)`/etc.); dismissible suggestions persist on the Documents
+  page (`GET/PATCH /api/v1/documents/suggestions`) rather than a one-time
+  toast; explicit "Upload new version of..." action
+  (`POST /{doc_id}/versions`); retroactive "link to existing document"
+  action (`POST /{doc_id}/link`). Dashboard nests versions per document
+  (expand/collapse) with a score trend arrow vs. the previous version. Never
+  auto-links silently — every link is an explicit accept or upload action.
+- **Phase C (Fix-verification diff):** `app/insights/fix_verification.py`
+  matches a previous version's completed-review findings against a new
+  review's findings by category (+ `section_ref` when both are present).
+  Wired into `trigger_review` — a previous finding with no match is marked
+  `resolved` with `notes.resolution = "verified"`; a finding that still
+  matches is marked `still_present` and, critically, a prior manual "Mark
+  Fixed" claim is reset back to `open` (the re-review's actual result always
+  wins over the unverified claim, per the plan's core design decision).
+  Reused the existing `notes` JSONB column on `Finding` instead of a new
+  migration/CHECK-constraint change to the `status` enum. New
+  `GET /{doc_id}/versions/{other_version}/finding-diff` endpoint powers a
+  three-column Resolved/New/Persisted view at `/versions/diff`, linked
+  directly from each version row's "Compare vs vN" action on the dashboard.
+- **Not done / explicitly out of scope this session:** no manual browser
+  click-through — verified via backend HTTP-layer tests (`pytest`, real
+  Postgres) and `tsc --noEmit`, not a live UI session, given three phases in
+  one session; state this explicitly rather than claim it. VPS deployment
+  of these changes: see next action.
+
 **Sample documents (2026-07-19):** replaced the 2 generic placeholder
 samples (`sample_rfp.docx`, `sample_sow.docx`) with real-world SOW/RFP
 template sets under `docs/sample/{RFP_Sample,RFP_template,SOW_Template}/`
@@ -152,10 +209,10 @@ prevention), `docs/phases/prompts/PHASE_{3-7}_PROMPT.md` (scope-trim rationale p
 
 ## Next action
 
-1. **Run `docs/phases/prompts/DOCUMENT_LIFECYCLE_FULL_PROMPT.md`** in a
-   new session — implements Projects (first-class entity) → Document
-   versioning → Fix-verification diff, in that dependency order. Planned
-   2026-07-19, zero code written yet.
+1. **Document Lifecycle & Multi-Project plan — done, not yet deployed.**
+   Manual browser click-through of Projects/Versioning/Fix-verification
+   flows on a running dev server is still open (this session verified via
+   backend HTTP tests + `tsc --noEmit` only).
 2. **Build finding deduplication** — currently doesn't exist at all;
    Metric 1.4 is structurally unmeasurable until this is built.
 3. Fix confidence calibration (17.95% error vs. <5% target) — likely needs
