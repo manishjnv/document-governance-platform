@@ -8,13 +8,24 @@ Document rows (parsed_text) org-scoped, deleted_at IS NULL.
 """
 
 import math
+import re
 import uuid
 from collections import Counter
+from decimal import Decimal
 
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.document import Document
+from app.models.document_link_suggestion import DocumentLinkSuggestion
+from app.models.organization import Organization
+
+# Strips common version-marker noise ("_v2", " (revised)", "-v3", "(final)",
+# "copy") so two uploads of the same underlying document compare as similar
+# filenames even when their version suffix differs.
+_VERSION_SUFFIX_RE = re.compile(
+    r"[\s_\-]*\(?(v\d+|version\s*\d+|revised|final|copy|draft)\)?", re.IGNORECASE
+)
 
 
 def compute_similarity(text_a: str, text_b: str) -> float:
@@ -88,6 +99,95 @@ async def find_similar_documents(
 
     scored.sort(key=lambda d: d["similarity"], reverse=True)
     return scored[:limit]
+
+
+def _normalized_filename(filename: str) -> str:
+    """Lowercased filename stem with version-suffix noise stripped, for
+    fuzzy version-match comparison (T-2028 versioning suggestion, Phase B)."""
+    stem = filename.rsplit(".", 1)[0]
+    stem = _VERSION_SUFFIX_RE.sub("", stem)
+    return re.sub(r"[^a-z0-9]+", "", stem.lower())
+
+
+def filename_similarity(name_a: str, name_b: str) -> float:
+    """difflib ratio between version-suffix-stripped, normalized filenames."""
+    import difflib
+
+    norm_a, norm_b = _normalized_filename(name_a), _normalized_filename(name_b)
+    if not norm_a or not norm_b:
+        return 0.0
+    return difflib.SequenceMatcher(None, norm_a, norm_b).ratio()
+
+
+async def suggest_version_link(
+    db: AsyncSession, org_id: uuid.UUID, doc: Document
+) -> DocumentLinkSuggestion | None:
+    """T-2028/2029 support (Phase B, Document Lifecycle plan): after any
+    upload, check whether `doc` looks like a new version of an existing,
+    *different* document group -- same org, meaningful parsed_text overlap
+    or version-suffix-insensitive filename match. Never auto-links; only
+    stores a dismissible suggestion pointing at the best-matching group's
+    latest version. Idempotent per doc_id (unique constraint on doc_id).
+
+    # ponytail: whichever of text/filename similarity scores higher wins --
+    # a simple max, not a weighted blend. Good enough for a first-pass
+    # heuristic; revisit if false-positive/negative rate in practice
+    # warrants a real blended score.
+    """
+    org_result = await db.execute(select(Organization).where(Organization.org_id == org_id))
+    org = org_result.scalar_one_or_none()
+    threshold = float(org.similarity_suggestion_threshold) if org else 0.55
+
+    candidates = [
+        d
+        for d in await _org_documents(db, org_id)
+        if d.doc_id != doc.doc_id and d.document_group_id != doc.document_group_id
+    ]
+    if not candidates:
+        return None
+
+    best_doc = None
+    best_score = 0.0
+    for candidate in candidates:
+        text_score = (
+            compute_similarity(doc.parsed_text, candidate.parsed_text)
+            if doc.parsed_text and candidate.parsed_text
+            else 0.0
+        )
+        name_score = filename_similarity(
+            doc.original_filename or doc.filename, candidate.original_filename or candidate.filename
+        )
+        score = max(text_score, name_score)
+        if score > best_score:
+            best_score, best_doc = score, candidate
+
+    if best_doc is None or best_score < threshold:
+        return None
+
+    # Point the suggestion at the latest version within the matched group.
+    group_result = await db.execute(
+        select(Document)
+        .where(
+            and_(
+                Document.document_group_id == best_doc.document_group_id,
+                Document.org_id == org_id,
+                Document.deleted_at.is_(None),
+            )
+        )
+        .order_by(Document.version.desc())
+    )
+    latest_in_group = group_result.scalars().first()
+
+    suggestion = DocumentLinkSuggestion(
+        org_id=org_id,
+        doc_id=doc.doc_id,
+        suggested_doc_id=latest_in_group.doc_id,
+        similarity_score=Decimal(str(round(best_score, 4))),
+        status="pending",
+    )
+    db.add(suggestion)
+    await db.flush()
+    return suggestion
 
 
 async def find_duplicates(
