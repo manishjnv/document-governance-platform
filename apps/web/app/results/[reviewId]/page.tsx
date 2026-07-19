@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 
 interface Finding {
   finding_id: string;
+  finding_source: string;
   title: string;
   category: string;
   severity: string;
@@ -76,9 +77,9 @@ export default function ResultsPage() {
   const [error, setError] = useState('');
   const [expandedFinding, setExpandedFinding] = useState<string | null>(null);
   const [severityFilter, setSeverityFilter] = useState<string | null>(null);
-  const [showDocument, setShowDocument] = useState(false);
+  const [showDocument, setShowDocument] = useState(true);
   const [highlightedSection, setHighlightedSection] = useState<string | null>(null);
-  const [splitPercent, setSplitPercent] = useState(50);
+  const [splitPercent, setSplitPercent] = useState(33);
   const [resizingSplit, setResizingSplit] = useState(false);
   const router = useRouter();
   const docPaneRef = useRef<HTMLDivElement>(null);
@@ -224,6 +225,14 @@ export default function ResultsPage() {
     return review.findings.filter((f) => f.severity.toLowerCase() === severityFilter);
   }, [review, severityFilter]);
 
+  // Rule-engine findings only fire when a required section/keyword/format
+  // check FAILS -- so every rule-sourced finding already represents a gap,
+  // no separate "expected sections" list needed to compute this.
+  const ruleGaps = useMemo(
+    () => review?.findings.filter((f) => f.finding_source === 'rule') ?? [],
+    [review]
+  );
+
   if (loading) {
     return (
       <AppShell>
@@ -295,10 +304,123 @@ export default function ResultsPage() {
 
   const findingsPanel = (
     <>
+      {/* Overall Score / Risk Level */}
+      <div className="grid grid-cols-2 gap-1.5 mb-2">
+        <Card>
+          <CardHeader className="text-center pb-0.5 pt-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground">Overall Score</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center pb-2">
+            <div
+              className={`text-3xl font-bold mb-1 ${
+                scoreStatus(review.overall_score) === 'green'
+                  ? 'text-green-700'
+                  : scoreStatus(review.overall_score) === 'yellow'
+                  ? 'text-yellow-700'
+                  : 'text-red-700'
+              }`}
+            >
+              {review.overall_score.toFixed(1)}
+            </div>
+            <div
+              role="progressbar"
+              aria-valuenow={review.overall_score}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Overall score"
+              className="w-full bg-gray-200 rounded-full h-1.5"
+            >
+              <div
+                className={`h-1.5 rounded-full ${
+                  scoreStatus(review.overall_score) === 'green'
+                    ? 'bg-green-600'
+                    : scoreStatus(review.overall_score) === 'yellow'
+                    ? 'bg-yellow-600'
+                    : 'bg-red-600'
+                }`}
+                style={{ width: `${review.overall_score}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="text-center pb-0.5 pt-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground">Risk Level</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center pb-2">
+            <div
+              className={`text-3xl font-bold mb-1 ${
+                review.risk_score > 70
+                  ? 'text-red-700'
+                  : review.risk_score > 40
+                  ? 'text-yellow-700'
+                  : 'text-green-700'
+              }`}
+            >
+              {review.risk_score.toFixed(0)}%
+            </div>
+            <p
+              className={`text-xs font-semibold ${
+                review.risk_score > 70
+                  ? 'text-red-700'
+                  : review.risk_score > 40
+                  ? 'text-yellow-700'
+                  : 'text-green-700'
+              }`}
+            >
+              {review.risk_score > 70 ? 'High' : review.risk_score > 40 ? 'Medium' : 'Low'}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Document X-Ray: sections found + rule-engine gaps at a glance */}
+      {docInfo?.parsed_sections && docInfo.parsed_sections.length > 0 && (
+        <Card className="mb-2">
+          <CardHeader className="pb-0.5 pt-2">
+            <CardTitle className="text-sm">Document X-Ray</CardTitle>
+          </CardHeader>
+          <CardContent className="pb-2">
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <h4 className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wide mb-1">
+                  Sections Found ({docInfo.parsed_sections.length})
+                </h4>
+                <ul className="space-y-0.5">
+                  {docInfo.parsed_sections.map((s, i) => (
+                    <li key={i} className="truncate text-foreground">
+                      {s.heading}
+                      {s.page_number != null && <span className="text-muted-foreground"> (p.{s.page_number})</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wide mb-1">
+                  Gaps Detected ({ruleGaps.length})
+                </h4>
+                {ruleGaps.length === 0 ? (
+                  <p className="text-muted-foreground">None -- passes all rule checks.</p>
+                ) : (
+                  <ul className="space-y-0.5">
+                    {ruleGaps.map((f) => (
+                      <li key={f.finding_id} className="truncate text-red-700">
+                        {f.title}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Findings Summary (clickable filters) */}
-      <Card className="mb-4">
-        <CardHeader className="pb-1 pt-3">
-          <CardTitle className="text-base">
+      <Card className="mb-2">
+        <CardHeader className="pb-0.5 pt-2">
+          <CardTitle className="text-sm">
             Findings Summary
             {severityFilter && (
               <button
@@ -310,8 +432,8 @@ export default function ResultsPage() {
             )}
           </CardTitle>
         </CardHeader>
-        <CardContent className="pb-3">
-          <div className="grid grid-cols-5 gap-2">
+        <CardContent className="pb-2">
+          <div className="grid grid-cols-5 gap-1.5">
             {SEVERITIES.map((sev) => {
               const style = STAT_STYLES[sev];
               const active = severityFilter === sev;
@@ -338,11 +460,11 @@ export default function ResultsPage() {
 
       {/* Findings Details */}
       <Card>
-        <CardHeader className="flex-row items-center justify-between space-y-0 pb-1 pt-3">
-          <CardTitle className="text-base">
+        <CardHeader className="flex-row items-center justify-between space-y-0 pb-0.5 pt-2">
+          <CardTitle className="text-sm">
             Findings {severityFilter && <span className="text-muted-foreground font-normal">({visibleFindings.length} of {review.findings.length})</span>}
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {docInfo?.parsed_sections && docInfo.parsed_sections.length > 0 && (
               <Button size="sm" variant="outline" onClick={() => setShowDocument((s) => !s)}>
                 <FileText size={14} strokeWidth={2} className="mr-1.5" aria-hidden="true" />
@@ -354,7 +476,7 @@ export default function ResultsPage() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="pb-3">
+        <CardContent className="pb-2">
           {visibleFindings.length === 0 ? (
             <p className="text-muted-foreground text-sm">No findings in this filter.</p>
           ) : (
@@ -475,7 +597,7 @@ export default function ResultsPage() {
         </div>
 
         {docInfo && (
-          <p className="text-sm text-muted-foreground mb-4">
+          <p className="text-sm text-muted-foreground mb-2">
             <span className="font-medium text-foreground">{docInfo.original_filename}</span>
             {docInfo.project_name && <> &middot; Project: {docInfo.project_name}</>}
             {docInfo.document_type && <> &middot; {docInfo.document_type}</>}
@@ -484,86 +606,9 @@ export default function ResultsPage() {
           </p>
         )}
 
-        {/* Overall Score Card */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-          {/* Score */}
-          <Card>
-            <CardHeader className="text-center pb-1 pt-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Overall Score</CardTitle>
-            </CardHeader>
-            <CardContent className="text-center pb-3">
-              <div
-                className={`text-4xl font-bold mb-1 ${
-                  scoreStatus(review.overall_score) === 'green'
-                    ? 'text-green-700'
-                    : scoreStatus(review.overall_score) === 'yellow'
-                    ? 'text-yellow-700'
-                    : 'text-red-700'
-                }`}
-              >
-                {review.overall_score.toFixed(1)}
-              </div>
-              <div
-                role="progressbar"
-                aria-valuenow={review.overall_score}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label="Overall score"
-                className="w-full bg-gray-200 rounded-full h-1.5"
-              >
-                <div
-                  className={`h-1.5 rounded-full ${
-                    scoreStatus(review.overall_score) === 'green'
-                      ? 'bg-green-600'
-                      : scoreStatus(review.overall_score) === 'yellow'
-                      ? 'bg-yellow-600'
-                      : 'bg-red-600'
-                  }`}
-                  style={{ width: `${review.overall_score}%` }}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Risk Score */}
-          <Card>
-            <CardHeader className="text-center pb-1 pt-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Risk Level</CardTitle>
-            </CardHeader>
-            <CardContent className="text-center pb-3">
-              <div
-                className={`text-4xl font-bold mb-1 ${
-                  review.risk_score > 70
-                    ? 'text-red-700'
-                    : review.risk_score > 40
-                    ? 'text-yellow-700'
-                    : 'text-green-700'
-                }`}
-              >
-                {review.risk_score.toFixed(0)}%
-              </div>
-              <p
-                className={`text-sm font-semibold ${
-                  review.risk_score > 70
-                    ? 'text-red-700'
-                    : review.risk_score > 40
-                    ? 'text-yellow-700'
-                    : 'text-green-700'
-                }`}
-              >
-                {review.risk_score > 70
-                  ? 'High'
-                  : review.risk_score > 40
-                  ? 'Medium'
-                  : 'Low'}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
         {showDocument && docInfo?.parsed_sections ? (
           <div ref={splitContainerRef} className={cn('flex items-start gap-0', resizingSplit && 'select-none')}>
-            <div style={{ width: `${splitPercent}%` }} className="min-w-0 pr-2">
+            <div style={{ width: `${splitPercent}%` }} className="min-w-0 pr-1">
               {findingsPanel}
             </div>
 
@@ -573,12 +618,12 @@ export default function ResultsPage() {
               className="w-1.5 shrink-0 self-stretch cursor-col-resize rounded-full bg-border hover:bg-primary/50 active:bg-primary transition-colors"
             />
 
-            <div style={{ width: `${100 - splitPercent}%` }} className="min-w-0 pl-2">
+            <div style={{ width: `${100 - splitPercent}%` }} className="min-w-0 pl-1">
               <Card className="sticky top-4 max-h-[calc(100vh-2rem)] flex flex-col">
-                <CardHeader className="pb-1 pt-3">
-                  <CardTitle className="text-base">Document</CardTitle>
+                <CardHeader className="pb-0.5 pt-2">
+                  <CardTitle className="text-sm">Document</CardTitle>
                 </CardHeader>
-                <CardContent className="overflow-y-auto pb-3" ref={docPaneRef}>
+                <CardContent className="overflow-y-auto pb-2" ref={docPaneRef}>
                   <div className="space-y-4 text-sm">
                     {docInfo.parsed_sections.map((section, i) => {
                       const slug = sectionSlug(section.heading, i);

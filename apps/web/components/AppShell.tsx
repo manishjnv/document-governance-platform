@@ -58,7 +58,8 @@ export function AppShell({
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [width, setWidth] = useState(224);
-  const [collapsed, setCollapsed] = useState(false);
+  // Default collapsed unless the user has an explicit saved preference.
+  const [collapsed, setCollapsed] = useState(true);
   const [resizing, setResizing] = useState(false);
   const router = useRouter();
 
