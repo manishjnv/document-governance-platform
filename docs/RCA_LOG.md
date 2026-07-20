@@ -245,5 +245,47 @@ listed below — several of these are copy-pasted patterns that recur.
 
 ---
 
+### 16. DOCX table-only documents silently parsed to empty text (2026-07-20)
+
+- **Symptom:** Discovered while assembling a real-document test set for
+  the AI accuracy work (`docs/sample/SOW_Template/*.docx`, downloaded
+  TemplateLab SOW templates) -- every one of 27 real-world `.docx` files
+  parsed with `status: "success"` and `raw_text: ""`. A document with
+  real, substantial content (project fields, deliverables, team members)
+  came back completely empty, with no error anywhere in the pipeline. Had
+  this hit a real user upload, the review agents would have run against
+  an empty string and reported findings based on nothing, while the UI
+  showed a normal "review complete" result.
+- **Root cause:** `apps/api/app/parser.py::DocxParser.parse()` only
+  iterated `doc.paragraphs`. Any document whose content lives in a table
+  (a common layout choice for structured SOW/RFP templates, not unique to
+  TemplateLab) has zero paragraphs with real text, so the whole extraction
+  loop produced nothing -- and because nothing raised an exception, the
+  function returned its normal `status="success"` path with an empty
+  string.
+- **Fix:** switched to `doc.iter_inner_content()` (python-docx 1.2+),
+  which yields `Paragraph` and `Table` objects in document order, and
+  added `DocxParser._extract_table_text()` to flatten table cell text into
+  the output (deduping merged cells, which python-docx repeats once per
+  spanned grid position). 26 of 27 previously-empty files now extract
+  real text; the 1 remaining case has a malformed table grid python-docx's
+  `row.cells` can't resolve at all, and now correctly surfaces as
+  `status="failed"` with an error message instead of the previous silent
+  empty success -- strictly better even where the underlying file is
+  genuinely unparseable with this library.
+- **Prevention:** `status="success"` was never actually verified against
+  "extracted something non-trivial" anywhere in the pipeline -- a parser
+  returning empty text is currently indistinguishable from a parser that
+  correctly found no content (e.g. a truly blank file). Worth adding a
+  minimum-extracted-length sanity check (log a warning, don't fail the
+  upload) so a future parser gap surfaces as a visible signal rather than
+  a silent empty-success review. Not built in this pass -- flagged for
+  whoever picks up the next parser-reliability sweep. Tests added in
+  `apps/api/tests/test_parser_file_types.py::TestDocxParser` (table-only
+  doc, merged-cell dedup, paragraphs+tables both captured) so this
+  specific regression can't reappear silently.
+
+---
+
 *(Append new entries above this line, most recent first is NOT required —
 keep chronological.)*

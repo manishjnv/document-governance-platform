@@ -62,14 +62,35 @@ class DocxParser:
 
             from docx import Document
             from docx.enum.style import WD_STYLE_TYPE
+            from docx.table import Table
+            from docx.text.paragraph import Paragraph
 
             doc = Document(BytesIO(file_content))
             raw_text = []
             sections = []
             page_count = 1  # DOCX doesn't have built-in page info
 
-            for para in doc.paragraphs:
-                text = para.text.strip()
+            # iter_inner_content() walks paragraphs AND tables in document
+            # order -- many real-world SOW/RFP templates (not just this
+            # project's TemplateLab samples) lay out their actual content
+            # in tables rather than plain paragraphs. The old paragraphs-only
+            # loop silently returned status="success" with raw_text="" for
+            # every such document -- a document with real content parsing
+            # to empty text, with no error surfaced anywhere.
+            for block in doc.iter_inner_content():
+                if isinstance(block, Table):
+                    table_text = DocxParser._extract_table_text(block)
+                    if not table_text:
+                        continue
+                    raw_text.append(table_text)
+                    if sections:
+                        sections[-1].content += table_text + "\n"
+                    continue
+
+                if not isinstance(block, Paragraph):
+                    continue
+
+                text = block.text.strip()
                 if not text:
                     continue
 
@@ -77,10 +98,10 @@ class DocxParser:
 
                 # Detect heading level
                 level = 0
-                if para.style and para.style.name.startswith("Heading"):
+                if block.style and block.style.name.startswith("Heading"):
                     # Extract number from "Heading 1", "Heading 2", etc.
                     try:
-                        level = int(para.style.name.split()[-1])
+                        level = int(block.style.name.split()[-1])
                     except (IndexError, ValueError):
                         level = 0
 
@@ -124,6 +145,29 @@ class DocxParser:
                 page_count=0,
                 error_message=str(e),
             )
+
+    @staticmethod
+    def _extract_table_text(table) -> str:
+        """Flattens a docx table's cell text into lines. Merged cells share
+        the same underlying XML element across every grid position they
+        span, so a naive per-cell loop would repeat that cell's text once
+        per spanned column/row -- dedup by the underlying element's
+        identity within each row to avoid that."""
+        lines = []
+        for row in table.rows:
+            seen = set()
+            cell_texts = []
+            for cell in row.cells:
+                cell_id = id(cell._tc)
+                if cell_id in seen:
+                    continue
+                seen.add(cell_id)
+                text = cell.text.strip()
+                if text:
+                    cell_texts.append(text)
+            if cell_texts:
+                lines.append(" | ".join(cell_texts))
+        return "\n".join(lines)
 
     @staticmethod
     def _detect_type(text: str) -> DocumentType:
