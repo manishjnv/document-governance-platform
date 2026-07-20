@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.ai.orchestrator import ReviewOrchestrator
+from app.ai.orchestrator import ReviewOrchestrator, ReviewResult
 
 
 @pytest.mark.asyncio
@@ -99,3 +99,175 @@ async def test_ambiguous_language_scan_failure_does_not_break_review(monkeypatch
     orchestrator = ReviewOrchestrator()
     violations = await orchestrator._run_ambiguous_language_scan("some text", {})
     assert violations == []
+
+
+def _result(agent_name, findings):
+    return ReviewResult(
+        agent_name=agent_name, findings={"findings": findings}, confidence=0.9, duration_seconds=1.0
+    )
+
+
+class TestFindingDeduplication:
+    """Metric 1.4: same issue reported by multiple agents merges into one
+    finding, with combined evidence and the higher confidence kept.
+    Distinct issues (including ones from the same agent) must never merge."""
+
+    def test_cross_agent_duplicate_is_merged(self):
+        orchestrator = ReviewOrchestrator()
+        shared_evidence = "Vendor shall not be liable for damages exceeding fees paid in the prior 12 months."
+        results = [
+            _result(
+                "CommercialReviewer",
+                [
+                    {
+                        "type": "missing_liability_cap",
+                        "severity": "major",
+                        "description": "Liability cap is present but narrow.",
+                        "evidence": shared_evidence,
+                        "recommendation": "Confirm cap amount is acceptable.",
+                        "confidence": 0.7,
+                    }
+                ],
+            ),
+            _result(
+                "LegalReviewer",
+                [
+                    {
+                        "type": "liability_limitation",
+                        "severity": "critical",
+                        "description": "Liability limitation clause found, review carve-outs.",
+                        "evidence": shared_evidence,
+                        "recommendation": "Check carve-out list.",
+                        "confidence": 0.85,
+                    }
+                ],
+            ),
+        ]
+
+        merged = orchestrator._merge_findings(results)
+
+        assert len(merged["findings"]) == 1
+        finding = merged["findings"][0]
+        assert finding["confidence"] == 0.85
+        assert finding["severity"] == "critical"
+        assert finding["source_agent"] == "CommercialReviewer, LegalReviewer"
+
+    def test_distinct_findings_are_not_merged(self):
+        orchestrator = ReviewOrchestrator()
+        results = [
+            _result(
+                "ScopeReviewer",
+                [
+                    {
+                        "type": "missing_criteria",
+                        "severity": "medium",
+                        "description": "No acceptance criteria for deliverable 2.",
+                        "evidence": "Deliverable 2: ongoing support services as needed by client.",
+                        "recommendation": "Add measurable acceptance criteria.",
+                        "confidence": 0.6,
+                    }
+                ],
+            ),
+            _result(
+                "SecurityReviewer",
+                [
+                    {
+                        "type": "missing_data_handling",
+                        "severity": "major",
+                        "description": "No data handling or access control language present.",
+                        "evidence": "All work will be performed remotely by vendor staff.",
+                        "recommendation": "Add data handling and access control requirements.",
+                        "confidence": 0.75,
+                    }
+                ],
+            ),
+        ]
+
+        merged = orchestrator._merge_findings(results)
+
+        assert len(merged["findings"]) == 2
+
+    def test_same_agent_findings_are_never_merged(self):
+        """Two findings from the SAME agent quoting the same evidence stay
+        separate -- that's a candidate prompt/parsing bug worth surfacing,
+        not cross-agent corroboration to collapse."""
+        orchestrator = ReviewOrchestrator()
+        evidence = "Payment terms: net 30 days from invoice date, no late fee specified."
+        results = [
+            _result(
+                "CommercialReviewer",
+                [
+                    {
+                        "type": "missing_late_fee",
+                        "severity": "medium",
+                        "description": "No late payment fee specified.",
+                        "evidence": evidence,
+                        "recommendation": "Add a late fee clause.",
+                        "confidence": 0.6,
+                    },
+                    {
+                        "type": "payment_term_ambiguous",
+                        "severity": "low",
+                        "description": "Payment terms could be clearer.",
+                        "evidence": evidence,
+                        "recommendation": "Clarify payment terms.",
+                        "confidence": 0.5,
+                    },
+                ],
+            ),
+        ]
+
+        merged = orchestrator._merge_findings(results)
+
+        assert len(merged["findings"]) == 2
+
+    def test_short_or_missing_evidence_is_never_merged(self):
+        """Findings with no evidence, or evidence too short to compare
+        reliably, must never be merged -- avoids false merges on generic
+        short phrases (the launch criteria's 0-false-merge requirement)."""
+        orchestrator = ReviewOrchestrator()
+        results = [
+            _result(
+                "ScopeReviewer",
+                [
+                    {
+                        "type": "vague_language",
+                        "severity": "low",
+                        "description": "Uses vague language.",
+                        "evidence": "TBD",
+                        "recommendation": "Clarify.",
+                        "confidence": 0.5,
+                    }
+                ],
+            ),
+            _result(
+                "PMOReviewer",
+                [
+                    {
+                        "type": "vague_language",
+                        "severity": "low",
+                        "description": "Also vague.",
+                        "evidence": "TBD",
+                        "recommendation": "Clarify.",
+                        "confidence": 0.55,
+                    }
+                ],
+            ),
+            _result(
+                "LegalReviewer",
+                [
+                    {
+                        "type": "no_governing_law",
+                        "severity": "medium",
+                        "description": "No governing law clause found.",
+                        "evidence": None,
+                        "recommendation": "Add a governing law clause.",
+                        "confidence": 0.65,
+                    }
+                ],
+            ),
+        ]
+
+        merged = orchestrator._merge_findings(results)
+
+        assert len(merged["findings"]) == 3

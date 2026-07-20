@@ -1,6 +1,7 @@
 """AI agent orchestrator for coordinating document reviews."""
 
 import asyncio
+import difflib
 import logging
 import time
 from dataclasses import dataclass, field
@@ -16,6 +17,8 @@ from app.ai.agent import (
 )
 
 logger = logging.getLogger(__name__)
+
+_SEVERITY_RANK = {"critical": 4, "major": 3, "medium": 2, "low": 1}
 
 
 @dataclass
@@ -60,6 +63,13 @@ class ReviewOrchestrator:
             LegalReviewer(),
         ]
         self.initialized = False
+
+        # ponytail: evidence-text fuzzy match via stdlib difflib, not an
+        # embedding model -- findings quote the document verbatim, so
+        # lexical overlap is a strong same-issue signal without adding an
+        # ML dependency. Revisit if evidence-text dedup proves insufficient.
+        self.dedupe_similarity_threshold = 0.82
+        self.dedupe_min_evidence_length = 20
 
     async def initialize(self):
         """Initialize all agents."""
@@ -279,12 +289,15 @@ class ReviewOrchestrator:
             )
 
     def _merge_findings(self, results: list[ReviewResult]) -> dict:
-        """Merge findings from all agents into unified structure."""
+        """Merge findings from all agents into unified structure, then
+        collapse cross-agent duplicates (same underlying issue reported by
+        more than one agent) into a single finding -- Metric 1.4."""
         merged = {
             "findings": [],
             "agents": {},
         }
 
+        raw_findings = []
         for result in results:
             if result.error:
                 merged["agents"][result.agent_name] = {
@@ -303,6 +316,80 @@ class ReviewOrchestrator:
                 if "findings" in result.findings:
                     for finding in result.findings["findings"]:
                         finding["source_agent"] = result.agent_name
-                        merged["findings"].append(finding)
+                        raw_findings.append(finding)
 
+        merged["findings"] = self._dedupe_findings(raw_findings)
+        return merged
+
+    def _dedupe_findings(self, findings: list[dict]) -> list[dict]:
+        """Collapses findings from DIFFERENT agents that quote the same (or
+        near-identical) evidence text into one finding. Same-agent
+        duplicates are left alone -- that's more likely a prompt/parsing
+        issue worth surfacing, not cross-agent corroboration. A
+        conservative similarity threshold plus a minimum evidence length
+        keep false merges at zero per the launch criteria's "0 false
+        merges" requirement, at the cost of some missed merges on short or
+        vague evidence (tolerated up to <1% per spec) -- findings with no
+        evidence, or evidence too short to compare reliably, are never
+        merged."""
+        n = len(findings)
+        parent = list(range(n))
+
+        def find(i: int) -> int:
+            while parent[i] != i:
+                parent[i] = parent[parent[i]]
+                i = parent[i]
+            return i
+
+        def union(i: int, j: int) -> None:
+            ri, rj = find(i), find(j)
+            if ri != rj:
+                parent[ri] = rj
+
+        for i in range(n):
+            evidence_i = (findings[i].get("evidence") or "").strip().lower()
+            if len(evidence_i) < self.dedupe_min_evidence_length:
+                continue
+            for j in range(i + 1, n):
+                if findings[i]["source_agent"] == findings[j]["source_agent"]:
+                    continue
+                evidence_j = (findings[j].get("evidence") or "").strip().lower()
+                if len(evidence_j) < self.dedupe_min_evidence_length:
+                    continue
+                ratio = difflib.SequenceMatcher(None, evidence_i, evidence_j).ratio()
+                if ratio >= self.dedupe_similarity_threshold:
+                    union(i, j)
+
+        groups: dict[int, list[dict]] = {}
+        for i in range(n):
+            groups.setdefault(find(i), []).append(findings[i])
+
+        deduped = []
+        for group in groups.values():
+            deduped.append(group[0] if len(group) == 1 else self._combine_findings(group))
+        return deduped
+
+    def _combine_findings(self, group: list[dict]) -> dict:
+        """Merges a group of duplicate findings into one: the
+        highest-confidence finding's fields are the base, severity is the
+        most severe reported (a corroborated finding shouldn't lose
+        severity), evidence and contributing agents are combined."""
+        base = max(group, key=lambda f: f.get("confidence", 0))
+        agents = sorted({f["source_agent"] for f in group})
+        top_severity = max(
+            (f.get("severity", "medium").lower() for f in group),
+            key=lambda s: _SEVERITY_RANK.get(s, 0),
+        )
+        evidences = []
+        for f in group:
+            ev = (f.get("evidence") or "").strip()
+            if ev and ev not in evidences:
+                evidences.append(ev)
+
+        merged = dict(base)
+        merged["severity"] = top_severity
+        merged["evidence"] = " | ".join(evidences) if evidences else base.get("evidence")
+        merged["source_agent"] = ", ".join(agents)[:100]  # matches Finding.agent_name String(100)
+        merged["merged_from_agents"] = agents
+        merged["confidence"] = max(f.get("confidence", 0) for f in group)
         return merged
