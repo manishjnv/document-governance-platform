@@ -126,6 +126,23 @@ export default function HomePage() {
           </div>
         </section>
 
+        <section className="border-t bg-muted/30">
+          <div className="max-w-6xl mx-auto px-4 py-16 text-center">
+            <h2 className="text-2xl font-bold mb-6">Reviewing a specific document type?</h2>
+            <div className="flex items-center justify-center gap-4 flex-wrap">
+              <Link href="/use-cases/sow-review" className="rounded-md border px-6 py-3 font-medium hover:bg-muted">
+                SOW review
+              </Link>
+              <Link href="/use-cases/rfp-review" className="rounded-md border px-6 py-3 font-medium hover:bg-muted">
+                RFP review
+              </Link>
+              <Link href="/use-cases/scope-creep-prevention" className="rounded-md border px-6 py-3 font-medium hover:bg-muted">
+                Scope creep prevention
+              </Link>
+            </div>
+          </div>
+        </section>
+
         <section className="border-t">
           <div className="max-w-6xl mx-auto px-4 py-16 text-center">
             <h2 className="text-2xl font-bold mb-4">Ready to review your first document?</h2>

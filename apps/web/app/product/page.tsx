@@ -84,10 +84,21 @@ export default function ProductPage() {
         <div className="text-center">
           <Link
             href="/login"
-            className="inline-block rounded-md bg-primary text-primary-foreground px-6 py-3 font-medium hover:opacity-90"
+            className="inline-block rounded-md bg-primary text-primary-foreground px-6 py-3 font-medium hover:opacity-90 mb-4"
           >
             Get started
           </Link>
+          <p className="text-sm text-muted-foreground">
+            See it applied to{' '}
+            <Link href="/use-cases/sow-review" className="underline hover:no-underline">
+              SOW review
+            </Link>{' '}
+            or check{' '}
+            <Link href="/pricing" className="underline hover:no-underline">
+              pricing
+            </Link>
+            .
+          </p>
         </div>
       </main>
 

@@ -83,25 +83,49 @@ both blocked on human dashboard access, not on code.
 ## Phase 2 — Expansion (Weeks 5-12)
 
 ### Engineering
+- [x] `/use-cases/sow-review`, `/use-cases/rfp-review`,
+  `/use-cases/scope-creep-prevention` — done 2026-07-20. Static Server
+  Components (not a dynamic `[slug]` template — 3 fixed pages didn't
+  justify one), each with `FAQPage` JSON-LD and internal links to
+  `/pricing` + matching `/solutions/for-*` per `SITE_STRUCTURE.md`'s
+  matrix.
+- [x] `/solutions/for-procurement`, `/for-legal`, `/for-agencies` — done
+  2026-07-20. Same static-page pattern, linking back to `/pricing` +
+  matching `/use-cases/*`.
+- [x] `/resources/glossary/[term]` route + `DefinedTerm` schema — done
+  2026-07-20. Dynamic route (`generateStaticParams` + `generateMetadata`)
+  backed by `apps/web/app/resources/glossary/data.ts`; `/resources/glossary`
+  index page added too.
+- [x] Internal linking pass per `SITE_STRUCTURE.md`'s matrix — done
+  2026-07-20. Homepage → use-cases row added; `/product` → `/use-cases/sow-review`
+  + `/pricing`; nav/footer updated with Use Cases/Solutions/Glossary links;
+  every new page links to `/pricing` and its counterpart page.
 - [ ] Decide CMS/authoring approach for `/resources/blog` and
   `/resources/guides` (hand-coded MDX vs. headless CMS) — **blocking
-  decision, make this in week 5, not mid-phase**
-- [ ] `/use-cases/[slug]`, `/solutions/[slug]` route templates
-- [ ] `/resources/glossary/[term]` route + `DefinedTerm` schema
+  decision, make this in week 5, not mid-phase**. Still open — no blog
+  content shipped this pass, deliberately (see content note below).
 - [ ] `Article`/`BlogPosting` schema on blog posts, with a real `author`
-  object (E-E-A-T)
-- [ ] Internal linking pass per `SITE_STRUCTURE.md`'s matrix
+  object (E-E-A-T) — blocked on the CMS decision above, no blog exists
+  yet.
 
 ### Content (see `CONTENT_CALENDAR.md` for the full list)
-- [ ] `/use-cases/sow-review`, `/use-cases/rfp-review`,
-  `/use-cases/scope-creep-prevention`
-- [ ] `/solutions/for-procurement`, `/for-legal`, `/for-agencies`
-- [ ] Blog posts #1-8 (Month 1-2 batch)
-- [ ] Glossary terms, first 5 (liability cap, indemnification, scope
-  creep, MSA, SOW)
+- [x] `/use-cases/sow-review`, `/use-cases/rfp-review`,
+  `/use-cases/scope-creep-prevention` — done 2026-07-20, grounded in
+  `docs/planning/4_AI_AGENT_SPECS.md`, no fabricated stats/testimonials.
+- [x] `/solutions/for-procurement`, `/for-legal`, `/for-agencies` — done
+  2026-07-20, same grounding rule.
+- [x] Glossary terms, first 5 (liability cap, indemnification, scope
+  creep, MSA, SOW) — done 2026-07-20, 150-300+ words each per
+  `CONTENT_CALENDAR.md`'s target.
+- [ ] Blog posts #1-8 (Month 1-2 batch) — **not done this pass**. These
+  require the CMS/authoring decision above plus a named human reviewer
+  per `CONTENT_CALENDAR.md`'s editorial rule (E-E-A-T) — not something a
+  coding session can complete unilaterally.
 
 **Phase 2 exit criteria:** 15-20 pages indexed in GSC; first organic
-sessions appear in GA4 (even if low volume).
+sessions appear in GA4 (even if low volume). 9 new pages + glossary index
+shipped this pass (12 URLs total including glossary terms) — GSC/GA4
+verification itself is still blocked on human dashboard access per Phase 1.
 
 ---
 
