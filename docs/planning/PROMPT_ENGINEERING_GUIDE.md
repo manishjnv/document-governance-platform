@@ -84,41 +84,63 @@ Conditional checks (currency/tax, accessibility) are explicitly scoped
 in-prompt to skip when not applicable — a cross-border or public-facing
 signal must be present, not forced onto every document.
 
-### What was deliberately NOT done this pass
+### What was deliberately NOT done in the initial pass (later completed same day)
 
 - No new agents, no schema restructuring beyond adding new `type` enum
   values and 1-2 new boolean fields per agent's structured-extraction
   object (`legal_terms`, `governance`, etc.) — additive only, so
   `apps/api/tests/test_legal_reviewer.py` and `test_pmo_reviewer.py`'s
   substring-based topic-coverage tests stay valid without modification.
-- No re-run of the live-API precision/recall harness
-  (`test_legal_reviewer.py::test_legal_reviewer_precision_recall_live`,
-  gated behind `ANTHROPIC_API_KEY` which this project doesn't use —
-  needs an equivalent OpenRouter-gated version, not built yet) — this
-  revision is unverified against real model output as of commit time.
-  **Next step for whoever picks this up:** build a real-document ground
-  truth pass (see "Real test set" below) and measure before/after this
-  revision's actual precision/recall/calibration delta, not just that it
-  compiles and passes structural tests.
+- ~~No re-run of the live-API precision/recall harness~~ **Done later
+  the same day** — see "Live-model validation" below. Found and fixed 3
+  real bugs (`max_tokens`, timeout retry, missing `evidence` fields on 3
+  agents) that a structural-test-only pass could never have caught.
+
+## Live-model validation (2026-07-20, same day as the revision above)
+
+Ran the revised prompts against real OpenRouter output (`z-ai/glm-5.2`)
+on real documents — not simulated. Full writeup:
+`docs/planning/5_LAUNCH_CRITERIA.md`'s "Real-document spot-check
+(2026-07-20)" section. Three real bugs found and fixed in the process:
+
+1. `max_tokens=4000` truncated JSON output on large real documents
+   (~30K input tokens) — raised to 8000 in `apps/api/app/ai/agent.py`.
+2. Agent timeout (60s, no retry) intermittently dropped a random agent's
+   findings entirely on real API latency variance — added one retry at
+   90s in `ReviewOrchestrator._run_agent`.
+3. `DeliveryReviewer`, `CommercialReviewer`, `SecurityReviewer` never had
+   an `evidence` field in their output schema (unlike Scope/PMO/Legal) —
+   silently broke dedup and clause-location for 3 of 6 agents since
+   those features depend on evidence text. Fixed by adding `"evidence"`
+   to all 3 schemas + an explicit quote-evidence instruction.
+
+Qualitative result: the calibration rubric visibly worked (confidence
+tracked certainty rather than clustering high), every new checklist item
+fired correctly with accurate reasoning, and the pipeline correctly
+handled a genuinely hard real-world case (FAR-clause incorporation by
+reference in a real federal contract) without false-flagging terms that
+existed via reference rather than literal text.
 
 ## Real test set status (2026-07-20)
 
-`docs/sample/` has 4 real RFP samples (`RFP_Sample/`) and ~90 real SOW/RFP
-templates (`SOW_Template/`, `RFP_template/`). Discovered while starting a
-ground-truth pass: most `SOW_Template/*.docx` files are genuinely blank
-fill-in-the-blank templates (Lorem Ipsum placeholder text, "DESCRIPTION
-HERE") — not realistic filled documents, so grading them for
-precision/recall is degenerate (everything is trivially "missing"). The 4
-RFP samples and a subset of templates with real reference content (e.g.
-the GSA EaaS SOW template used above) are usable; a genuinely realistic
-filled SOW set still doesn't exist in this repo. Options for next
-session: (a) use the usable subset for a smaller real pass, (b) source
-additional real, filled (not blank) SOW documents, (c) accept the
-synthetic set remains primary for SOW until real documents exist.
+`docs/sample/` had 4 real RFP samples (`RFP_Sample/`) and ~90 SOW/RFP
+templates (`SOW_Template/`, `RFP_template/`) — mostly blank fill-in-the-
+blank templates (Lorem Ipsum, "DESCRIPTION HERE"), not usable for
+grading. **Added `docs/sample/Real_Federal_Contracts/`**: 4 real, awarded,
+filled US federal contracts sourced from USCIS's public contracts
+reading room (see that folder's README for provenance/caveats — real
+federal-contract formatting, not representative of a typical commercial
+SOW). This is the current best real-document source in the repo for
+accuracy work; still not the ≥10-doc set full launch-gate measurement
+needs, and still no real *commercial* (non-government) filled SOW/RFP
+exists in this repo.
 
 ## Changelog
 
 - **2026-07-20**: Confidence calibration rubric added to all 6 agents.
   Scope (+2 checks), Delivery (+2), Commercial (+2), Security (+3), PMO
-  (+2), Legal (+3) additive checklist items. See table above. Not yet
-  measured against live model output.
+  (+2), Legal (+3) additive checklist items. See table above.
+- **2026-07-20 (same day, live-model validation pass)**: `max_tokens`
+  4000→8000, agent timeout retry (60s→60s+90s), `evidence` field added
+  to Delivery/Commercial/Security schemas. Sourced 4 real federal
+  contracts into `docs/sample/Real_Federal_Contracts/`. 5 new tests.

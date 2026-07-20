@@ -101,6 +101,58 @@ async def test_ambiguous_language_scan_failure_does_not_break_review(monkeypatch
     assert violations == []
 
 
+class TestAgentTimeoutRetry:
+    """2026-07-20: a live smoke test found a different agent randomly
+    hitting the 60s ceiling on each of 2 runs against real OpenRouter
+    output -- response-latency variance, not a per-agent problem. One
+    retry at a longer window should recover a transient timeout instead
+    of losing that agent's findings entirely."""
+
+    @pytest.mark.asyncio
+    async def test_recovers_on_first_attempt_timeout(self, monkeypatch):
+        import asyncio
+
+        orchestrator = ReviewOrchestrator()
+        agent = AsyncMock()
+        agent.name = "FlakyReviewer"
+
+        calls = {"count": 0}
+
+        async def flaky_review(document_text, document_type="SOW"):
+            calls["count"] += 1
+            if calls["count"] == 1:
+                await asyncio.sleep(10)  # will be cut short by a patched timeout
+            return {"findings": [], "overall_confidence": 0.8}
+
+        agent.review = flaky_review
+        monkeypatch.setattr(orchestrator, "_AGENT_TIMEOUTS_SECONDS", (0.05, 5.0))
+
+        result = await orchestrator._run_agent(agent, "some text", "SOW")
+
+        assert result.error is None
+        assert calls["count"] == 2
+        assert result.confidence == 0.8
+
+    @pytest.mark.asyncio
+    async def test_reports_timeout_error_after_all_retries_exhausted(self, monkeypatch):
+        import asyncio
+
+        orchestrator = ReviewOrchestrator()
+        agent = AsyncMock()
+        agent.name = "AlwaysSlowReviewer"
+
+        async def always_slow_review(document_text, document_type="SOW"):
+            await asyncio.sleep(10)
+
+        agent.review = always_slow_review
+        monkeypatch.setattr(orchestrator, "_AGENT_TIMEOUTS_SECONDS", (0.05, 0.05))
+
+        result = await orchestrator._run_agent(agent, "some text", "SOW")
+
+        assert result.error == "timeout"
+        assert result.confidence == 0.0
+
+
 def _result(agent_name, findings):
     return ReviewResult(
         agent_name=agent_name, findings={"findings": findings}, confidence=0.9, duration_seconds=1.0

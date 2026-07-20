@@ -35,6 +35,11 @@ confidence should usually be below 0.7. A finding you're genuinely unsure about 
 confidence score is more useful than a false-certain one -- it tells the reader where to look
 harder, rather than implying the AI already checked thoroughly.
 
+IMPORTANT: Quote the exact document language as evidence for each finding, even when the finding
+is about something MISSING -- quote the section header or nearby text that should have contained
+it, so the finding can be located in the document. Only omit evidence when nothing in the document
+is relevant to quote (e.g. the entire timeline concept is absent).
+
 Provide findings as JSON with:
 {
     "timeline": {
@@ -48,6 +53,7 @@ Provide findings as JSON with:
             "type": "missing_dates|unrealistic|undefined_dependency|unconfirmed_staffing|no_schedule_buffer",
             "severity": "critical|major|medium|low",
             "description": "string",
+            "evidence": "string",
             "confidence": 0.0-1.0
         }
     ],
@@ -78,6 +84,11 @@ confidence should usually be below 0.7. A finding you're genuinely unsure about 
 confidence score is more useful than a false-certain one -- it tells the reader where to look
 harder, rather than implying the AI already checked thoroughly.
 
+IMPORTANT: Quote the exact document language as evidence for each finding, even when the finding
+is about something MISSING -- quote the section header or nearby text that should have contained
+it, so the finding can be located in the document. Only omit evidence when nothing in the document
+is relevant to quote (e.g. the entire timeline concept is absent).
+
 Provide findings as JSON with:
 {
     "timeline": {
@@ -91,6 +102,7 @@ Provide findings as JSON with:
             "type": "missing_dates|unrealistic|undefined_dependency|unconfirmed_staffing|no_schedule_buffer",
             "severity": "critical|major|medium|low",
             "description": "string",
+            "evidence": "string",
             "confidence": 0.0-1.0
         }
     ],

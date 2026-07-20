@@ -67,6 +67,15 @@ class TestDeliveryReviewerNewChecks:
         assert "unconfirmed_staffing" in prompt
         assert "no_schedule_buffer" in prompt
 
+    def test_schema_requests_evidence(self):
+        """2026-07-20: found via live real-document testing -- Delivery,
+        Commercial, and Security never had an `evidence` field in their
+        output schema at all (unlike Scope/PMO/Legal), so dedup and
+        clause-location (_locate_finding in reviews.py) silently never
+        worked for these 3 agents' findings."""
+        prompt = DeliveryReviewer().get_system_prompt("SOW")
+        assert '"evidence"' in prompt
+
 
 class TestCommercialReviewerNewChecks:
     def test_sow_prompt_covers_renewal_and_currency(self):
@@ -78,6 +87,10 @@ class TestCommercialReviewerNewChecks:
         prompt = CommercialReviewer().get_system_prompt("SOW")
         assert "renewal_risk" in prompt
         assert "currency_tax_gap" in prompt
+
+    def test_schema_requests_evidence(self):
+        prompt = CommercialReviewer().get_system_prompt("SOW")
+        assert '"evidence"' in prompt
 
 
 class TestSecurityReviewerNewChecks:
@@ -92,6 +105,10 @@ class TestSecurityReviewerNewChecks:
         assert "missing_personnel_security" in prompt
         assert "missing_breach_notification" in prompt
         assert "missing_accessibility_standard" in prompt
+
+    def test_schema_requests_evidence(self):
+        prompt = SecurityReviewer().get_system_prompt("SOW")
+        assert '"evidence"' in prompt
 
 
 class TestPMOReviewerNewChecks:

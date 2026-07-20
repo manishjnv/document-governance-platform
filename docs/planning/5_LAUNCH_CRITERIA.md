@@ -143,6 +143,79 @@ not silently left as an "in progress" line.
 
 ---
 
+### Real-document spot-check (2026-07-20)
+
+**Not a full Metrics 1.1-1.4 pass** (that needs manual ground-truth
+labeling across ≥10 documents per `5_LAUNCH_CRITERIA.md`'s methodology —
+not done here). This was a live smoke test against real OpenRouter
+output on real documents to validate the same-day prompt-accuracy
+revision (`docs/planning/PROMPT_ENGINEERING_GUIDE.md`) and dedup build,
+using `docs/sample/Real_Federal_Contracts/USCIS_70SBUR18C00000017.pdf` (a
+real, awarded, 46-page federal SOW/contract — not a template). Found and
+fixed 3 real bugs in the process, more valuable than the numbers below:
+
+1. **`max_tokens=4000` was too small for large real documents.**
+   `docs/planning/AI_MODEL_ROUTING.md`'s own "Known gaps" section had
+   already flagged this as untested ("longer real-world documents may
+   need a higher ceiling — no scaling test was done"). Confirmed: GLM-5.2
+   hit `finish_reason="length"` and returned truncated, unparseable JSON
+   against this document's ~30K input tokens. Raised to 8000
+   (`apps/api/app/ai/agent.py`) — costs nothing for calls that don't need
+   it (OpenRouter bills actual completion tokens, not the ceiling).
+2. **Agent timeout had no retry**, and a live run showed a DIFFERENT
+   agent randomly hitting the 60s ceiling on different runs against the
+   same/similar documents — response-latency variance from the model
+   backend, not a per-agent problem. Added one retry at 90s
+   (`ReviewOrchestrator._run_agent`) — recovered a real timeout live
+   during this same test run (LegalReviewer failed at 60s, succeeded on
+   retry).
+3. **DeliveryReviewer, CommercialReviewer, and SecurityReviewer never had
+   an `evidence` field in their output schema at all** (unlike
+   Scope/PMO/Legal) — confirmed via this live run, all 3 agents' findings
+   came back with empty evidence on a real document. This silently broke
+   two things for 3 of 6 agents: cross-agent dedup (`_dedupe_findings`
+   requires ≥20 chars of evidence to compare) and `_locate_finding()`'s
+   clause-highlighting in `reviews.py`. Fixed by adding `"evidence"` to
+   all 3 schemas plus an explicit quote-evidence instruction, matching
+   Scope/PMO/Legal's existing pattern.
+
+**Qualitative result on the 48 findings produced** (not independently
+graded against hand-built ground truth, but spot-read against the source
+document): findings were specific, cited exact page/section numbers, and
+correctly handled a genuinely hard real-world case — this contract
+incorporates ~136 FAR clauses by reference rather than spelling out
+liability/warranty/termination terms in prose. LegalReviewer correctly
+recognized FAR 52.212-4/52.233-4 as covering governing law rather than
+flagging it as missing, and scored the liability-cap finding at 0.65
+confidence (not false-certain) specifically because the term exists via
+reference rather than visible text — this is the calibration rubric
+(`docs/planning/PROMPT_ENGINEERING_GUIDE.md`) working as intended. One
+finding caught unresolved bracketed placeholder text
+(`[10 business days unless a different number is inserted]`) still
+present in the executed document — a real defect in the source contract
+itself, not a false positive.
+
+**Not measured**: this is one document, one read-through, not a scored
+precision/recall pass. `SecurityReviewer` failed both timeout attempts on
+this document (150s total) — even the retry ceiling isn't enough for
+every large real document; correctly degraded to `status: partial`
+rather than silently succeeding, but is a known remaining limit for
+unusually large inputs.
+
+**Real document corpus now available**: `docs/sample/Real_Federal_Contracts/`
+(4 real, awarded, filled US federal contracts, sourced from USCIS's
+public contracts reading room — see that folder's README for details and
+provenance). Supplements `docs/sample/SOW_Template/` and `RFP_template/`,
+which turned out to be mostly blank fill-in-the-blank templates when
+first assembling a real-document test set, not usable for grading. Next
+step for a full launch-gate Metrics 1.1/1.3/1.4 pass: hand-build ground
+truth against 2-3 of these real documents (this is the real, substantial
+time investment — reading a 46-page contract carefully enough to know
+every issue it should surface) and score the pipeline's findings against
+it.
+
+---
+
 ## Category 2: Performance & Scalability
 
 ### Metric 2.1: Review Completion Time

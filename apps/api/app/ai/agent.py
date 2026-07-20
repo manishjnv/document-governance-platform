@@ -149,7 +149,18 @@ class ReviewAgent(ABC):
                     response = await asyncio.to_thread(
                         self.client.messages.create,
                         model=model,
-                        max_tokens=4000,
+                        # 4000 (docs/planning/AI_MODEL_ROUTING.md's Round 2 fix)
+                        # was validated against a 3.7K-char test document only
+                        # -- that doc's own "Known gaps" section flagged
+                        # "longer real-world documents may need a higher
+                        # ceiling, no scaling test was done." Confirmed
+                        # 2026-07-20 against a real 119K-char/30K-token
+                        # federal contract: GLM-5.2 hit finish_reason="length"
+                        # and returned truncated, unparseable JSON at 4000.
+                        # Raising the ceiling costs nothing for calls that
+                        # don't need it (OpenRouter bills actual completion
+                        # tokens generated, not the max allowed).
+                        max_tokens=8000,
                         temperature=0.7,
                         system=self.get_system_prompt(document_type),
                         messages=[
@@ -332,6 +343,11 @@ class DeliveryReviewer(ReviewAgent):
 """
 
         return doc_branch + _CONFIDENCE_CALIBRATION + """
+IMPORTANT: Quote the exact document language as evidence for each finding, even when the finding
+is about something MISSING -- quote the section header or nearby text that should have contained
+it, so the finding can be located in the document. Only omit evidence when nothing in the document
+is relevant to quote (e.g. the entire timeline concept is absent).
+
 Provide findings as JSON with:
 {
     "timeline": {
@@ -345,6 +361,7 @@ Provide findings as JSON with:
             "type": "missing_dates|unrealistic|undefined_dependency|unconfirmed_staffing|no_schedule_buffer",
             "severity": "critical|major|medium|low",
             "description": "string",
+            "evidence": "string",
             "confidence": 0.0-1.0
         }
     ],
@@ -399,6 +416,11 @@ class CommercialReviewer(ReviewAgent):
 """
 
         return doc_branch + _CONFIDENCE_CALIBRATION + """
+IMPORTANT: Quote the exact document language as evidence for each finding, even when the finding
+is about something MISSING -- quote the section header or nearby text that should have contained
+it, so the finding can be located in the document. Only omit evidence when nothing in the document
+is relevant to quote (e.g. the document has no pricing section anywhere).
+
 Provide findings as:
 {
     "pricing": {
@@ -412,6 +434,7 @@ Provide findings as:
             "type": "ambiguous_pricing|missing_terms|escalation_gap|renewal_risk|currency_tax_gap",
             "severity": "critical|major|medium|low",
             "description": "string",
+            "evidence": "string",
             "confidence": 0.0-1.0
         }
     ],
@@ -473,6 +496,11 @@ class SecurityReviewer(ReviewAgent):
 """
 
         return doc_branch + _CONFIDENCE_CALIBRATION + """
+IMPORTANT: Quote the exact document language as evidence for each finding, even when the finding
+is about something MISSING -- quote the section header or nearby text that should have contained
+it, so the finding can be located in the document. Only omit evidence when nothing in the document
+is relevant to quote (e.g. the document has no security section anywhere).
+
 Provide findings as:
 {
     "compliance_requirements": ["SOC2", "ISO27001", ...],
@@ -482,6 +510,7 @@ Provide findings as:
             "type": "missing_clause|compliance_gap|audit_gap|missing_personnel_security|missing_breach_notification|missing_accessibility_standard",
             "severity": "critical|major|medium|low",
             "description": "string",
+            "evidence": "string",
             "confidence": 0.0-1.0
         }
     ],

@@ -241,52 +241,74 @@ class ReviewOrchestrator:
             logger.error(f"Ambiguous-language scan failed: {e}")
             return []
 
+    # T-409: agent timeout, plus one retry at a longer window (2026-07-20).
+    # A live smoke test against real OpenRouter output found a DIFFERENT
+    # agent hitting the 60s ceiling on each of 2 runs (not the same one
+    # each time) -- that's response-latency variance from the model
+    # backend, not a per-agent prompt-length problem. Losing an entire
+    # agent's findings to one slow response is a real accuracy cost, so
+    # one retry at 90s trades a bit of worst-case latency for not
+    # silently dropping a whole agent's output.
+    _AGENT_TIMEOUTS_SECONDS = (60.0, 90.0)
+
     async def _run_agent(
         self, agent, document_text: str, document_type: str = "SOW"
     ) -> Optional[ReviewResult]:
-        """Run a single agent with error handling and timeout."""
+        """Run a single agent with error handling, timeout, and one retry
+        on timeout specifically (non-timeout errors already get a
+        fallback-model chain inside agent.review() itself, so they're not
+        retried again here)."""
         start_time = time.time()
 
-        try:
-            # T-409: Implement agent timeout (max 60 seconds)
-            findings = await asyncio.wait_for(
-                agent.review(document_text, document_type), timeout=60.0
-            )
+        for attempt, timeout in enumerate(self._AGENT_TIMEOUTS_SECONDS):
+            try:
+                findings = await asyncio.wait_for(
+                    agent.review(document_text, document_type), timeout=timeout
+                )
 
-            # T-407: Confidence scoring
-            confidence = findings.get("overall_confidence", 0.5)
+                # T-407: Confidence scoring
+                confidence = findings.get("overall_confidence", 0.5)
 
-            duration = time.time() - start_time
+                duration = time.time() - start_time
+                if attempt > 0:
+                    logger.warning(f"{agent.name}: succeeded on timeout retry")
 
-            return ReviewResult(
-                agent_name=agent.name,
-                findings=findings,
-                confidence=confidence,
-                duration_seconds=duration,
-            )
+                return ReviewResult(
+                    agent_name=agent.name,
+                    findings=findings,
+                    confidence=confidence,
+                    duration_seconds=duration,
+                )
 
-        except asyncio.TimeoutError:
-            duration = time.time() - start_time
-            logger.warning(f"{agent.name} timed out after {duration:.1f}s")
-            return ReviewResult(
-                agent_name=agent.name,
-                findings={},
-                confidence=0.0,
-                duration_seconds=duration,
-                error="timeout",
-            )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    f"{agent.name} timed out after {timeout:.0f}s "
+                    f"(attempt {attempt + 1}/{len(self._AGENT_TIMEOUTS_SECONDS)})"
+                )
+                continue
 
-        except Exception as e:
-            duration = time.time() - start_time
-            logger.error(f"{agent.name} failed: {e}")
-            # T-448: Agent fallback (continue with other agents)
-            return ReviewResult(
-                agent_name=agent.name,
-                findings={},
-                confidence=0.0,
-                duration_seconds=duration,
-                error=str(e),
-            )
+            except Exception as e:
+                duration = time.time() - start_time
+                logger.error(f"{agent.name} failed: {e}")
+                # T-448: Agent fallback (continue with other agents)
+                return ReviewResult(
+                    agent_name=agent.name,
+                    findings={},
+                    confidence=0.0,
+                    duration_seconds=duration,
+                    error=str(e),
+                )
+
+        # Every attempt timed out.
+        duration = time.time() - start_time
+        logger.warning(f"{agent.name} timed out after {duration:.1f}s (all retries exhausted)")
+        return ReviewResult(
+            agent_name=agent.name,
+            findings={},
+            confidence=0.0,
+            duration_seconds=duration,
+            error="timeout",
+        )
 
     def _merge_findings(self, results: list[ReviewResult]) -> dict:
         """Merge findings from all agents into unified structure, then
