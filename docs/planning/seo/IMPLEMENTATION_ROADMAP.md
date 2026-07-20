@@ -132,14 +132,34 @@ verification itself is still blocked on human dashboard access per Phase 1.
 ## Phase 3 — Scale (Weeks 13-24)
 
 ### Engineering
-- [ ] `FAQPage` schema on `/use-cases/*` and `/compare/*`
+- [x] `FAQPage` schema on `/use-cases/*` — done 2026-07-20 as part of
+  Phase 2 (was built ahead of schedule alongside the use-case pages
+  themselves). `/compare/*` still open — no `/compare/*` pages exist yet.
+- [ ] `FAQPage` schema on `/compare/*` — blocked on `/compare/*` pages
+  existing (see Content section below).
 - [ ] `/resources/templates` download flow (gated lead magnet — needs a
   form + email capture, check if this reuses any existing
   signup/lead infrastructure or needs new plumbing)
 - [ ] Core Web Vitals re-check against Phase 1 baseline; fix regressions
 
 ### Content
-- [ ] Blog posts #9-16 (Month 3-4 batch) + remaining 15 glossary terms
+- [x] Remaining 10 of the 15-term glossary batch — done 2026-07-20 (rfp,
+  rfi, deliverable-acceptance-criteria, fixed-price-contract,
+  time-and-materials-contract, force-majeure,
+  termination-for-convenience, sla, warranty-clause,
+  limitation-of-liability). Full 15-term batch from `CONTENT_CALENDAR.md`
+  is now done; `sitemap.ts` picks these up automatically (it maps over
+  `GLOSSARY_ENTRIES`, no manual edit needed per new term).
+- [x] Blog engineering scaffold + 3 of 8 Month 1-2 posts drafted as a
+  demo batch — done 2026-07-20 (`/resources/blog`, `/resources/blog/[slug]`,
+  `BlogPosting` JSON-LD, `author: 'ScopeWise Team'` / Organization schema
+  type, no fabricated named reviewer). **Deliberately kept `noindex` and
+  out of `sitemap.ts`/nav** — `CONTENT_CALENDAR.md`'s editorial rule
+  requires a named human reviewer with procurement/legal-ops credibility
+  before AI-drafted posts go live; that hasn't happened yet. Posts are
+  live at their URL for review, not indexed. Remove the noindex + add to
+  sitemap/nav once reviewed. Posts #4-8 of the Month 1-2 batch (and all
+  of #9-16) not drafted yet.
 - [ ] `/compare/scopewise-vs-manual-review` (no legal gate needed — not
   naming a competitor)
 - [ ] **Legal review** of any `/compare/[competitor]` page before
@@ -170,12 +190,17 @@ ranking (any position) per GSC.
 
 ## Baseline measurements (fill in as Phase 1 completes)
 
+Measured with local `lighthouse` CLI against the live VPS (simulated
+throttling, not CrUX field data -- swap for real PSI/CrUX numbers via
+`seo-google` once GSC/GA4 access exists).
+
 | Metric | Value | Date measured |
 |---|---|---|
-| Lighthouse Performance (homepage) | _pending_ | |
-| Lighthouse Performance (pricing) | _pending_ | |
-| LCP | _pending_ | |
-| INP | _pending_ | |
-| CLS | _pending_ | |
-| GSC verified | _pending_ | |
-| Sitemap submitted | _pending_ | |
+| Lighthouse Performance (homepage) | 79 | 2026-07-20 |
+| Lighthouse Performance (/product) | 89 | 2026-07-20 |
+| LCP (homepage) | 2.9s | 2026-07-20 |
+| LCP (/product) | 2.5s | 2026-07-20 |
+| TBT (homepage) | 650ms | 2026-07-20 |
+| CLS | 0 | 2026-07-20 |
+| GSC verified | _pending_ — needs human dashboard access | |
+| Sitemap submitted | _pending_ — needs human dashboard access | |
