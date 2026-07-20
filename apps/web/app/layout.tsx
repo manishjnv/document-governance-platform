@@ -4,10 +4,21 @@ import { ServiceWorkerRegister } from '@/components/service-worker-register'
 import { InstallPrompt } from '@/components/install-prompt'
 
 export const metadata: Metadata = {
-  title: 'ScopeWise',
-  description: 'Catch contract risk before you sign.',
+  metadataBase: new URL('https://scopewise.assessiq.in'),
+  title: {
+    default: 'ScopeWise -- AI-Powered SOW & RFP Review',
+    template: '%s | ScopeWise',
+  },
+  description: 'Catch contract risk before you sign. AI review of your SOW or RFP for scope, delivery, commercial, security, PMO, and legal risk.',
   manifest: '/manifest.json',
   themeColor: '#0066cc',
+  openGraph: {
+    siteName: 'ScopeWise',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
