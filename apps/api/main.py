@@ -25,6 +25,7 @@ from app.routers import (
     comments,
     compliance,
     compliance_frameworks,
+    contact,
     documents_bulk,
     documents_extra,
     documents,
@@ -116,6 +117,7 @@ app.include_router(collab_extra.router)
 app.include_router(comments.router)
 app.include_router(compliance.router)
 app.include_router(compliance_frameworks.router)
+app.include_router(contact.router)
 app.include_router(documents_extra.router)
 app.include_router(documents_bulk.router)
 app.include_router(documents.router)

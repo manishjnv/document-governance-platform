@@ -71,6 +71,11 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from_email: str = "noreply@scopewise.app"
 
+    # Where the public /contact form's submissions are delivered. Never
+    # exposed to the frontend -- the contact page posts to the API, the
+    # API emails this address server-side.
+    contact_email: str = "manishjnvk@gmail.com"
+
     # Google Sign-In -- verifies ID tokens issued by Google Identity
     # Services on the frontend. Only the Client ID is needed (no client
     # secret): this is the token-verification flow, not a server-side
