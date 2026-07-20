@@ -73,7 +73,7 @@ export function AppShell({
   const handleLogout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
-    router.push('/login');
+    router.push('/');
   };
 
   const startResize = useCallback((e: React.MouseEvent) => {
