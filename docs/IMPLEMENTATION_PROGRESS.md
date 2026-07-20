@@ -263,13 +263,18 @@ prevention), `docs/phases/prompts/PHASE_{3-7}_PROMPT.md` (scope-trim rationale p
    Google/OTP login, and the new marketing pages -- all deployed and
    backend/type-checked or live-`curl`-verified, but not yet driven
    through an actual browser session.
-2. **SEO: Phase 1 done, Phase 2-4 not started.** GSC verification, GA4
-   install, and a Lighthouse baseline are Phase 1's only remaining items
-   (blocked on human dashboard access, not code). Phase 2 (use-case pages,
-   blog, glossary) is next -- do it in an interactive session, not a
-   scheduled cloud routine (confirmed broken: no git push credentials in
-   that sandbox, see session handoff doc). Full roadmap:
-   `docs/planning/seo/IMPLEMENTATION_ROADMAP.md`.
+2. **SEO: Phase 1-2 fully done, Phase 3-4 partially done (2026-07-20).**
+   GSC sitemap submitted (existing `assessiq.in` Domain property covers
+   the subdomain, no separate verification needed -- waiting on Google's
+   crawl to confirm "Success"), GA4 live (`G-BS21BGYW3B`, base pageviews
+   only, no per-CTA events yet), Lighthouse baseline recorded (homepage
+   79, /product 89). Phase 2 fully shipped: 3 use-case pages, 3 solution
+   pages, all 15 glossary terms, internal linking. Phase 3-4: blog engine
+   built + 3 of 8 Month 1-2 posts published (5 more + all of Month 3-4
+   still to draft), `/compare/*` and case study still blocked on legal
+   sign-off / a real customer respectively. Full detail:
+   `docs/phases/summaries/SESSION_HANDOFF_2026_07_20_SEO_PHASE2_4.md` and
+   the checklist in `docs/planning/seo/IMPLEMENTATION_ROADMAP.md`.
 3. **Model routing: only spot-tested.** `AI_MODEL_ROUTING.md`'s benchmark
    covered one reviewer type (Legal) on one sample document. Worth a
    broader sweep (other 5 reviewer types, RFP docs, longer documents)
