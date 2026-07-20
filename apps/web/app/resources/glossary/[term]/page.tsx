@@ -75,10 +75,10 @@ export default async function GlossaryTermPage({
 
         <div className="text-center">
           <Link
-            href="/pricing"
+            href="/login"
             className="inline-block rounded-md bg-primary text-primary-foreground px-6 py-3 font-medium hover:opacity-90"
           >
-            See pricing
+            Get started
           </Link>
         </div>
       </main>

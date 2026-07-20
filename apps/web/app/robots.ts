@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/dashboard', '/upload', '/search', '/results', '/projects', '/versions'],
+        disallow: ['/dashboard', '/upload', '/search', '/results', '/projects', '/versions', '/pricing'],
       },
     ],
     sitemap: 'https://scopewise.assessiq.in/sitemap.xml',

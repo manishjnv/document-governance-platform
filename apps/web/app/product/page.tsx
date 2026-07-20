@@ -92,10 +92,6 @@ export default function ProductPage() {
             See it applied to{' '}
             <Link href="/use-cases/sow-review" className="underline hover:no-underline">
               SOW review
-            </Link>{' '}
-            or check{' '}
-            <Link href="/pricing" className="underline hover:no-underline">
-              pricing
             </Link>
             .
           </p>

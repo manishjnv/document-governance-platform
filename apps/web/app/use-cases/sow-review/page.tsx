@@ -146,10 +146,10 @@ export default function SowReviewPage() {
 
         <div className="text-center">
           <Link
-            href="/pricing"
+            href="/login"
             className="inline-block rounded-md bg-primary text-primary-foreground px-6 py-3 font-medium hover:opacity-90 mb-4"
           >
-            See pricing
+            Get started
           </Link>
           <p className="text-sm text-muted-foreground">
             Reviewing SOWs for procurement?{' '}

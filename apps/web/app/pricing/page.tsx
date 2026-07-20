@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: 'Pricing',
   description: 'ScopeWise pricing -- talk to us about your team\'s document review volume.',
   alternates: { canonical: '/pricing' },
+  robots: { index: false, follow: false },
 };
 
 const INCLUDED = [
