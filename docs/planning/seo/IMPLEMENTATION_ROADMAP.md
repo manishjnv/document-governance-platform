@@ -23,37 +23,60 @@ is small enough to be a single ticket.
   bot-management-level AI-crawler blocking is now off too as a side
   effect. Flagged to the user; revisit with a hostname-scoped
   Configuration/Transform Rule if that needs restoring for the main site.
-- [ ] Replace `apps/web/app/page.tsx`'s client-redirect-only homepage with
-  a real SSR/static marketing page (move the "logged in → /dashboard"
-  redirect logic into `/dashboard`'s own guard instead)
-- [ ] Build `/product`, `/pricing`, `/about`, `/contact` (static pages,
-  Next.js App Router, no new dependency)
-- [ ] `app/sitemap.ts` (Next.js native sitemap generation -- `app/robots.ts`
-  below already references `https://scopewise.assessiq.in/sitemap.xml`,
-  so this doesn't exist yet until this item ships)
+- [x] Replace `apps/web/app/page.tsx`'s client-redirect-only homepage with
+  a real SSR marketing page — done 2026-07-20. `/dashboard` already had
+  its own auth guard (redirects to `/login` if no token) from before this
+  session, so no logic needed moving there; the homepage now carries zero
+  auth/redirect logic at all, just static marketing content.
+- [x] Build `/product`, `/pricing`, `/about`, `/contact` — done 2026-07-20
+  (static Server Components, shared `MarketingHeader`/`MarketingFooter`).
+  `/pricing` is "contact us" pricing for now, per the plan. No fake social
+  proof/testimonials anywhere, per the main strategy doc's Section 5 rule
+  (accuracy validation is still in progress, see
+  `docs/IMPLEMENTATION_PROGRESS.md`).
+- [x] `app/sitemap.ts` — done 2026-07-20 (lists `/`, `/product`,
+  `/pricing`, `/about`, `/contact`; matches what `app/robots.ts` already
+  referenced).
 - [x] `app/robots.ts` — done 2026-07-20 (Next.js native, allows `/`,
   disallows the authenticated app routes, required once Cloudflare
   stopped serving its own managed version, see item above)
-- [ ] `generateMetadata` on every public page (title, description, OG,
-  Twitter Card — Next.js Metadata API, no new dependency)
-- [ ] `Organization` + `WebSite` + `SoftwareApplication` JSON-LD on
-  homepage
-- [ ] Google Search Console: verify domain ownership, submit sitemap
-- [ ] GA4: install, verify events fire on key CTAs (signup/demo click)
+- [x] `generateMetadata` on every public page — done 2026-07-20 (per-page
+  `export const metadata`, plus a title template + metadataBase in the
+  root layout for absolute OG URLs).
+- [x] `Organization` + `WebSite` + `SoftwareApplication` JSON-LD on
+  homepage — done 2026-07-20 (inline `<script type="application/ld+json">`
+  in `app/page.tsx`).
+- [ ] Google Search Console: verify domain ownership, submit sitemap —
+  **needs a human with GSC access to `scopewise.assessiq.in`**, can't be
+  done from a coding session. Once deployed: Search Console → Add
+  property → `scopewise.assessiq.in` → verify (DNS TXT record via
+  Cloudflare, or HTML file upload) → Sitemaps → submit
+  `https://scopewise.assessiq.in/sitemap.xml`.
+- [ ] GA4: install, verify events fire on key CTAs — **needs a human to
+  create a GA4 property** and give the code session the Measurement ID.
+  Once you have one: add `NEXT_PUBLIC_GA_MEASUREMENT_ID` to `.env`, wire
+  Next.js's `@next/third-parties` `GoogleAnalytics` component (or a plain
+  gtag.js script) into `app/layout.tsx`, and fire an event on the
+  homepage's two "Get started" CTAs (`/login` links) — a future session
+  can wire the code once the Measurement ID exists.
 - [ ] Lighthouse/PageSpeed Insights baseline run on the new marketing
-  pages, record numbers in this doc's "Baseline" section below once done
+  pages — blocked until deployed to the live site (local Next.js dev
+  builds hit the Windows-Defender-on-`.next` issue noted in `CLAUDE.md`,
+  so this needs to run against the deployed VPS, not local).
 
 ### Content
-- [ ] Homepage copy (value prop, social proof placeholder — no fake
-  testimonials, see main strategy doc Section 5)
-- [ ] `/product` copy — what the 6 agents + rule engine do, in plain
-  language
-- [ ] `/pricing` copy (even if "contact us" pricing initially — a page
-  must exist)
+- [x] Homepage copy — done 2026-07-20 (value prop, three-step "how it
+  works," six-agent grid, no fabricated social proof).
+- [x] `/product` copy — done 2026-07-20 (plain-language explanation of
+  the 6 agents + rule engine + versioning/fix-verification, sourced from
+  `docs/planning/4_AI_AGENT_SPECS.md`'s agent descriptions).
+- [x] `/pricing` copy — done 2026-07-20 ("contact us" pricing, feature
+  list, CTA to `/contact`).
 
-**Phase 1 exit criteria:** GSC shows the domain verified and sitemap
-submitted; Lighthouse score recorded; homepage returns real HTML to a
-crawler (verify with `curl` + view-source, not just visually in a browser).
+**Phase 1 exit criteria:** homepage returns real HTML to a crawler
+(verified 2026-07-20 -- see deploy note below) — done. GSC verification +
+sitemap submission and Lighthouse baseline are the two items still open,
+both blocked on human dashboard access, not on code.
 
 ---
 
