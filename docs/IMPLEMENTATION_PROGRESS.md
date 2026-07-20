@@ -1,7 +1,7 @@
 # EDGP Implementation Progress
 
-**Last Updated:** 2026-07-20 04:55 GMT+5:30
-**Current Phase:** Phase 1-2 core product complete + deployed live; pre-launch fix plan Steps 1-2 done, Step 3 pending SME. Document Lifecycle & Multi-Project plan (Projects/Versioning/Fix-verification) — all three phases implemented, deployed, mandatory-project + fuzzy name matching added on top. Google Sign-In + email-OTP login shipped and verified live. New file types (.doc/.xlsx/.xls/.csv) supported. Enterprise SEO strategy planned, Phase 1 ready to kick off in a new session. Full detail: `docs/phases/summaries/SESSION_HANDOFF_2026_07_20_LIFECYCLE_SSO_SEO.md`.
+**Last Updated:** 2026-07-20 10:54 GMT+5:30
+**Current Phase:** Phase 1-2 core product complete + deployed live; pre-launch fix plan Steps 1-2 done, Step 3 pending SME. Document Lifecycle & Multi-Project plan (Projects/Versioning/Fix-verification) — all three phases implemented, deployed, mandatory-project + fuzzy name matching added on top. Auth is now seamless Google Sign-In + email-OTP only (no password anywhere in the real UI; unrecognized emails auto-create an account). New file types (.doc/.xlsx/.xls/.csv) supported. Enterprise SEO strategy written, a live Cloudflare misconfiguration blocking all AI crawlers was found and fixed, and **SEO Phase 1 (Foundation) is implemented and deployed live** (real marketing homepage/product/pricing/about/contact/sitemap/schema -- only GSC/GA4/Lighthouse remain, blocked on dashboard access). Full detail: `docs/phases/summaries/SESSION_HANDOFF_2026_07_20_LIFECYCLE_SSO_SEO.md`.
 
 > Previous version of this doc (dated 07-17 02:00, showing "14% overall") was
 > stale from early Phase 1 and did not reflect Phase 2/3 or the pre-launch
@@ -197,6 +197,29 @@ template sets under `docs/sample/{RFP_Sample,RFP_template,SOW_Template}/`
 (~140 files) for manual UI testing across varied real document formats/
 layouts.
 
+**Seamless passwordless auth + Cloudflare AI-crawler fix + SEO Phase 1
+(2026-07-20):** Removed all password UI from `/login` -- now Google
+Sign-In + 4-digit email OTP only, both auto-provisioning a user/org on
+first use via `_get_or_create_user` (`apps/api/app/routers/auth.py`).
+Existing `/auth/login`, `/signup`, `/password-reset*` endpoints kept
+as-is (unused by any UI, still used internally by ~15 test files as JWT
+plumbing -- deliberate scope-limiting decision, not an oversight).
+Found and fixed a live production issue: Cloudflare's zone-wide
+`ai_bots_protection` bot-management setting was silently blocking every
+AI crawler (GPTBot, ClaudeBot, Google-Extended, etc.) sitewide;
+disabling it broke the managed robots.txt (404), fixed by adding a
+native `apps/web/app/robots.ts`. Note this Cloudflare zone setting is
+shared with `assessiq.in` (the main site) -- confirmed the main site's
+own robots.txt is unaffected (served natively from its own origin), but
+the zone-wide AI-bot-blocking policy itself is an open decision for the
+user, not re-litigated here. Implemented SEO Phase 1 (Foundation)
+directly in-session after discovering a scheduled cloud routine could
+not push code (sandbox has no git write credentials): real marketing
+homepage + `/product`, `/pricing`, `/about`, `/contact` pages, native
+`sitemap.ts`/`robots.ts`, per-page metadata, JSON-LD schema. All live
+and curl-verified on `scopewise.assessiq.in`. Full writeup:
+`docs/phases/summaries/SESSION_HANDOFF_2026_07_20_LIFECYCLE_SSO_SEO.md`.
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)
@@ -236,10 +259,18 @@ prevention), `docs/phases/prompts/PHASE_{3-7}_PROMPT.md` (scope-trim rationale p
 ## Next action
 
 1. **Manual browser click-through still open** for Projects/Versioning/
-   Fix-verification flows and the new mandatory-project upload validation
-   — deployed and backend/type-checked, but not yet driven through the
-   live UI in a browser.
-2. **Model routing: only spot-tested.** `AI_MODEL_ROUTING.md`'s benchmark
+   Fix-verification flows, mandatory-project upload validation, seamless
+   Google/OTP login, and the new marketing pages -- all deployed and
+   backend/type-checked or live-`curl`-verified, but not yet driven
+   through an actual browser session.
+2. **SEO: Phase 1 done, Phase 2-4 not started.** GSC verification, GA4
+   install, and a Lighthouse baseline are Phase 1's only remaining items
+   (blocked on human dashboard access, not code). Phase 2 (use-case pages,
+   blog, glossary) is next -- do it in an interactive session, not a
+   scheduled cloud routine (confirmed broken: no git push credentials in
+   that sandbox, see session handoff doc). Full roadmap:
+   `docs/planning/seo/IMPLEMENTATION_ROADMAP.md`.
+3. **Model routing: only spot-tested.** `AI_MODEL_ROUTING.md`'s benchmark
    covered one reviewer type (Legal) on one sample document. Worth a
    broader sweep (other 5 reviewer types, RFP docs, longer documents)
    before fully trusting GLM-5.2/MiniMax M3 output in production —

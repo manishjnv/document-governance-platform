@@ -1,18 +1,28 @@
-# Session Handoff — 2026-07-20: Document Lifecycle, Auth Overhaul, SEO Plan
+# Session Handoff — 2026-07-20: Document Lifecycle, Auth Overhaul, SEO Plan + Phase 1
 
 **Headline:** Shipped the full 3-phase Document Lifecycle plan (Projects/
 Versioning/Fix-verification), found and fixed a critical production bug
 (every upload was crashing), added mandatory-project enforcement with
 fuzzy name matching, expanded upload file-type support, built Google
-Sign-In + email-OTP login end-to-end (verified live), and produced a full
-enterprise SEO strategy + Phase 1 kickoff prompt for a future session.
+Sign-In + email-OTP login end-to-end and then simplified it further to
+seamless auto-provisioning auth (no password anywhere in the real UI),
+produced a full enterprise SEO strategy, fixed a live Cloudflare
+misconfiguration that was blocking every AI crawler sitewide, and
+implemented SEO Phase 1 (Foundation) end-to-end after discovering the
+cloud-routine execution path for it was a dead end (see "Cloud routine
+git-push 403" below).
 
 **Commits (chronological):** `42fcfd5` `1ed9d99` `e966576` `cccc3e6`
 `f1de9bd` `d4c6ef6` `271c709` (Document Lifecycle A/B/C) → `23731c5`
 `84d3d0e` (mandatory project + file types + critical bugfix) → `67256e7`
 `666954b` (project name fuzzy matching + dashboard density) → `2bbbcac`
 `8d42b94` (Google SSO/OTP + SEO strategy v1) → `7d3bd9a` `c0b39e6` (OTP UX
-polish + SEO companion docs). All pushed to `master`, all deployed to
+polish + SEO companion docs) → `f02c8a7` `4792ed8` (button styling + first
+handoff doc) → `46d2778` (seamless auth: password login UI removed,
+OTP/Google auto-provision accounts) → `5eeb393` `9d862cd` (Cloudflare
+AI-crawler block fixed + native `robots.ts`) → `bb59262` `0419599`
+`c310d58` (SEO Phase 1 implementation + roadmap update + ESLint
+build-error fix). All pushed to `master`, all deployed to
 `scopewise.assessiq.in`.
 
 ---
@@ -89,7 +99,97 @@ Tighter table font/padding (more rows visible without scrolling), tighter
 spacing between project sections, "Filter by Type" label+dropdown on one
 line.
 
-### Enterprise SEO strategy (planning only — see below)
+### Seamless auth: password login removed entirely
+Login page (`apps/web/app/login/page.tsx`) has **no password form at
+all** now — Google Sign-In and email-OTP are the only two entry points,
+and both are seamless signup+login: an unrecognized email creates a
+brand-new org+admin account on the spot
+(`app/routers/auth.py::_get_or_create_user`, shared by both `/otp/verify`
+and `/google`), an existing one logs straight in. No separate "sign up"
+screen, no "new vs. returning user" distinction — everyone lands on
+`/dashboard`, which already shows empty vs. populated state naturally.
+
+**Scope call, made explicitly with the user rather than silently:**
+`POST /auth/login`, `/auth/signup`, `/auth/password-reset(/confirm)`,
+`/auth/change-password`, and `app/core/login_lockout.py` are all still in
+the backend, unreachable from the real UI now but deliberately **not**
+removed — ~15 test files use `POST /auth/login` purely as internal
+plumbing to mint a JWT for test setup, and removing the endpoints would
+have meant rewriting all of them for zero user-facing benefit. Full
+rationale saved to memory
+(`project_scopewise_seamless_auth_no_password.md`).
+
+OTP codes are also now 4 digits (was 6), auto-submit as soon as all 4 are
+entered, have an eye-icon show/hide toggle, and the email is a branded
+HTML template (verified via a real send through Resend).
+
+### Cloudflare misconfiguration found and fixed (live production issue)
+While investigating Resend domain verification (unrelated), found that
+Cloudflare's zone-level `bot_management.ai_bots_protection` was set to
+`block` — this was generating the `Disallow: /` rules for GPTBot,
+ClaudeBot, Google-Extended, etc. that the SEO strategy's baseline check
+had already flagged. Fixed via the Cloudflare API (not the dashboard —
+the token needed a "Bot Management" permission added first, distinct
+from "DNS Settings," a genuinely confusing part of Cloudflare's
+permission model). Disabling it revealed a second layer:
+`is_robots_txt_managed: true` was what served `robots.txt` at the edge in
+the first place — disabling that caused a 404 until `apps/web/app/robots.ts`
+(Next.js native) was added the same session to replace it.
+
+**Caveat, flagged to the user and left as an open decision:**
+`ai_bots_protection` is a **zone-wide** setting (covers `assessiq.in`
+too, the shared domain with another live site) — Cloudflare's classic
+Bot Management has no per-subdomain scoping. Confirmed the main
+`assessiq.in` site's own `robots.txt` is unaffected (served natively
+from its own origin, never depended on Cloudflare's managed layer), but
+its bot-management-level AI-crawler blocking is now off too as a side
+effect. Would need a hostname-scoped Configuration/Transform Rule to
+restore selectively if that matters for the main site.
+
+### SEO Phase 1 (Foundation) — implemented end-to-end this session
+Full strategy + companion docs (`docs/planning/SEO_STRATEGY.md`,
+`docs/planning/seo/*.md`) were written mid-session. A cloud routine was
+scheduled to implement Phase 1 (`trig_01EfYV9x6YVs3E8KHNsC1wMo`), but see
+"Cloud routine git-push 403" below for why that path was abandoned in
+favor of implementing directly in this session:
+
+- Real SSR marketing homepage (was a 100% client-side redirect with
+  literally the text "Redirecting..." and nothing else for a crawler to
+  see) — value prop, three-step "how it works," six-agent grid,
+  `Organization`+`WebSite`+`SoftwareApplication` JSON-LD.
+- New `/product`, `/pricing`, `/about`, `/contact` pages (shared
+  `MarketingHeader`/`MarketingFooter` components).
+- `app/sitemap.ts` (Next.js native).
+- Per-page `generateMetadata` + title template/`metadataBase` in the root
+  layout for OG.
+- No fabricated social proof/testimonials anywhere — accuracy validation
+  is still in progress per `docs/IMPLEMENTATION_PROGRESS.md`.
+- **Caught a real build-breaking bug:** `next build` runs ESLint and
+  treats raw apostrophes/quotes in JSX text as errors
+  (`react/no-unescaped-entities`), not warnings — `tsc --noEmit` doesn't
+  catch this at all. First VPS deploy attempt failed on it; fixed and
+  redeployed. This is why the Docker build (not local `tsc`) is the real
+  gate for frontend changes in this repo.
+
+**Still open in Phase 1**, all blocked on human dashboard access, not
+code: GSC domain verification + sitemap submission, GA4 property
+creation + install, Lighthouse baseline run against the live site. Exact
+steps for each are in `docs/planning/seo/IMPLEMENTATION_ROADMAP.md`.
+
+### Cloud routine git-push 403 (infrastructure finding, not an app bug)
+The scheduled cloud routine for SEO Phase 1 fired, did the work in its
+sandbox, but `git push` to `github.com/manishjnv/document-governance-platform`
+consistently returned **403** — confirmed across two separate attempts
+(the original run, then its own self-scheduled retry). Root cause: the
+routine's `git_repository` source was a plain public HTTPS URL with no
+write credentials configured — fine for the initial clone, not for
+pushing. The `RemoteTrigger`/routine-creation API surface available in
+this session has no field for supplying git push credentials. Net
+effect: **any future cloud routine against this repo will hit the same
+wall** until either a GitHub connector with write access is configured
+account-side (check `https://claude.ai/customize/connectors`), or work
+continues to be implemented directly in an interactive session instead
+(what happened here for Phase 1).
 
 ---
 
@@ -104,46 +204,61 @@ line.
 
 ## Test suite
 
-Backend: **457 passed, 2 skipped** (baseline was 402 at session start).
-Frontend: `tsc --noEmit` clean throughout, checked after every change set.
+Backend: **458 passed, 2 skipped** (baseline was 402 at session start).
+Frontend: `tsc --noEmit` clean throughout, checked after every change set
+-- note `tsc` alone is *not* sufficient for frontend changes in this repo,
+see the ESLint build-error finding above; the VPS Docker build is the
+real gate.
 
 ## Deployment
 
 Every code change this session was deployed to `scopewise.assessiq.in`
-live, same session — multiple rebuild/restart cycles for `scopewise-api`
-and `scopewise-web`, all verified healthy (`/health` 200, `/login` 200,
-no crash loops in logs) after each.
+live, same session — many rebuild/restart cycles for `scopewise-api` and
+`scopewise-web`, all verified healthy (`/health` 200, `/login` 200, no
+crash loops in logs) after each. Homepage/product/pricing/about/contact
+all independently curl-verified live (200s, real HTML, no
+"Redirecting..."), sitemap.xml and robots.txt verified serving correctly.
 
 ---
 
 ## Open items for a future session
 
 1. **Manual browser click-through still not done.** Every feature this
-   session was verified via backend HTTP-layer tests + `tsc --noEmit`,
-   not a live UI session — say so explicitly rather than claim full
-   verification. Worth a dedicated pass: project create/upload, version
-   upload + suggestion accept, version-diff view, Google Sign-In button,
-   OTP login flow, all four new file types.
-2. **SMTP_FROM_EMAIL is on `assessiq.in`, not `scopewise.assessiq.in`.**
+   session was verified via backend HTTP-layer tests + `tsc --noEmit`/live
+   `curl` checks, not an actual browser session — say so explicitly rather
+   than claim full verification. Worth a dedicated pass: project
+   create/upload, version upload + suggestion accept, version-diff view,
+   Google Sign-In button, OTP login flow (including the new 4-digit
+   auto-submit + eye-icon UX), all four new document file types, and the
+   new marketing pages' visual polish.
+2. **SEO Phase 1 exit items needing human dashboard access**: GSC domain
+   verification + sitemap submission, GA4 property creation + install,
+   Lighthouse baseline. Steps in
+   `docs/planning/seo/IMPLEMENTATION_ROADMAP.md`.
+3. **SEO Phase 2-4** — not started, roadmap in
+   `docs/planning/seo/IMPLEMENTATION_ROADMAP.md`. Given the cloud-routine
+   git-push 403 finding, do these directly in an interactive session
+   rather than scheduling another cloud routine, unless a GitHub
+   connector with write access gets configured first.
+4. **Cloudflare's `ai_bots_protection` is now off zone-wide**, affecting
+   the `assessiq.in` main site too (see "Cloudflare misconfiguration"
+   above) — confirm with the user/main-site owner whether that's
+   acceptable long-term or needs a hostname-scoped rule instead.
+5. **SMTP_FROM_EMAIL is on `assessiq.in`, not `scopewise.assessiq.in`.**
    To send from the ScopeWise subdomain, add `scopewise.assessiq.in` as
-   its own domain in Resend and complete its DKIM/SPF DNS verification
-   (Cloudflare DNS — see item 3 for a caveat on doing that via API).
-3. **Cloudflare API token's `dns_records` endpoint is broken for this
-   token**, discovered while investigating the Resend/domain question.
-   `GET /zones/{id}` (single zone) works and confirms correct token/zone/
-   permissions (including `dns_records:read` explicitly listed); `GET
-   /zones/{id}/dns_records` (the actual records-list endpoint) 403s with
-   a generic "Authentication error" regardless of query params, IPv4
-   forced, or re-saving the token. Root cause unresolved — looks like a
-   Cloudflare-side inconsistency, not a config mistake. If DNS records
-   need programmatic access later, expect to hit this again; the
-   Cloudflare dashboard works fine as a workaround.
-4. **`docs/phases/prompts/SEO_IMPLEMENTATION_PROMPT.md` is ready to run**
-   — self-contained Phase 1 (Foundation) kickoff prompt. Leads with the
-   homepage-has-zero-indexable-content and Cloudflare-blocks-AI-crawlers
-   findings, scoped to one session's worth of work. Phases 2-4 are
-   separate future sessions per `docs/planning/seo/IMPLEMENTATION_ROADMAP.md`.
-5. **Finding deduplication still unimplemented** (carried over from prior
+   its own domain in Resend and complete its DKIM/SPF DNS verification.
+6. **Cloudflare API token permission gaps turned out to be the recurring
+   root cause** of several "mystery" 403s this session (`dns_records`,
+   `bot_management` before "Bot Management" permission was added) — the
+   token's permission list only grants exactly what's explicitly added in
+   the Cloudflare dashboard's "+ Add more" UI, and Cloudflare returns the
+   same generic "Authentication error" for both IP-restriction failures
+   and missing-scope failures, which makes them easy to conflate.
+   `dns_records` itself was never re-tested after "Bot Management" was
+   added (a different scope), so it may or may not still fail --
+   diagnose the same way (check `GET /zones/{id}` works first to isolate
+   token/zone/IP from a specific endpoint's permission scope).
+7. **Finding deduplication still unimplemented** (carried over from prior
    sessions, unrelated to this session's work) — Metric 1.4 remains
    structurally unmeasurable until built.
 
