@@ -8,6 +8,29 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
+# Shared across all 6 agents (2026-07-20 prompt-accuracy pass -- see
+# docs/planning/PROMPT_ENGINEERING_GUIDE.md). Targets the measured
+# calibration gap from the 2026-07-18 accuracy pass
+# (docs/planning/5_LAUNCH_CRITERIA.md Metric 1.3): structured-field
+# extraction was right 75% of the time while stated confidence clustered
+# at 80-100% -- models were defaulting to a "safe middle" score instead of
+# actually discriminating between "I'm quoting exact text" and "I'm
+# inferring from absence." This rubric gives concrete anchors instead of
+# leaving confidence to the model's own untethered judgment.
+_CONFIDENCE_CALIBRATION = """
+CONFIDENCE CALIBRATION -- score EACH finding independently, not the review as a whole:
+- 0.85-1.0: you are quoting exact clause text: the fact is explicitly and unambiguously stated.
+- 0.60-0.84: the clause is present but requires interpretation, OR you're inferring it from a
+  section that plausibly-but-not-certainly covers this point (e.g. general terms elsewhere).
+- 0.30-0.59: you are inferring ABSENCE or ambiguity from what's not stated. There may be an
+  attachment, exhibit, or referenced-but-not-included document you can't see -- account for that.
+- Below 0.30: you are guessing, or the document is too fragmentary to judge reliably.
+Do NOT default to 0.8-0.9 as a "safe middle" score. If you are not quoting exact text, your
+confidence should usually be below 0.7. A finding you're genuinely unsure about with a low
+confidence score is more useful than a false-certain one -- it tells the reader where to look
+harder, rather than implying the AI already checked thoroughly.
+"""
+
 
 class _OpenRouterMessage:
     def __init__(self, text: str):
@@ -216,9 +239,20 @@ class ScopeReviewer(ReviewAgent):
 3. Detect scope boundaries and constraints
 4. Find ambiguous or missing acceptance criteria
 5. Identify potential scope creep indicators
+6. Check for EXPLICIT EXCLUSIONS -- does the document state what is NOT included, or only
+   what is? A deliverables list with no exclusions is a common scope-creep entry point: anything
+   not explicitly excluded tends to get argued into scope later.
+7. Check for UNSTATED CLIENT-SIDE ASSUMPTIONS -- does delivery depend on the client providing
+   access, approvals, data, or decisions on a timeline the document never actually commits the
+   client to? An assumption that's never stated as a dependency is a risk the vendor is silently
+   carrying alone.
+
+Note: a deterministic rule engine already checks for the PRESENCE of an "Assumptions and
+Constraints" section by keyword/section match -- your job is to judge the QUALITY of what's
+there (or the risk of what's silently missing), not just restate that a section exists.
 """
 
-        return doc_branch + """
+        return doc_branch + _CONFIDENCE_CALIBRATION + """
 Provide your response as a JSON object with this structure:
 {
     "deliverables": [
@@ -235,7 +269,7 @@ Provide your response as a JSON object with this structure:
     },
     "findings": [
         {
-            "type": "missing_criteria|ambiguous|scope_creep",
+            "type": "missing_criteria|ambiguous|scope_creep|missing_exclusions|unstated_assumption",
             "severity": "critical|major|medium|low",
             "description": "string",
             "evidence": "string",
@@ -288,9 +322,16 @@ class DeliveryReviewer(ReviewAgent):
 3. Realistic assumptions about dates
 4. Missing or unclear delivery dates
 5. Risk indicators in the schedule
+6. STAFFING/RESOURCE AVAILABILITY -- does the schedule depend on named individuals, a specific
+   team size, or specialist roles the document never confirms are actually available for the
+   stated dates? A timeline with no named or role-based resourcing behind it is optimistic by
+   default, not realistic.
+7. SCHEDULE BUFFER -- is there any contingency/buffer time built in, or does every milestone
+   assume zero slippage anywhere upstream? A schedule with zero slack across multiple sequential
+   dependencies is a specific, callable-out risk, not just "aggressive."
 """
 
-        return doc_branch + """
+        return doc_branch + _CONFIDENCE_CALIBRATION + """
 Provide findings as JSON with:
 {
     "timeline": {
@@ -301,7 +342,7 @@ Provide findings as JSON with:
     "dependencies": ["string"],
     "findings": [
         {
-            "type": "missing_dates|unrealistic|undefined_dependency",
+            "type": "missing_dates|unrealistic|undefined_dependency|unconfirmed_staffing|no_schedule_buffer",
             "severity": "critical|major|medium|low",
             "description": "string",
             "confidence": 0.0-1.0
@@ -348,9 +389,16 @@ class CommercialReviewer(ReviewAgent):
 3. Out-of-scope pricing
 4. Invoice timing and conditions
 5. Ambiguous commercial language
+6. RENEWAL/AUTO-RENEWAL TERMS -- if this is an ongoing or retainer-style engagement, does it
+   auto-renew unless cancelled, and if so, is the cancellation notice period and deadline clear?
+   Silent auto-renewal with a short/buried notice window is a common commercial trap.
+7. CURRENCY & TAX TREATMENT -- if the engagement could be cross-border (parties in different
+   countries, or currency not explicitly tied to one party's home currency), is the billing
+   currency fixed, and is responsibility for taxes/duties/withholding stated? Leave this out if
+   there's no indication of a cross-border engagement -- don't force the check where it doesn't apply.
 """
 
-        return doc_branch + """
+        return doc_branch + _CONFIDENCE_CALIBRATION + """
 Provide findings as:
 {
     "pricing": {
@@ -361,7 +409,7 @@ Provide findings as:
     },
     "findings": [
         {
-            "type": "ambiguous_pricing|missing_terms|escalation_gap",
+            "type": "ambiguous_pricing|missing_terms|escalation_gap|renewal_risk|currency_tax_gap",
             "severity": "critical|major|medium|low",
             "description": "string",
             "confidence": 0.0-1.0
@@ -411,16 +459,27 @@ class SecurityReviewer(ReviewAgent):
 3. Audit rights and compliance obligations
 4. Encryption and access control requirements
 5. Missing security controls
+6. PERSONNEL SECURITY -- if vendor staff will access sensitive systems, data, or facilities, does
+   the document require background checks, security clearances, or vetting? Common in
+   government/regulated engagements, easy to silently omit in commercial ones handling sensitive data.
+7. BREACH/INCIDENT NOTIFICATION TIMELINE -- if a data breach or security incident occurs, does the
+   document state how quickly the vendor must notify the client (e.g. "within 24/48/72 hours")? A
+   security section that requires controls but never specifies incident response timing leaves the
+   client blind to how fast they'd even find out.
+8. ACCESSIBILITY COMPLIANCE -- if the deliverable is a public-facing or government-adjacent
+   product (website, app, portal), does the document reference an accessibility standard (WCAG,
+   Section 508)? Skip this check entirely if the deliverable is clearly internal-only tooling with
+   no public-facing component -- don't force it where it doesn't apply.
 """
 
-        return doc_branch + """
+        return doc_branch + _CONFIDENCE_CALIBRATION + """
 Provide findings as:
 {
     "compliance_requirements": ["SOC2", "ISO27001", ...],
     "security_controls": ["string"],
     "findings": [
         {
-            "type": "missing_clause|compliance_gap|audit_gap",
+            "type": "missing_clause|compliance_gap|audit_gap|missing_personnel_security|missing_breach_notification|missing_accessibility_standard",
             "severity": "critical|major|medium|low",
             "description": "string",
             "confidence": 0.0-1.0
@@ -494,10 +553,16 @@ class PMOReviewer(ReviewAgent):
    - Are exit/completion criteria defined? (what must be true to consider work done/accepted)
    - Is there a documented fallback, contingency, or rollback plan if the engagement fails or is terminated early?
 
+6. REPORTING & RISK TRACKING
+   - Is a reporting cadence specified (weekly status, monthly steering committee), or just "regular
+     updates" with no actual frequency? Vague cadence language is functionally no cadence.
+   - Is there any mention of a risk register, RAID log, or equivalent ongoing risk-tracking
+     mechanism -- or does the document only address risk implicitly through the escalation path?
+
 RACI is critical. Missing RACI = major risk. Entry/exit criteria and fallback plan are critical for fixed-scope engagements; major for ongoing/retainer engagements.
 """
 
-        return doc_branch + """
+        return doc_branch + _CONFIDENCE_CALIBRATION + """
 IMPORTANT: Quote governance language directly. Only report what you find; don't speculate. Rate confidence in each finding (0-100 scaled to 0.0-1.0).
 
 Provide your response as a JSON object with this structure:
@@ -507,11 +572,12 @@ Provide your response as a JSON object with this structure:
         "escalation_levels": ["string"],
         "sla_defined": true|false,
         "entry_exit_criteria_defined": true|false,
-        "fallback_plan_defined": true|false
+        "fallback_plan_defined": true|false,
+        "reporting_cadence_defined": true|false
     },
     "findings": [
         {
-            "type": "missing_raci|undefined_escalation|unclear_decision_authority|missing_sla|missing_entry_exit_criteria|missing_fallback_plan",
+            "type": "missing_raci|undefined_escalation|unclear_decision_authority|missing_sla|missing_entry_exit_criteria|missing_fallback_plan|vague_reporting_cadence|missing_risk_register",
             "severity": "critical|major|medium|low",
             "description": "string",
             "evidence": "string",
@@ -585,10 +651,31 @@ Missing legal-terms disclosure in an RFP is a risk to VENDORS pricing the bid, a
 5. WARRANTY
    - Is there a warranty clause? Disclaimer of implied warranties?
 
+6. CONFIDENTIALITY
+   - Is confidentiality MUTUAL (both parties bound) or one-sided (only the client's information
+     protected)? A one-sided confidentiality clause is a specific, callable-out asymmetry, not just
+     "confidentiality is addressed."
+   - Is there a stated DURATION or survival period after termination? "Confidential forever" and
+     "confidentiality ends at termination" are both real clauses that mean very different things --
+     if neither is stated, that's a gap. (Note: a rule engine already checks whether the WORD
+     "confidential" appears at all -- your value-add here is judging mutuality and duration, not
+     restating that the section exists.)
+
+7. INSURANCE, ASSIGNMENT & FORCE MAJEURE
+   - Does the document require the vendor to carry insurance (general liability, professional
+     liability/E&O, cyber)? For engagements with real operational or data risk, no insurance
+     requirement at all is worth flagging.
+   - Can either party assign or subcontract the agreement without the other's consent? Silent on
+     this usually defaults to "yes" under most governing law, which may not be what either party
+     actually wants.
+   - Is force majeure addressed (excusable delay for events outside either party's control)? Its
+     absence matters more for longer or higher-risk engagements than short fixed-scope ones --
+     weight the finding's severity accordingly rather than always flagging it as critical.
+
 Flag ambiguous legal language explicitly (e.g., "reasonable efforts", "as applicable") as a finding, not just missing clauses.
 """
 
-        return doc_branch + """
+        return doc_branch + _CONFIDENCE_CALIBRATION + """
 IMPORTANT: Quote the exact clause language as evidence. Rate confidence in each finding (0-100 scaled to 0.0-1.0).
 
 Provide your response as a JSON object with this structure:
@@ -599,11 +686,13 @@ Provide your response as a JSON object with this structure:
         "ip_ownership": "vendor|customer|joint|undefined",
         "termination_for_cause": true|false,
         "governing_law": "string or null",
-        "warranty_defined": true|false
+        "warranty_defined": true|false,
+        "confidentiality_mutual": true|false|null,
+        "insurance_required": true|false
     },
     "findings": [
         {
-            "type": "missing_liability_cap|undefined_ip_ownership|missing_termination_clause|no_governing_law|missing_warranty|ambiguous_legal_language",
+            "type": "missing_liability_cap|undefined_ip_ownership|missing_termination_clause|no_governing_law|missing_warranty|ambiguous_legal_language|one_sided_confidentiality|missing_confidentiality_duration|missing_insurance_requirement|unaddressed_assignment|missing_force_majeure",
             "severity": "critical|major|medium|low",
             "description": "string",
             "evidence": "string",

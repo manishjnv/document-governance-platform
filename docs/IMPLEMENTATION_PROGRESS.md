@@ -226,8 +226,9 @@ and curl-verified on `scopewise.assessiq.in`. Full writeup:
 
 | Item | Status | Blocker |
 |---|---|---|
-| AI accuracy validation (Metrics 1.1-1.4) | **Measured 2026-07-18** on a 12-doc synthetic set (see `docs/planning/5_LAUNCH_CRITERIA.md` "Measured Results"): rule-engine precision/recall **100%/100% PASS**; confidence calibration **17.95% error, FAIL** (target <5%); dedup **NOT MEASURABLE** | Real ≥10-doc test set still needed for launch-gate-quality evidence (synthetic is a stopgap); calibration needs prompt/confidence tuning; dedup needs to be BUILT (see below) — none of this is done yet, only measured |
-| **Finding deduplication is unimplemented** (new finding, 2026-07-18) | `orchestrator._merge_findings()` concatenates all agent findings with no cross-agent duplicate detection at all | Metric 1.4 cannot pass until this is built, or the launch gate explicitly descopes it with sign-off |
+| AI accuracy validation (Metrics 1.1-1.4) | **Measured 2026-07-18** on a 12-doc synthetic set (see `docs/planning/5_LAUNCH_CRITERIA.md` "Measured Results"): rule-engine precision/recall **100%/100% PASS**; confidence calibration **17.95% error, FAIL** (target <5%); dedup **NOT MEASURABLE**. **2026-07-20: dedup now built** (see below) and a **prompt-accuracy revision shipped** targeting the calibration failure directly — see `docs/planning/PROMPT_ENGINEERING_GUIDE.md`. **Not yet re-measured against live model output.** | Real ≥10-doc test set still needed for launch-gate-quality evidence (synthetic is a stopgap) — attempted 2026-07-20, found most of `docs/sample/SOW_Template/*` are blank fill-in templates (Lorem Ipsum placeholders), not usable for grading; the 4 real RFP samples are usable. Next: re-run Metrics 1.1/1.3/1.4 against real model output with the new prompts, then decide if real-doc sourcing is still needed for SOW. |
+| ~~Finding deduplication is unimplemented~~ **Built 2026-07-20** | `orchestrator._merge_findings()` now cross-agent-deduplicates via evidence-text similarity (`apps/api/app/ai/orchestrator.py::_dedupe_findings`, stdlib `difflib`, no ML dependency) | Metric 1.4 is now measurable — needs the live-model measurement pass above to actually score it |
+| **DOCX table-only documents parsed to empty text** (found 2026-07-20, RCA #16) | **Fixed.** `DocxParser.parse()` only walked `doc.paragraphs`; any table-laid-out document (common real-world SOW/RFP template pattern) silently returned `status="success"` with `raw_text=""`. Now walks `doc.iter_inner_content()` (paragraphs + tables in order). | None — fixed, tested, deployed |
 | Legal severity calibration | Worksheet prepared (`docs/planning/LEGAL_SEVERITY_CALIBRATION.md`) | Needs a legal SME to actually fill in the comparison table and sign off — scheduling action, not implementation work |
 
 ## Deferred by design (see phase prompt docs for rationale, not re-litigated here)
@@ -250,9 +251,13 @@ Frontend: `apps/web/app/{dashboard,upload,search,results,login}/page.tsx`,
 `apps/web/components/AppShell.tsx`.
 
 Docs: `docs/planning/4_AI_AGENT_SPECS.md` (agent specs), `docs/planning/5_LAUNCH_CRITERIA.md`
-(launch gate metrics + measured results), `docs/planning/LEGAL_SEVERITY_CALIBRATION.md`
+(launch gate metrics + measured results), `docs/planning/PROMPT_ENGINEERING_GUIDE.md`
+(prompt-revision rationale, sources, changelog — read before editing any agent's prompt),
+`docs/planning/LEGAL_SEVERITY_CALIBRATION.md`
 (SME worksheet), `docs/RCA_LOG.md` (every bug fixed this session, root cause +
 prevention), `docs/phases/prompts/PHASE_{3-7}_PROMPT.md` (scope-trim rationale per phase).
+`prompts/*.md` — auto-generated read-only mirror of agent prompts, regenerate via
+`python scripts/generate_prompt_docs.py` after editing `agent.py`.
 
 ---
 

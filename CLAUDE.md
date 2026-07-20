@@ -35,7 +35,19 @@ Legal) + a rule engine, per `docs/planning/4_AI_AGENT_SPECS.md`.
   scripts, one-off debug output), not for anything meant to persist or be
   read by a future session.
 - `docs/phases/summaries/` — session handoff summaries.
-- `docs/sample/` — sample SOW/RFP documents for manual UI testing.
+- `docs/sample/` — sample SOW/RFP documents. Useful for more than manual
+  UI testing: also the real-document source for AI-accuracy work (see
+  `docs/planning/PROMPT_ENGINEERING_GUIDE.md`'s "Real test set" section
+  for what's actually usable there vs. blank templates).
+- `docs/planning/PROMPT_ENGINEERING_GUIDE.md` — the 6 AI agents' prompts
+  are prompt-engineered (not trained/fine-tuned — see file for why that
+  distinction matters), and this doc is where prompt-revision rationale,
+  sources, and a changelog live. **Read before editing any agent's
+  `get_system_prompt()` in `apps/api/app/ai/agent.py`.**
+- `prompts/` — read-only, auto-generated mirror of the 6 agents' current
+  prompts (`apps/api/app/ai/agent.py` is the actual source of truth).
+  Regenerate via `python scripts/generate_prompt_docs.py` after any
+  prompt edit — never hand-edit files in `prompts/` directly.
 
 **Rule of thumb:** if a file is a deliverable someone (you or a future
 session) will want to find again, it goes in the repo under `docs/`. If
