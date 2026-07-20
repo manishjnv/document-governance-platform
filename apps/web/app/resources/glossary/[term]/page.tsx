@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { CheckCircle2, Sparkles } from 'lucide-react';
 import { MarketingHeader } from '@/components/MarketingHeader';
 import { MarketingFooter } from '@/components/MarketingFooter';
 import { GLOSSARY_ENTRIES, getGlossaryEntry } from '../data';
@@ -25,6 +27,21 @@ export async function generateMetadata({
     description: entry.shortDefinition,
     alternates: { canonical: `/resources/glossary/${entry.slug}` },
   };
+}
+
+/** Bolds each keyword's occurrences in `text` so scanning readers can spot
+ * the defined terms at a glance, without storing markup in the content. */
+function highlight(text: string, keywords: string[]): ReactNode {
+  if (keywords.length === 0) return text;
+  const pattern = new RegExp(`(${keywords.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
+  const parts = text.split(pattern);
+  return parts.map((part, i) =>
+    keywords.some((k) => k.toLowerCase() === part.toLowerCase()) ? (
+      <strong key={i}>{part}</strong>
+    ) : (
+      part
+    )
+  );
 }
 
 export default async function GlossaryTermPage({
@@ -58,12 +75,35 @@ export default async function GlossaryTermPage({
         <h1 className="text-3xl md:text-4xl font-bold mb-4">{entry.term}</h1>
         <p className="text-lg text-muted-foreground mb-8">{entry.shortDefinition}</p>
 
-        <div className="space-y-6 mb-12">
-          {entry.body.map((paragraph, i) => (
-            <p key={i} className="text-muted-foreground">
-              {paragraph}
-            </p>
+        <div className="rounded-lg border bg-muted/30 p-5 mb-10">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+            In short
+          </h2>
+          <ul className="space-y-2">
+            {entry.keyPoints.map((point, i) => (
+              <li key={i} className="flex gap-2 text-sm">
+                <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                <span>{highlight(point, entry.keywords)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="space-y-8 mb-10">
+          {entry.sections.map((section) => (
+            <div key={section.heading}>
+              <h2 className="text-xl font-bold mb-2">{section.heading}</h2>
+              <p className="text-muted-foreground">{highlight(section.body, entry.keywords)}</p>
+            </div>
           ))}
+        </div>
+
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-5 mb-12">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold">How ScopeWise checks this</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">{entry.scopewiseNote}</p>
         </div>
 
         <div className="rounded-lg border p-5 mb-12">
