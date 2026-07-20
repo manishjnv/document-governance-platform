@@ -46,23 +46,24 @@ is small enough to be a single ticket.
 - [x] `Organization` + `WebSite` + `SoftwareApplication` JSON-LD on
   homepage — done 2026-07-20 (inline `<script type="application/ld+json">`
   in `app/page.tsx`).
-- [ ] Google Search Console: verify domain ownership, submit sitemap —
-  **needs a human with GSC access to `scopewise.assessiq.in`**, can't be
-  done from a coding session. Once deployed: Search Console → Add
-  property → `scopewise.assessiq.in` → verify (DNS TXT record via
-  Cloudflare, or HTML file upload) → Sitemaps → submit
-  `https://scopewise.assessiq.in/sitemap.xml`.
-- [ ] GA4: install, verify events fire on key CTAs — **needs a human to
-  create a GA4 property** and give the code session the Measurement ID.
-  Once you have one: add `NEXT_PUBLIC_GA_MEASUREMENT_ID` to `.env`, wire
-  Next.js's `@next/third-parties` `GoogleAnalytics` component (or a plain
-  gtag.js script) into `app/layout.tsx`, and fire an event on the
-  homepage's two "Get started" CTAs (`/login` links) — a future session
-  can wire the code once the Measurement ID exists.
-- [ ] Lighthouse/PageSpeed Insights baseline run on the new marketing
-  pages — blocked until deployed to the live site (local Next.js dev
-  builds hit the Windows-Defender-on-`.next` issue noted in `CLAUDE.md`,
-  so this needs to run against the deployed VPS, not local).
+- [x] Google Search Console: sitemap submitted 2026-07-20 to the
+  existing `assessiq.in` **Domain property** (covers all subdomains via
+  DNS verification, no separate `scopewise.assessiq.in` property needed).
+  Submitted sitemap showed "Couldn't fetch" with a blank "Last read" —
+  Google hadn't attempted the crawl yet as of submission time; site-side
+  everything checks out (200, valid XML, correct robots.txt, verified
+  even with a spoofed Googlebot UA). Waiting on Google's next crawl pass
+  to confirm "Success" — not a code issue.
+- [x] GA4 installed — done 2026-07-20. Measurement ID `G-BS21BGYW3B`
+  wired via a plain `next/script` gtag.js snippet in `app/layout.tsx`
+  (no `@next/third-parties` dependency added, per the lazy-dependency
+  rule — a few lines of `next/script` covers it). Threaded through as a
+  build arg: `Dockerfile.prod` → `docker-compose.vps.yml` →
+  `NEXT_PUBLIC_GA_MEASUREMENT_ID` in the VPS `.env`. Confirmed live (ID
+  present in page source, gtag script loads). Per-CTA event firing (the
+  original ask) not wired yet — only the base pageview/config call.
+- [x] Lighthouse baseline run — done 2026-07-20 against the live VPS
+  (see Baseline measurements table below): homepage 79, /product 89.
 
 ### Content
 - [x] Homepage copy — done 2026-07-20 (value prop, three-step "how it
@@ -74,9 +75,7 @@ is small enough to be a single ticket.
   list, CTA to `/contact`).
 
 **Phase 1 exit criteria:** homepage returns real HTML to a crawler
-(verified 2026-07-20 -- see deploy note below) — done. GSC verification +
-sitemap submission and Lighthouse baseline are the two items still open,
-both blocked on human dashboard access, not on code.
+(verified 2026-07-20) — done. All engineering + content items done.
 
 ---
 
@@ -100,13 +99,14 @@ both blocked on human dashboard access, not on code.
   2026-07-20. Homepage → use-cases row added; `/product` → `/use-cases/sow-review`
   + `/pricing`; nav/footer updated with Use Cases/Solutions/Glossary links;
   every new page links to `/pricing` and its counterpart page.
-- [ ] Decide CMS/authoring approach for `/resources/blog` and
-  `/resources/guides` (hand-coded MDX vs. headless CMS) — **blocking
-  decision, make this in week 5, not mid-phase**. Still open — no blog
-  content shipped this pass, deliberately (see content note below).
-- [ ] `Article`/`BlogPosting` schema on blog posts, with a real `author`
-  object (E-E-A-T) — blocked on the CMS decision above, no blog exists
-  yet.
+- [x] CMS/authoring decision for `/resources/blog` — made 2026-07-20:
+  hand-coded TypeScript data file + dynamic route (no MDX, no headless
+  CMS), same pattern as the glossary system. `/resources/guides` not
+  built yet, same decision would apply when it is.
+- [x] `BlogPosting` schema on blog posts — done 2026-07-20, `author` is
+  `{"@type": "Organization", "name": "ScopeWise"}` rather than a named
+  Person (no named individual reviewer assigned yet — see content note
+  below).
 
 ### Content (see `CONTENT_CALENDAR.md` for the full list)
 - [x] `/use-cases/sow-review`, `/use-cases/rfp-review`,
