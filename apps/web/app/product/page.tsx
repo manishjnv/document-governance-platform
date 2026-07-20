@@ -66,8 +66,8 @@ export default function ProductPage() {
           Alongside the AI agents, a set of deterministic rules checks for
           specific, well-known SOW and RFP risk patterns -- things like a
           missing liability cap, an undefined SLA, or a document type
-          (SOW vs. RFP) mismatch in the language used. Rules don't hallucinate;
-          they either match or they don't, which keeps the AI agents honest.
+          (SOW vs. RFP) mismatch in the language used. Rules don&apos;t hallucinate;
+          they either match or they don&apos;t, which keeps the AI agents honest.
         </p>
 
         <h2 className="text-2xl font-bold mb-4">Versioning and fix-verification</h2>
@@ -76,7 +76,7 @@ export default function ProductPage() {
           to the original and re-reviews it. Findings from the previous
           version are automatically checked against the new one: resolved
           issues are marked verified, and issues that are still present stay
-          open -- regardless of whether someone manually marked them "fixed"
+          open -- regardless of whether someone manually marked them &quot;fixed&quot;
           in between. The re-review is what actually verifies a fix, not a
           checkbox.
         </p>

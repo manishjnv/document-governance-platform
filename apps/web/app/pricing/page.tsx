@@ -26,8 +26,8 @@ export default function PricingPage() {
       <main className="max-w-3xl mx-auto px-4 py-16 text-center">
         <h1 className="text-3xl md:text-4xl font-bold mb-4">Pricing</h1>
         <p className="text-lg text-muted-foreground mb-10">
-          ScopeWise is in early access. Pricing is tailored to your team's
-          document volume and review needs -- talk to us and we'll work out
+          ScopeWise is in early access. Pricing is tailored to your team&apos;s
+          document volume and review needs -- talk to us and we&apos;ll work out
           a plan that fits.
         </p>
 

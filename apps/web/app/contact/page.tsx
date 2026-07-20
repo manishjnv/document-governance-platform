@@ -18,7 +18,7 @@ export default function ContactPage() {
         <h1 className="text-3xl md:text-4xl font-bold mb-4">Contact us</h1>
         <p className="text-lg text-muted-foreground mb-8">
           Evaluating ScopeWise for your team, or have a question about a
-          review? Reach out and we'll get back to you.
+          review? Reach out and we&apos;ll get back to you.
         </p>
         <a
           href="mailto:hello@scopewise.assessiq.in"

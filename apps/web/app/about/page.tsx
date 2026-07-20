@@ -24,14 +24,14 @@ export default function AboutPage() {
         </p>
         <p className="text-lg text-muted-foreground mb-6">
           ScopeWise exists to catch that risk before signature, not manage it
-          after. It's built specifically for the pre-signature review of SOWs
+          after. It&apos;s built specifically for the pre-signature review of SOWs
           and RFPs -- not as a general contract-lifecycle-management tool,
           and not as a tool for drafting or responding to an RFP. Just: is
           this document safe to sign, and if not, exactly where is the risk.
         </p>
         <p className="text-lg text-muted-foreground">
           ScopeWise is built by a small team and is in early access -- if
-          you're evaluating it for your organization, we'd like to hear from
+          you&apos;re evaluating it for your organization, we&apos;d like to hear from
           you.
         </p>
       </main>

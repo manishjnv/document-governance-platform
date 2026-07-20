@@ -88,7 +88,7 @@ export default function HomePage() {
                 <FileSearch className="h-8 w-8 text-primary mx-auto mb-3" />
                 <h3 className="font-semibold mb-2">Upload your document</h3>
                 <p className="text-sm text-muted-foreground">
-                  PDF, DOCX, DOC, XLSX, XLS, or CSV -- any SOW or RFP you've received or are about to send.
+                  PDF, DOCX, DOC, XLSX, XLS, or CSV -- any SOW or RFP you&apos;ve received or are about to send.
                 </p>
               </div>
               <div>
