@@ -9,19 +9,31 @@ is small enough to be a single ticket.
 ## Phase 1 — Foundation (Weeks 1-4)
 
 ### Engineering
-- [ ] **Fix Cloudflare robots.txt AI-crawler block** (Bots → AI Scrapers
-  and Crawlers dashboard, or a custom Transform Rule) — allow
-  `Google-Extended`, `GPTBot`, `ClaudeBot` on public routes. *Do this
-  first — 10-minute fix, sitewide impact, zero dependency on anything
-  else.*
+- [x] **Fix Cloudflare robots.txt AI-crawler block** — done 2026-07-20.
+  Root cause wasn't a simple dashboard toggle: Cloudflare's zone-level
+  `bot_management.ai_bots_protection` was set to `block`, disabled via
+  the Cloudflare API. That in turn revealed `is_robots_txt_managed: true`
+  was the thing actually serving (and overriding-at-the-edge) robots.txt
+  for the whole zone — disabling it caused a 404 until `app/robots.ts`
+  (below) was added same-session. **Caveat:** `ai_bots_protection` is
+  zone-wide (covers `assessiq.in` too, no per-subdomain scoping in
+  Cloudflare's classic Bot Management) — confirmed the main `assessiq.in`
+  site's own robots.txt is unaffected (it's served natively from its own
+  origin, never depended on Cloudflare's managed layer), but its
+  bot-management-level AI-crawler blocking is now off too as a side
+  effect. Flagged to the user; revisit with a hostname-scoped
+  Configuration/Transform Rule if that needs restoring for the main site.
 - [ ] Replace `apps/web/app/page.tsx`'s client-redirect-only homepage with
   a real SSR/static marketing page (move the "logged in → /dashboard"
   redirect logic into `/dashboard`'s own guard instead)
 - [ ] Build `/product`, `/pricing`, `/about`, `/contact` (static pages,
   Next.js App Router, no new dependency)
-- [ ] `app/sitemap.ts` (Next.js native sitemap generation)
-- [ ] `app/robots.ts` (Next.js native robots.txt generation, or confirm
-  Cloudflare's edit from item 1 is sufficient and skip this)
+- [ ] `app/sitemap.ts` (Next.js native sitemap generation -- `app/robots.ts`
+  below already references `https://scopewise.assessiq.in/sitemap.xml`,
+  so this doesn't exist yet until this item ships)
+- [x] `app/robots.ts` — done 2026-07-20 (Next.js native, allows `/`,
+  disallows the authenticated app routes, required once Cloudflare
+  stopped serving its own managed version, see item above)
 - [ ] `generateMetadata` on every public page (title, description, OG,
   Twitter Card — Next.js Metadata API, no new dependency)
 - [ ] `Organization` + `WebSite` + `SoftwareApplication` JSON-LD on
