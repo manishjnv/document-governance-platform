@@ -150,16 +150,16 @@ verification itself is still blocked on human dashboard access per Phase 1.
   limitation-of-liability). Full 15-term batch from `CONTENT_CALENDAR.md`
   is now done; `sitemap.ts` picks these up automatically (it maps over
   `GLOSSARY_ENTRIES`, no manual edit needed per new term).
-- [x] Blog engineering scaffold + 3 of 8 Month 1-2 posts drafted as a
-  demo batch — done 2026-07-20 (`/resources/blog`, `/resources/blog/[slug]`,
+- [x] Blog engineering scaffold + 3 of 8 Month 1-2 posts drafted and
+  published — done 2026-07-20 (`/resources/blog`, `/resources/blog/[slug]`,
   `BlogPosting` JSON-LD, `author: 'ScopeWise Team'` / Organization schema
-  type, no fabricated named reviewer). **Deliberately kept `noindex` and
-  out of `sitemap.ts`/nav** — `CONTENT_CALENDAR.md`'s editorial rule
-  requires a named human reviewer with procurement/legal-ops credibility
-  before AI-drafted posts go live; that hasn't happened yet. Posts are
-  live at their URL for review, not indexed. Remove the noindex + add to
-  sitemap/nav once reviewed. Posts #4-8 of the Month 1-2 batch (and all
-  of #9-16) not drafted yet.
+  type, no fabricated named reviewer). Indexed + added to `sitemap.ts`
+  and footer nav 2026-07-20 after review. Note for the record:
+  `CONTENT_CALENDAR.md`'s editorial rule calls for a **named** human
+  reviewer with procurement/legal-ops credibility, and these went live
+  under a general approval rather than that specific named-reviewer
+  process — worth tightening if/when a real reviewer is assigned. Posts
+  #4-8 of the Month 1-2 batch (and all of #9-16) not drafted yet.
 - [ ] `/compare/scopewise-vs-manual-review` (no legal gate needed — not
   naming a competitor)
 - [ ] **Legal review** of any `/compare/[competitor]` page before

@@ -26,7 +26,6 @@ export async function generateMetadata({
     title: post.title,
     description: post.dek,
     alternates: { canonical: `/resources/blog/${post.slug}` },
-    robots: { index: false, follow: true },
   };
 }
 

@@ -9,7 +9,6 @@ export const metadata: Metadata = {
   description:
     'Practical guides on SOW review, RFP evaluation, and contract risk -- liability caps, scope creep, acceptance criteria, and more.',
   alternates: { canonical: '/resources/blog' },
-  robots: { index: false, follow: true },
 };
 
 export default function BlogIndexPage() {
