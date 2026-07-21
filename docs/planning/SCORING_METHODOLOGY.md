@@ -28,24 +28,34 @@ are trained against.
 category scores, weights in `DocumentScorer.WEIGHTS` (per-org
 customizable, `app/admin/customization.py` `get_scoring_weights`).
 
-**2026-07-21 fix — general severity penalty was unbounded:** on top of
-each category's own keyword-matched deductions, a smaller penalty
-(`_GENERAL_SEVERITY_PENALTY`) applies to *every* category for *every*
-finding, so severity always affects scoring even for findings that don't
-happen to use a category's trigger words. That penalty used to be a raw,
-uncapped sum — any real document with more than ~10-15 findings (this
-app's own calibration notes say 30-40+ is typical) blew past 100 and
-zeroed every category identically, regardless of what each category's
-own findings actually were. Confirmed in production: every completed
-review had all 7 categories and `overall_score` stored as exactly 0.00.
-Fixed the same way the identical problem was already fixed for
-`risk_score` below: the raw sum is now passed through the same
-saturating curve, capped at `GENERAL_PENALTY_CAP` (40, not 100) so
-severity volume alone can never fully erase a category's own signal.
-**40 is a judgment call, not a derived or industry-standard number** —
-sized to roughly 1.5x a single category-specific critical penalty (25),
-comparable in magnitude rather than dominant. Tunable later the same way
-other scoring constants here are, if real review data suggests otherwise.
+**2026-07-21 redesign — category scores were zeroing out on real
+documents:** two stacked flat-sum penalty mechanisms guaranteed that
+every completed production review stored all 7 categories and
+`overall_score` as exactly 0.00 (confirmed against prod data — 31-70
+findings per review is normal, and both sums grew linearly with finding
+count against a fixed 100-point budget). Fixed in two steps, verified
+against a real 70-finding production review:
+
+1. **Per-category penalties now saturate instead of cliff-clamping.**
+   Each category's own keyword-matched penalty sum maps to a score via
+   `100 * e^(-k * raw_sum)` (`_saturating_category_score`,
+   `CATEGORY_SATURATION_K = 0.017`) instead of linear subtraction
+   clamped at 0. Calibrated so one critical-severity match (raw 25)
+   lands a category at ~65 (yellow) and a heavily-matched category
+   approaches 0 asymptotically — a category with 12 matched findings
+   now reads visibly differently from one with 30, instead of both
+   flatlining at 0. The k differs from `RISK_SATURATION_K` because the
+   input scale differs (one category's own matches vs. a whole review's
+   raw sum) — see the constant's in-code comment.
+2. **The cross-category "general severity penalty" was retired
+   entirely** (not capped — an intermediate capped version still zeroed
+   everything once stacked on the per-category curve). It double-counted
+   the same severity signal each category's own penalty already carries,
+   and overall severity/volume is already captured — separately,
+   correctly — by `risk_score`. Each category's score is now driven only
+   by its own matched findings, which is also easier to explain to a
+   customer: "commercial is 11 because these 16 commercial findings
+   exist," with no invisible cross-category adjustment.
 
 ---
 

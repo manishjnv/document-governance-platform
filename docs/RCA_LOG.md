@@ -393,6 +393,31 @@ listed below — several of these are copy-pasted patterns that recur.
   scoring-calibration sweep, since capping 7 more constants is its own
   design decision (what should each category's ceiling be?) rather than
   a mechanical extension of this fix.
+- **Addendum (same day, ~3h later):** the flagged follow-up became
+  urgent immediately. Re-running the review on the real
+  `SOC_SOW_Testing.docx` (70 findings) after the cap fix still produced
+  6 of 7 categories at exactly 0.00 -- the per-category uncapped sums
+  flagged above were doing the zeroing on their own, and the capped
+  general penalty (saturating to ~39/40 for any high-volume document)
+  wiped out whatever survived. Final design (verified against the real
+  70-finding review, user-approved): (1) every category's own penalty
+  sum now maps through a saturating curve
+  (`_saturating_category_score`, `CATEGORY_SATURATION_K = 0.017`,
+  calibrated so one critical match ~= 65/yellow, no more hard cliff at
+  0); (2) the cross-category general penalty was **retired entirely**
+  rather than re-capped -- it double-counted the severity signal each
+  category's own penalty already carries, and overall severity/volume
+  is already captured correctly by risk_score. Result on the real
+  document: overall 15.0, categories spread 0.07-87.3 (consistency,
+  with only 1 matched finding, correctly reads green while
+  heavily-matched categories read near-0) instead of uniform zeros.
+  Two pre-existing tests (`test_score_with_critical_findings`,
+  `test_score_status_red`) were asserting on the double-counting
+  behavior and were updated to assert on the matched categories
+  instead. Lesson repeated three times in one module now: **any
+  unbounded linear sum fed by real-world finding volume will blow past
+  a fixed budget; saturate at the source, and never stack two volume-
+  driven shrink mechanisms on the same signal.**
 
 ---
 

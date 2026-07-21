@@ -30,7 +30,18 @@ async def test_score_perfect_document(scorer):
 
 @pytest.mark.asyncio
 async def test_score_with_critical_findings(scorer):
-    """T-912: Test scoring penalizes critical findings heavily."""
+    """T-912: Test scoring penalizes critical findings heavily.
+
+    2026-07-21: category scores are no longer dragged down by a blanket
+    cross-category penalty (see CATEGORY_SATURATION_K's comment) -- only
+    the 2 categories these findings actually match (completeness,
+    commercial) should be heavily penalized; the other 5, untouched by
+    any finding, correctly stay at 100. overall_score is a weighted
+    average across all 7, so 2-of-7 categories dropping hard doesn't
+    necessarily pull the *overall* number below an arbitrary 80 --
+    that's correct behavior now, not a regression, so the assertion
+    checks the categories that actually have findings instead.
+    """
     findings = [
         {
             "severity": "critical",
@@ -52,7 +63,9 @@ async def test_score_with_critical_findings(scorer):
 
     # Risk should be high due to 2 critical findings
     assert result.risk_score > 20.0
-    assert result.overall_score < 80.0
+    assert result.category_scores["completeness"].score < 80.0
+    assert result.category_scores["commercial"].score < 80.0
+    assert result.overall_score < 100.0
 
 
 @pytest.mark.asyncio

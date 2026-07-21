@@ -78,26 +78,19 @@ class DocumentScorer:
     # worded could score a perfect 100 if none happened to contain a
     # trigger word like "missing" or "ambiguous".
     _SPECIFIC_SEVERITY_PENALTY = {"critical": 25, "major": 15, "medium": 8, "low": 4, "info": 0}
-    # Smaller points deducted from EVERY category per finding/violation,
-    # regardless of whether it matched any category's keywords -- ensures
-    # severity always affects scoring, not just specifically-worded findings.
-    _GENERAL_SEVERITY_PENALTY = {"critical": 12, "major": 6, "medium": 3, "low": 1, "info": 0}
-    # 2026-07-21 fix: this used to subtract the RAW, uncapped sum of the
-    # above from every category (e.g. 18 critical + 30 major + 17 medium +
-    # 2 low = 449 points off a 100-point category) -- any real document
-    # with more than ~10-15 findings zeroed out all 7 categories AND
-    # overall_score identically, regardless of what each category's own
-    # findings actually looked like. Confirmed against production data:
-    # every completed review had every category stored as exactly 0.00.
-    # Same saturating-curve fix already applied to risk_score for the
-    # identical "flat sum blows past any real cap" problem (see
-    # RISK_SATURATION_K below) -- capped well under 100 (not eliminated
-    # entirely) so severity volume still nudges every category down
-    # proportionally, without erasing each category's own specific signal.
-    # 40 is a judgment call (no industry standard for this), sized to
-    # roughly 1.5x a single specific-severity critical penalty (25) so it's
-    # comparable in magnitude, not dominant.
-    GENERAL_PENALTY_CAP = 40.0
+    # A cross-category "general severity penalty" (smaller points off
+    # EVERY category per finding, matched or not) used to live here.
+    # Retired 2026-07-21: it was a raw uncapped sum that zeroed every
+    # category identically on any real document with more than ~10-15
+    # findings (confirmed in production: every review had every category
+    # stored as exactly 0.00) -- a saturating-curve cap on that sum
+    # (same fix as RISK_SATURATION_K below) still wasn't enough once each
+    # category's own penalty was *also* fixed to saturate instead of
+    # cliff-clamping (_saturating_category_score) -- two independent
+    # "shrink toward 0" curves stacked on the same underlying finding
+    # volume reliably zeroed every category anyway. Each category's score
+    # is now driven only by its own matched findings; overall severity/
+    # volume is still captured, correctly, by risk_score below.
 
     # Risk model (2026-07-19 redesign): the old risk score was a flat
     # additive sum (critical*15 + major*10 + total_count) capped at 100,
@@ -118,6 +111,20 @@ class DocumentScorer:
     # across that whole range instead of pinning everything past ~10
     # findings to 100 -- see docs/planning/SCORING_METHODOLOGY.md.
     RISK_SATURATION_K = 0.0086
+
+    # Same saturating-curve idea (_saturating_category_score) but for a
+    # single category's own raw penalty sum, not the whole-review risk
+    # total -- a different k because the input scale is different. Risk's
+    # raw sum spans a whole review (30-400 typical); one category's raw
+    # sum is usually just its own 1-5 matched findings (10-125-ish for a
+    # single critical-to-several-critical match). Reusing RISK_SATURATION_K
+    # here barely dented a single critical finding's category (100 -> 80,
+    # not a meaningful drop) -- calibrated instead so one critical-severity
+    # match (raw=25) drops a category to ~65 (yellow), consistent with
+    # what this scorer's own tests expect a critical finding to do, while
+    # still asymptotically approaching 0 for a heavily-matched category
+    # instead of a hard cliff.
+    CATEGORY_SATURATION_K = 0.017
 
     # Maps each finding to a customer-facing risk axis instead of one
     # blended number. Agent names match app/ai/agent.py; rule-engine
@@ -182,22 +189,20 @@ class DocumentScorer:
         category_scores["operations"] = self._score_operations(findings, rule_violations)
         category_scores["security"] = self._score_security(findings, rule_violations)
 
-        # Apply the general severity penalty to every category, on top of
-        # whatever category-specific keyword matches already deducted --
-        # saturated (see GENERAL_PENALTY_CAP), not the raw sum, so a
-        # document with many findings doesn't zero out every category
-        # identically regardless of category-specific signal.
-        general_penalty = self._saturate(
-            self._general_penalty(findings, rule_violations), cap=self.GENERAL_PENALTY_CAP
-        )
-        if general_penalty:
-            for cat_score in category_scores.values():
-                cat_score.score = max(0.0, cat_score.score - general_penalty)
-                cat_score.points_earned = int(cat_score.score)
-                cat_score.status = (
-                    "green" if cat_score.score >= 80
-                    else ("yellow" if cat_score.score >= 50 else "red")
-                )
+        # 2026-07-21: a cross-category "general severity penalty" used to
+        # be subtracted from every category here on top of each category's
+        # own keyword-matched deductions (see _SPECIFIC_SEVERITY_PENALTY's
+        # comment above for the original 449-raw-point production bug, and
+        # its history for the saturating-curve patch that still wasn't
+        # enough). Retired entirely: it was double-
+        # counting the same finding-severity signal each category's own
+        # penalty already accounts for (now itself a saturating curve, no
+        # more hard cliffs -- see _saturating_category_score), and
+        # stacking two independent "shrink toward 0" curves on the same
+        # underlying finding volume reliably zeroed every category anyway
+        # on any real, high-finding-volume document. Overall severity/
+        # volume is still captured -- separately, correctly -- by
+        # risk_score below, which was never part of this problem.
 
         # Calculate overall score (weighted average)
         overall_score = self._calculate_overall_score(category_scores)
@@ -225,11 +230,21 @@ class DocumentScorer:
     def _severity(self, item: dict) -> str:
         return str(item.get("severity", "")).lower()
 
-    def _general_penalty(self, findings: list[dict], violations: list[dict]) -> float:
-        return sum(
-            self._GENERAL_SEVERITY_PENALTY.get(self._severity(item), 0)
-            for item in findings + violations
-        )
+    def _saturating_category_score(self, raw_penalty_sum: float) -> float:
+        """100 -> 0 with diminishing returns as raw_penalty_sum grows, instead
+        of a linear `100 - raw_sum` then hard-clamped at 0 -- see
+        _SPECIFIC_SEVERITY_PENALTY's 2026-07-21 fix comment for the full
+        story. The per-category keyword filters below are broad (e.g.
+        "data" or "sla" alone matches), so a real document with 70+
+        findings routinely produces several matches per category; without
+        this, any category with more than ~4-8 matched critical/major
+        findings was landing at exactly 0 with no differentiation between
+        "some gaps" and "nothing addressed at all." 100 stays each
+        category's ceiling (not a new number) -- this only removes the
+        hard cliff, same curve shape as _saturate (risk_score) but with
+        CATEGORY_SATURATION_K -- see that constant's comment for why.
+        """
+        return round(100.0 * math.exp(-self.CATEGORY_SATURATION_K * raw_penalty_sum), 2)
 
     def _score_completeness(self, findings: list[dict], violations: list[dict]) -> CategoryScore:
         """
@@ -237,23 +252,22 @@ class DocumentScorer:
 
         Reduced by: missing sections, incomplete sections, missing acceptance criteria.
         """
-        points = 100
-
         # Count missing-section findings
         missing_sections = [f for f in findings if "missing" in str(f).lower() and "section" in str(f).lower()]
         missing_sections += [v for v in violations if "missing section" in v.get("description", "").lower()]
 
-        points -= sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 10) for i in missing_sections)
-
         # Count missing-criteria findings
         missing_criteria = [f for f in findings if "acceptance" in str(f).lower() or "criteria" in str(f).lower()]
-        points -= sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 8) for i in missing_criteria)
 
         # Count incomplete-field findings
         incomplete = [v for v in violations if "incomplete" in v.get("description", "").lower()]
-        points -= sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 5) for i in incomplete)
 
-        points = max(0, min(100, points))
+        raw_penalty = (
+            sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 10) for i in missing_sections)
+            + sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 8) for i in missing_criteria)
+            + sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 5) for i in incomplete)
+        )
+        points = self._saturating_category_score(raw_penalty)
 
         return CategoryScore(
             category="completeness",
@@ -270,8 +284,6 @@ class DocumentScorer:
 
         Reduced by: ambiguous findings, undefined terms, unclear language.
         """
-        points = 100
-
         # Count ambiguous findings
         ambiguous = [
             f for f in findings
@@ -282,9 +294,8 @@ class DocumentScorer:
             if any(x in v.get("description", "").lower() for x in ["ambiguous", "unclear", "vague"])
         ]
 
-        points -= sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 12) for i in ambiguous)
-
-        points = max(0, min(100, points))
+        raw_penalty = sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 12) for i in ambiguous)
+        points = self._saturating_category_score(raw_penalty)
 
         return CategoryScore(
             category="clarity",
@@ -301,17 +312,14 @@ class DocumentScorer:
 
         Reduced by: conflicting requirements, contradictory terms, inconsistencies.
         """
-        points = 100
-
         # Count consistency issues
         inconsistent = [
             f for f in findings
             if any(x in str(f).lower() for x in ["conflict", "contradict", "inconsistent", "duplicate"])
         ]
 
-        points -= sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 15) for i in inconsistent)
-
-        points = max(0, min(100, points))
+        raw_penalty = sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 15) for i in inconsistent)
+        points = self._saturating_category_score(raw_penalty)
 
         return CategoryScore(
             category="consistency",
@@ -328,8 +336,6 @@ class DocumentScorer:
 
         Reduced by: missing pricing, ambiguous payment terms, missing escalation, payment gaps.
         """
-        points = 100
-
         # Count commercial findings
         commercial_findings = [
             f for f in findings
@@ -340,9 +346,8 @@ class DocumentScorer:
             if any(x in v.get("rule_id", "").lower() for x in ["sow-005", "sow-011"])  # Pricing rules
         ]
 
-        points -= sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 20) for i in commercial_findings)
-
-        points = max(0, min(100, points))
+        raw_penalty = sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 20) for i in commercial_findings)
+        points = self._saturating_category_score(raw_penalty)
 
         return CategoryScore(
             category="commercial",
@@ -359,8 +364,6 @@ class DocumentScorer:
 
         Reduced by: missing dates, unrealistic timeline, undefined dependencies.
         """
-        points = 100
-
         # Count delivery findings
         delivery_findings = [
             f for f in findings
@@ -371,9 +374,8 @@ class DocumentScorer:
             if any(x in v.get("rule_id", "").lower() for x in ["sow-004", "sow-017", "sow-018"])  # Timeline rules
         ]
 
-        points -= sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 15) for i in delivery_findings)
-
-        points = max(0, min(100, points))
+        raw_penalty = sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 15) for i in delivery_findings)
+        points = self._saturating_category_score(raw_penalty)
 
         return CategoryScore(
             category="delivery",
@@ -390,8 +392,6 @@ class DocumentScorer:
 
         Reduced by: missing resources, undefined assumptions, unclear constraints.
         """
-        points = 100
-
         # Count operations findings. Keyword list extended 2026-07-17 to also
         # catch PMOReviewer findings (RACI/escalation/governance/SLA/entry-exit
         # criteria/fallback plan) -- those are operations-category concerns per
@@ -414,9 +414,8 @@ class DocumentScorer:
             if any(x in v.get("rule_id", "").lower() for x in ["sow-007", "sow-014", "sow-019"])
         ]
 
-        points -= sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 12) for i in operations_findings)
-
-        points = max(0, min(100, points))
+        raw_penalty = sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 12) for i in operations_findings)
+        points = self._saturating_category_score(raw_penalty)
 
         return CategoryScore(
             category="operations",
@@ -433,8 +432,6 @@ class DocumentScorer:
 
         Reduced by: missing security controls, compliance gaps, audit gaps.
         """
-        points = 100
-
         # Count security findings
         security_findings = [
             f for f in findings
@@ -446,9 +443,8 @@ class DocumentScorer:
         ]
 
         # Security issues are more critical
-        points -= sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 25) for i in security_findings)
-
-        points = max(0, min(100, points))
+        raw_penalty = sum(self._SPECIFIC_SEVERITY_PENALTY.get(self._severity(i), 25) for i in security_findings)
+        points = self._saturating_category_score(raw_penalty)
 
         return CategoryScore(
             category="security",
