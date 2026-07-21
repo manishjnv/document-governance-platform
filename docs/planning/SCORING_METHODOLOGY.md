@@ -28,6 +28,25 @@ are trained against.
 category scores, weights in `DocumentScorer.WEIGHTS` (per-org
 customizable, `app/admin/customization.py` `get_scoring_weights`).
 
+**2026-07-21 fix — general severity penalty was unbounded:** on top of
+each category's own keyword-matched deductions, a smaller penalty
+(`_GENERAL_SEVERITY_PENALTY`) applies to *every* category for *every*
+finding, so severity always affects scoring even for findings that don't
+happen to use a category's trigger words. That penalty used to be a raw,
+uncapped sum — any real document with more than ~10-15 findings (this
+app's own calibration notes say 30-40+ is typical) blew past 100 and
+zeroed every category identically, regardless of what each category's
+own findings actually were. Confirmed in production: every completed
+review had all 7 categories and `overall_score` stored as exactly 0.00.
+Fixed the same way the identical problem was already fixed for
+`risk_score` below: the raw sum is now passed through the same
+saturating curve, capped at `GENERAL_PENALTY_CAP` (40, not 100) so
+severity volume alone can never fully erase a category's own signal.
+**40 is a judgment call, not a derived or industry-standard number** —
+sized to roughly 1.5x a single category-specific critical penalty (25),
+comparable in magnitude rather than dominant. Tunable later the same way
+other scoring constants here are, if real review data suggests otherwise.
+
 ---
 
 ## Risk Level (0-100, higher is worse)

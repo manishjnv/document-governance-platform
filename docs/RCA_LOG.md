@@ -332,6 +332,68 @@ listed below — several of these are copy-pasted patterns that recur.
   was permanently stuck showing "Unknown" with no recovery option in
   the UI).
 
+### 18. Every completed review had all 7 category scores AND overall_score stored as exactly 0.00 (2026-07-21)
+
+- **Symptom:** User asked what "Completeness"/"Accuracy" on the dashboard
+  mean, since both always showed 0. Queried production directly across
+  all completed reviews: `overall_score`, `score_completeness`,
+  `score_clarity`, `score_consistency`, `score_commercial`,
+  `score_delivery`, `score_operations`, and `score_security` were **all
+  exactly 0.00 on every single review**, despite 31-67 real findings per
+  review and legitimate `risk_score` values (94-100%) -- so it wasn't a
+  parsing/empty-document problem, real findings existed.
+- **Root cause:** `DocumentScorer.score_document()` applies a smaller
+  "general" severity penalty to *every* category on top of each
+  category's own keyword-matched deductions (`_GENERAL_SEVERITY_PENALTY`,
+  intended so severity always affects scoring even for findings that
+  don't happen to use a category's trigger words). That penalty was a
+  raw, uncapped linear sum across *all* findings, then subtracted in
+  full from every category's 100-point budget. For one real review (18
+  critical + 30 major + 17 medium + 2 low findings), the raw sum was
+  **449** -- so every category landed at `max(0, 100 - 449) = 0`,
+  identically, regardless of what each category's own findings actually
+  covered. Any real document with more than ~10-15 findings hits this
+  (this codebase's own calibration notes say 30-40+ is typical for a
+  real SOW/RFP review), so this has likely been live for a long time.
+  This is the *exact same failure shape* `risk_score` already hit and
+  was fixed for on 2026-07-19 (RCA/SCORING_METHODOLOGY.md's "the old
+  risk score was a flat additive sum... capped at 100... saturated
+  almost immediately") -- the fix just never got applied to this second,
+  separate flat-sum site.
+- **Fix:** the general penalty's raw sum is now passed through the same
+  saturating curve already used for `risk_score` (`DocumentScorer.
+  _saturate`, now parameterized with a `cap` instead of hardcoding 100),
+  capped at a new `GENERAL_PENALTY_CAP = 40` -- severity volume alone can
+  now only ever pull a category down to 60, never to 0, so
+  category-specific findings have to contribute for a category to
+  actually go red. 40 was a deliberate judgment call (confirmed with the
+  user, no industry standard exists for this specific number) -- see
+  `docs/planning/SCORING_METHODOLOGY.md` for the full reasoning.
+  `tests/test_scoring.py::test_score_status_red` was actually relying on
+  the bug (5 generic critical findings alone forcing every category red
+  via the old unbounded penalty) and had to be rewritten to use
+  category-specific findings instead; added
+  `test_high_finding_volume_does_not_zero_every_category` reproducing
+  the exact production finding distribution as a permanent regression
+  guard.
+- **Prevention:** this class of bug (a flat/linear sum against
+  unbounded real-world volume) has now recurred twice in the same
+  scoring module. Checked the rest of `algorithm.py` for the same
+  pattern: each of the 7 categories' own *specific*-penalty deductions
+  (`_score_completeness`/`_score_clarity`/etc., all `points -=
+  sum(_SPECIFIC_SEVERITY_PENALTY...)`) is also an uncapped linear sum,
+  just isolated to one category and range-clamped at the end
+  (`max(0, min(100, points))`) rather than zeroing all 7 at once like
+  the general penalty did -- lower severity (a category with enough of
+  its *own* findings hitting 0 is more defensible than an unrelated
+  category getting zeroed by a flood of other-category findings), but
+  the same underlying "no headroom past a handful of critical findings"
+  flaw the risk_score redesign was meant to eliminate everywhere. Not
+  fixed in this pass -- flagged for whoever picks up the next
+  scoring-calibration sweep, since capping 7 more constants is its own
+  design decision (what should each category's ceiling be?) rather than
+  a mechanical extension of this fix.
+
 ---
 
 *(Append new entries above this line, most recent first is NOT required —

@@ -168,33 +168,25 @@ async def test_score_status_yellow(scorer):
 
 @pytest.mark.asyncio
 async def test_score_status_red(scorer):
-    """T-918: Test status is red for low-scoring documents."""
+    """T-918: Test status is red for low-scoring documents.
+
+    2026-07-21: the general (all-categories) severity penalty is now
+    capped at GENERAL_PENALTY_CAP (40/100) instead of an uncapped linear
+    sum -- see algorithm.py's _GENERAL_SEVERITY_PENALTY comment for the
+    production bug this fixed (every category was landing at exactly
+    0.00 on any real document with more than ~10-15 findings). A
+    consequence: generic findings that don't match ANY category's own
+    keywords can no longer alone drive a category below 60 (100 - the
+    40-point cap) -- by design, category-specific signal has to
+    contribute for a category to actually go red. This test now uses
+    completeness-specific findings ("missing ... section") for that.
+    """
     findings = [
-        {
-            "severity": "critical",
-            "description": "Critical issue 1",
-            "type": "critical_1",
-        },
-        {
-            "severity": "critical",
-            "description": "Critical issue 2",
-            "type": "critical_2",
-        },
-        {
-            "severity": "critical",
-            "description": "Critical issue 3",
-            "type": "critical_3",
-        },
-        {
-            "severity": "critical",
-            "description": "Critical issue 4",
-            "type": "critical_4",
-        },
-        {
-            "severity": "critical",
-            "description": "Critical issue 5",
-            "type": "critical_5",
-        },
+        {"severity": "critical", "description": "Missing acceptance criteria section entirely"},
+        {"severity": "critical", "description": "Missing deliverables section entirely"},
+        {"severity": "critical", "description": "Missing scope section entirely"},
+        {"severity": "critical", "description": "Critical issue 4"},
+        {"severity": "critical", "description": "Critical issue 5"},
     ]
 
     result = await scorer.score_document(
@@ -203,9 +195,9 @@ async def test_score_status_red(scorer):
         rule_violations=[],
     )
 
-    # Should have red status for some categories
-    statuses = [score.status for score in result.category_scores.values()]
-    assert "red" in statuses
+    # completeness should be red: 3 category-specific critical findings
+    # plus the (now-capped) general penalty
+    assert result.category_scores["completeness"].status == "red"
 
 
 @pytest.mark.asyncio
@@ -321,3 +313,31 @@ async def test_scoring_stability(scorer):
 
     assert result1.overall_score == result2.overall_score
     assert result1.risk_score == result2.risk_score
+
+
+@pytest.mark.asyncio
+async def test_high_finding_volume_does_not_zero_every_category(scorer):
+    """Regression for the 2026-07-21 production bug: a real review with
+    18 critical + 30 major + 17 medium + 2 low findings (confirmed
+    production data) had every one of the 7 categories AND overall_score
+    stored as exactly 0.00. Root cause: the general severity penalty
+    summed unboundedly across all findings (449 raw points for this
+    exact distribution) and was subtracted in full from every category's
+    100-point budget. Fixed by saturating that sum to GENERAL_PENALTY_CAP
+    (40) via the same curve already used for risk_score."""
+    findings = (
+        [{"severity": "critical", "description": "generic issue"} for _ in range(18)]
+        + [{"severity": "major", "description": "generic issue"} for _ in range(30)]
+        + [{"severity": "medium", "description": "generic issue"} for _ in range(17)]
+        + [{"severity": "low", "description": "generic issue"} for _ in range(2)]
+    )
+
+    result = await scorer.score_document("doc-1", findings, [])
+
+    assert result.overall_score > 0
+    for category, cat_score in result.category_scores.items():
+        assert cat_score.score > 0, f"{category} was zeroed out"
+    # Risk score is a separate, already-correct saturating model -- a
+    # high-severity/high-volume document should still read as high risk
+    # even though category scores are no longer artificially zeroed.
+    assert result.risk_score > 90

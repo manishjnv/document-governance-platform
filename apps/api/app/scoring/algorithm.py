@@ -82,6 +82,22 @@ class DocumentScorer:
     # regardless of whether it matched any category's keywords -- ensures
     # severity always affects scoring, not just specifically-worded findings.
     _GENERAL_SEVERITY_PENALTY = {"critical": 12, "major": 6, "medium": 3, "low": 1, "info": 0}
+    # 2026-07-21 fix: this used to subtract the RAW, uncapped sum of the
+    # above from every category (e.g. 18 critical + 30 major + 17 medium +
+    # 2 low = 449 points off a 100-point category) -- any real document
+    # with more than ~10-15 findings zeroed out all 7 categories AND
+    # overall_score identically, regardless of what each category's own
+    # findings actually looked like. Confirmed against production data:
+    # every completed review had every category stored as exactly 0.00.
+    # Same saturating-curve fix already applied to risk_score for the
+    # identical "flat sum blows past any real cap" problem (see
+    # RISK_SATURATION_K below) -- capped well under 100 (not eliminated
+    # entirely) so severity volume still nudges every category down
+    # proportionally, without erasing each category's own specific signal.
+    # 40 is a judgment call (no industry standard for this), sized to
+    # roughly 1.5x a single specific-severity critical penalty (25) so it's
+    # comparable in magnitude, not dominant.
+    GENERAL_PENALTY_CAP = 40.0
 
     # Risk model (2026-07-19 redesign): the old risk score was a flat
     # additive sum (critical*15 + major*10 + total_count) capped at 100,
@@ -167,8 +183,13 @@ class DocumentScorer:
         category_scores["security"] = self._score_security(findings, rule_violations)
 
         # Apply the general severity penalty to every category, on top of
-        # whatever category-specific keyword matches already deducted.
-        general_penalty = self._general_penalty(findings, rule_violations)
+        # whatever category-specific keyword matches already deducted --
+        # saturated (see GENERAL_PENALTY_CAP), not the raw sum, so a
+        # document with many findings doesn't zero out every category
+        # identically regardless of category-specific signal.
+        general_penalty = self._saturate(
+            self._general_penalty(findings, rule_violations), cap=self.GENERAL_PENALTY_CAP
+        )
         if general_penalty:
             for cat_score in category_scores.values():
                 cat_score.score = max(0.0, cat_score.score - general_penalty)
@@ -453,10 +474,10 @@ class DocumentScorer:
         """Sum of severity-weighted points across findings/violations."""
         return sum(self.risk_weights.get(self._severity(item), 0) for item in items)
 
-    def _saturate(self, raw_sum: float) -> float:
-        """Map a raw severity-weighted sum to 0-100 with diminishing returns.
+    def _saturate(self, raw_sum: float, cap: float = 100.0) -> float:
+        """Map a raw severity-weighted sum to 0-cap with diminishing returns.
 
-        100 * (1 - e^(-k * raw_sum)) instead of a linear sum capped at 100:
+        cap * (1 - e^(-k * raw_sum)) instead of a linear sum capped at cap:
         a linear+cap model saturates to the cap after just 4-5 critical
         findings (30 pts each already exceeds most reasonable caps), so
         every real-world document with several critical issues reads
@@ -464,9 +485,12 @@ class DocumentScorer:
         from "catastrophic." The exponential curve keeps climbing (slower)
         past that point, so a 15-critical-finding document still scores
         visibly worse than a 5-critical-finding one instead of both
-        pinning at the ceiling.
+        pinning at the ceiling. Same RISK_SATURATION_K regardless of cap --
+        1 - e^(-kx) approaches 1 at the same rate independent of the outer
+        multiplier, so a lower cap is a scaled-down copy of the same curve
+        shape, not a differently-calibrated one.
         """
-        return round(100.0 * (1.0 - math.exp(-self.RISK_SATURATION_K * raw_sum)), 2)
+        return round(cap * (1.0 - math.exp(-self.RISK_SATURATION_K * raw_sum)), 2)
 
     def _calculate_risk_score(self, findings: list[dict], violations: list[dict]) -> float:
         """
