@@ -167,6 +167,29 @@ export default function ResultsPage() {
     }
   };
 
+  const handleDownloadPdf = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/reviews/${reviewId}/report?format=pdf`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const binary = atob(res.data.data);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const base = docInfo?.original_filename?.replace(/\.[^.]+$/, '') || 'review';
+      link.download = `${base}-report.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to download PDF report');
+    }
+  };
+
   const handleSetStatus = async (finding: Finding, newStatus: string) => {
     try {
       const token = localStorage.getItem('access_token');
@@ -555,6 +578,9 @@ export default function ResultsPage() {
                 {showDocument ? 'Hide Document' : 'Show Document'}
               </Button>
             )}
+            <Button size="sm" variant="outline" onClick={handleDownloadPdf}>
+              Download PDF
+            </Button>
             <Button size="sm" onClick={handleViewReport}>
               View Full Report
             </Button>

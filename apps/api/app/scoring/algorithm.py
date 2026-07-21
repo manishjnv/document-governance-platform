@@ -11,6 +11,19 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+# One-line, category-specific action a reviewer can take -- shared between
+# _generate_next_steps (top-of-report "Recommended Next Steps") and the
+# report's per-category scorecard guidance, so the two don't drift.
+CATEGORY_GUIDANCE = {
+    "completeness": "Add missing sections and deliverable details",
+    "clarity": "Review ambiguous language and clarify terms",
+    "consistency": "Resolve conflicting requirements",
+    "commercial": "Define clear pricing and payment terms",
+    "delivery": "Establish realistic timeline with milestones",
+    "operations": "Define resources, assumptions, and constraints",
+    "security": "Add security requirements and compliance clauses",
+}
+
 
 @dataclass
 class CategoryScore:
@@ -521,21 +534,8 @@ class DocumentScorer:
 
         # Add steps for low-scoring categories
         for category, score_obj in category_scores.items():
-            if score_obj.score < 60:
-                if category == "completeness":
-                    steps.append(f"Add missing sections and deliverable details")
-                elif category == "clarity":
-                    steps.append(f"Review ambiguous language and clarify terms")
-                elif category == "consistency":
-                    steps.append(f"Resolve conflicting requirements")
-                elif category == "commercial":
-                    steps.append(f"Define clear pricing and payment terms")
-                elif category == "delivery":
-                    steps.append(f"Establish realistic timeline with milestones")
-                elif category == "operations":
-                    steps.append(f"Define resources, assumptions, and constraints")
-                elif category == "security":
-                    steps.append(f"Add security requirements and compliance clauses")
+            if score_obj.score < 60 and category in CATEGORY_GUIDANCE:
+                steps.append(CATEGORY_GUIDANCE[category])
 
         # Add critical issue steps. Checks both findings and rule_violations --
         # a critical AI-agent finding is just as urgent as a critical rule
