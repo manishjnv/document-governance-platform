@@ -63,6 +63,7 @@ async def build_daily_digest(
                     Review.completed_at >= yesterday,
                     Review.deleted_at.is_(None),
                     Document.doc_id == Review.doc_id,
+                    Document.deleted_at.is_(None),
                 )
             )
         )
@@ -91,6 +92,7 @@ async def build_daily_digest(
                         Comment.doc_id == Document.doc_id,
                         Comment.created_at >= yesterday,
                         Comment.deleted_at.is_(None),
+                        Document.deleted_at.is_(None),
                     )
                 )
             )
@@ -120,6 +122,7 @@ async def build_daily_digest(
                     Finding.deleted_at.is_(None),
                     Review.review_id == Finding.review_id,
                     Document.doc_id == Review.doc_id,
+                    Document.deleted_at.is_(None),
                 )
             )
         )

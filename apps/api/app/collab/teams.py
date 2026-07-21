@@ -200,6 +200,7 @@ async def get_team_activity(
         .where(
             Document.org_id == org_id,
             Document.uploaded_by_user_id.in_(member_ids),
+            Document.deleted_at.is_(None),
             Comment.deleted_at.is_(None),
             Comment.created_at >= since,
         )
@@ -222,6 +223,7 @@ async def get_team_activity(
         .where(
             Document.org_id == org_id,
             Document.uploaded_by_user_id.in_(member_ids),
+            Document.deleted_at.is_(None),
             Review.deleted_at.is_(None),
             Review.created_at >= since,
         )

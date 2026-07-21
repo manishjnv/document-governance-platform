@@ -145,6 +145,7 @@ function DocumentsTable({
   reviewingDocId,
   onReview,
   onView,
+  onDelete,
   projectOptions,
   onAssignProject,
 }: {
@@ -152,6 +153,7 @@ function DocumentsTable({
   reviewingDocId: string | null;
   onReview: (docId: string) => void;
   onView: (docId: string) => void;
+  onDelete: (docId: string) => void;
   projectOptions: ProjectSummary[];
   onAssignProject: (docId: string, projectId: string | null, projectName: string | null) => void;
 }) {
@@ -220,6 +222,14 @@ function DocumentsTable({
             </Link>
           </>
         )}
+        <span className="text-muted-foreground">•</span>
+        <button
+          className="text-destructive hover:underline disabled:opacity-50"
+          disabled={isReviewing}
+          onClick={() => onDelete(doc.doc_id)}
+        >
+          Delete
+        </button>
       </div>
     );
   };
@@ -462,6 +472,19 @@ export default function DashboardPage() {
     }
   };
 
+  const handleDelete = async (docId: string) => {
+    if (!confirm('Permanently delete this document, its reviews, and all findings? This cannot be undone.')) return;
+    try {
+      const token = localStorage.getItem('access_token');
+      await axios.delete(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/${docId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchDocuments();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to delete document');
+    }
+  };
+
   // Stats: computed client-side from the currently-loaded (filtered) page of documents.
   const stats = useMemo(() => {
     const byType: Record<string, number> = {};
@@ -625,6 +648,7 @@ export default function DashboardPage() {
                   reviewingDocId={reviewingDocId}
                   onReview={handleReview}
                   onView={handleView}
+                  onDelete={handleDelete}
                   projectOptions={projects}
                   onAssignProject={handleAssignProject}
                 />
@@ -646,6 +670,7 @@ export default function DashboardPage() {
                   reviewingDocId={reviewingDocId}
                   onReview={handleReview}
                   onView={handleView}
+                  onDelete={handleDelete}
                   projectOptions={projects}
                   onAssignProject={handleAssignProject}
                 />

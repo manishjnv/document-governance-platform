@@ -71,6 +71,7 @@ async def list_link_suggestions(
             and_(
                 DocumentLinkSuggestion.org_id == org_id,
                 DocumentLinkSuggestion.status == "pending",
+                Document.deleted_at.is_(None),
             )
         )
         .order_by(DocumentLinkSuggestion.created_at.desc())
@@ -78,7 +79,17 @@ async def list_link_suggestions(
 
     suggestions = []
     for suggestion, doc in result.all():
-        suggested_doc = await _get_org_document(db, suggestion.suggested_doc_id, org_id)
+        suggested_doc = await db.scalar(
+            select(Document).where(
+                and_(
+                    Document.doc_id == suggestion.suggested_doc_id,
+                    Document.org_id == org_id,
+                    Document.deleted_at.is_(None),
+                )
+            )
+        )
+        if suggested_doc is None:
+            continue
         suggestions.append(
             {
                 "suggestion_id": str(suggestion.suggestion_id),

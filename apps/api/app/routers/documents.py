@@ -482,12 +482,14 @@ async def delete_document(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Delete document (soft delete).
+    Permanently delete a document: removes the stored file and hard-deletes
+    the row. Reviews, findings, comments, analytics, and version-link
+    suggestions referencing it are removed via ON DELETE CASCADE (see
+    migrations 001, 003, 008, 024) -- irreversible, not a soft delete.
 
     **T-308: Delete document endpoint**
     """
-    from datetime import datetime
-    from sqlalchemy import select
+    from sqlalchemy import delete, select
 
     if current_user.role == "viewer":
         raise HTTPException(
@@ -510,9 +512,12 @@ async def delete_document(
     # Verify org access
     await verify_org_access(str(doc.org_id), current_user)
 
-    # Soft delete
-    doc.deleted_at = datetime.utcnow()
+    if doc.s3_path:
+        storage = await get_storage_instance()
+        await storage.delete(doc.s3_path)
+
+    await db.execute(delete(Document).where(Document.doc_id == doc_id))
     await db.commit()
 
-    logger.info(f"Document {doc_id} deleted by user {current_user.user_id}")
+    logger.info(f"Document {doc_id} permanently deleted by user {current_user.user_id}")
     return None
