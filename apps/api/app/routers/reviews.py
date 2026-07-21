@@ -606,6 +606,7 @@ async def generate_report(
             "recommendation": f.recommendation,
             "evidence": f.evidence,
             "section_ref": f.section_ref,
+            "risk_area": _risk_area(f),
         }
         for f in findings
     ]

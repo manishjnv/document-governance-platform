@@ -118,6 +118,45 @@ async def test_finding_shows_section_and_page_reference():
 
 
 @pytest.mark.asyncio
+async def test_finding_shows_risk_area_and_labeled_points():
+    html = await ReportGenerator().generate_html_report(
+        "doc-1",
+        "doc.docx",
+        _scoring_result(),
+        review_findings=[
+            {
+                "title": "Missing acceptance criteria",
+                "description": "No acceptance criteria section found.",
+                "recommendation": "Add an acceptance criteria section.",
+                "evidence": "Section 4 is blank.",
+                "severity": "critical",
+                "risk_area": "Scope",
+            }
+        ],
+    )
+    assert "Scope" in html
+    assert "Why it matters:" in html
+    assert "No acceptance criteria section found." in html
+    assert "Recommendation:" in html
+    assert "Add an acceptance criteria section." in html
+    assert "Evidence:" in html
+    assert "Section 4 is blank." in html
+
+
+@pytest.mark.asyncio
+async def test_heatmap_shows_category_description_and_driving_findings():
+    html = await ReportGenerator().generate_html_report(
+        "doc-1", "doc.docx", _scoring_result(), review_findings=[]
+    )
+    # completeness is red in _scoring_result() with one finding attached
+    assert "Are all required sections" in html
+    assert "Driven by: Missing deliverables section" in html
+    # security is green with no findings attached
+    assert "Are security, compliance" in html
+    assert "No findings in this category." in html
+
+
+@pytest.mark.asyncio
 async def test_untrusted_finding_text_is_escaped():
     """Findings/filenames come from uploaded documents -- must not be able
     to inject markup into a report another org member later opens."""

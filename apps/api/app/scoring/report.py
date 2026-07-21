@@ -18,6 +18,19 @@ logger = logging.getLogger(__name__)
 BRAND_BLUE = "#0057B8"
 BRAND_BLUE_DARK = "#003D82"
 
+# What each scorecard/heatmap category actually measures, in plain English --
+# shown under the Risk Heatmap so a reader isn't left guessing what
+# "Operations: 62" means or how it relates to their document.
+CATEGORY_DESCRIPTIONS = {
+    "completeness": "Are all required sections, deliverables, and acceptance criteria present?",
+    "clarity": "Is the language specific, or does it lean on vague/undefined terms?",
+    "consistency": "Do requirements, dates, and figures agree with each other throughout?",
+    "commercial": "Are pricing, payment terms, and financial obligations clearly defined?",
+    "delivery": "Is there a realistic timeline with clear milestones and deadlines?",
+    "operations": "Are resources, assumptions, dependencies, and constraints spelled out?",
+    "security": "Are security, compliance, and data-protection requirements addressed?",
+}
+
 
 def _esc(value) -> str:
     """Escape before interpolating into the report HTML -- findings and
@@ -244,29 +257,6 @@ class ReportGenerator:
             margin-top: 8px;
         }}
 
-        .score-grid {{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }}
-
-        .score-card {{
-            background: #f9f9f9;
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-            padding: 20px;
-            text-align: center;
-        }}
-
-        .score-card h3 {{
-            font-size: 14px;
-            text-transform: uppercase;
-            color: #666;
-            margin-bottom: 10px;
-        }}
-
         .score-value {{
             font-size: 36px;
             font-weight: bold;
@@ -285,37 +275,71 @@ class ReportGenerator:
             color: #e74c3c;
         }}
 
-        .score-guidance {{
-            font-size: 12px;
-            color: #555;
-            margin-top: 8px;
-            text-align: left;
-        }}
-
-        .progress-bar {{
+        /* Scorecard: a dense table (one row per category) instead of 7
+        large cards -- same numbers, ~70% less vertical space, and room
+        for a longer guidance sentence per row without wrapping oddly. */
+        .scorecard-table {{
             width: 100%;
-            height: 8px;
+            border-collapse: collapse;
+            margin-top: 12px;
+            font-size: 12px;
+        }}
+
+        .scorecard-table th {{
+            text-align: left;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #888;
+            padding: 4px 10px 6px;
+            border-bottom: 2px solid #e0e0e0;
+        }}
+
+        .scorecard-table td {{
+            padding: 7px 10px;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }}
+
+        .sc-category {{
+            font-weight: 600;
+            text-transform: capitalize;
+            white-space: nowrap;
+        }}
+
+        .sc-score {{
+            font-weight: bold;
+            font-size: 15px;
+            width: 36px;
+        }}
+
+        .sc-score.green {{ color: #27ae60; }}
+        .sc-score.yellow {{ color: #f39c12; }}
+        .sc-score.red {{ color: #e74c3c; }}
+
+        .sc-bar-cell {{
+            width: 90px;
+        }}
+
+        .mini-bar {{
+            width: 80px;
+            height: 6px;
             background: #e0e0e0;
-            border-radius: 4px;
+            border-radius: 3px;
             overflow: hidden;
-            margin-bottom: 10px;
         }}
 
-        .progress-fill {{
+        .mini-bar-fill {{
             height: 100%;
-            border-radius: 4px;
+            border-radius: 3px;
         }}
 
-        .progress-fill.green {{
-            background: #27ae60;
-        }}
+        .mini-bar-fill.green {{ background: #27ae60; }}
+        .mini-bar-fill.yellow {{ background: #f39c12; }}
+        .mini-bar-fill.red {{ background: #e74c3c; }}
 
-        .progress-fill.yellow {{
-            background: #f39c12;
-        }}
-
-        .progress-fill.red {{
-            background: #e74c3c;
+        .sc-guidance {{
+            color: #555;
         }}
 
         .xray-grid {{
@@ -380,9 +404,40 @@ class ReportGenerator:
             background: #e5ffe5;
         }}
 
-        .finding-title {{
-            font-weight: bold;
-            margin-bottom: 5px;
+        .finding-tags {{
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 8px;
+        }}
+
+        .finding-severity-badge {{
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }}
+
+        .finding-severity-badge.critical {{ background: #e74c3c; }}
+        .finding-severity-badge.major {{ background: #f39c12; }}
+        .finding-severity-badge.medium {{ background: #3498db; }}
+        .finding-severity-badge.low {{ background: #27ae60; }}
+        .finding-severity-badge.info {{ background: #888; }}
+
+        .finding-area-tag {{
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: #555;
+            background: rgba(0,0,0,0.06);
+            padding: 2px 8px;
+            border-radius: 10px;
         }}
 
         .finding-location {{
@@ -393,47 +448,84 @@ class ReportGenerator:
             background: rgba(0,87,184,0.08);
             padding: 2px 8px;
             border-radius: 10px;
+        }}
+
+        .finding-title {{
+            font-weight: bold;
+            font-size: 14px;
             margin-bottom: 8px;
         }}
 
-        .finding-desc {{
-            font-size: 14px;
-            margin-bottom: 5px;
+        .finding-points {{
+            list-style: disc;
+            margin-left: 18px;
+            font-size: 13px;
         }}
 
-        .finding-rec {{
-            font-size: 12px;
-            color: #666;
-            font-style: italic;
+        .finding-points li {{
+            margin-bottom: 5px;
+            padding-left: 2px;
+        }}
+
+        .finding-points strong {{
+            color: #444;
         }}
 
         .heatmap {{
             display: grid;
-            /* Adaptive column count (not a fixed 7-across, which got
-            cramped) -- as few as 1, as many as fit at >=100px each. */
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-            gap: 10px;
+            gap: 12px;
             margin-top: 20px;
         }}
 
+        /* Column count picked in Python (_build_risk_heatmap), not CSS
+        auto-fit -- see that method's docstring for why. */
+        .heatmap-cols-1 {{
+            grid-template-columns: 1fr;
+        }}
+
+        .heatmap-cols-2 {{
+            grid-template-columns: repeat(2, 1fr);
+        }}
+
         .heatmap-cell {{
-            text-align: center;
-            padding: 15px;
+            text-align: left;
+            padding: 14px 16px;
             border-radius: 8px;
-            color: white;
+            border-left: 4px solid;
+            background: #f9f9f9;
+        }}
+
+        .heatmap-cell.green {{ border-left-color: #27ae60; }}
+        .heatmap-cell.yellow {{ border-left-color: #f39c12; }}
+        .heatmap-cell.red {{ border-left-color: #e74c3c; }}
+
+        .heatmap-cell-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
             font-weight: bold;
+            font-size: 13px;
+            margin-bottom: 6px;
         }}
 
-        .heatmap-cell.green {{
-            background: #27ae60;
+        .heatmap-score {{
+            font-size: 18px;
         }}
 
-        .heatmap-cell.yellow {{
-            background: #f39c12;
+        .heatmap-cell.green .heatmap-score {{ color: #27ae60; }}
+        .heatmap-cell.yellow .heatmap-score {{ color: #f39c12; }}
+        .heatmap-cell.red .heatmap-score {{ color: #e74c3c; }}
+
+        .heatmap-desc {{
+            font-size: 12px;
+            color: #555;
+            margin-bottom: 6px;
         }}
 
-        .heatmap-cell.red {{
-            background: #e74c3c;
+        .heatmap-driver {{
+            font-size: 11px;
+            color: #888;
+            font-style: italic;
         }}
 
         .footer {{
@@ -517,20 +609,16 @@ class ReportGenerator:
 """
 
     def _build_scorecard(self, scoring_result) -> str:
-        """T-611: Scorecard with 7 category scores + a one-line, actionable
-        guidance per category so a reader knows what to fix, not just the
-        number. Green categories get an affirmative note instead of a
-        generic "add more" nudge."""
-        html = """
-            <section>
-                <h2>Scorecard</h2>
-                <div class="score-grid">
-"""
-
+        """T-611: Scorecard with 7 category scores -- a dense table (one
+        row per category: score, mini bar, guidance) instead of 7 large
+        cards, which needed two full grid rows to show the same 7 numbers.
+        Guidance is a one-line, actionable takeaway per category so a
+        reader knows what to fix, not just the number -- green categories
+        get an affirmative note instead of a generic "add more" nudge."""
+        rows = ""
         for category_name, category_score in scoring_result.category_scores.items():
             score = category_score.score
             status = category_score.status
-            progress_pct = int(score)
 
             if status == "green":
                 guidance = "On track -- no major gaps found in this area."
@@ -540,23 +628,34 @@ class ReportGenerator:
                 if matched:
                     guidance += f" ({matched} related finding{'s' if matched != 1 else ''})"
 
-            html += f"""
-                    <div class="score-card">
-                        <h3>{_esc(category_name)}</h3>
-                        <div class="progress-bar">
-                            <div class="progress-fill {status}" style="width: {progress_pct}%"></div>
-                        </div>
-                        <div class="score-value {status}">{score:.0f}</div>
-                        <p style="font-size: 12px; color: #666;">of {category_score.max_points}</p>
-                        <p class="score-guidance">{_esc(guidance)}</p>
-                    </div>
+            rows += f"""
+                        <tr>
+                            <td class="sc-category">{_esc(category_name)}</td>
+                            <td class="sc-score {status}">{score:.0f}</td>
+                            <td class="sc-bar-cell">
+                                <div class="mini-bar"><div class="mini-bar-fill {status}" style="width: {int(score)}%"></div></div>
+                            </td>
+                            <td class="sc-guidance">{_esc(guidance)}</td>
+                        </tr>
 """
 
-        html += """
-                </div>
+        return f"""
+            <section>
+                <h2>Scorecard</h2>
+                <table class="scorecard-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Score</th>
+                            <th></th>
+                            <th>Guidance</th>
+                        </tr>
+                    </thead>
+                    <tbody>{rows}
+                    </tbody>
+                </table>
             </section>
 """
-        return html
 
     def _build_document_xray(self, sections: list, rule_gaps: list) -> str:
         """Document sections found + rule-engine gaps, at a glance -- the
@@ -592,9 +691,14 @@ class ReportGenerator:
 """
 
     def _build_findings_section(self, findings: list) -> str:
-        """Build findings section, tagged with section name + page number
-        (finding["section_ref"], e.g. "Payment Terms (p.4)") so a reader
-        can find the clause in the source document without re-searching."""
+        """Build findings section. Each finding is tagged with its risk
+        area (finding["risk_area"], e.g. "Legal") and its section + page
+        reference (finding["section_ref"], e.g. "Payment Terms (p.4)") so
+        a reader can place it in both "what kind of risk" and "where in
+        the document" without cross-referencing another section. Content
+        is broken into four plain-English, labeled bullet points --
+        what's missing, why it matters, the recommendation, and the
+        quoted evidence -- instead of blended prose paragraphs."""
         if not findings:
             return """
             <section>
@@ -616,25 +720,35 @@ class ReportGenerator:
             recommendation = finding.get("recommendation", "")
             evidence = finding.get("evidence", "")
             section_ref = finding.get("section_ref", "")
+            risk_area = finding.get("risk_area", "")
 
             html += f"""
                     <li class="finding {severity}">
+                        <div class="finding-tags">
+                            <span class="finding-severity-badge {severity}">{_esc(severity.upper())}</span>
 """
+            if risk_area:
+                html += f'                            <span class="finding-area-tag">{_esc(risk_area)}</span>\n'
             if section_ref:
-                html += f'                        <div class="finding-location">&#128205; {_esc(section_ref)}</div>\n'
+                # Plain text, not the pin emoji: fonts-liberation (the only
+                # font installed in the PDF-rendering container) has no
+                # emoji glyphs, so it rendered as a tofu box in the PDF.
+                html += f'                            <span class="finding-location">{_esc(section_ref)}</span>\n'
 
-            html += f'                        <div class="finding-title">[{_esc(severity.upper())}] {_esc(title)}</div>\n'
-
+            html += f"""                        </div>
+                        <div class="finding-title">{_esc(title)}</div>
+                        <ul class="finding-points">
+"""
             if description:
-                html += f'                        <div class="finding-desc">{_esc(description)}</div>\n'
-
-            if evidence:
-                html += f'                        <div class="finding-desc"><strong>Evidence:</strong> {_esc(evidence)}</div>\n'
-
+                html += f'                            <li><strong>Why it matters:</strong> {_esc(description)}</li>\n'
             if recommendation:
-                html += f'                        <div class="finding-rec"><strong>Recommendation:</strong> {_esc(recommendation)}</div>\n'
+                html += f'                            <li><strong>Recommendation:</strong> {_esc(recommendation)}</li>\n'
+            if evidence:
+                html += f'                            <li><strong>Evidence:</strong> &ldquo;{_esc(evidence)}&rdquo;</li>\n'
 
-            html += "                    </li>\n"
+            html += """                        </ul>
+                    </li>
+"""
 
         html += """
                 </ul>
@@ -643,22 +757,52 @@ class ReportGenerator:
         return html
 
     def _build_risk_heatmap(self, scoring_result) -> str:
-        """T-612: Risk heatmap visual."""
-        html = """
+        """T-612: Risk heatmap -- what each category means (CATEGORY_
+        DESCRIPTIONS) and how it relates to THIS document (which findings
+        actually drove that score), not just a bare colored number a
+        reader has to interpret on their own.
+
+        Column count is decided here, not via CSS `auto-fit`/`minmax`:
+        verified empirically that WeasyPrint's grid implementation doesn't
+        actually vary the column count with `auto-fit` (it always
+        collapsed to 1 column regardless of available width). 2 columns
+        when there's more than one category -- each cell holds a full
+        description sentence + a driver line, so beyond 2 columns on an
+        A4 page the text would wrap awkwardly."""
+        cols = 2 if len(scoring_result.category_scores) > 1 else 1
+        html = f"""
             <section>
                 <h2>Risk Heatmap</h2>
-                <p>Category-by-category risk assessment:</p>
-                <div class="heatmap">
+                <p>Category-by-category risk assessment, and what drove each score in this document:</p>
+                <div class="heatmap heatmap-cols-{cols}">
 """
 
         for category_name, category_score in scoring_result.category_scores.items():
             status = category_score.status
             score = int(category_score.score)
+            description = CATEGORY_DESCRIPTIONS.get(category_name, "")
+
+            related = category_score.findings or []
+            if related:
+                top_titles = [
+                    f.get("title") or f.get("description", "Untitled finding")
+                    for f in related[:2]
+                ]
+                driver_line = "; ".join(_esc(t) for t in top_titles)
+                if len(related) > 2:
+                    driver_line += f" (+{len(related) - 2} more)"
+                driven_by = f'<div class="heatmap-driver">Driven by: {driver_line}</div>'
+            else:
+                driven_by = '<div class="heatmap-driver">No findings in this category.</div>'
 
             html += f"""
                     <div class="heatmap-cell {status}">
-                        <div>{_esc(category_name.title())}</div>
-                        <div style="font-size: 18px; margin-top: 5px;">{score}</div>
+                        <div class="heatmap-cell-header">
+                            <span>{_esc(category_name.title())}</span>
+                            <span class="heatmap-score">{score}</span>
+                        </div>
+                        <div class="heatmap-desc">{_esc(description)}</div>
+                        {driven_by}
                     </div>
 """
 
@@ -696,9 +840,9 @@ class ReportGenerator:
         WeasyPrint (was xhtml2pdf) renders the SAME html_content the HTML
         report already produces, but as a real CSS engine: Grid/Flexbox/
         multi-column, border-radius, and box-shadow all render as
-        authored -- xhtml2pdf supported none of those, so `.score-grid`/
-        `.heatmap`/`.xray-grid` degraded to stacked blocks with wasted
-        space. Imported lazily (not at module load) since it needs
+        authored -- xhtml2pdf supported none of those, so `.heatmap`/
+        `.xray-grid` degraded to stacked blocks with wasted space.
+        Imported lazily (not at module load) since it needs
         system libs (Pango/Cairo/gdk-pixbuf -- see Dockerfile.prod) that
         aren't guaranteed present on every machine importing this module.
         """

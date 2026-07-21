@@ -151,6 +151,12 @@ class TestGenerateReport:
         assert "Missing termination clause" in html  # rule gap
         assert "Scope of Work (p.3)" in html  # finding section+page ref
         assert "Legal" in html  # top risk area
+        assert "Scope" in html  # agent finding tagged with its risk_area
+        assert "Compliance" in html  # rule finding tagged with its risk_area
+        assert "Why it matters:" in html  # finding restructured into labeled points
+        assert "Recommendation:" in html
+        assert "scorecard-table" in html  # compact table, not the old card grid
+        assert "Are all required sections" in html  # heatmap category description
 
     async def test_pdf_report_returns_valid_pdf_bytes(self, client, completed_review, require_weasyprint):
         """Regression: format=pdf used to decode binary PDF bytes as UTF-8
