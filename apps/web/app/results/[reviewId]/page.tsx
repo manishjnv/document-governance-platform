@@ -45,6 +45,7 @@ interface Finding {
   description: string;
   section_ref: string | null;
   status: string;
+  risk_area: string;
 }
 
 interface ReviewData {
@@ -97,6 +98,7 @@ export default function ResultsPage() {
   const [error, setError] = useState('');
   const [expandedFinding, setExpandedFinding] = useState<string | null>(null);
   const [severityFilter, setSeverityFilter] = useState<string | null>(null);
+  const [areaFilter, setAreaFilter] = useState<string | null>(null);
   const [showDocument, setShowDocument] = useState(true);
   const [highlightedSection, setHighlightedSection] = useState<string | null>(null);
   const [splitPercent, setSplitPercent] = useState(33);
@@ -241,9 +243,10 @@ export default function ResultsPage() {
 
   const visibleFindings = useMemo(() => {
     if (!review) return [];
-    if (!severityFilter) return review.findings;
-    return review.findings.filter((f) => f.severity.toLowerCase() === severityFilter);
-  }, [review, severityFilter]);
+    return review.findings
+      .filter((f) => !severityFilter || f.severity.toLowerCase() === severityFilter)
+      .filter((f) => !areaFilter || f.risk_area === areaFilter);
+  }, [review, severityFilter, areaFilter]);
 
   // Rule-engine findings only fire when a required section/keyword/format
   // check FAILS -- so every rule-sourced finding already represents a gap,
@@ -407,28 +410,46 @@ export default function ResultsPage() {
           <CardHeader className="pb-0.5 pt-2">
             <CardTitle className="text-sm">
               Risk by Area
-              <InfoTip text="The same risk score, split by area (Legal, Commercial, Delivery, etc.) so you can see what's actually driving it." />
+              <InfoTip text="The same risk score, split by area (Legal, Commercial, Delivery, etc.) so you can see what's actually driving it. Click an area to filter the findings below to just that area." />
+              {areaFilter && (
+                <button
+                  onClick={() => setAreaFilter(null)}
+                  className="ml-2 text-xs font-normal text-primary hover:underline"
+                >
+                  clear filter
+                </button>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="pb-2">
             <div className="space-y-1.5">
               {Object.entries(review.risk_breakdown)
                 .sort((a, b) => b[1] - a[1])
-                .map(([axis, score]) => (
-                  <div key={axis} className="flex items-center gap-2 text-xs">
-                    <span className="w-20 shrink-0 text-foreground font-medium truncate">{axis}</span>
-                    <div className="flex-1 bg-gray-200 rounded-full h-1.5">
-                      <div
-                        className={cn(
-                          'h-1.5 rounded-full transition-[width] duration-500 ease-out',
-                          score > 70 ? 'bg-red-600' : score > 40 ? 'bg-yellow-600' : 'bg-green-600'
-                        )}
-                        style={{ width: `${score}%` }}
-                      />
-                    </div>
-                    <span className="w-9 shrink-0 text-right text-muted-foreground">{score.toFixed(0)}%</span>
-                  </div>
-                ))}
+                .map(([axis, score]) => {
+                  const active = areaFilter === axis;
+                  return (
+                    <button
+                      key={axis}
+                      onClick={() => setAreaFilter(active ? null : axis)}
+                      className={cn(
+                        'flex items-center gap-2 text-xs w-full rounded-md p-0.5 transition-all',
+                        active ? 'ring-2 ring-offset-1 ring-primary' : 'hover:bg-muted/60'
+                      )}
+                    >
+                      <span className="w-20 shrink-0 text-foreground font-medium truncate text-left">{axis}</span>
+                      <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                        <div
+                          className={cn(
+                            'h-1.5 rounded-full transition-[width] duration-500 ease-out',
+                            score > 70 ? 'bg-red-600' : score > 40 ? 'bg-yellow-600' : 'bg-green-600'
+                          )}
+                          style={{ width: `${score}%` }}
+                        />
+                      </div>
+                      <span className="w-9 shrink-0 text-right text-muted-foreground">{score.toFixed(0)}%</span>
+                    </button>
+                  );
+                })}
             </div>
           </CardContent>
         </Card>
@@ -525,7 +546,7 @@ export default function ResultsPage() {
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0 pb-0.5 pt-2">
           <CardTitle className="text-sm">
-            Findings {severityFilter && <span className="text-muted-foreground font-normal">({visibleFindings.length} of {review.findings.length})</span>}
+            Findings {(severityFilter || areaFilter) && <span className="text-muted-foreground font-normal">({visibleFindings.length} of {review.findings.length})</span>}
           </CardTitle>
           <div className="flex items-center gap-1.5">
             {docInfo?.parsed_sections && docInfo.parsed_sections.length > 0 && (
@@ -570,6 +591,11 @@ export default function ResultsPage() {
                         <span className={cn('shrink-0 text-[9px] font-bold uppercase tracking-wide px-1 py-0.5 rounded leading-none', severityBadge(finding.severity))}>
                           {finding.severity}
                         </span>
+                        {finding.risk_area && (
+                          <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide px-1 py-0.5 rounded leading-none bg-muted text-muted-foreground">
+                            {finding.risk_area}
+                          </span>
+                        )}
                         {fixed && (
                           <span className="shrink-0 flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide px-1 py-0.5 rounded leading-none bg-green-700 text-white">
                             <Check size={9} strokeWidth={3} /> Fixed

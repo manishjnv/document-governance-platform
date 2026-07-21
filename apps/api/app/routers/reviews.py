@@ -19,9 +19,19 @@ from app.models.document import Document
 from app.models.finding import Finding
 from app.models.review import Review
 from app.schemas.auth import TokenData
+from app.scoring.algorithm import DocumentScorer
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/reviews", tags=["reviews"])
+
+
+def _risk_area(finding: Finding) -> str:
+    """Same axis a finding contributes to in the Risk by Area breakdown
+    (DocumentScorer._calculate_risk_breakdown) -- lets the UI tag each
+    finding with the area it's already counted under."""
+    if finding.finding_source == "rule":
+        return "Compliance"
+    return DocumentScorer.AXIS_BY_AGENT.get(finding.agent_name or "", "Other")
 
 
 async def _verify_against_previous_version(db: AsyncSession, doc: Document, review: Review) -> None:
@@ -473,6 +483,7 @@ async def get_review(
                 "confidence": int(f.confidence),
                 "recommendation": f.recommendation,
                 "status": f.status,
+                "risk_area": _risk_area(f),
             }
             for f in findings
         ],

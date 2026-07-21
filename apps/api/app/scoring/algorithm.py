@@ -93,7 +93,10 @@ class DocumentScorer:
     # Maps each finding to a customer-facing risk axis instead of one
     # blended number. Agent names match app/ai/agent.py; rule-engine
     # findings carry no agent_name, hence the "Compliance" fallback.
-    _AXIS_BY_AGENT = {
+    # Public (not name-mangled) so app/routers/reviews.py can tag each
+    # finding with its risk_area using the exact same mapping the Risk by
+    # Area breakdown was computed from -- one source of truth, no drift.
+    AXIS_BY_AGENT = {
         "ScopeReviewer": "Scope",
         "DeliveryReviewer": "Delivery",
         "CommercialReviewer": "Commercial",
@@ -474,7 +477,7 @@ class DocumentScorer:
         by_axis: dict[str, list[dict]] = {}
 
         for f in findings:
-            axis = self._AXIS_BY_AGENT.get(f.get("source_agent", ""), "Other")
+            axis = self.AXIS_BY_AGENT.get(f.get("source_agent", ""), "Other")
             by_axis.setdefault(axis, []).append(f)
 
         for v in violations:
