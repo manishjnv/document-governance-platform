@@ -432,6 +432,54 @@ async def set_document_project(
     return DocumentRead.from_orm(doc)
 
 
+@router.patch(
+    "/{doc_id}/type",
+    response_model=DocumentRead,
+    summary="Correct a document's type",
+)
+async def set_document_type(
+    doc_id: UUID,
+    document_type: str = Query(..., description="One of DocumentType's values, e.g. SOW, Proposal, RFP"),
+    current_user: TokenData = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Manually set/correct a document's type -- auto-detection (parser.py's
+    PdfParser/DocxParser._detect_type) runs once at upload against parsed
+    text and has no retry path; a document that parsed to empty text (or
+    just detected wrong) is otherwise stuck showing "Unknown" with no way
+    to fix it."""
+    from sqlalchemy import select
+
+    from app.parser import DocumentType
+
+    # "Other" isn't a DocumentType auto-detection ever guesses (it's a
+    # UI-only fallback for "none of the above"), but a manual correction
+    # must still be able to select it.
+    allowed_types = {t.value for t in DocumentType} | {"Other"}
+    if document_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid document_type. Allowed: {', '.join(sorted(allowed_types))}",
+        )
+
+    result = await db.execute(
+        select(Document).where((Document.doc_id == doc_id) & (Document.deleted_at.is_(None)))
+    )
+    doc = result.scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+
+    await verify_org_access(str(doc.org_id), current_user)
+
+    doc.document_type = document_type
+    await db.commit()
+    await db.refresh(doc)
+
+    await invalidate_cache(f"cache:*:{doc.org_id}:*")
+
+    return DocumentRead.from_orm(doc)
+
+
 @router.get(
     "/{doc_id}",
     response_model=DocumentDetail,

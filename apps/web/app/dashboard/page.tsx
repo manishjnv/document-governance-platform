@@ -78,6 +78,48 @@ function TrendIndicator({ current, previous }: { current: number | null; previou
   );
 }
 
+function DocumentTypeCell({
+  doc,
+  onSetType,
+}: {
+  doc: Document;
+  onSetType: (docId: string, documentType: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  if (!open) {
+    return (
+      <button className="hover:underline text-left" onClick={() => setOpen(true)} title="Click to change">
+        {doc.document_type || 'Unknown'}
+      </button>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1">
+      <select
+        autoFocus
+        defaultValue={doc.document_type || ''}
+        onChange={(e) => {
+          if (e.target.value) onSetType(doc.doc_id, e.target.value);
+          setOpen(false);
+        }}
+        onBlur={() => setOpen(false)}
+        className="px-1.5 py-1 text-sm border border-input rounded-md bg-background"
+      >
+        <option value="" disabled>
+          Select type
+        </option>
+        {DOCUMENT_TYPES.map((type) => (
+          <option key={type} value={type}>
+            {type}
+          </option>
+        ))}
+      </select>
+    </span>
+  );
+}
+
 function AssignProjectControl({
   doc,
   projectOptions,
@@ -148,6 +190,7 @@ function DocumentsTable({
   onDelete,
   projectOptions,
   onAssignProject,
+  onSetDocumentType,
 }: {
   documents: Document[];
   reviewingDocId: string | null;
@@ -156,6 +199,7 @@ function DocumentsTable({
   onDelete: (docId: string) => void;
   projectOptions: ProjectSummary[];
   onAssignProject: (docId: string, projectId: string | null, projectName: string | null) => void;
+  onSetDocumentType: (docId: string, documentType: string) => void;
 }) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
@@ -275,7 +319,9 @@ function DocumentsTable({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>{latest.document_type || 'Unknown'}</TableCell>
+                  <TableCell>
+                    <DocumentTypeCell doc={latest} onSetType={onSetDocumentType} />
+                  </TableCell>
                   <TableCell>
                     <ScoreCell value={latest.latest_completeness_score} />
                   </TableCell>
@@ -299,7 +345,9 @@ function DocumentsTable({
                       <TableCell className="pl-8 text-muted-foreground">
                         v{doc.version} -- {doc.original_filename || doc.filename}
                       </TableCell>
-                      <TableCell>{doc.document_type || 'Unknown'}</TableCell>
+                      <TableCell>
+                        <DocumentTypeCell doc={doc} onSetType={onSetDocumentType} />
+                      </TableCell>
                       <TableCell>
                         <ScoreCell value={doc.latest_completeness_score} />
                       </TableCell>
@@ -424,6 +472,23 @@ export default function DashboardPage() {
       fetchDocuments();
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to assign project');
+    }
+  };
+
+  const handleSetDocumentType = async (docId: string, documentType: string) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      await axios.patch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/${docId}/type`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { document_type: documentType },
+        }
+      );
+      fetchDocuments();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to set document type');
     }
   };
 
@@ -651,6 +716,7 @@ export default function DashboardPage() {
                   onDelete={handleDelete}
                   projectOptions={projects}
                   onAssignProject={handleAssignProject}
+                  onSetDocumentType={handleSetDocumentType}
                 />
               </div>
             </details>
@@ -673,6 +739,7 @@ export default function DashboardPage() {
                   onDelete={handleDelete}
                   projectOptions={projects}
                   onAssignProject={handleAssignProject}
+                  onSetDocumentType={handleSetDocumentType}
                 />
               </div>
             </details>

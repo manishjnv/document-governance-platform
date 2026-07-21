@@ -80,6 +80,43 @@ class TestDeleteDocumentRBAC:
         assert response.status_code == 204
 
 
+class TestSetDocumentType:
+    """PATCH /documents/{doc_id}/type -- manual correction for when
+    auto-detection at upload guessed wrong or (e.g. a parse failure)
+    never ran at all, leaving the document stuck showing "Unknown"."""
+
+    async def test_admin_can_correct_document_type(self, client, org_with_users):
+        token = await _login(client, "admin@doctest.com")
+        response = await client.patch(
+            f"/api/v1/documents/{org_with_users['doc'].doc_id}/type",
+            params={"document_type": "RFP"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 200
+        assert response.json()["document_type"] == "RFP"
+
+    async def test_other_is_accepted_even_though_not_auto_detected(self, client, org_with_users):
+        """"Other" is a UI-only fallback category -- auto-detection never
+        guesses it, but a manual correction must still allow it."""
+        token = await _login(client, "admin@doctest.com")
+        response = await client.patch(
+            f"/api/v1/documents/{org_with_users['doc'].doc_id}/type",
+            params={"document_type": "Other"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 200
+        assert response.json()["document_type"] == "Other"
+
+    async def test_invalid_type_rejected(self, client, org_with_users):
+        token = await _login(client, "admin@doctest.com")
+        response = await client.patch(
+            f"/api/v1/documents/{org_with_users['doc'].doc_id}/type",
+            params={"document_type": "NotARealType"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert response.status_code == 422
+
+
 class TestFilenameSanitization:
     def test_strips_path_traversal(self):
         assert _sanitize_filename("../../etc/passwd") == "passwd"

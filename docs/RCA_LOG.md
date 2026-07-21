@@ -285,6 +285,53 @@ listed below — several of these are copy-pasted patterns that recur.
   doc, merged-cell dedup, paragraphs+tables both captured) so this
   specific regression can't reappear silently.
 
+### 17. RCA #16's fix required python-docx 1.2+, but requirements.txt still pinned 0.8.11 -- every real DOCX upload silently broke in production (2026-07-21)
+
+- **Symptom:** User reported `SOC_SOW_Testing.docx` (uploaded to live
+  ScopeWise, real content, `docs/sample/SOW_Sample/SOC_SOW_Testing.docx`
+  is the same file) showed `document_type: null` ("Unknown" in the UI)
+  and no "View Document" option after review. Queried prod directly:
+  `parsed_text` length 0, `parsed_sections` count 0, `page_count` 0 --
+  a real, non-trivial document stored as if it were blank.
+- **Root cause:** RCA #16 (previous entry, 2026-07-20) rewrote
+  `DocxParser.parse()` to call `Document.iter_inner_content()` and its
+  own writeup even says "(python-docx 1.2+)" -- but `requirements.txt`
+  was never updated off `python-docx==0.8.11`, which predates that
+  method entirely. Locally, tests passed anyway because the dev venv
+  already had python-docx 1.2.0 installed from an earlier ad-hoc
+  upgrade that was never reflected in requirements.txt -- so every local
+  test run and every "it works on my machine" check was silently
+  validating against a different dependency version than what the
+  Docker image (built fresh from requirements.txt) actually shipped.
+  Confirmed by copying the sample file into the live `scopewise-api`
+  container and parsing it there directly:
+  `AttributeError: 'Document' object has no attribute
+  'iter_inner_content'` -- caught by `DocxParser.parse()`'s own
+  `except Exception`, logged, and returned as a normal-looking
+  `status="failed"` `ParseResult` with no exception ever reaching
+  `documents.py`'s own try/except, so nothing was ever logged as a
+  parsing failure at the request layer either. This affected **every**
+  DOCX upload in production since whenever RCA #16 was first deployed,
+  not just this one file.
+- **Fix:** `requirements.txt` repinned to `python-docx==1.2.0` (matches
+  what was already proven working locally), with a comment explaining
+  exactly which method requires it and why. Verified by rebuilding the
+  actual `scopewise-api` Docker image and parsing the same sample file
+  inside the freshly-built container before deploying -- not just
+  re-running local tests, which would have passed either way.
+- **Prevention:** a requirements.txt pin is only as good as whether the
+  local dev environment actually matches it -- nothing here enforces
+  that a locally-installed package version equals the pinned one. The
+  real guardrail that caught this was rebuilding the Docker image and
+  testing inside it directly, which should be standard practice before
+  claiming any parser/dependency-adjacent fix is deployed correctly (not
+  just "tests pass locally"). Also added `PATCH
+  /api/v1/documents/{doc_id}/type` (previously no way to manually
+  correct a document's type at all -- auto-detection has no retry path,
+  so a document that parsed to empty text, or was just detected wrong,
+  was permanently stuck showing "Unknown" with no recovery option in
+  the UI).
+
 ---
 
 *(Append new entries above this line, most recent first is NOT required —
