@@ -51,6 +51,20 @@ TEST_DATABASE_URL = os.getenv(
 )
 
 
+@pytest.fixture
+def require_weasyprint():
+    """Skip (not fail) tests that actually render a PDF via WeasyPrint on
+    machines missing its native libs (Pango/Cairo/gdk-pixbuf) -- present in
+    the prod/CI Docker image (Dockerfile.prod) but not guaranteed on every
+    dev machine. Importing weasyprint without them raises OSError, not
+    ImportError, so pytest.importorskip's default ImportError catch alone
+    wouldn't skip cleanly."""
+    try:
+        import weasyprint  # noqa: F401
+    except OSError:
+        pytest.skip("WeasyPrint native libs not installed in this environment")
+
+
 @pytest.fixture(scope="session")
 def test_engine():
     engine = create_async_engine(TEST_DATABASE_URL, echo=False, future=True)

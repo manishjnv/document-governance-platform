@@ -135,7 +135,7 @@ async def test_untrusted_finding_text_is_escaped():
 
 
 @pytest.mark.asyncio
-async def test_pdf_export_produces_real_pdf_bytes():
+async def test_pdf_export_produces_real_pdf_bytes(require_weasyprint):
     """Regression guard: the endpoint used to base64/utf-8-mishandle these
     bytes downstream, corrupting the file. This only guards that
     generate_pdf_report itself returns a valid PDF; see test_reviews_report

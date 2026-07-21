@@ -152,7 +152,7 @@ class TestGenerateReport:
         assert "Scope of Work (p.3)" in html  # finding section+page ref
         assert "Legal" in html  # top risk area
 
-    async def test_pdf_report_returns_valid_pdf_bytes(self, client, completed_review):
+    async def test_pdf_report_returns_valid_pdf_bytes(self, client, completed_review, require_weasyprint):
         """Regression: format=pdf used to decode binary PDF bytes as UTF-8
         with errors="ignore" before returning them, corrupting the file.
         The base64 payload must decode back to real, openable PDF bytes."""

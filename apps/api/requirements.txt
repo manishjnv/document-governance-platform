@@ -44,10 +44,14 @@ openpyxl==3.1.2
 xlrd==2.0.1
 
 # PDF report generation (app/scoring/report.py::ReportGenerator.generate_pdf_report).
-# Pure Python, wraps reportlab -- no system libs (Pango/Cairo) required,
-# unlike weasyprint. Renders the existing HTML report template directly.
-xhtml2pdf==0.2.17
-reportlab==4.5.1
+# Switched from xhtml2pdf -> WeasyPrint: xhtml2pdf (reportlab-based) has no
+# CSS Grid/Flexbox/multi-column support, so the report's card/grid sections
+# degraded to stacked blocks in the PDF -- wasted space, no real layout.
+# WeasyPrint is a real CSS engine (multi-column, rounded corners/shadows,
+# much closer to the HTML preview) at the cost of system libs (Pango/
+# Cairo/gdk-pixbuf) -- see Dockerfile.prod's runtime apt-get for the exact
+# packages; confirmed no build-time headers needed, prebuilt wheels cover it.
+weasyprint==69.0
 
 # HTTP Client
 httpx==0.25.2

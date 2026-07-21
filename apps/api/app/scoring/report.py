@@ -90,6 +90,14 @@ class ReportGenerator:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document Review Report - {_esc(filename)}</title>
     <style>
+        /* Print-only: equal margin on every page of the PDF. Ignored by
+        regular browser rendering (this same HTML also powers "View Full
+        Report"), so it's safe to keep in one shared stylesheet. */
+        @page {{
+            size: A4;
+            margin: 1.5cm;
+        }}
+
         * {{
             margin: 0;
             padding: 0;
@@ -97,7 +105,7 @@ class ReportGenerator:
         }}
 
         body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: Arial, 'Liberation Sans', 'Helvetica Neue', Helvetica, sans-serif;
             background: #f5f5f5;
             color: #333;
             line-height: 1.6;
@@ -110,6 +118,20 @@ class ReportGenerator:
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             overflow: hidden;
+        }}
+
+        @media print {{
+            /* @page already gives the PDF its edge margin -- an elevated,
+            floating card reads as a browser-view affordance, not a page. */
+            body {{
+                background: white;
+            }}
+            .container {{
+                max-width: none;
+                margin: 0;
+                border-radius: 0;
+                box-shadow: none;
+            }}
         }}
 
         .header {{
@@ -183,7 +205,7 @@ class ReportGenerator:
             background: #eef4fc;
             border-left: 4px solid {BRAND_BLUE};
             padding: 20px;
-            border-radius: 4px;
+            border-radius: 6px;
             margin-bottom: 20px;
         }}
 
@@ -231,8 +253,9 @@ class ReportGenerator:
 
         .score-card {{
             background: #f9f9f9;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
             padding: 20px;
             text-align: center;
         }}
@@ -333,7 +356,8 @@ class ReportGenerator:
             border-left: 4px solid #e74c3c;
             padding: 15px;
             margin-bottom: 15px;
-            border-radius: 4px;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }}
 
         .finding.critical {{
@@ -385,7 +409,9 @@ class ReportGenerator:
 
         .heatmap {{
             display: grid;
-            grid-template-columns: repeat(7, 1fr);
+            /* Adaptive column count (not a fixed 7-across, which got
+            cramped) -- as few as 1, as many as fit at >=100px each. */
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
             gap: 10px;
             margin-top: 20px;
         }}
@@ -393,7 +419,7 @@ class ReportGenerator:
         .heatmap-cell {{
             text-align: center;
             padding: 15px;
-            border-radius: 4px;
+            border-radius: 8px;
             color: white;
             font-weight: bold;
         }}
@@ -667,27 +693,17 @@ class ReportGenerator:
         """
         T-617: PDF export.
 
-        xhtml2pdf (pure Python, wraps reportlab -- no system libs like
-        weasyprint's Pango/Cairo needed) renders the SAME html_content the
-        HTML report already produces.
-
-        xhtml2pdf's CSS support doesn't include Grid/Flexbox (used by
-        `.score-grid`/`.heatmap`/`.xray-grid` in the HTML template) --
-        those sections degrade to stacked blocks in the PDF rather than a
-        grid layout. Content and data are unaffected; only that specific
-        visual layout.
+        WeasyPrint (was xhtml2pdf) renders the SAME html_content the HTML
+        report already produces, but as a real CSS engine: Grid/Flexbox/
+        multi-column, border-radius, and box-shadow all render as
+        authored -- xhtml2pdf supported none of those, so `.score-grid`/
+        `.heatmap`/`.xray-grid` degraded to stacked blocks with wasted
+        space. Imported lazily (not at module load) since it needs
+        system libs (Pango/Cairo/gdk-pixbuf -- see Dockerfile.prod) that
+        aren't guaranteed present on every machine importing this module.
         """
-        import io
-
-        from xhtml2pdf import pisa
+        from weasyprint import HTML
 
         logger.info(f"PDF export requested for {filename}")
 
-        output = io.BytesIO()
-        result = pisa.CreatePDF(src=html_content, dest=output)
-
-        if result.err:
-            logger.error(f"PDF generation failed for {filename}: {result.err} error(s)")
-            raise RuntimeError(f"PDF generation failed with {result.err} error(s)")
-
-        return output.getvalue()
+        return HTML(string=html_content).write_pdf()

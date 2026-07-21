@@ -39,7 +39,7 @@ def _fake_findings():
     ]
 
 
-def test_build_report_content_produces_html_and_pdf_bytes():
+def test_build_report_content_produces_html_and_pdf_bytes(require_weasyprint):
     html, pdf_bytes = asyncio.run(
         _build_report_content(_fake_review(), _fake_doc(), _fake_findings())
     )
@@ -53,7 +53,7 @@ def test_build_report_content_produces_html_and_pdf_bytes():
     assert pdf_bytes.startswith(b"%PDF-")
 
 
-def test_build_report_content_keeps_a_zero_score_category():
+def test_build_report_content_keeps_a_zero_score_category(require_weasyprint):
     """Regression: a category legitimately scoring 0 (the worst case --
     critical findings everywhere) must still appear in the report. The
     original `if score_val:` check was falsy for 0 and silently dropped
