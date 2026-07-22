@@ -125,6 +125,43 @@ wrong. The 4 heading-keyword FPs and the self-negating finding are gone.
 measured 0 FPs, 93.1%). Already past the >90% strict-recall launch target for
 this document; next gate is after Phase C.
 
+## Phase C measurement note — 2026-07-23 (later same session)
+
+Phase C (broken-reference detector REF-SCAN + conflict LLM scan
+CONFLICT-SCAN, commits `ec9f3b8`+`a0f13e4`) deployed and exercised in 4
+consecutive live prod reviews:
+
+- **Reference scan: 0 dangling references — correct.** SOC_SOW_Testing.docx's
+  internal references (Appendix A, Appendix B) all resolve to real headings;
+  the dangling-reference capability is proven by 10 unit tests
+  (`test_references.py`), including the guideline §4 scenario (missing
+  Appendix C fires `evidence_type='reference'` with the referring sentence).
+- **Conflict scan: 0 contradictions in ~37-42s, no failures.** The test doc
+  contains deliberate *ambiguities* but arguably no hard *contradictions*,
+  so 0 is plausible — quality on a genuinely conflicting document is
+  unproven. Parked per the plan's abort criterion; revisit with a synthetic
+  conflicting doc before trusting it.
+- **Persona recall: confirmed unchanged.** 4 rerun attempts 20:42-21:04 UTC
+  each lost a different agent to a 60s+120s double timeout (OpenRouter
+  latency degradation at that hour — lesson: don't measure during degraded
+  provider latency). A clean **6/6 run at 21:08 UTC** (review for doc
+  `2d2dc7ba`, 74 findings) reproduces the Phase A pattern: all 4
+  previously-missed rows (TI operational detail, IR lifecycle, log-inventory
+  owner/volume) fire again; the 93.1% strict-recall figure stands post-C.
+
+**Phase C exit criteria: PASS** (suite green incl. reference/conflict tests;
+detectors live in prod; §4 scenario covered by regression tests; 6/6
+confirmation run clean).
+
+## Phase D verification — 2026-07-23
+
+Same 21:08 UTC review (first post-migration-028): `audit_meta` populated in
+the API response — parsed-text SHA-256, `models_used` = z-ai/glm-5.2 for
+all 6 agents (actual per-agent capture, not config echo),
+`rules_version` 2026-07-23.1, UTC timestamp. `app_git_sha` is "unknown"
+until the VPS compose passes a GIT_SHA env/build arg — cosmetic, noted.
+**Phase D exit criteria: PASS.**
+
 ## Next actions (not done in this session)
 
 - Tighten the 4 rule-engine section detectors' heading synonyms.

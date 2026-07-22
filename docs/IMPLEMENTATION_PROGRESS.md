@@ -39,6 +39,30 @@ live pipeline vs the 29-row ground truth in
 72.4%, lenient 86.2%, effective precision ≈93%. Misses + rule-engine false
 positives and fix list in `docs/planning/ACCURACY_BASELINE_2026_07_22.md`.
 
+**Guideline feasibility plan — EXECUTED 2026-07-23** (all 4 phases of
+`docs/phases/prompts/GUIDELINE_FEASIBILITY_PLAN_PROMPT.md`):
+
+- **Phase A** (measured-defect fixes): section-presence matching normalizes
+  numbered headings + word-boundary aliases (root cause of the 4 FPs);
+  self-negating-finding filter at orchestrator ingestion; 13 guideline §5
+  rules SOW-021..033 (keyword checks, org-disableable); ScopeReviewer
+  per-service-line decomposition + DeliveryReviewer appendix-table audit.
+  **Re-measured: strict recall 72.4% → 93.1%, rule FPs 4 → 0, precision
+  ≈97%** (second dated measurement in ACCURACY_BASELINE_2026_07_22.md).
+- **Phase B** (typed evidence, migration 027): findings gained
+  evidence_type/page/line/anchors/matched_text (nullable). Rule engine
+  stamps missing_section, ambiguous scan stamps location+matched_text,
+  agent quotes derive location at ingestion. UI tag + quoted block.
+- **Phase C**: broken-reference detector (`app/rules/references.py`,
+  REF-SCAN toggle) + LLM ConflictDetector (separate orchestrator step,
+  CONFLICT-SCAN toggle, degrades to [] on failure).
+- **Phase D** (migration 028): reviews.audit_meta JSONB — parsed-text
+  SHA-256, models actually used per agent, RULES_VERSION, git SHA;
+  surfaced in API + results footer + PDF footer.
+
+Plan's "Excludes" honored: no multi-backend AI, no customer-managed keys,
+no dual review, no explainability sub-scores.
+
 **Scoring & reporting:** 7-category weighted scoring, severity now actually
 read from findings (was keyword-matching only — fixed), PDF report
 generation via `xhtml2pdf` (was a placeholder), stored-XSS fix in HTML
