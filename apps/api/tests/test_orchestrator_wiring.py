@@ -330,6 +330,55 @@ class TestFindingDeduplication:
         merged = orchestrator._merge_findings(results)
         assert len(merged["findings"]) == 1
 
+    @pytest.mark.parametrize(
+        "description",
+        [
+            # Hedged compliance question = real gap finding, must survive.
+            "The SOW does not state whether the vendor is compliant with ISO 27001.",
+            # Clean-bill clause followed by a contrast carrying a real issue.
+            "No issues found in section 3 but section 4 lacks a termination clause.",
+        ],
+    )
+    def test_hedged_or_contrasted_findings_survive_the_filter(self, description):
+        orchestrator = ReviewOrchestrator()
+        results = [
+            _result(
+                "LegalReviewer",
+                [
+                    {
+                        "type": "gap",
+                        "severity": "major",
+                        "description": description,
+                        "evidence": "Relevant section text long enough to matter here.",
+                        "recommendation": "Address the gap.",
+                        "confidence": 0.7,
+                    }
+                ],
+            ),
+        ]
+        merged = orchestrator._merge_findings(results)
+        assert len(merged["findings"]) == 1, f"wrongly dropped: {description!r}"
+
+    def test_unhedged_clean_bill_is_dropped(self):
+        orchestrator = ReviewOrchestrator()
+        results = [
+            _result(
+                "SecurityReviewer",
+                [
+                    {
+                        "type": "compliance_check",
+                        "severity": "low",
+                        "description": "The document is fully compliant with the stated ISO 27001 requirement.",
+                        "evidence": "Compliance clause quoted verbatim from section 9.",
+                        "recommendation": "None.",
+                        "confidence": 0.9,
+                    }
+                ],
+            ),
+        ]
+        merged = orchestrator._merge_findings(results)
+        assert merged["findings"] == []
+
     def test_short_or_missing_evidence_is_never_merged(self):
         """Findings with no evidence, or evidence too short to compare
         reliably, must never be merged -- avoids false merges on generic

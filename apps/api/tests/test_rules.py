@@ -393,6 +393,16 @@ def test_section_presence_still_fires_when_truly_absent(executor, rule_id):
     assert violation is not None, f"{rule_id} stopped detecting genuinely missing sections"
 
 
+def test_compound_heading_does_not_satisfy_presence_rule(executor):
+    """Adversarial-review regression (2026-07-23): "Out-of-Scope Items" is
+    about the section's ABSENCE -- it must not satisfy SOW-002's "Scope"
+    alias and silently pass a critical presence rule."""
+    violation = executor._check_section_presence(
+        _builtin_rule("SOW-002"), {"4. Exclusions and Out-of-Scope Items": "x"}
+    )
+    assert violation is not None
+
+
 def test_word_count_uses_normalized_heading_lookup(executor):
     """SOW-008's "Scope" alias must find the content under a numbered
     "3. Scope of Services" heading and check its word count."""

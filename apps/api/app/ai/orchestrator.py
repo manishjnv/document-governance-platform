@@ -26,18 +26,33 @@ _SEVERITY_RANK = {"critical": 4, "major": 3, "medium": 2, "low": 1}
 # ...requirement is not applicable to this SOW", shipped to a real user,
 # 2026-07-22 accuracy baseline). The prompts now say to omit these, but the
 # model is probabilistic -- this deterministic backstop drops them before
-# persistence. "is compliant" deliberately does not match "is not compliant".
-_SELF_NEGATING = re.compile(
-    r"\b(not applicable|no issues? (?:were |was )?(?:found|identified)"
+# persistence. Two tiers (adversarial review, 2026-07-23): direct phrases
+# always drop; "clean bill" phrases ("no issues found", "is compliant") drop
+# only when the description contains no hedge or contrast language -- "does
+# not state whether the vendor is compliant" and "no issues in section 3 BUT
+# section 4 lacks X" are real findings that must survive.
+_SELF_NEGATING_DIRECT = re.compile(
+    r"\b(not applicable|does not apply|no action (?:is )?(?:required|needed))\b",
+    re.IGNORECASE,
+)
+_SELF_NEGATING_CLEAN_BILL = re.compile(
+    r"\b(no issues? (?:were |was )?(?:found|identified)"
     r"|no concerns? (?:were |was )?(?:found|identified)"
-    r"|does not apply|is (?:fully )?compliant)\b",
+    r"|is (?:fully )?compliant)\b",
+    re.IGNORECASE,
+)
+_HEDGE_OR_CONTRAST = re.compile(
+    r"\b(but|however|although|except|whether|if|unclear|not state[ds]?"
+    r"|lacks?|missing|absent|undefined)\b",
     re.IGNORECASE,
 )
 
 
 def _is_self_negating(finding: dict) -> bool:
     head = str(finding.get("description") or finding.get("title") or "")[:300]
-    return bool(_SELF_NEGATING.search(head))
+    if _SELF_NEGATING_DIRECT.search(head):
+        return True
+    return bool(_SELF_NEGATING_CLEAN_BILL.search(head)) and not _HEDGE_OR_CONTRAST.search(head)
 
 
 @dataclass

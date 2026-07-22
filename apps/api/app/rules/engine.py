@@ -25,8 +25,11 @@ def _normalize_heading(heading: str) -> str:
 def _alias_in_headings(alias: str, normalized_headings: list[str]) -> bool:
     """True if the alias appears (word-boundary) inside any heading, so the
     alias "Scope" matches the heading "3. Scope of Services" but not
-    "microscope calibration"."""
-    pattern = re.compile(r"(?<!\w)" + re.escape(alias.strip().lower()) + r"(?!\w)")
+    "microscope calibration". Hyphens count as word characters here so a
+    compound like "Out-of-Scope Items" does NOT satisfy a "Scope" alias --
+    that heading is about the section's absence, and letting it match would
+    silently pass a critical presence rule (adversarial review, 2026-07-23)."""
+    pattern = re.compile(r"(?<![\w-])" + re.escape(alias.strip().lower()) + r"(?![\w-])")
     return any(pattern.search(h) for h in normalized_headings)
 
 
