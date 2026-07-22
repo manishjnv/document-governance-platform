@@ -44,6 +44,8 @@ interface Finding {
   recommendation: string;
   description: string;
   section_ref: string | null;
+  evidence_type: string | null;
+  matched_text: string | null;
   status: string;
   risk_area: string;
 }
@@ -627,6 +629,11 @@ export default function ResultsPage() {
                             <Check size={9} strokeWidth={3} /> Fixed
                           </span>
                         )}
+                        {finding.evidence_type && (
+                          <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide px-1 py-0.5 rounded leading-none border border-muted-foreground/30 text-muted-foreground">
+                            {finding.evidence_type.replace(/_/g, ' ')}
+                          </span>
+                        )}
                         <h3 className={cn('font-semibold text-xs truncate', fixed && 'line-through')}>
                           {title}
                         </h3>
@@ -660,6 +667,14 @@ export default function ResultsPage() {
                           <h4 className="font-semibold mb-1 text-xs uppercase tracking-wide text-muted-foreground">Description</h4>
                           <p>{finding.description}</p>
                         </div>
+                        {finding.matched_text && (
+                          <div>
+                            <h4 className="font-semibold mb-1 text-xs uppercase tracking-wide text-muted-foreground">Document Text</h4>
+                            <blockquote className="border-l-2 border-muted-foreground/30 pl-2 italic text-muted-foreground">
+                              {finding.matched_text}
+                            </blockquote>
+                          </div>
+                        )}
                         <div>
                           <h4 className="font-semibold mb-1 text-xs uppercase tracking-wide text-muted-foreground">Recommendation</h4>
                           <p>{finding.recommendation}</p>

@@ -202,6 +202,8 @@ class ReviewOrchestrator:
                     "description": v.description,
                     "evidence": v.evidence,
                     "recommendation": v.recommendation,
+                    "evidence_type": getattr(v, "evidence_type", None),
+                    "matched_text": getattr(v, "matched_text", None),
                 }
                 for v in rule_violations
             ],

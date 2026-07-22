@@ -45,7 +45,14 @@ class RuleSeverity(str, Enum):
 
 @dataclass
 class RuleViolation:
-    """A rule violation found during validation."""
+    """A rule violation found during validation.
+
+    evidence_type/matched_text: typed evidence (migration 027, guideline
+    §1/§6). Every builtin rule check is an absence check, so validate()
+    stamps 'missing_section'; producers with a concrete quote (ambiguous-
+    language scan, reference detector) set 'location'/'reference' plus
+    matched_text themselves.
+    """
 
     rule_id: str
     rule_name: str
@@ -53,6 +60,8 @@ class RuleViolation:
     description: str
     evidence: Optional[str] = None
     recommendation: Optional[str] = None
+    evidence_type: Optional[str] = None
+    matched_text: Optional[str] = None
 
 
 @dataclass
@@ -135,6 +144,8 @@ class RuleExecutor:
                     continue
 
                 if violation:
+                    if violation.evidence_type is None:
+                        violation.evidence_type = "missing_section"
                     violations.append(violation)
 
             except Exception as e:

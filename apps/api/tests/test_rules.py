@@ -238,6 +238,8 @@ async def test_validate_document_with_violations(executor):
     assert len(violations) == 1
     assert violations[0].rule_id == "RULE-003"
     assert violations[0].severity == RuleSeverity.CRITICAL
+    # Typed evidence (migration 027): every builtin absence check is stamped.
+    assert violations[0].evidence_type == "missing_section"
 
 
 def test_rule_document_type_filtering(executor):

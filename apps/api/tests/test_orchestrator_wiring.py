@@ -72,6 +72,12 @@ async def test_ambiguous_language_findings_land_in_rule_violations():
     assert "AMBIG-tbd" in ambig_ids
     assert "AMBIG-promptly" in ambig_ids
 
+    # Typed evidence (migration 027): the ambiguous-language scan quotes the
+    # offending sentence, so it must carry location evidence + matched_text.
+    ambig = next(v for v in result.rule_violations if v["rule_id"] == "AMBIG-tbd")
+    assert ambig["evidence_type"] == "location"
+    assert "TBD" in ambig["matched_text"]
+
 
 @pytest.mark.asyncio
 async def test_ambiguous_language_scan_handles_empty_text_without_crashing():

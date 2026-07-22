@@ -23,6 +23,15 @@ class FindingCreate(BaseModel):
     description: str = Field(..., min_length=1)
     evidence: Optional[str] = None
     section_ref: Optional[str] = Field(None, max_length=255)
+    evidence_type: Optional[str] = Field(
+        None, pattern="^(location|missing_section|cross_document|conflict|reference)$"
+    )
+    page: Optional[int] = None
+    line_start: Optional[int] = None
+    line_end: Optional[int] = None
+    anchor_before: Optional[str] = Field(None, max_length=255)
+    anchor_after: Optional[str] = Field(None, max_length=255)
+    matched_text: Optional[str] = None
     severity: Severity
     confidence: Decimal = Field(Decimal("100.00"), ge=0, le=100)
     business_impact: Optional[BusinessImpact] = None
@@ -66,6 +75,13 @@ class FindingRead(BaseModel):
     description: str
     evidence: Optional[str] = None
     section_ref: Optional[str] = None
+    evidence_type: Optional[str] = None
+    page: Optional[int] = None
+    line_start: Optional[int] = None
+    line_end: Optional[int] = None
+    anchor_before: Optional[str] = None
+    anchor_after: Optional[str] = None
+    matched_text: Optional[str] = None
     severity: Severity
     confidence: Decimal
     business_impact: Optional[BusinessImpact] = None

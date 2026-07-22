@@ -284,8 +284,25 @@ async def trigger_review(
         # iterating agent_info["findings"] directly was the bug: that's the
         # raw per-agent JSON dict, not a list, so it yielded dict KEYS as
         # strings instead of finding objects)
+        def _tolerant_int(value):
+            # Agent JSON is untrusted: "3", 3.0, "n/a" all show up. Null on
+            # anything non-numeric -- evidence fields must never fail a review.
+            try:
+                return int(value) if value is not None else None
+            except (TypeError, ValueError):
+                return None
+
+        _EVIDENCE_TYPES = {"location", "missing_section", "cross_document", "conflict", "reference"}
+
         for finding_data in orchestrated_result.merged_findings.get("findings", []):
             finding_type = finding_data.get("type", "unknown")
+            agent_evidence = finding_data.get("evidence")
+            evidence_type = finding_data.get("evidence_type")
+            if evidence_type not in _EVIDENCE_TYPES:
+                # Derive rather than prompt for it: an agent quoting document
+                # text is a 'location' evidence; page/line stay null (DOCX
+                # pagination is unreliable -- page_count=1 bug, 2026-07-21).
+                evidence_type = "location" if agent_evidence else None
             finding = Finding(
                 finding_id=uuid4(),
                 org_id=doc.org_id,
@@ -306,6 +323,12 @@ async def trigger_review(
                 severity=finding_data.get("severity", "medium"),
                 confidence=int((finding_data.get("confidence", 0.5) * 100)),
                 recommendation=finding_data.get("recommendation", ""),
+                evidence_type=evidence_type,
+                page=_tolerant_int(finding_data.get("page")),
+                line_start=_tolerant_int(finding_data.get("line_start")),
+                line_end=_tolerant_int(finding_data.get("line_end")),
+                matched_text=finding_data.get("matched_text")
+                or (agent_evidence if evidence_type == "location" else None),
             )
 
             db.add(finding)
@@ -341,6 +364,8 @@ async def trigger_review(
                 severity=violation.get("severity", "medium"),
                 confidence=100,
                 recommendation=violation.get("recommendation", ""),
+                evidence_type=violation.get("evidence_type"),
+                matched_text=violation.get("matched_text"),
             )
 
             db.add(finding)
@@ -479,6 +504,11 @@ async def get_review(
                 "description": f.description,
                 "evidence": f.evidence,
                 "section_ref": f.section_ref,
+                "evidence_type": f.evidence_type,
+                "page": f.page,
+                "line_start": f.line_start,
+                "line_end": f.line_end,
+                "matched_text": f.matched_text,
                 "severity": f.severity,
                 "confidence": int(f.confidence),
                 "recommendation": f.recommendation,

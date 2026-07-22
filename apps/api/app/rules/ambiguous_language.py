@@ -108,6 +108,8 @@ def scan_ambiguous_language(
                         + ". Context-dependent -- flagged for human triage, not necessarily a defect."
                     ),
                     evidence=matched_sentence,
+                    evidence_type="location",
+                    matched_text=matched_sentence,
                     recommendation=(
                         "Replace with a specific, quantified, or dated commitment "
                         "(e.g., a defined SLA, a named list instead of 'as needed', "

@@ -6,7 +6,7 @@ import uuid
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Optional
 
-from sqlalchemy import CheckConstraint, ForeignKey, Numeric, String, Text
+from sqlalchemy import CheckConstraint, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -41,6 +41,11 @@ class Finding(Base, TimestampMixin, SoftDeleteMixin):
             "status IN ('open', 'acknowledged', 'resolved', 'dismissed')",
             name="ck_findings_status",
         ),
+        CheckConstraint(
+            "evidence_type IS NULL OR evidence_type IN "
+            "('location', 'missing_section', 'cross_document', 'conflict', 'reference')",
+            name="ck_findings_evidence_type",
+        ),
     )
 
     finding_id: Mapped[uuid.UUID] = mapped_column(
@@ -62,6 +67,17 @@ class Finding(Base, TimestampMixin, SoftDeleteMixin):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     evidence: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     section_ref: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
+    # Typed evidence (migration 027, guideline §1/§6). All nullable -- page/
+    # line numbers stay null for DOCX until pagination is fixed (page_count
+    # returns 1 for DOCX, observed 2026-07-21).
+    evidence_type: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    page: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    line_start: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    line_end: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    anchor_before: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    anchor_after: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    matched_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     severity: Mapped[str] = mapped_column(String(50), nullable=False)
     confidence: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False, default=Decimal("100.00"))
