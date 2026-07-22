@@ -70,8 +70,12 @@ def scan_references(
         if m.group(1):  # Appendix/Annex/Exhibit/Schedule <letter-or-number>
             kind, ident = m.group(1), m.group(2)
             label = f"{kind.lower()} {ident.lower()}"
-            exists = any(label in h for h in headings_norm) or any(
-                label in h for h in headings_raw
+            # Word-boundary, not substring: "appendix a" must not resolve
+            # against a heading for "Appendix AB" (adversarial review
+            # 2026-07-23 -- same bug class engine._alias_in_headings fixed).
+            label_pattern = re.compile(r"(?<![\w-])" + re.escape(label) + r"(?![\w-])")
+            exists = any(
+                label_pattern.search(h) for h in (*headings_norm, *headings_raw)
             )
         else:  # Section <number>
             kind, ident = m.group(3), m.group(4)

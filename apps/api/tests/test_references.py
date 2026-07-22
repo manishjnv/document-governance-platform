@@ -59,6 +59,14 @@ def test_duplicate_dangling_references_reported_once():
     assert len(violations) == 1
 
 
+def test_similar_heading_does_not_resolve_reference():
+    """Adversarial-review regression: a heading for "Appendix AB" must not
+    make a reference to the nonexistent "Appendix A" look resolved."""
+    sections = {"Appendix AB - Extended Terms": "x"}
+    violations = scan_references("See Appendix A for the log sources.", sections)
+    assert [v.rule_id for v in violations] == ["REF-appendix-a"]
+
+
 def test_empty_text_returns_empty():
     assert scan_references("", _SECTIONS) == []
 
