@@ -11,6 +11,24 @@ from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
 
+# Real documents number their headings ("3. Scope of Services", "1.2 Purpose",
+# "IV) Terms") -- strip any leading numbering/lettering so alias matching
+# compares actual section names. Measured 2026-07-22: exact-key matching made
+# 4 section-presence rules fire on sections that plainly existed.
+_HEADING_NUM_PREFIX = re.compile(r"^\s*(?:(?:\d+(?:\.\d+)*|[ivxlc]+|[a-z])[\.\)]\s*)+", re.IGNORECASE)
+
+
+def _normalize_heading(heading: str) -> str:
+    return _HEADING_NUM_PREFIX.sub("", heading).strip().lower()
+
+
+def _alias_in_headings(alias: str, normalized_headings: list[str]) -> bool:
+    """True if the alias appears (word-boundary) inside any heading, so the
+    alias "Scope" matches the heading "3. Scope of Services" but not
+    "microscope calibration"."""
+    pattern = re.compile(r"(?<!\w)" + re.escape(alias.strip().lower()) + r"(?!\w)")
+    return any(pattern.search(h) for h in normalized_headings)
+
 
 class RuleSeverity(str, Enum):
     """Rule severity levels."""
@@ -144,11 +162,11 @@ class RuleExecutor:
             return None
 
         match_mode = rule.params.get("match", "any")
-        present = {s.lower() for s in sections.keys()}
+        present = [_normalize_heading(s) for s in sections.keys()]
 
         if match_mode == "all":
             for section in required_sections:
-                if section.lower() not in present:
+                if not _alias_in_headings(section, present):
                     return RuleViolation(
                         rule_id=rule.rule_id,
                         rule_name=rule.name,
@@ -159,7 +177,7 @@ class RuleExecutor:
                     )
             return None
 
-        if not any(section.lower() in present for section in required_sections):
+        if not any(_alias_in_headings(section, present) for section in required_sections):
             aliases = "', '".join(required_sections)
             return RuleViolation(
                 rule_id=rule.rule_id,
@@ -194,7 +212,16 @@ class RuleExecutor:
         min_words = rule.params.get("min_words", 50)
 
         for section in required_sections:
-            section_text = sections.get(section.lower())
+            # Same normalized word-boundary matching as _check_section_presence,
+            # so "Scope" finds the content of a "3. Scope of Services" heading.
+            section_text = next(
+                (
+                    content
+                    for heading, content in sections.items()
+                    if _alias_in_headings(section, [_normalize_heading(heading)])
+                ),
+                None,
+            )
             if section_text is None:
                 continue  # this alias isn't the one the document used
 

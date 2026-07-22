@@ -352,6 +352,92 @@ def test_section_presence_match_all_still_requires_every_entry(executor):
     assert executor._check_section_presence(rule, {"scope": "x"}) is not None
 
 
+def _builtin_rule(rule_id):
+    from app.rules.builtin import get_builtin_rules
+
+    d = next(r for r in get_builtin_rules() if r["rule_id"] == rule_id)
+    return Rule(
+        rule_id=d["rule_id"],
+        name=d["name"],
+        description=d["description"],
+        document_types=d["document_types"],
+        severity=RuleSeverity(d["severity"]),
+        check_type=d["check_type"],
+        params=d["params"],
+        recommendation=d["recommendation"],
+    )
+
+
+# Regression tests for the 4 measured false positives (2026-07-22 accuracy
+# baseline): SOC_SOW_Testing.docx's real numbered headings must satisfy the
+# section-presence rules that fired "missing section" on them in production.
+_SOC_SOW_SECTIONS = {
+    "1. Purpose": "x",
+    "3. Scope of Services": "x",
+    "4. Deliverables": "x",
+    "8. Assumptions": "x",
+}
+
+
+@pytest.mark.parametrize("rule_id", ["SOW-001", "SOW-002", "SOW-003", "SOW-007"])
+def test_numbered_real_headings_satisfy_section_presence(executor, rule_id):
+    violation = executor._check_section_presence(_builtin_rule(rule_id), _SOC_SOW_SECTIONS)
+    assert violation is None, f"{rule_id} false-positived on a section that exists"
+
+
+@pytest.mark.parametrize("rule_id", ["SOW-001", "SOW-002", "SOW-003", "SOW-007"])
+def test_section_presence_still_fires_when_truly_absent(executor, rule_id):
+    violation = executor._check_section_presence(
+        _builtin_rule(rule_id), {"5. Service Levels": "x", "7. Governance": "x"}
+    )
+    assert violation is not None, f"{rule_id} stopped detecting genuinely missing sections"
+
+
+def test_word_count_uses_normalized_heading_lookup(executor):
+    """SOW-008's "Scope" alias must find the content under a numbered
+    "3. Scope of Services" heading and check its word count."""
+    rule = _builtin_rule("SOW-008")
+    violation = executor._check_word_count(rule, {"3. Scope of Services": "too short"}, "")
+    assert violation is not None
+    assert "words" in violation.evidence
+
+
+# SOW-021..SOW-033: guideline §5 coverage rules. One case per rule: a doc
+# lacking the concept fires, a doc containing a synonym phrasing doesn't.
+_GUIDELINE_RULE_CASES = {
+    "SOW-021": "Phase 1 milestone: platform onboarding complete by 2026-03-01.",
+    "SOW-022": "Service performance is tracked against each KPI monthly.",
+    "SOW-023": "A service credit of 5% applies per missed SLA target.",
+    "SOW-024": "Ownership is defined in the RACI matrix in Appendix C.",
+    "SOW-025": "The service maintains SOC 2 Type II compliance throughout the term.",
+    "SOW-026": "Log data retention is 13 months in hot storage.",
+    "SOW-027": "A transition-out plan with knowledge transfer applies at contract end.",
+    "SOW-028": "Disaster recovery targets: RTO 4 hours, RPO 15 minutes.",
+    "SOW-029": "Business continuity arrangements follow the vendor BCP.",
+    "SOW-030": "All work product and intellectual property vests in the Customer.",
+    "SOW-031": "Fees are invoiced monthly in arrears per the payment schedule below.",
+    "SOW-032": "Customer shall provide two security analysts during onboarding.",
+    "SOW-033": "A glossary of terms and acronyms appears in Appendix D.",
+}
+
+_TEXT_WITHOUT_ANY_CONCEPT = (
+    "The vendor will deliver managed monitoring services from its delivery "
+    "center. Work begins after contract signature and continues for the term."
+)
+
+
+@pytest.mark.parametrize("rule_id", sorted(_GUIDELINE_RULE_CASES))
+def test_guideline_rule_fires_when_concept_absent(executor, rule_id):
+    violation = executor._check_keyword(_builtin_rule(rule_id), _TEXT_WITHOUT_ANY_CONCEPT)
+    assert violation is not None, f"{rule_id} should fire on a doc lacking the concept"
+
+
+@pytest.mark.parametrize("rule_id", sorted(_GUIDELINE_RULE_CASES))
+def test_guideline_rule_silent_when_synonym_present(executor, rule_id):
+    violation = executor._check_keyword(_builtin_rule(rule_id), _GUIDELINE_RULE_CASES[rule_id])
+    assert violation is None, f"{rule_id} false-positived on a doc containing the concept"
+
+
 def test_rule_recommendation_guidance(executor):
     """T-910: Test rule recommendations are clear and actionable."""
     rule = Rule(
