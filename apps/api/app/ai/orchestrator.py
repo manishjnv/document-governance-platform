@@ -3,6 +3,7 @@
 import asyncio
 import difflib
 import logging
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Optional
@@ -19,6 +20,24 @@ from app.ai.agent import (
 logger = logging.getLogger(__name__)
 
 _SEVERITY_RANK = {"critical": 4, "major": 3, "medium": 2, "low": 1}
+
+# Self-negating findings: an agent occasionally emits a "finding" whose own
+# description says there is nothing wrong ("Missing Accessibility Standard --
+# ...requirement is not applicable to this SOW", shipped to a real user,
+# 2026-07-22 accuracy baseline). The prompts now say to omit these, but the
+# model is probabilistic -- this deterministic backstop drops them before
+# persistence. "is compliant" deliberately does not match "is not compliant".
+_SELF_NEGATING = re.compile(
+    r"\b(not applicable|no issues? (?:were |was )?(?:found|identified)"
+    r"|no concerns? (?:were |was )?(?:found|identified)"
+    r"|does not apply|is (?:fully )?compliant)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_self_negating(finding: dict) -> bool:
+    head = str(finding.get("description") or finding.get("title") or "")[:300]
+    return bool(_SELF_NEGATING.search(head))
 
 
 @dataclass
@@ -342,6 +361,12 @@ class ReviewOrchestrator:
                 # Extract findings from agent result
                 if "findings" in result.findings:
                     for finding in result.findings["findings"]:
+                        if _is_self_negating(finding):
+                            logger.info(
+                                f"Dropped self-negating finding from {result.agent_name}: "
+                                f"{str(finding.get('title') or finding.get('description'))[:80]}"
+                            )
+                            continue
                         finding["source_agent"] = result.agent_name
                         raw_findings.append(finding)
 

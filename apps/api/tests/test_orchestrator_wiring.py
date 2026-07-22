@@ -273,6 +273,63 @@ class TestFindingDeduplication:
 
         assert len(merged["findings"]) == 2
 
+    def test_self_negating_finding_is_dropped_before_persistence(self):
+        """2026-07-22 baseline FP: SecurityReviewer emitted "Missing
+        Accessibility Standard" whose own description said the requirement
+        is not applicable. Such findings must be filtered at ingestion."""
+        orchestrator = ReviewOrchestrator()
+        results = [
+            _result(
+                "SecurityReviewer",
+                [
+                    {
+                        "type": "missing_accessibility",
+                        "severity": "low",
+                        "description": "Accessibility standard (Section 508) is not applicable to this SOW as there is no public-facing deliverable.",
+                        "evidence": "No public-facing deliverable described.",
+                        "recommendation": "None needed.",
+                        "confidence": 0.6,
+                    },
+                    {
+                        "type": "missing_breach_notification",
+                        "severity": "major",
+                        "description": "No breach notification timeline is defined.",
+                        "evidence": "Security section covers monitoring only, no incident notification clause.",
+                        "recommendation": "Add a 72-hour breach notification requirement.",
+                        "confidence": 0.7,
+                    },
+                ],
+            ),
+        ]
+
+        merged = orchestrator._merge_findings(results)
+
+        assert len(merged["findings"]) == 1
+        assert merged["findings"][0]["type"] == "missing_breach_notification"
+
+    def test_negated_compliance_finding_is_kept(self):
+        """"is not compliant" is a real problem, not a self-negation --
+        the filter must not over-match."""
+        orchestrator = ReviewOrchestrator()
+        results = [
+            _result(
+                "SecurityReviewer",
+                [
+                    {
+                        "type": "compliance_gap",
+                        "severity": "critical",
+                        "description": "The data-handling clause is not compliant with the stated ISO 27001 requirement.",
+                        "evidence": "Data may be stored in vendor-selected regions without restriction.",
+                        "recommendation": "Constrain storage regions.",
+                        "confidence": 0.8,
+                    }
+                ],
+            ),
+        ]
+
+        merged = orchestrator._merge_findings(results)
+        assert len(merged["findings"]) == 1
+
     def test_short_or_missing_evidence_is_never_merged(self):
         """Findings with no evidence, or evidence too short to compare
         reliably, must never be merged -- avoids false merges on generic
