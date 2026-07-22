@@ -1,6 +1,6 @@
 # EDGP Implementation Progress
 
-**Last Updated:** 2026-07-20 10:54 GMT+5:30
+**Last Updated:** 2026-07-22 17:30 GMT+5:30
 **Current Phase:** Phase 1-2 core product complete + deployed live; pre-launch fix plan Steps 1-2 done, Step 3 pending SME. Document Lifecycle & Multi-Project plan (Projects/Versioning/Fix-verification) — all three phases implemented, deployed, mandatory-project + fuzzy name matching added on top. Auth is now seamless Google Sign-In + email-OTP only (no password anywhere in the real UI; unrecognized emails auto-create an account). New file types (.doc/.xlsx/.xls/.csv) supported. Enterprise SEO strategy written, a live Cloudflare misconfiguration blocking all AI crawlers was found and fixed, and **SEO Phase 1 (Foundation) is implemented and deployed live** (real marketing homepage/product/pricing/about/contact/sitemap/schema -- only GSC/GA4/Lighthouse remain, blocked on dashboard access). Full detail: `docs/phases/summaries/SESSION_HANDOFF_2026_07_20_LIFECYCLE_SSO_SEO.md`.
 
 > Previous version of this doc (dated 07-17 02:00, showing "14% overall") was
@@ -32,6 +32,12 @@ Rule engine (20 SOW rules + 7 RFP rules). RFP is a first-class
 `deepseek-chat` default; fixed a `max_tokens=2000` truncation bug that
 was silently breaking 3 of 5 candidate models. Full benchmark results
 and rationale in `docs/planning/AI_MODEL_ROUTING.md`.
+
+**Accuracy baseline (2026-07-22):** first measured precision/recall of the
+live pipeline vs the 29-row ground truth in
+`docs/sample/SOW_Sample/SOW_Review_Training_Guideline.md` — strict recall
+72.4%, lenient 86.2%, effective precision ≈93%. Misses + rule-engine false
+positives and fix list in `docs/planning/ACCURACY_BASELINE_2026_07_22.md`.
 
 **Scoring & reporting:** 7-category weighted scoring, severity now actually
 read from findings (was keyword-matching only — fixed), PDF report
