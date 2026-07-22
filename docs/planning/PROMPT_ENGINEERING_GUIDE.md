@@ -181,6 +181,16 @@ changes, all additive:
    appendix (it caught the shared-IR-specialist coverage gap). New `type`
    value `incomplete_inventory`.
 
+## 2026-07-23 (later same session) — ConflictDetector prompt (Phase C2)
+
+New `ConflictDetector` in `agent.py` — not a 7th persona; a separate
+orchestrator step (`_run_conflict_scan`, org-disableable via CONFLICT-SCAN)
+producing `evidence_type='conflict'` findings with both quotes. Prompt is
+deliberately narrow: contradictions only, both sides quoted verbatim,
+"empty list is a good answer" stated explicitly so it doesn't drift into
+duplicating the other reviewers' gap-finding. Mirrored to
+`prompts/conflict.md`.
+
 ## Changelog
 
 - **2026-07-20**: Confidence calibration rubric added to all 6 agents.

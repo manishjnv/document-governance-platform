@@ -16,6 +16,7 @@ sys.path.insert(0, str(REPO_ROOT / "apps" / "api"))
 
 from app.ai.agent import (  # noqa: E402
     CommercialReviewer,
+    ConflictDetector,
     DeliveryReviewer,
     LegalReviewer,
     PMOReviewer,
@@ -30,6 +31,9 @@ AGENTS = {
     "security": SecurityReviewer(),
     "pmo": PMOReviewer(),
     "legal": LegalReviewer(),
+    # Not a review persona -- the Phase C2 conflict scan (orchestrator step,
+    # org-disableable via CONFLICT-SCAN). Mirrored here like the others.
+    "conflict": ConflictDetector(),
 }
 
 

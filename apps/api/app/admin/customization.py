@@ -40,7 +40,11 @@ from app.scoring.algorithm import DocumentScorer
 logger = logging.getLogger(__name__)
 
 # Real built-in rule IDs (app/rules/builtin.py) -- validated against, not invented.
-VALID_RULE_IDS = {rule["rule_id"] for rule in get_builtin_rules()}
+# REF-SCAN / CONFLICT-SCAN: pseudo rule ids gating the broken-reference
+# detector (app/rules/references.py) and the LLM conflict scan
+# (orchestrator._run_conflict_scan) so both are org-disableable through the
+# same plumbing.
+VALID_RULE_IDS = {rule["rule_id"] for rule in get_builtin_rules()} | {"REF-SCAN", "CONFLICT-SCAN"}
 
 # Real AI reviewer agent names (app/ai/agent.py). All 6 concrete
 # ReviewAgent subclasses (Scope, Delivery, Commercial, Security, PMO,

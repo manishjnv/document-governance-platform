@@ -754,3 +754,45 @@ Provide your response as a JSON object with this structure:
             "type": "object",
             "required": ["legal_terms", "findings", "overall_confidence"],
         }
+
+
+class ConflictDetector(ReviewAgent):
+    """Within-document contradiction check (Phase C2, guideline §4 evidence
+    type 'conflict'). NOT one of the 6 review personas: the orchestrator runs
+    it as a separate, org-disableable step (pseudo rule id CONFLICT-SCAN) and
+    converts its output into rule-violation-shaped findings with both quotes
+    as evidence. Subclassing ReviewAgent only to reuse the OpenRouter client,
+    fallback chain, and JSON parsing."""
+
+    def __init__(self):
+        super().__init__("ConflictDetector")
+
+    def get_system_prompt(self, document_type: str = "SOW") -> str:
+        return """You are a contract-consistency checker. Your ONLY job is to find pairs of statements WITHIN this document that contradict each other -- dates, amounts, durations, SLAs, scope statements, or obligations that cannot both be true.
+
+Rules:
+- Only report genuine contradictions between two concrete statements you can quote verbatim. Two vague statements are not a conflict; a statement and its refinement are not a conflict.
+- Do NOT report missing information, ambiguity, or risks -- other reviewers handle those. If the document contains no contradictions, return an empty list. An empty list is a good, expected answer.
+- Quote BOTH sides exactly as written, with the section each quote came from.
+""" + _CONFIDENCE_CALIBRATION + """
+Provide your response as a JSON object with this structure:
+{
+    "conflicts": [
+        {
+            "section_a": "string",
+            "quote_a": "string (verbatim)",
+            "section_b": "string",
+            "quote_b": "string (verbatim)",
+            "explanation": "string (why these cannot both be true)",
+            "severity": "critical|major|medium|low",
+            "confidence": 0.0-1.0
+        }
+    ],
+    "overall_confidence": 0.0-1.0
+}"""
+
+    def get_output_schema(self) -> dict:
+        return {
+            "type": "object",
+            "required": ["conflicts", "overall_confidence"],
+        }

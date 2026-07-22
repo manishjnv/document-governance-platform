@@ -97,6 +97,7 @@ class ReviewOrchestrator:
             LegalReviewer(),
         ]
         self.initialized = False
+        self._conflict_detector = None  # lazy -- Phase C2, only if enabled
 
         # ponytail: evidence-text fuzzy match via stdlib difflib, not an
         # embedding model -- findings quote the document verbatim, so
@@ -159,13 +160,23 @@ class ReviewOrchestrator:
             document_text, document_type, sections or {}, enabled_rule_ids
         )
         ambiguous_task = self._run_ambiguous_language_scan(document_text, sections or {})
+        references_task = self._run_reference_scan(
+            document_text, sections or {}, enabled_rule_ids
+        )
 
-        all_tasks = agent_tasks + [rule_task, ambiguous_task]
-        all_results = await asyncio.gather(*all_tasks, return_exceptions=False)
+        conflict_task = self._run_conflict_scan(document_text, enabled_rule_ids)
 
-        # Split results: agents, rule-engine violations, ambiguous-language violations
-        results = [r for r in all_results[:-2] if r is not None]  # Agent results
-        rule_violations = (all_results[-2] or []) + (all_results[-1] or [])  # Rule + ambiguous-language
+        scan_tasks = [rule_task, ambiguous_task, references_task, conflict_task]
+        all_results = await asyncio.gather(
+            *agent_tasks, *scan_tasks, return_exceptions=False
+        )
+
+        # Split results: first len(agent_tasks) entries are agents, the rest
+        # are violation lists from the deterministic/LLM scans.
+        results = [r for r in all_results[: len(agent_tasks)] if r is not None]
+        rule_violations = [
+            v for scan in all_results[len(agent_tasks) :] for v in (scan or [])
+        ]
 
         # Determine overall status
         successful = sum(1 for r in results if r.error is None)
@@ -275,6 +286,94 @@ class ReviewOrchestrator:
 
         except Exception as e:
             logger.error(f"Ambiguous-language scan failed: {e}")
+            return []
+
+    async def _run_reference_scan(
+        self,
+        document_text: str,
+        sections: dict,
+        enabled_rule_ids: Optional[set[str]] = None,
+    ) -> list:
+        """Broken internal-reference detector (Phase C1, guideline §4).
+        Deterministic like the ambiguous-language scan, but org-disableable
+        via the REF-SCAN pseudo rule id."""
+        start_time = time.time()
+
+        try:
+            from app.rules.references import REF_SCAN_RULE_ID, scan_references
+
+            if enabled_rule_ids is not None and REF_SCAN_RULE_ID not in enabled_rule_ids:
+                return []
+
+            violations = scan_references(document_text, sections)
+
+            duration = time.time() - start_time
+            logger.info(
+                f"Reference scan complete: {len(violations)} dangling references in {duration:.1f}s"
+            )
+            return violations
+
+        except Exception as e:
+            logger.error(f"Reference scan failed: {e}")
+            return []
+
+    async def _run_conflict_scan(
+        self,
+        document_text: str,
+        enabled_rule_ids: Optional[set[str]] = None,
+    ) -> list:
+        """Within-document contradiction check (Phase C2) -- one extra LLM
+        call per review, org-disableable via CONFLICT-SCAN. Failures and
+        timeouts degrade to [] like every other scan; a conflict pass must
+        never take down a review."""
+        from app.ai.agent import ConflictDetector
+        from app.rules.engine import RuleSeverity, RuleViolation
+
+        if enabled_rule_ids is not None and "CONFLICT-SCAN" not in enabled_rule_ids:
+            return []
+
+        start_time = time.time()
+        try:
+            if self._conflict_detector is None:
+                self._conflict_detector = ConflictDetector()
+                await self._conflict_detector.initialize()
+
+            result = await asyncio.wait_for(
+                self._conflict_detector.review(document_text), timeout=120.0
+            )
+            conflicts = result.get("conflicts") or []
+
+            violations = []
+            for i, c in enumerate(conflicts, start=1):
+                if not (c.get("quote_a") and c.get("quote_b")):
+                    continue  # both quotes are the whole point -- drop halves
+                quotes = (
+                    f"{c.get('section_a', '?')}: \"{c['quote_a']}\" | "
+                    f"{c.get('section_b', '?')}: \"{c['quote_b']}\""
+                )
+                sev = str(c.get("severity", "major")).lower()
+                violations.append(
+                    RuleViolation(
+                        rule_id=f"CONFLICT-{i}",
+                        rule_name=f"Contradiction: {c.get('section_a', '?')} vs {c.get('section_b', '?')}"[:100],
+                        severity=RuleSeverity(sev) if sev in _SEVERITY_RANK else RuleSeverity.MAJOR,
+                        description=c.get("explanation", "Contradictory statements found."),
+                        evidence=quotes,
+                        recommendation="Reconcile the two statements so only one commitment stands.",
+                        evidence_type="conflict",
+                        matched_text=quotes,
+                    )
+                )
+
+            duration = time.time() - start_time
+            logger.info(f"Conflict scan complete: {len(violations)} contradictions in {duration:.1f}s")
+            return violations
+
+        except asyncio.TimeoutError:
+            logger.warning("Conflict scan timed out after 120s -- skipped")
+            return []
+        except Exception as e:
+            logger.error(f"Conflict scan failed: {e}")
             return []
 
     # T-409: agent timeout, plus one retry at a longer window (2026-07-20).
