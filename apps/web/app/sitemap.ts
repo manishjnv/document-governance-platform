@@ -19,7 +19,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/resources/glossary',
     ...GLOSSARY_ENTRIES.map((entry) => `/resources/glossary/${entry.slug}`),
     '/resources/blog',
-    ...BLOG_POSTS.map((post) => `/resources/blog/${post.slug}`),
+    // pendingReview posts are live at their URL but noindexed pending
+    // editorial sign-off -- keep them out of the sitemap until reviewed.
+    ...BLOG_POSTS.filter((post) => !post.pendingReview).map(
+      (post) => `/resources/blog/${post.slug}`
+    ),
   ];
 
   return routes.map((route) => ({

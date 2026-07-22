@@ -247,9 +247,14 @@ class ReviewOrchestrator:
     # each time) -- that's response-latency variance from the model
     # backend, not a per-agent prompt-length problem. Losing an entire
     # agent's findings to one slow response is a real accuracy cost, so
-    # one retry at 90s trades a bit of worst-case latency for not
-    # silently dropping a whole agent's output.
-    _AGENT_TIMEOUTS_SECONDS = (60.0, 90.0)
+    # one retry at a longer window trades worst-case latency for not
+    # silently dropping a whole agent's output. Retry window is 120s, not
+    # 90s: on a real 46-page federal contract (~30K input tokens),
+    # SecurityReviewer exhausted 60s+90s while LegalReviewer's successful
+    # retry ran ~65s -- large documents legitimately need the headroom.
+    # ponytail: fixed windows, not scaled-by-document-length; revisit if
+    # even 120s proves insufficient on real customer documents.
+    _AGENT_TIMEOUTS_SECONDS = (60.0, 120.0)
 
     async def _run_agent(
         self, agent, document_text: str, document_type: str = "SOW"

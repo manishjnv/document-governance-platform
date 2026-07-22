@@ -121,7 +121,7 @@ handled a genuinely hard real-world case (FAR-clause incorporation by
 reference in a real federal contract) without false-flagging terms that
 existed via reference rather than literal text.
 
-## Real test set status (2026-07-20)
+## Real test set status (2026-07-20, updated 2026-07-22)
 
 `docs/sample/` had 4 real RFP samples (`RFP_Sample/`) and ~90 SOW/RFP
 templates (`SOW_Template/`, `RFP_template/`) — mostly blank fill-in-the-
@@ -130,10 +130,29 @@ grading. **Added `docs/sample/Real_Federal_Contracts/`**: 4 real, awarded,
 filled US federal contracts sourced from USCIS's public contracts
 reading room (see that folder's README for provenance/caveats — real
 federal-contract formatting, not representative of a typical commercial
-SOW). This is the current best real-document source in the repo for
-accuracy work; still not the ≥10-doc set full launch-gate measurement
-needs, and still no real *commercial* (non-government) filled SOW/RFP
-exists in this repo.
+SOW). Still no real *commercial* (non-government) filled SOW/RFP in the
+repo, and still short of the ≥10-doc launch-gate set.
+
+**2026-07-21/22 — user-supplied hand-labeled ground truth now exists:**
+`docs/sample/SOW_Sample/SOW_Review_Training_Guideline.md` contains 29
+hand-labeled findings (SOW-001..SOW-029, each with section, page, line
+range, finding, recommendation, and severity) against
+`docs/sample/SOW_Sample/SOC_SOW_Testing.docx` (a commercial-style SOC
+services SOW — parses cleanly, 5.3K chars). It also specifies a target
+evidence model (evidence_type: location / missing_section /
+cross_document / conflict / reference; anchors; line-level citations)
+that goes beyond what the pipeline currently emits, plus an
+"Enterprise Trust Framework" section (positioning, auditability,
+compliance-mapping, multi-backend AI) that reads as product-direction
+input, not just test data. **This is the ground truth the scored
+Metrics 1.1/1.3 pass should run against first** — run the pipeline on
+`SOC_SOW_Testing.docx`, score findings against the 29 labels, and
+measure precision/recall/calibration for real (blocked only on the
+OpenRouter key limit as of 2026-07-20). The user also added several
+filled/real SOW PDFs to `SOW_Sample/` and `SOW_Template/` (AWS example
+SOWs, a 126-page SOW-drafting guide, etc.) — all parse cleanly except
+`SOW_Template/sample-statement-work.pdf` (6 pages, 95 chars extracted —
+image-only scan, the parser has no OCR; a known gap, not a regression).
 
 ## Changelog
 

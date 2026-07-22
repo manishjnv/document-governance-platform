@@ -3,6 +3,7 @@ import Script from 'next/script'
 import './globals.css'
 import { ServiceWorkerRegister } from '@/components/service-worker-register'
 import { InstallPrompt } from '@/components/install-prompt'
+import { CtaClickTracker } from '@/components/CtaClickTracker'
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
 
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to main content
         </a>
         <ServiceWorkerRegister />
+        {GA_MEASUREMENT_ID && <CtaClickTracker />}
         <main id="main-content">{children}</main>
         <InstallPrompt />
       </body>
