@@ -77,6 +77,54 @@ summarize past:
 - SecurityReviewer's "Missing Accessibility Standard" finding whose own text
   says accessibility is *not applicable* — should be suppressed, not emitted.
 
+## Second measurement — 2026-07-23 (post Phase A of GUIDELINE_FEASIBILITY_PLAN)
+
+After the Phase A fixes (section-presence matching normalization + synonyms,
+self-negating-finding filter, 13 guideline §5 rules SOW-021..033, ScopeReviewer
+per-service-line decomposition, DeliveryReviewer appendix-table audit — commits
+`0ea801f..08caf22`), review rerun on the VPS:
+review `f5ed3e51-ae33-4906-86d2-5c5a46f87663`, doc
+`58f0f7ad-b4e1-48b3-af53-63b988d4e2ca`, **6/6 agents, 79 findings**
+(60 agent + 18 rule + 1 ambiguous-language). Note: a first rerun attempt
+(review `311a8e14`) lost ScopeReviewer to a double timeout (OpenRouter latency
+variance) — measurement uses the 6/6 run.
+
+| Metric | 2026-07-22 | 2026-07-23 |
+|---|---|---|
+| Recall (strict) | 21/29 = 72.4% | **27/29 = 93.1%** |
+| Recall (lenient, incl. partials) | 25/29 = 86.2% | **29/29 = 100%** |
+| Rule-engine false positives | 4 | **0** |
+| Self-negating findings shipped | 1 | **0** |
+| Effective precision | ≈93% (68/73) | **≈97% (77/79)** |
+
+Movement on the previously-missed rows:
+
+- SOW-004 (TI operational detail) ❌→✅ — ScopeReviewer per-service
+  decomposition fired exactly as prompted (sources/enrichment/reporting).
+- SOW-006 (IR lifecycle) ❌→✅ — flagged missing lifecycle phases, critical.
+- SOW-025/026 (log inventory ownership/volume) ❌→✅ — DeliveryReviewer
+  "Incomplete Inventory" on Appendix A cites missing owner/status/volume
+  (GB/day, EPS) columns, satisfying both rows with one finding.
+- SOW-005 (hunt methodology) 🟡→✅, SOW-027 (shift allocation) 🟡→✅,
+  SOW-010 (service hours) stays ✅ with explicit coverage-hours language.
+
+Still not strict matches (both were 🟡 partial at baseline and remain so):
+
+- SOW-002 (infrastructure inventory incomplete) — only indirectly covered via
+  the Section 12 "critical business applications may be refined" scope-creep
+  finding; no agent flags the Customer Environment inventory itself.
+- SOW-020 (open-items prioritization process) — PMO flags undefined decision
+  authority (same as baseline); no finding explicitly demands a
+  prioritization/approval workflow for the open-items list.
+
+Remaining questionable findings (~2 of 79): SOW-008/SOW-009 word-count rules
+fire on sections whose prose lives partly in tables — borderline, not clearly
+wrong. The 4 heading-keyword FPs and the self-negating finding are gone.
+
+**Phase A exit criteria: PASS** (target was 4 FPs gone + strict recall ≥79%;
+measured 0 FPs, 93.1%). Already past the >90% strict-recall launch target for
+this document; next gate is after Phase C.
+
 ## Next actions (not done in this session)
 
 - Tighten the 4 rule-engine section detectors' heading synonyms.
