@@ -154,6 +154,33 @@ SOWs, a 126-page SOW-drafting guide, etc.) — all parse cleanly except
 `SOW_Template/sample-statement-work.pdf` (6 pages, 95 chars extracted —
 image-only scan, the parser has no OCR; a known gap, not a regression).
 
+## 2026-07-23 revision — measured-recall fixes (accuracy baseline follow-up)
+
+Triggered by `docs/planning/ACCURACY_BASELINE_2026_07_22.md`: 72.4% strict
+recall, all 4 strict misses being appendix/sub-section detail the agents
+summarize past, plus 1 self-negating finding shipped to a user. Three
+changes, all additive:
+
+1. **Shared "not-applicable → omit" instruction** appended to
+   `_CONFIDENCE_CALIBRATION` (the one seam already injected into all 6
+   prompts): if a checklist item is not applicable or has no issue, omit
+   it — findings are for problems only. Backstopped deterministically in
+   `orchestrator._merge_findings` (`_SELF_NEGATING` regex) because the
+   model is probabilistic; the regex deliberately does not match
+   "is not compliant".
+2. **ScopeReviewer check #8 — per-service-line decomposition** (targets
+   GT SOW-004/SOW-006): each enumerated service line must be checked for
+   operational detail (TI: IOC lifecycle/sources/reporting; IR: NIST SP
+   800-61 phases), one finding per underspecified service, not one
+   generic "scope not detailed". New `type` value
+   `missing_operational_detail`.
+3. **DeliveryReviewer check #8 — appendix/inventory table audit**
+   (targets GT SOW-025/SOW-026): log/asset/resource tables must be
+   audited for owner/status columns and volume estimates (GB/day, EPS).
+   Delivery (not PMO) chosen because it already audits the resource-plan
+   appendix (it caught the shared-IR-specialist coverage gap). New `type`
+   value `incomplete_inventory`.
+
 ## Changelog
 
 - **2026-07-20**: Confidence calibration rubric added to all 6 agents.

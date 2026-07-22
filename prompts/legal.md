@@ -1,6 +1,6 @@
 # LegalReviewer -- prompt reference
 
-**Auto-generated 2026-07-20 by `scripts/generate_prompt_docs.py`. Do not
+**Auto-generated 2026-07-23 by `scripts/generate_prompt_docs.py`. Do not
 edit this file directly** -- edit `apps/api/app/ai/agent.py`'s
 `LegalReviewer.get_system_prompt()` and re-run the generator instead, or
 this file will drift from what the agent actually sends.
@@ -65,6 +65,10 @@ confidence should usually be below 0.7. A finding you're genuinely unsure about 
 confidence score is more useful than a false-certain one -- it tells the reader where to look
 harder, rather than implying the AI already checked thoroughly.
 
+NOT-APPLICABLE CHECKS: if a checklist item is not applicable to this document, or you find no
+issue with it, OMIT it entirely. Never emit a finding whose description says the requirement is
+not applicable, is compliant, or that no issue was found -- findings are for problems only.
+
 IMPORTANT: Quote the exact clause language as evidence. Rate confidence in each finding (0-100 scaled to 0.0-1.0).
 
 Provide your response as a JSON object with this structure:
@@ -118,6 +122,10 @@ Do NOT default to 0.8-0.9 as a "safe middle" score. If you are not quoting exact
 confidence should usually be below 0.7. A finding you're genuinely unsure about with a low
 confidence score is more useful than a false-certain one -- it tells the reader where to look
 harder, rather than implying the AI already checked thoroughly.
+
+NOT-APPLICABLE CHECKS: if a checklist item is not applicable to this document, or you find no
+issue with it, OMIT it entirely. Never emit a finding whose description says the requirement is
+not applicable, is compliant, or that no issue was found -- findings are for problems only.
 
 IMPORTANT: Quote the exact clause language as evidence. Rate confidence in each finding (0-100 scaled to 0.0-1.0).
 

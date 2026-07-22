@@ -29,6 +29,10 @@ Do NOT default to 0.8-0.9 as a "safe middle" score. If you are not quoting exact
 confidence should usually be below 0.7. A finding you're genuinely unsure about with a low
 confidence score is more useful than a false-certain one -- it tells the reader where to look
 harder, rather than implying the AI already checked thoroughly.
+
+NOT-APPLICABLE CHECKS: if a checklist item is not applicable to this document, or you find no
+issue with it, OMIT it entirely. Never emit a finding whose description says the requirement is
+not applicable, is compliant, or that no issue was found -- findings are for problems only.
 """
 
 
@@ -257,6 +261,14 @@ class ScopeReviewer(ReviewAgent):
    access, approvals, data, or decisions on a timeline the document never actually commits the
    client to? An assumption that's never stated as a dependency is a risk the vendor is silently
    carrying alone.
+8. DECOMPOSE EACH LISTED SERVICE LINE -- for every service the scope enumerates (e.g.
+   monitoring, threat intelligence, threat hunting, incident response), check whether the
+   document says HOW that service operates, not merely that it is included. Concretely:
+   Threat Intelligence should describe IOC lifecycle management, intelligence sources, and
+   reporting; Incident Response should define its lifecycle phases (identification,
+   containment, eradication, recovery, lessons learned -- NIST SP 800-61). A service named in
+   a single line with no operational description is a SEPARATE finding per service line --
+   do not collapse them into one generic "scope not detailed" finding.
 
 Note: a deterministic rule engine already checks for the PRESENCE of an "Assumptions and
 Constraints" section by keyword/section match -- your job is to judge the QUALITY of what's
@@ -280,7 +292,7 @@ Provide your response as a JSON object with this structure:
     },
     "findings": [
         {
-            "type": "missing_criteria|ambiguous|scope_creep|missing_exclusions|unstated_assumption",
+            "type": "missing_criteria|ambiguous|scope_creep|missing_exclusions|unstated_assumption|missing_operational_detail",
             "severity": "critical|major|medium|low",
             "description": "string",
             "evidence": "string",
@@ -340,6 +352,11 @@ class DeliveryReviewer(ReviewAgent):
 7. SCHEDULE BUFFER -- is there any contingency/buffer time built in, or does every milestone
    assume zero slippage anywhere upstream? A schedule with zero slack across multiple sequential
    dependencies is a specific, callable-out risk, not just "aggressive."
+8. APPENDIX AND INVENTORY TABLE AUDIT -- when the document contains a log inventory, asset
+   inventory, or resource/staffing table (often in an appendix), audit its columns, not just
+   its existence: does each row name an OWNER and a status? Are VOLUME estimates documented
+   for log sources (GB/day, events-per-second)? An operational inventory with no ownership or
+   volume data is a concrete finding -- cite the specific table and what its columns lack.
 """
 
         return doc_branch + _CONFIDENCE_CALIBRATION + """
@@ -358,7 +375,7 @@ Provide findings as JSON with:
     "dependencies": ["string"],
     "findings": [
         {
-            "type": "missing_dates|unrealistic|undefined_dependency|unconfirmed_staffing|no_schedule_buffer",
+            "type": "missing_dates|unrealistic|undefined_dependency|unconfirmed_staffing|no_schedule_buffer|incomplete_inventory",
             "severity": "critical|major|medium|low",
             "description": "string",
             "evidence": "string",
