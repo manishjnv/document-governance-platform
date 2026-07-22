@@ -1,8 +1,13 @@
 """
-Built-in validation rules (20 core SOW rules).
+Built-in validation rules.
 
 T-504: Create built-in rules as data structures (no database)
 """
+
+# Bump whenever the rule set below changes -- recorded in each review's
+# audit_meta (Phase D) so a stored review can be traced to the rule library
+# that produced it.
+RULES_VERSION = "2026-07-23.1"
 
 
 def get_builtin_rules() -> list[dict]:

@@ -193,6 +193,7 @@ async def analytics_db():
                 started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 completed_at TIMESTAMP,
                 processing_time_seconds INTEGER,
+                audit_meta TEXT,
                 error_message TEXT,
                 error_details TEXT,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

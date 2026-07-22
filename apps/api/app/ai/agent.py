@@ -206,6 +206,11 @@ class ReviewAgent(ABC):
                     "findings": [],
                 }
 
+            # Phase D auditability: record which model actually answered
+            # (primary or a fallback) -- consumed into review.audit_meta.
+            if isinstance(result, dict):
+                result["_model_used"] = model
+
             logger.info(f"{self.name}: Review complete")
             return result
 

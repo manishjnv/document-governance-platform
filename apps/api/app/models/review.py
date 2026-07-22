@@ -95,6 +95,10 @@ class Review(Base, TimestampMixin, SoftDeleteMixin):
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     error_details: Mapped[Optional[Any]] = mapped_column(JSONB, nullable=True)
 
+    # Migration 028 (Phase D, guideline "Auditability"): parsed-text SHA-256,
+    # models actually used per agent, rule library version, app git SHA.
+    audit_meta: Mapped[Optional[Any]] = mapped_column(JSONB, nullable=True)
+
     organization: Mapped["Organization"] = relationship(back_populates="reviews")
     document: Mapped["Document"] = relationship(back_populates="reviews")
     findings: Mapped[list["Finding"]] = relationship(

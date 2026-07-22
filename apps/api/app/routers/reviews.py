@@ -389,6 +389,31 @@ async def trigger_review(
         review.low_finding_count = low_count
         review.info_finding_count = info_count
 
+        # Phase D (guideline "Auditability", migration 028): enough metadata
+        # to trace a stored review to the exact inputs that produced it.
+        # ponytail: hash is of parsed_text (what the agents actually saw),
+        # not the uploaded file -- a file hash needs a documents migration;
+        # add if a customer asks for file-level integrity.
+        import hashlib
+        import os
+
+        from app.rules.builtin import RULES_VERSION
+
+        models_used = {
+            r.agent_name: r.findings.get("_model_used")
+            for r in orchestrated_result.results
+            if r.error is None and isinstance(r.findings, dict) and r.findings.get("_model_used")
+        }
+        review.audit_meta = {
+            "parsed_text_sha256": hashlib.sha256(
+                (doc.parsed_text or "").encode("utf-8")
+            ).hexdigest(),
+            "models_used": models_used,
+            "rules_version": RULES_VERSION,
+            "app_git_sha": os.getenv("GIT_SHA", "unknown"),
+            "generated_at_utc": datetime.utcnow().isoformat() + "Z",
+        }
+
         # Phase C (Document Lifecycle plan): if this document has an earlier
         # version with a completed review, verify that version's findings
         # against what this re-review actually found.
@@ -486,6 +511,7 @@ async def get_review(
         "risk_score": float(review.risk_score) if review.risk_score is not None else None,
         "risk_breakdown": review.risk_breakdown,
         "processing_time_seconds": review.processing_time_seconds,
+        "audit_meta": review.audit_meta,
         "findings_count": {
             "critical": review.critical_finding_count,
             "major": review.major_finding_count,
@@ -670,6 +696,7 @@ async def generate_report(
         findings_count=findings_count,
         sections=doc.parsed_sections or [],
         rule_gaps=rule_gaps,
+        audit_meta=review.audit_meta,
     )
 
     if format.lower() == "pdf":

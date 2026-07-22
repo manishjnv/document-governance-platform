@@ -50,10 +50,19 @@ interface Finding {
   risk_area: string;
 }
 
+interface AuditMeta {
+  parsed_text_sha256?: string;
+  models_used?: Record<string, string>;
+  rules_version?: string;
+  app_git_sha?: string;
+  generated_at_utc?: string;
+}
+
 interface ReviewData {
   review_id: string;
   doc_id: string;
   status: string;
+  audit_meta: AuditMeta | null;
   overall_score: number;
   risk_score: number;
   findings_count: {
@@ -709,6 +718,24 @@ export default function ResultsPage() {
           )}
         </CardContent>
       </Card>
+
+      {review.audit_meta && (
+        <p className="text-[11px] text-muted-foreground px-1">
+          {[
+            review.audit_meta.models_used &&
+              Object.values(review.audit_meta.models_used).length > 0 &&
+              `Models: ${[...new Set(Object.values(review.audit_meta.models_used))].join(', ')}`,
+            review.audit_meta.rules_version && `Rules ${review.audit_meta.rules_version}`,
+            review.audit_meta.parsed_text_sha256 &&
+              `Doc SHA-256 ${review.audit_meta.parsed_text_sha256.slice(0, 12)}…`,
+            review.audit_meta.app_git_sha &&
+              review.audit_meta.app_git_sha !== 'unknown' &&
+              `Build ${review.audit_meta.app_git_sha.slice(0, 8)}`,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      )}
     </>
   );
 
