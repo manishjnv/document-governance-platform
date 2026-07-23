@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { RefreshCw, ShieldCheck } from 'lucide-react';
+import { RefreshCw, Search, ShieldCheck } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,6 +67,35 @@ function timeAgo(iso: string | null): string {
   return `${months} month${months > 1 ? 's' : ''} ago`;
 }
 
+function SearchBox({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <div className="relative">
+      <Search
+        size={13}
+        strokeWidth={2}
+        className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+        aria-hidden="true"
+      />
+      <input
+        type="search"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        className="h-7 w-44 rounded-md border border-input bg-background pl-7 pr-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+      />
+    </div>
+  );
+}
+
 function StatTile({ value, label, sub }: { value: number | string; label: string; sub?: string }) {
   return (
     <Card>
@@ -84,6 +113,9 @@ export default function AdminPage() {
   const [data, setData] = useState<Overview | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [peopleQuery, setPeopleQuery] = useState('');
+  const [signInQuery, setSignInQuery] = useState('');
+  const [activityQuery, setActivityQuery] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -193,8 +225,9 @@ export default function AdminPage() {
 
           {/* People */}
           <Card className="mb-3">
-            <CardHeader className="pb-1 pt-3">
+            <CardHeader className="flex-row items-center justify-between space-y-0 pb-1 pt-3">
               <CardTitle className="text-sm">People</CardTitle>
+              <SearchBox value={peopleQuery} onChange={setPeopleQuery} placeholder="Search people…" />
             </CardHeader>
             <CardContent className="pb-3 overflow-x-auto">
               <table className="w-full text-xs">
@@ -212,7 +245,9 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.people.map((p) => (
+                  {data.people.filter((p) =>
+                    `${p.name} ${p.email} ${p.role}`.toLowerCase().includes(peopleQuery.toLowerCase())
+                  ).map((p) => (
                     <tr key={p.email} className="border-b last:border-0">
                       <td className="py-1.5 pr-3 font-medium">{p.name}</td>
                       <td className="py-1.5 pr-3 text-muted-foreground">{p.email}</td>
@@ -242,15 +277,20 @@ export default function AdminPage() {
           <div className="grid lg:grid-cols-2 gap-3 mb-3">
             {/* Recent sign-ins */}
             <Card>
-              <CardHeader className="pb-1 pt-3">
+              <CardHeader className="flex-row items-center justify-between space-y-0 pb-1 pt-3">
                 <CardTitle className="text-sm">Recent sign-ins</CardTitle>
+                <SearchBox value={signInQuery} onChange={setSignInQuery} placeholder="Search sign-ins…" />
               </CardHeader>
               <CardContent className="pb-3">
                 {data.recent_sign_ins.length === 0 ? (
                   <p className="text-xs text-muted-foreground">No sign-ins recorded yet.</p>
                 ) : (
-                  <ul className="space-y-1.5 text-xs">
-                    {data.recent_sign_ins.map((s, i) => (
+                  <ul className="space-y-1.5 text-xs max-h-72 overflow-y-auto">
+                    {data.recent_sign_ins.filter((s) =>
+                      `${s.who} ${s.how} ${s.device ?? ''} ${s.from_ip ?? ''}`
+                        .toLowerCase()
+                        .includes(signInQuery.toLowerCase())
+                    ).map((s, i) => (
                       <li key={i} className="flex justify-between gap-2">
                         <span className="min-w-0 truncate">
                           <span className="font-medium">{s.who}</span>
@@ -268,15 +308,18 @@ export default function AdminPage() {
 
             {/* Recent activity */}
             <Card>
-              <CardHeader className="pb-1 pt-3">
+              <CardHeader className="flex-row items-center justify-between space-y-0 pb-1 pt-3">
                 <CardTitle className="text-sm">Recent activity</CardTitle>
+                <SearchBox value={activityQuery} onChange={setActivityQuery} placeholder="Search activity…" />
               </CardHeader>
               <CardContent className="pb-3">
                 {data.recent_activity.length === 0 ? (
                   <p className="text-xs text-muted-foreground">Nothing yet.</p>
                 ) : (
-                  <ul className="space-y-1.5 text-xs">
-                    {data.recent_activity.map((a, i) => (
+                  <ul className="space-y-1.5 text-xs max-h-72 overflow-y-auto">
+                    {data.recent_activity.filter((a) =>
+                      `${a.who} ${a.what}`.toLowerCase().includes(activityQuery.toLowerCase())
+                    ).map((a, i) => (
                       <li key={i} className="flex justify-between gap-2">
                         <span className="min-w-0 truncate">
                           <span className="font-medium">{a.who}</span>

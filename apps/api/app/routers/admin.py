@@ -195,7 +195,7 @@ async def get_admin_overview(
             select(AuditLog)
             .where(AuditLog.org_id == org_id, AuditLog.action.in_(_LOGIN_ACTIONS))
             .order_by(AuditLog.created_at.desc())
-            .limit(15)
+            .limit(50)
         )
     ).scalars().all()
     signins_7d = (
@@ -223,7 +223,7 @@ async def get_admin_overview(
             select(AuditLog)
             .where(AuditLog.org_id == org_id)
             .order_by(AuditLog.created_at.desc())
-            .limit(25)
+            .limit(100)
         )
     ).scalars().all()
 
