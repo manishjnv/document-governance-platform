@@ -179,7 +179,10 @@ async def test_non_admin_gets_403_on_all_admin_endpoints(db_session):
 
 
 @pytest.mark.asyncio
-async def test_admin_overview_shape_and_counts(db_session):
+async def test_admin_overview_shape_and_counts(db_session, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "platform_admin_emails", "user@example.com")
     org = await _seed_org(db_session)
     admin = await _seed_user(db_session, org.org_id, "admin", "boss@example.com")
     await _seed_user(db_session, org.org_id, "viewer", "member@example.com")
@@ -253,23 +256,18 @@ async def test_platform_admin_sees_all_workspaces(db_session, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_ordinary_org_admin_stays_org_scoped(db_session, monkeypatch):
+async def test_ordinary_workspace_admin_gets_403(db_session, monkeypatch):
+    """The admin page is super-admin only: an admin of their own
+    auto-created workspace must NOT see it."""
     from app.config import settings
 
     monkeypatch.setattr(settings, "platform_admin_emails", "boss@example.com")
 
     org_a = await _seed_org(db_session)
     admin_a = await _seed_user(db_session, org_a.org_id, "admin", "a@example.com")
-    org_b = Organization(org_id=uuid.uuid4(), name="Other Workspace")
-    db_session.add(org_b)
-    await db_session.commit()
-    await _seed_user(db_session, org_b.org_id, "admin", "b@example.com")
 
     client = _make_client(
         db_session, org_a.org_id, role="admin", user_id=admin_a.user_id, email="a@example.com"
     )
     resp = await client.get("/api/v1/admin/overview")
-    assert resp.status_code == 200
-    emails = {p["email"] for p in resp.json()["people"]}
-    assert "b@example.com" not in emails
-    assert "a@example.com" in emails
+    assert resp.status_code == 403

@@ -129,13 +129,13 @@ async def get_admin_overview(
     current_user: TokenData = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Everything an admin wants at a glance, read-only. Org-scoped for a
-    normal workspace admin; platform-wide (every workspace) when the caller
-    is in settings.platform_admin_emails -- each new email signup creates
-    its own org, so the product owner needs the cross-org view."""
+    """Super-admin only (settings.platform_admin_emails): a platform-wide
+    view across every workspace. Every other user -- including admins of
+    their own auto-created workspace -- gets 403; this page is for the
+    product owner, not per-org administration."""
     from datetime import datetime, timedelta
 
-    from sqlalchemy import func, select, true
+    from sqlalchemy import func, select
 
     from app.config import settings
     from app.models.audit_log import AuditLog
@@ -143,51 +143,40 @@ async def get_admin_overview(
     from app.models.finding import Finding
     from app.models.review import Review
 
-    org_id = UUID(str(current_user.org_id))
     platform_admins = {
         e.strip().lower() for e in settings.platform_admin_emails.split(",") if e.strip()
     }
-    is_platform = (current_user.email or "").lower() in platform_admins
-
-    # Per-model org conditions; true() (no filter) for the platform view.
-    audit_in_scope = true() if is_platform else (AuditLog.org_id == org_id)
-    doc_in_scope = true() if is_platform else (Document.org_id == org_id)
-    review_in_scope = true() if is_platform else (Review.org_id == org_id)
-    finding_in_scope = true() if is_platform else (Finding.org_id == org_id)
+    if (current_user.email or "").lower() not in platform_admins:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
 
     now = datetime.utcnow()
     week_ago = now - timedelta(days=7)
     month_ago = now - timedelta(days=30)
 
-    org_names: dict = {}
-    if is_platform:
-        users = (
-            await db.execute(select(User).where(User.deleted_at.is_(None)).order_by(User.created_at))
-        ).scalars().all()
-        org_names = dict((await db.execute(select(Organization.org_id, Organization.name))).all())
-    else:
-        users = await list_org_users(db, org_id, 0, 1000)
+    users = (
+        await db.execute(select(User).where(User.deleted_at.is_(None)).order_by(User.created_at))
+    ).scalars().all()
+    org_names = dict((await db.execute(select(Organization.org_id, Organization.name))).all())
 
     # Per-user document / review counts + last activity, in three grouped
     # queries instead of N per user.
     doc_counts = dict(
         (await db.execute(
             select(Document.uploaded_by_user_id, func.count())
-            .where(doc_in_scope, Document.deleted_at.is_(None))
+            .where(Document.deleted_at.is_(None))
             .group_by(Document.uploaded_by_user_id)
         )).all()
     )
     review_counts = dict(
         (await db.execute(
             select(Review.triggered_by_user_id, func.count())
-            .where(review_in_scope, Review.deleted_at.is_(None))
+            .where(Review.deleted_at.is_(None))
             .group_by(Review.triggered_by_user_id)
         )).all()
     )
     last_activity = dict(
         (await db.execute(
             select(AuditLog.user_id, func.max(AuditLog.created_at))
-            .where(audit_in_scope)
             .group_by(AuditLog.user_id)
         )).all()
     )
@@ -217,7 +206,7 @@ async def get_admin_overview(
     signin_rows = (
         await db.execute(
             select(AuditLog)
-            .where(audit_in_scope, AuditLog.action.in_(_LOGIN_ACTIONS))
+            .where(AuditLog.action.in_(_LOGIN_ACTIONS))
             .order_by(AuditLog.created_at.desc())
             .limit(50)
         )
@@ -225,7 +214,6 @@ async def get_admin_overview(
     signins_7d = (
         await db.execute(
             select(func.count()).where(
-                audit_in_scope,
                 AuditLog.action.in_(_LOGIN_ACTIONS),
                 AuditLog.created_at >= week_ago,
             )
@@ -234,7 +222,6 @@ async def get_admin_overview(
     signins_30d = (
         await db.execute(
             select(func.count()).where(
-                audit_in_scope,
                 AuditLog.action.in_(_LOGIN_ACTIONS),
                 AuditLog.created_at >= month_ago,
             )
@@ -245,7 +232,6 @@ async def get_admin_overview(
     activity_rows = (
         await db.execute(
             select(AuditLog)
-            .where(audit_in_scope)
             .order_by(AuditLog.created_at.desc())
             .limit(100)
         )
@@ -254,13 +240,12 @@ async def get_admin_overview(
     # Documents + AI usage.
     docs_total = (
         await db.execute(
-            select(func.count()).where(doc_in_scope, Document.deleted_at.is_(None))
+            select(func.count()).where(Document.deleted_at.is_(None))
         )
     ).scalar() or 0
     docs_7d = (
         await db.execute(
             select(func.count()).where(
-                doc_in_scope,
                 Document.deleted_at.is_(None),
                 Document.created_at >= week_ago,
             )
@@ -276,14 +261,14 @@ async def get_admin_overview(
                 func.count().filter(Review.created_at >= week_ago),
                 func.avg(Review.processing_time_seconds),
                 func.max(Review.completed_at),
-            ).where(review_in_scope, Review.deleted_at.is_(None))
+            ).where(Review.deleted_at.is_(None))
         )
     ).one()
     reviews_total, reviews_completed, reviews_failed, reviews_7d, avg_seconds, last_review_at = review_stats
 
     findings_total = (
         await db.execute(
-            select(func.count()).where(finding_in_scope, Finding.deleted_at.is_(None))
+            select(func.count()).where(Finding.deleted_at.is_(None))
         )
     ).scalar() or 0
 
@@ -291,7 +276,7 @@ async def get_admin_overview(
     recent_meta = (
         await db.execute(
             select(Review.audit_meta)
-            .where(review_in_scope, Review.audit_meta.isnot(None))
+            .where(Review.audit_meta.isnot(None))
             .order_by(Review.completed_at.desc())
             .limit(20)
         )

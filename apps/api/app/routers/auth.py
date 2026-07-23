@@ -591,6 +591,11 @@ async def get_current_user_info(
 
     first_name, last_name = _split_name(user.full_name)
 
+    from app.config import settings
+
+    platform_admins = {
+        e.strip().lower() for e in settings.platform_admin_emails.split(",") if e.strip()
+    }
     return CurrentUserResponse(
         user_id=user.user_id,
         email=user.email,
@@ -602,6 +607,7 @@ async def get_current_user_info(
         mfa_enabled=False,
         created_at=user.created_at,
         last_login=user.last_login,
+        is_platform_admin=user.email.lower() in platform_admins,
     )
 
 

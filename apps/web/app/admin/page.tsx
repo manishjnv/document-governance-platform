@@ -134,7 +134,7 @@ export default function AdminPage() {
         return;
       }
       const meBody = await me.json();
-      if (meBody.role !== 'admin') {
+      if (meBody.is_platform_admin !== true) {
         router.push('/dashboard');
         return;
       }

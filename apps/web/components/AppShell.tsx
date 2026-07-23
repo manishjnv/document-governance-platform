@@ -82,7 +82,7 @@ export function AppShell({
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => (r.ok ? r.json() : null))
-      .then((me) => setIsAdmin(me?.role === 'admin'))
+      .then((me) => setIsAdmin(me?.is_platform_admin === true))
       .catch(() => {});
   }, []);
 

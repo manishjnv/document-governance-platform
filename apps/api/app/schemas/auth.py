@@ -155,6 +155,9 @@ class CurrentUserResponse(BaseModel):
     mfa_enabled: bool
     created_at: datetime
     last_login: Optional[datetime] = None
+    # True only for settings.platform_admin_emails (the product owner) --
+    # gates the platform-wide /admin page, NOT per-org admin rights.
+    is_platform_admin: bool = False
 
 
 class UserCreateRequest(BaseModel):
