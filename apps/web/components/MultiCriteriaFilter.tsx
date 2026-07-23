@@ -151,7 +151,7 @@ export default function MultiCriteriaFilter({
         </div>
 
         {/* Date Range */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label htmlFor="dateFrom" className="block text-sm font-medium text-gray-700 mb-1">
               From Date
@@ -181,7 +181,7 @@ export default function MultiCriteriaFilter({
         </div>
 
         {/* Score Range */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label htmlFor="scoreMin" className="block text-sm font-medium text-gray-700 mb-1">
               Min Score (0-100)

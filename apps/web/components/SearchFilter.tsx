@@ -122,7 +122,7 @@ export default function SearchFilter({ onSearch, loading = false }: SearchFilter
         </div>
 
         {/* Date Range */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label htmlFor="dateFrom" className="block text-sm font-medium text-foreground mb-1">
               From Date

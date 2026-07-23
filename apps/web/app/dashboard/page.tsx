@@ -627,7 +627,7 @@ export default function DashboardPage() {
       )}
 
       {/* Stats + Filter row */}
-      <div className="flex flex-nowrap items-center justify-between gap-4 mb-6">
+      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 mb-6">
         <div className="flex flex-wrap items-center gap-x-3 rounded-lg border text-sm min-w-0">
           <span className="text-slate-700">
             Total <span className="font-normal text-slate-900">{stats.total}</span>

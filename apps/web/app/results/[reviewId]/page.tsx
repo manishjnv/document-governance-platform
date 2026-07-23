@@ -362,7 +362,7 @@ export default function ResultsPage() {
   const findingsPanel = (
     <>
       {/* Actions */}
-      <div className="flex items-center justify-end gap-1.5 mb-2">
+      <div className="flex flex-wrap items-center justify-end gap-1.5 mb-2">
         {docInfo?.parsed_sections && docInfo.parsed_sections.length > 0 && (
           <Button size="sm" variant="outline" onClick={() => setShowDocument((s) => !s)}>
             <FileText size={14} strokeWidth={2} className="mr-1.5" aria-hidden="true" />
@@ -767,19 +767,25 @@ export default function ResultsPage() {
         )}
 
         {showDocument && docInfo?.parsed_sections ? (
-          <div ref={splitContainerRef} className={cn('flex items-start gap-0', resizingSplit && 'select-none')}>
-            <div style={{ width: `${splitPercent}%` }} className="min-w-0 pr-1">
+          <div ref={splitContainerRef} className={cn('flex flex-col md:flex-row items-start gap-2 md:gap-0', resizingSplit && 'select-none')}>
+            <div
+              style={{ '--split-w': `${splitPercent}%` } as React.CSSProperties}
+              className="w-full md:[width:var(--split-w)] min-w-0 md:pr-1"
+            >
               {findingsPanel}
             </div>
 
-            {/* Drag-to-resize divider */}
+            {/* Drag-to-resize divider (panes stack on mobile, no divider) */}
             <div
               onMouseDown={startSplitResize}
-              className="w-1.5 shrink-0 self-stretch cursor-col-resize rounded-full bg-border hover:bg-primary/50 active:bg-primary transition-colors"
+              className="hidden md:block w-1.5 shrink-0 self-stretch cursor-col-resize rounded-full bg-border hover:bg-primary/50 active:bg-primary transition-colors"
             />
 
-            <div style={{ width: `${100 - splitPercent}%` }} className="min-w-0 pl-1">
-              <Card className="sticky top-4 max-h-[calc(100vh-2rem)] flex flex-col">
+            <div
+              style={{ '--split-w': `${100 - splitPercent}%` } as React.CSSProperties}
+              className="w-full md:[width:var(--split-w)] min-w-0 md:pl-1"
+            >
+              <Card className="md:sticky top-4 max-h-[70vh] md:max-h-[calc(100vh-2rem)] flex flex-col">
                 <CardHeader className="pb-0.5 pt-2">
                   <CardTitle className="text-sm">Document</CardTitle>
                 </CardHeader>

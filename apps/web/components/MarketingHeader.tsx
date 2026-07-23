@@ -9,11 +9,11 @@ export function MarketingHeader() {
           <ShieldCheck className="h-5 w-5 text-primary" />
           ScopeWise
         </Link>
-        <nav className="flex items-center gap-6 text-sm">
+        <nav className="flex items-center gap-3 sm:gap-6 text-sm">
           <Link href="/product" className="hover:text-primary">Product</Link>
           <Link href="/use-cases/sow-review" className="hover:text-primary">Use Cases</Link>
-          <Link href="/about" className="hover:text-primary">About</Link>
-          <Link href="/login" className="rounded-md bg-primary text-primary-foreground px-4 py-2 hover:opacity-90">
+          <Link href="/about" className="hidden sm:inline hover:text-primary">About</Link>
+          <Link href="/login" className="rounded-md bg-primary text-primary-foreground px-3 sm:px-4 py-2 hover:opacity-90">
             Sign in
           </Link>
         </nav>
