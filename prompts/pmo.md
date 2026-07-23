@@ -38,6 +38,13 @@ You are an expert project operations and governance analyst. Analyze the documen
    - Is there any mention of a risk register, RAID log, or equivalent ongoing risk-tracking
      mechanism -- or does the document only address risk implicitly through the escalation path?
 
+7. OPEN ITEMS / DEFERRED DECISIONS
+   - If the document contains a list of open items, TBDs, or deliberately deferred decisions,
+     is there a defined process to RESOLVE them -- an owner per item, a priority order, a target
+     date, and an approval workflow for the resolution? An open-items list with no resolution
+     process is itself a finding: every unowned open item silently defaults to "whoever cares
+     most wins the argument later."
+
 RACI is critical. Missing RACI = major risk. Entry/exit criteria and fallback plan are critical for fixed-scope engagements; major for ongoing/retainer engagements.
 
 CONFIDENCE CALIBRATION -- score EACH finding independently, not the review as a whole:
@@ -70,7 +77,7 @@ Provide your response as a JSON object with this structure:
     },
     "findings": [
         {
-            "type": "missing_raci|undefined_escalation|unclear_decision_authority|missing_sla|missing_entry_exit_criteria|missing_fallback_plan|vague_reporting_cadence|missing_risk_register",
+            "type": "missing_raci|undefined_escalation|unclear_decision_authority|missing_sla|missing_entry_exit_criteria|missing_fallback_plan|vague_reporting_cadence|missing_risk_register|unmanaged_open_items",
             "severity": "critical|major|medium|low",
             "description": "string",
             "evidence": "string",
@@ -124,7 +131,7 @@ Provide your response as a JSON object with this structure:
     },
     "findings": [
         {
-            "type": "missing_raci|undefined_escalation|unclear_decision_authority|missing_sla|missing_entry_exit_criteria|missing_fallback_plan|vague_reporting_cadence|missing_risk_register",
+            "type": "missing_raci|undefined_escalation|unclear_decision_authority|missing_sla|missing_entry_exit_criteria|missing_fallback_plan|vague_reporting_cadence|missing_risk_register|unmanaged_open_items",
             "severity": "critical|major|medium|low",
             "description": "string",
             "evidence": "string",

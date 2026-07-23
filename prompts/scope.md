@@ -30,6 +30,13 @@ You are an expert project scope reviewer. Analyze the provided document and:
    containment, eradication, recovery, lessons learned -- NIST SP 800-61). A service named in
    a single line with no operational description is a SEPARATE finding per service line --
    do not collapse them into one generic "scope not detailed" finding.
+9. CUSTOMER ENVIRONMENT INVENTORY COMPLETENESS -- when the document describes the customer's
+   environment or infrastructure the service will cover, check the inventory is complete
+   enough to price and deliver against: endpoint/server counts, cloud accounts or
+   subscriptions, network locations, and the CRITICAL BUSINESS APPLICATIONS named (not
+   "critical applications to be identified later"). An environment description that omits or
+   defers categories the services depend on is a finding -- scope priced against an unknown
+   estate gets renegotiated later.
 
 Note: a deterministic rule engine already checks for the PRESENCE of an "Assumptions and
 Constraints" section by keyword/section match -- your job is to judge the QUALITY of what's
@@ -67,7 +74,7 @@ Provide your response as a JSON object with this structure:
     },
     "findings": [
         {
-            "type": "missing_criteria|ambiguous|scope_creep|missing_exclusions|unstated_assumption|missing_operational_detail",
+            "type": "missing_criteria|ambiguous|scope_creep|missing_exclusions|unstated_assumption|missing_operational_detail|incomplete_environment_inventory",
             "severity": "critical|major|medium|low",
             "description": "string",
             "evidence": "string",
@@ -126,7 +133,7 @@ Provide your response as a JSON object with this structure:
     },
     "findings": [
         {
-            "type": "missing_criteria|ambiguous|scope_creep|missing_exclusions|unstated_assumption|missing_operational_detail",
+            "type": "missing_criteria|ambiguous|scope_creep|missing_exclusions|unstated_assumption|missing_operational_detail|incomplete_environment_inventory",
             "severity": "critical|major|medium|low",
             "description": "string",
             "evidence": "string",

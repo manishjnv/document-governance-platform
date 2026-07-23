@@ -191,6 +191,20 @@ deliberately narrow: contradictions only, both sides quoted verbatim,
 duplicating the other reviewers' gap-finding. Mirrored to
 `prompts/conflict.md`.
 
+## 2026-07-23 (second pass) — last two ground-truth partials
+
+Targets the 2 remaining partial rows from the 93.1% measurement:
+
+1. **ScopeReviewer check #9 — customer environment inventory completeness**
+   (GT SOW-002): environment/infrastructure descriptions must be complete
+   enough to price against (endpoint/server counts, cloud accounts,
+   critical applications NAMED, not deferred). New `type`
+   `incomplete_environment_inventory`.
+2. **PMOReviewer check #7 — open items / deferred decisions governance**
+   (GT SOW-020): an open-items/TBD list needs a resolution process (owner,
+   priority, target date, approval workflow). New `type`
+   `unmanaged_open_items`.
+
 ## Changelog
 
 - **2026-07-20**: Confidence calibration rubric added to all 6 agents.
