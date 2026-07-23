@@ -25,10 +25,10 @@ from app.routers.admin import router as admin_router
 from app.schemas.auth import TokenData
 
 
-def _token(org_id: uuid.UUID, role: str, user_id: uuid.UUID | None = None) -> TokenData:
+def _token(org_id: uuid.UUID, role: str, user_id: uuid.UUID | None = None, email: str = "user@example.com") -> TokenData:
     return TokenData.model_construct(
         user_id=user_id or uuid.uuid4(),
-        email="user@example.com",
+        email=email,
         org_id=org_id,
         role=role,
         exp=datetime.utcnow() + timedelta(hours=1),
@@ -37,7 +37,7 @@ def _token(org_id: uuid.UUID, role: str, user_id: uuid.UUID | None = None) -> To
     )
 
 
-def _make_client(db_session, org_id: uuid.UUID, role: str, user_id: uuid.UUID | None = None) -> AsyncClient:
+def _make_client(db_session, org_id: uuid.UUID, role: str, user_id: uuid.UUID | None = None, email: str = "user@example.com") -> AsyncClient:
     app = FastAPI()
     app.include_router(admin_router)
 
@@ -45,7 +45,7 @@ def _make_client(db_session, org_id: uuid.UUID, role: str, user_id: uuid.UUID | 
         yield db_session
 
     app.dependency_overrides[get_db] = _override_get_db
-    app.dependency_overrides[get_current_user] = lambda: _token(org_id, role, user_id)
+    app.dependency_overrides[get_current_user] = lambda: _token(org_id, role, user_id, email)
     return AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver")
 
 
@@ -222,3 +222,54 @@ def test_device_summary_is_human_readable():
         "(KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
     ) == "Safari on iPhone/iPad (mobile)"
     assert _device_from_ua(None) is None
+
+
+@pytest.mark.asyncio
+async def test_platform_admin_sees_all_workspaces(db_session, monkeypatch):
+    """Every new email signup creates its own org; the platform admin
+    (settings.platform_admin_emails) must see users across ALL of them,
+    each row labeled with its workspace name."""
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "platform_admin_emails", "boss@example.com")
+
+    org_a = await _seed_org(db_session)
+    boss = await _seed_user(db_session, org_a.org_id, "admin", "boss@example.com")
+    org_b = Organization(org_id=uuid.uuid4(), name="Other Workspace")
+    db_session.add(org_b)
+    await db_session.commit()
+    await _seed_user(db_session, org_b.org_id, "admin", "other@example.com")
+
+    client = _make_client(
+        db_session, org_a.org_id, role="admin", user_id=boss.user_id, email="boss@example.com"
+    )
+    resp = await client.get("/api/v1/admin/overview")
+    assert resp.status_code == 200
+    people = resp.json()["people"]
+    emails = {p["email"] for p in people}
+    assert {"boss@example.com", "other@example.com"} <= emails
+    workspaces = {p["email"]: p["workspace"] for p in people}
+    assert workspaces["other@example.com"] == "Other Workspace"
+
+
+@pytest.mark.asyncio
+async def test_ordinary_org_admin_stays_org_scoped(db_session, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "platform_admin_emails", "boss@example.com")
+
+    org_a = await _seed_org(db_session)
+    admin_a = await _seed_user(db_session, org_a.org_id, "admin", "a@example.com")
+    org_b = Organization(org_id=uuid.uuid4(), name="Other Workspace")
+    db_session.add(org_b)
+    await db_session.commit()
+    await _seed_user(db_session, org_b.org_id, "admin", "b@example.com")
+
+    client = _make_client(
+        db_session, org_a.org_id, role="admin", user_id=admin_a.user_id, email="a@example.com"
+    )
+    resp = await client.get("/api/v1/admin/overview")
+    assert resp.status_code == 200
+    emails = {p["email"] for p in resp.json()["people"]}
+    assert "b@example.com" not in emails
+    assert "a@example.com" in emails

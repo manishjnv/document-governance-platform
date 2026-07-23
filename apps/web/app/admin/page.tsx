@@ -18,6 +18,7 @@ interface Person {
   documents_uploaded: number;
   reviews_run: number;
   last_activity: string | null;
+  workspace: string | null;
 }
 
 interface Overview {
@@ -236,6 +237,9 @@ export default function AdminPage() {
                     <th className="py-1.5 pr-3 font-medium">Name</th>
                     <th className="py-1.5 pr-3 font-medium">Email</th>
                     <th className="py-1.5 pr-3 font-medium">Role</th>
+                    {data.people.some((p) => p.workspace) && (
+                      <th className="py-1.5 pr-3 font-medium">Workspace</th>
+                    )}
                     <th className="py-1.5 pr-3 font-medium">Status</th>
                     <th className="py-1.5 pr-3 font-medium">Joined</th>
                     <th className="py-1.5 pr-3 font-medium">Last sign-in</th>
@@ -246,12 +250,17 @@ export default function AdminPage() {
                 </thead>
                 <tbody>
                   {data.people.filter((p) =>
-                    `${p.name} ${p.email} ${p.role}`.toLowerCase().includes(peopleQuery.toLowerCase())
+                    `${p.name} ${p.email} ${p.role} ${p.workspace ?? ''}`
+                      .toLowerCase()
+                      .includes(peopleQuery.toLowerCase())
                   ).map((p) => (
                     <tr key={p.email} className="border-b last:border-0">
                       <td className="py-1.5 pr-3 font-medium">{p.name}</td>
                       <td className="py-1.5 pr-3 text-muted-foreground">{p.email}</td>
                       <td className="py-1.5 pr-3 capitalize">{p.role}</td>
+                      {data.people.some((x) => x.workspace) && (
+                        <td className="py-1.5 pr-3 text-muted-foreground">{p.workspace ?? '—'}</td>
+                      )}
                       <td className="py-1.5 pr-3">
                         <span
                           className={cn(

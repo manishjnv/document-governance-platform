@@ -129,43 +129,65 @@ async def get_admin_overview(
     current_user: TokenData = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Everything an admin wants at a glance, org-scoped, read-only."""
+    """Everything an admin wants at a glance, read-only. Org-scoped for a
+    normal workspace admin; platform-wide (every workspace) when the caller
+    is in settings.platform_admin_emails -- each new email signup creates
+    its own org, so the product owner needs the cross-org view."""
     from datetime import datetime, timedelta
 
-    from sqlalchemy import func, select
+    from sqlalchemy import func, select, true
 
+    from app.config import settings
     from app.models.audit_log import AuditLog
     from app.models.document import Document
     from app.models.finding import Finding
     from app.models.review import Review
 
     org_id = UUID(str(current_user.org_id))
+    platform_admins = {
+        e.strip().lower() for e in settings.platform_admin_emails.split(",") if e.strip()
+    }
+    is_platform = (current_user.email or "").lower() in platform_admins
+
+    # Per-model org conditions; true() (no filter) for the platform view.
+    audit_in_scope = true() if is_platform else (AuditLog.org_id == org_id)
+    doc_in_scope = true() if is_platform else (Document.org_id == org_id)
+    review_in_scope = true() if is_platform else (Review.org_id == org_id)
+    finding_in_scope = true() if is_platform else (Finding.org_id == org_id)
+
     now = datetime.utcnow()
     week_ago = now - timedelta(days=7)
     month_ago = now - timedelta(days=30)
 
-    users = await list_org_users(db, org_id, 0, 1000)
+    org_names: dict = {}
+    if is_platform:
+        users = (
+            await db.execute(select(User).where(User.deleted_at.is_(None)).order_by(User.created_at))
+        ).scalars().all()
+        org_names = dict((await db.execute(select(Organization.org_id, Organization.name))).all())
+    else:
+        users = await list_org_users(db, org_id, 0, 1000)
 
     # Per-user document / review counts + last activity, in three grouped
     # queries instead of N per user.
     doc_counts = dict(
         (await db.execute(
             select(Document.uploaded_by_user_id, func.count())
-            .where(Document.org_id == org_id, Document.deleted_at.is_(None))
+            .where(doc_in_scope, Document.deleted_at.is_(None))
             .group_by(Document.uploaded_by_user_id)
         )).all()
     )
     review_counts = dict(
         (await db.execute(
             select(Review.triggered_by_user_id, func.count())
-            .where(Review.org_id == org_id, Review.deleted_at.is_(None))
+            .where(review_in_scope, Review.deleted_at.is_(None))
             .group_by(Review.triggered_by_user_id)
         )).all()
     )
     last_activity = dict(
         (await db.execute(
             select(AuditLog.user_id, func.max(AuditLog.created_at))
-            .where(AuditLog.org_id == org_id)
+            .where(audit_in_scope)
             .group_by(AuditLog.user_id)
         )).all()
     )
@@ -183,6 +205,8 @@ async def get_admin_overview(
             "last_activity": (
                 last_activity[u.user_id].isoformat() if last_activity.get(u.user_id) else None
             ),
+            # Workspace name -- only populated in the platform-wide view.
+            "workspace": org_names.get(u.org_id),
         }
         for u in users
     ]
@@ -193,7 +217,7 @@ async def get_admin_overview(
     signin_rows = (
         await db.execute(
             select(AuditLog)
-            .where(AuditLog.org_id == org_id, AuditLog.action.in_(_LOGIN_ACTIONS))
+            .where(audit_in_scope, AuditLog.action.in_(_LOGIN_ACTIONS))
             .order_by(AuditLog.created_at.desc())
             .limit(50)
         )
@@ -201,7 +225,7 @@ async def get_admin_overview(
     signins_7d = (
         await db.execute(
             select(func.count()).where(
-                AuditLog.org_id == org_id,
+                audit_in_scope,
                 AuditLog.action.in_(_LOGIN_ACTIONS),
                 AuditLog.created_at >= week_ago,
             )
@@ -210,7 +234,7 @@ async def get_admin_overview(
     signins_30d = (
         await db.execute(
             select(func.count()).where(
-                AuditLog.org_id == org_id,
+                audit_in_scope,
                 AuditLog.action.in_(_LOGIN_ACTIONS),
                 AuditLog.created_at >= month_ago,
             )
@@ -221,7 +245,7 @@ async def get_admin_overview(
     activity_rows = (
         await db.execute(
             select(AuditLog)
-            .where(AuditLog.org_id == org_id)
+            .where(audit_in_scope)
             .order_by(AuditLog.created_at.desc())
             .limit(100)
         )
@@ -230,13 +254,13 @@ async def get_admin_overview(
     # Documents + AI usage.
     docs_total = (
         await db.execute(
-            select(func.count()).where(Document.org_id == org_id, Document.deleted_at.is_(None))
+            select(func.count()).where(doc_in_scope, Document.deleted_at.is_(None))
         )
     ).scalar() or 0
     docs_7d = (
         await db.execute(
             select(func.count()).where(
-                Document.org_id == org_id,
+                doc_in_scope,
                 Document.deleted_at.is_(None),
                 Document.created_at >= week_ago,
             )
@@ -252,14 +276,14 @@ async def get_admin_overview(
                 func.count().filter(Review.created_at >= week_ago),
                 func.avg(Review.processing_time_seconds),
                 func.max(Review.completed_at),
-            ).where(Review.org_id == org_id, Review.deleted_at.is_(None))
+            ).where(review_in_scope, Review.deleted_at.is_(None))
         )
     ).one()
     reviews_total, reviews_completed, reviews_failed, reviews_7d, avg_seconds, last_review_at = review_stats
 
     findings_total = (
         await db.execute(
-            select(func.count()).where(Finding.org_id == org_id, Finding.deleted_at.is_(None))
+            select(func.count()).where(finding_in_scope, Finding.deleted_at.is_(None))
         )
     ).scalar() or 0
 
@@ -267,7 +291,7 @@ async def get_admin_overview(
     recent_meta = (
         await db.execute(
             select(Review.audit_meta)
-            .where(Review.org_id == org_id, Review.audit_meta.isnot(None))
+            .where(review_in_scope, Review.audit_meta.isnot(None))
             .order_by(Review.completed_at.desc())
             .limit(20)
         )

@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     # customer-facing document review). Primary + fallback chain: if the
     # primary model errors or 429s, agent.py retries against the next.
     openrouter_api_key: str = ""
+    # Comma-separated emails allowed to see the platform-wide admin
+    # overview (all workspaces). Every new email signup creates its own
+    # org, so the product owner needs a cross-org view.
+    platform_admin_emails: str = "manishjnvk@gmail.com"
+
     openrouter_model: str = "z-ai/glm-5.2"
     openrouter_fallback_models: list[str] = [
         "minimax/minimax-m3",
