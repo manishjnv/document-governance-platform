@@ -287,6 +287,44 @@ it.
 - **CPU:** <70% average
 - **DB connections:** <20 max (pool size)
 
+### First measured results — 2026-07-23 (production VPS, small-sample)
+
+Real numbers from the live deployment (10 completed production reviews of
+real documents; not the 100-doc batch the methodology above calls for —
+treat as a first calibration of the targets, not the formal pass):
+
+- **2.1 Review completion:** n=10, mean **87s**, min 16s, max 180s
+  (max = an OpenRouter latency-degraded run with agent retries). **FAILS
+  the ≤25s target — but the target predates the current pipeline**: it was
+  written before the 6-specialist + conflict-scan architecture (7 LLM calls
+  per review, 60s+120s retry windows). A review that reads a whole contract
+  with 7 experts in ~90s is the product working as designed; the target
+  needs a decision (revise to e.g. mean ≤120s / p95 ≤240s) rather than
+  engineering heroics. Flagged for the launch sign-off discussion.
+- **2.2 Upload + parse:** 6-page DOCX uploads observed sub-second
+  (upload→202 within the same log second across all measurement runs).
+  Well inside targets; 50MB-file and PDF timing still unmeasured.
+- **2.3 Concurrency:** deliberately NOT load-tested — production runs on a
+  shared VPS hosting unrelated projects; a 10-concurrent-review load test
+  there would be irresponsible. Needs a staging environment first.
+- **2.4 Resources (snapshot during an active review):** api 372MB, web
+  27MB, postgres 56MB, redis 3MB (total ≈460MB of the <2GB target); CPU
+  <3% between agent calls. PASS at current load.
+
+**Category 4 (Security) — evidence collected 2026-07-23:** edge headers
+present (HSTS max-age=31536000 + preload, X-Frame-Options DENY, CSP
+frame-ancestors 'none', nosniff, strict referrer-policy); API auth gates
+verified live (unauthenticated → 401, non-admin on admin endpoints → 403);
+org-scoping of the new admin overview adversarially reviewed (verdict:
+accept, 2026-07-23). Formal checklist items (dependency audit, pen-test
+style input fuzzing) remain open.
+
+**Category 5 (Operations) — 2026-07-23:** public health endpoint
+`/api/v1/health` (reverse proxy only exposes `/api/*`); both containers
+`restart: unless-stopped`; api Docker healthcheck reporting healthy.
+External uptime monitoring and error tracking (e.g. UptimeRobot, Sentry)
+need third-party accounts — blocked on account owner, not engineering.
+
 ---
 
 ## Category 3: Functional Completeness

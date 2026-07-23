@@ -153,6 +153,18 @@ consecutive live prod reviews:
 detectors live in prod; §4 scenario covered by regression tests; 6/6
 confirmation run clean).
 
+## Conflict detector validated — 2026-07-23 (second session)
+
+The "quality unproven" caveat above is now resolved. A synthetic SOW with
+3 planted hard contradictions
+(`docs/sample/SOW_Sample/Synthetic_Conflicts_Test.docx`: 12- vs 24-month
+term, 99.9% vs 99.5% availability, Sept vs Oct start date) was run through
+the live production pipeline: **3/3 caught** (CONFLICT-1..3), each with
+both verbatim quotes, sensible severity (term = critical), and
+`evidence_type='conflict'`. Zero false conflicts — the detector even noted
+the $240,000 figure was *consistent* with the 24-month reading instead of
+flagging it. Scan cost: 24.3s of an 80.8s review.
+
 ## Phase D verification — 2026-07-23
 
 Same 21:08 UTC review (first post-migration-028): `audit_meta` populated in
