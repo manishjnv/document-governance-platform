@@ -68,7 +68,15 @@ class DocxParser:
             doc = Document(BytesIO(file_content))
             raw_text = []
             sections = []
-            page_count = 1  # DOCX doesn't have built-in page info
+            # DOCX has no intrinsic pages (layout is renderer-dependent),
+            # but Word stamps <w:lastRenderedPageBreak/> where each page
+            # began at last save, and explicit breaks are <w:br
+            # w:type="page"/>. Counting both gives real page numbers for
+            # Word-authored files; programmatically generated files with no
+            # markers fall back to a chars-per-page estimate below.
+            current_page = 1
+            saw_page_breaks = False
+            char_offset = 0
 
             # iter_inner_content() walks paragraphs AND tables in document
             # order -- many real-world SOW/RFP templates (not just this
@@ -83,6 +91,7 @@ class DocxParser:
                     if not table_text:
                         continue
                     raw_text.append(table_text)
+                    char_offset += len(table_text) + 1
                     if sections:
                         sections[-1].content += table_text + "\n"
                     continue
@@ -90,11 +99,19 @@ class DocxParser:
                 if not isinstance(block, Paragraph):
                     continue
 
+                breaks = block._p.xml.count("lastRenderedPageBreak") + block._p.xml.count(
+                    'type="page"'
+                )
+                if breaks:
+                    current_page += breaks
+                    saw_page_breaks = True
+
                 text = block.text.strip()
                 if not text:
                     continue
 
                 raw_text.append(text)
+                char_offset += len(text) + 1
 
                 # Detect heading level
                 level = 0
@@ -112,6 +129,8 @@ class DocxParser:
                             heading=text,
                             level=level,
                             content="",  # Will be filled as we parse
+                            page_number=current_page,
+                            start_offset=char_offset - len(text) - 1,
                         )
                     )
                 elif sections:
@@ -120,6 +139,16 @@ class DocxParser:
 
             # Combine text
             full_text = "\n".join(raw_text)
+
+            if saw_page_breaks:
+                page_count = current_page
+            else:
+                # ponytail: ~3000 chars/page estimate; real layout needs a
+                # renderer. Only used for files with no Word page markers.
+                _CHARS_PER_PAGE = 3000
+                page_count = max(1, -(-len(full_text) // _CHARS_PER_PAGE))
+                for s in sections:
+                    s.page_number = min(page_count, s.start_offset // _CHARS_PER_PAGE + 1)
 
             # Estimate tokens (rough: 1 token ≈ 4 chars)
             tokens = len(full_text) // 4

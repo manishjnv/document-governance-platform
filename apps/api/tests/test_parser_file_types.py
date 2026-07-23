@@ -173,3 +173,48 @@ class TestParseDocumentDispatch:
     async def test_unsupported_type_fails(self):
         result = await parse_document(b"data", "application/zip")
         assert result.status == "failed"
+
+
+@pytest.mark.asyncio
+class TestDocxPageNumbers:
+    """DOCX page tracking: explicit page breaks give real page numbers;
+    documents with no page markers get a chars-per-page estimate. Before
+    2026-07-23 every DOCX reported page_count=1 and no section pages."""
+
+    def _docx_with_page_break(self):
+        from docx import Document
+        from docx.enum.text import WD_BREAK
+
+        doc = Document()
+        doc.add_heading("First Section", level=1)
+        doc.add_paragraph("Content on page one.")
+        p = doc.add_paragraph()
+        p.add_run().add_break(WD_BREAK.PAGE)
+        doc.add_heading("Second Section", level=1)
+        doc.add_paragraph("Content on page two.")
+        buf = BytesIO()
+        doc.save(buf)
+        return buf.getvalue()
+
+    async def test_explicit_page_break_advances_page_number(self):
+        result = await DocxParser.parse(self._docx_with_page_break())
+        assert result.status == "success"
+        assert result.page_count == 2
+        pages = {s.heading: s.page_number for s in result.sections}
+        assert pages["First Section"] == 1
+        assert pages["Second Section"] == 2
+
+    async def test_no_markers_falls_back_to_estimate(self):
+        from docx import Document
+
+        doc = Document()
+        doc.add_heading("Only Section", level=1)
+        for _ in range(120):
+            doc.add_paragraph("Fifty characters of filler text padding this doc.")
+        buf = BytesIO()
+        doc.save(buf)
+
+        result = await DocxParser.parse(buf.getvalue())
+        assert result.status == "success"
+        assert result.page_count >= 2  # ~6000 chars / 3000-char estimate
+        assert result.sections[0].page_number == 1

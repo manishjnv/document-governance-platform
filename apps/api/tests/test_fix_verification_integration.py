@@ -89,7 +89,8 @@ class TestTriggerReviewVerifiesPreviousVersion:
             org_id=org.org_id, uploaded_by_user_id=admin.user_id,
             filename="sow.pdf", original_filename="sow.pdf", file_size_bytes=1024,
             file_type="pdf", s3_path="s3://bucket/sow_v1.pdf", version=1,
-            parsed_text="v1 text",
+            # >200 chars: trigger_review rejects unreadable/near-empty docs
+            parsed_text="v1 text. " + "This agreement describes the scope of services in detail. " * 5,
         )
         db_session.add(doc_v1)
         await db_session.flush()
@@ -100,7 +101,7 @@ class TestTriggerReviewVerifiesPreviousVersion:
             document_group_id=group_id,
             filename="sow_v2.pdf", original_filename="sow_v2.pdf", file_size_bytes=1024,
             file_type="pdf", s3_path="s3://bucket/sow_v2.pdf", version=2,
-            parsed_text="v2 text",
+            parsed_text="v2 text. " + "This agreement describes the scope of services in detail. " * 5,
         )
         db_session.add(doc_v2)
         await db_session.commit()

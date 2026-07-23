@@ -94,7 +94,7 @@ async def _verify_against_previous_version(db: AsyncSession, doc: Document, revi
 
 
 def _locate_finding(evidence, document_text, sections):
-    """Best-effort: which section/page a finding's evidence text falls in.
+    """Best-effort: (section label, page number) a finding's evidence falls in.
 
     Matches the finding's `evidence` (agents are prompted to quote clause
     language directly) against the document's parsed_sections content, same
@@ -104,7 +104,7 @@ def _locate_finding(evidence, document_text, sections):
     quotes evidence as strictly as Legal/PMO do.
     """
     if not evidence or not document_text or not sections:
-        return None
+        return None, None
 
     # Agents are prompted to "quote exactly" but often drop/add a trailing
     # period or the surrounding quote marks (e.g. quoting `"apply"` for
@@ -112,11 +112,11 @@ def _locate_finding(evidence, document_text, sections):
     # Strip both before matching instead of requiring byte-exact equality.
     normalized = evidence.strip().strip("\"'“”").rstrip(".,;: ")
     if not normalized:
-        return None
+        return None, None
 
     idx = document_text.find(normalized)
     if idx == -1:
-        return None
+        return None, None
 
     for section in sections:
         content = section.get("content") or ""
@@ -128,9 +128,9 @@ def _locate_finding(evidence, document_text, sections):
         if start <= idx < start + len(content):
             heading = section.get("heading") or "Unknown section"
             page = section.get("page_number")
-            return f"{heading} (p.{page})" if page else heading
+            return (f"{heading} (p.{page})" if page else heading), page
 
-    return None
+    return None, None
 
 # Global orchestrator instance
 _orchestrator: ReviewOrchestrator | None = None
@@ -314,9 +314,11 @@ async def trigger_review(
             evidence_type = finding_data.get("evidence_type")
             if evidence_type not in _EVIDENCE_TYPES:
                 # Derive rather than prompt for it: an agent quoting document
-                # text is a 'location' evidence; page/line stay null (DOCX
-                # pagination is unreliable -- page_count=1 bug, 2026-07-21).
+                # text is a 'location' evidence.
                 evidence_type = "location" if agent_evidence else None
+            section_ref, located_page = _locate_finding(
+                finding_data.get("evidence"), doc.parsed_text, doc.parsed_sections or []
+            )
             finding = Finding(
                 finding_id=uuid4(),
                 org_id=doc.org_id,
@@ -331,14 +333,12 @@ async def trigger_review(
                 title=finding_type.replace("_", " ").title()[:255],
                 description=finding_data.get("description", ""),
                 evidence=finding_data.get("evidence"),
-                section_ref=_locate_finding(
-                    finding_data.get("evidence"), doc.parsed_text, doc.parsed_sections or []
-                ),
+                section_ref=section_ref,
                 severity=finding_data.get("severity", "medium"),
                 confidence=int((finding_data.get("confidence", 0.5) * 100)),
                 recommendation=finding_data.get("recommendation", ""),
                 evidence_type=evidence_type,
-                page=_tolerant_int(finding_data.get("page")),
+                page=_tolerant_int(finding_data.get("page")) or located_page,
                 line_start=_tolerant_int(finding_data.get("line_start")),
                 line_end=_tolerant_int(finding_data.get("line_end")),
                 matched_text=finding_data.get("matched_text")
@@ -362,6 +362,9 @@ async def trigger_review(
 
         # Store rule violations as findings
         for violation in orchestrated_result.rule_violations:
+            section_ref, located_page = _locate_finding(
+                violation.get("evidence"), doc.parsed_text, doc.parsed_sections or []
+            )
             finding = Finding(
                 finding_id=uuid4(),
                 org_id=doc.org_id,
@@ -372,13 +375,12 @@ async def trigger_review(
                 title=violation.get("rule_name", "")[:255],
                 description=violation.get("description", ""),
                 evidence=violation.get("evidence"),
-                section_ref=_locate_finding(
-                    violation.get("evidence"), doc.parsed_text, doc.parsed_sections or []
-                ),
+                section_ref=section_ref,
                 severity=violation.get("severity", "medium"),
                 confidence=100,
                 recommendation=violation.get("recommendation", ""),
                 evidence_type=violation.get("evidence_type"),
+                page=located_page,
                 matched_text=violation.get("matched_text"),
             )
 
