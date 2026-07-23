@@ -361,6 +361,22 @@ export default function ResultsPage() {
 
   const findingsPanel = (
     <>
+      {/* Actions */}
+      <div className="flex items-center justify-end gap-1.5 mb-2">
+        {docInfo?.parsed_sections && docInfo.parsed_sections.length > 0 && (
+          <Button size="sm" variant="outline" onClick={() => setShowDocument((s) => !s)}>
+            <FileText size={14} strokeWidth={2} className="mr-1.5" aria-hidden="true" />
+            {showDocument ? 'Hide Document' : 'Show Document'}
+          </Button>
+        )}
+        <Button size="sm" variant="outline" onClick={handleDownloadPdf}>
+          Download PDF
+        </Button>
+        <Button size="sm" onClick={handleViewReport}>
+          View Full Report
+        </Button>
+      </div>
+
       {/* Overall Score / Risk Level */}
       <div className="grid grid-cols-2 gap-1.5 mb-2">
         <Card>
@@ -437,48 +453,6 @@ export default function ResultsPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Findings Summary (clickable filters) */}
-      <Card className="mb-2">
-        <CardHeader className="pb-0.5 pt-2">
-          <CardTitle className="text-sm">
-            Findings Summary
-            <InfoTip text="Every issue found, grouped by how serious it is. Click a number to filter the list below to just that severity." />
-            {severityFilter && (
-              <button
-                onClick={() => setSeverityFilter(null)}
-                className="ml-2 text-xs font-normal text-primary hover:underline"
-              >
-                clear filter
-              </button>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pb-2">
-          <div className="grid grid-cols-5 gap-1.5">
-            {SEVERITIES.map((sev) => {
-              const style = STAT_STYLES[sev];
-              const active = severityFilter === sev;
-              return (
-                <button
-                  key={sev}
-                  onClick={() => setSeverityFilter(active ? null : sev)}
-                  className={cn(
-                    'text-center p-2 rounded-md transition-all',
-                    style.bg,
-                    active ? 'ring-2 ring-offset-1 ring-primary' : 'hover:ring-1 hover:ring-primary/40'
-                  )}
-                >
-                  <div className={cn('text-2xl font-bold', style.text)}>
-                    {review.findings_count[sev]}
-                  </div>
-                  <div className="text-foreground text-xs font-medium">{style.label}</div>
-                </button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Risk breakdown by axis -- which KIND of risk is driving the score */}
       {review.risk_breakdown && Object.keys(review.risk_breakdown).length > 0 && (
@@ -576,26 +550,54 @@ export default function ResultsPage() {
         </Card>
       )}
 
+      {/* Findings Summary (clickable filters) */}
+      <Card className="mb-2">
+        <CardHeader className="pb-0.5 pt-2">
+          <CardTitle className="text-sm">
+            Findings Summary
+            <InfoTip text="Every issue found, grouped by how serious it is. Click a number to filter the list below to just that severity." />
+            {severityFilter && (
+              <button
+                onClick={() => setSeverityFilter(null)}
+                className="ml-2 text-xs font-normal text-primary hover:underline"
+              >
+                clear filter
+              </button>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pb-2">
+          <div className="grid grid-cols-5 gap-1.5">
+            {SEVERITIES.map((sev) => {
+              const style = STAT_STYLES[sev];
+              const active = severityFilter === sev;
+              return (
+                <button
+                  key={sev}
+                  onClick={() => setSeverityFilter(active ? null : sev)}
+                  className={cn(
+                    'text-center p-2 rounded-md transition-all',
+                    style.bg,
+                    active ? 'ring-2 ring-offset-1 ring-primary' : 'hover:ring-1 hover:ring-primary/40'
+                  )}
+                >
+                  <div className={cn('text-2xl font-bold', style.text)}>
+                    {review.findings_count[sev]}
+                  </div>
+                  <div className="text-foreground text-xs font-medium">{style.label}</div>
+                </button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Findings Details */}
       <Card>
-        <CardHeader className="flex-row items-center justify-between space-y-0 pb-0.5 pt-2">
+        <CardHeader className="pb-0.5 pt-2">
           <CardTitle className="text-sm">
             Findings {(severityFilter || areaFilter) && <span className="text-muted-foreground font-normal">({visibleFindings.length} of {review.findings.length})</span>}
           </CardTitle>
-          <div className="flex items-center gap-1.5">
-            {docInfo?.parsed_sections && docInfo.parsed_sections.length > 0 && (
-              <Button size="sm" variant="outline" onClick={() => setShowDocument((s) => !s)}>
-                <FileText size={14} strokeWidth={2} className="mr-1.5" aria-hidden="true" />
-                {showDocument ? 'Hide Document' : 'Show Document'}
-              </Button>
-            )}
-            <Button size="sm" variant="outline" onClick={handleDownloadPdf}>
-              Download PDF
-            </Button>
-            <Button size="sm" onClick={handleViewReport}>
-              View Full Report
-            </Button>
-          </div>
         </CardHeader>
         <CardContent className="pb-2">
           {visibleFindings.length === 0 ? (
