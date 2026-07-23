@@ -158,6 +158,7 @@ function OtpLogin({ onError }: { onError: (msg: string) => void }) {
           <input
             id="email"
             type="email"
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
@@ -183,6 +184,8 @@ function OtpLogin({ onError }: { onError: (msg: string) => void }) {
       <div className="relative">
         <input
           type={showCode ? 'text' : 'password'}
+          name="one-time-code"
+          autoComplete="one-time-code"
           inputMode="numeric"
           pattern="\d{4}"
           maxLength={4}
