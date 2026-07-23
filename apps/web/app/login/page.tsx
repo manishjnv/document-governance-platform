@@ -105,6 +105,7 @@ function OtpLogin({ onError }: { onError: (msg: string) => void }) {
   const [codeRequested, setCodeRequested] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showCode, setShowCode] = useState(false);
+  const [codeError, setCodeError] = useState('');
   const router = useRouter();
 
   const requestCode = async (e: React.FormEvent) => {
@@ -123,15 +124,15 @@ function OtpLogin({ onError }: { onError: (msg: string) => void }) {
 
   const verifyCode = async (submittedCode: string) => {
     setLoading(true);
-    onError('');
+    setCodeError('');
     try {
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/otp/verify`,
         { email, code: submittedCode }
       );
       storeTokensAndRedirect(router, response.data);
-    } catch (err: any) {
-      onError(err.response?.data?.detail || 'Incorrect code -- please try again');
+    } catch {
+      setCodeError("That code didn't match. Please try again.");
       setCode('');
     } finally {
       setLoading(false);
@@ -186,8 +187,10 @@ function OtpLogin({ onError }: { onError: (msg: string) => void }) {
           pattern="\d{4}"
           maxLength={4}
           value={code}
-          onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
-          placeholder="1234"
+          onChange={(e) => {
+            setCodeError('');
+            setCode(e.target.value.replace(/\D/g, '').slice(0, 4));
+          }}
           disabled={loading}
           autoFocus
           className="w-full px-3 py-2 pr-10 border border-input rounded-md text-lg tracking-[0.5em] text-center transition duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:opacity-50"
@@ -202,6 +205,11 @@ function OtpLogin({ onError }: { onError: (msg: string) => void }) {
         </button>
       </div>
       {loading && <p className="text-xs text-muted-foreground text-center">Verifying...</p>}
+      {codeError && (
+        <p role="alert" className="text-xs text-destructive text-center">
+          {codeError}
+        </p>
+      )}
       <button
         type="button"
         className="text-sm text-primary hover:underline w-full text-center"
