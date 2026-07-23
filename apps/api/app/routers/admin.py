@@ -64,6 +64,264 @@ def _user_response(user: User) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# Admin overview -- everything an admin wants at a glance, in plain words.
+# ---------------------------------------------------------------------------
+
+_ACTION_LABELS = {
+    "user.login": "Signed in with password",
+    "user.login.otp": "Signed in with an email code",
+    "user.login.google": "Signed in with Google",
+    "document.uploaded": "Uploaded a document",
+    "review.completed": "Ran an AI review",
+    "organization.created": "Created the workspace",
+    "access.granted": "Was given access",
+    "access.revoked": "Had access removed",
+}
+
+_LOGIN_ACTIONS = ("user.login", "user.login.otp", "user.login.google")
+
+_LOGIN_METHOD = {
+    "user.login": "Password",
+    "user.login.otp": "Email code",
+    "user.login.google": "Google",
+}
+
+
+def _humanize_action(action: str) -> str:
+    return _ACTION_LABELS.get(action, action.replace(".", " ").replace("_", " ").capitalize())
+
+
+def _device_from_ua(user_agent: Optional[str]) -> Optional[str]:
+    """'Chrome on Windows'-style summary. Deliberately a keyword scan, not a
+    UA-parser dependency -- good enough for an admin glance."""
+    if not user_agent:
+        return None
+    ua = user_agent.lower()
+    if "edg/" in ua or "edge" in ua:
+        browser = "Edge"
+    elif "firefox" in ua:
+        browser = "Firefox"
+    elif "chrome" in ua and "chromium" not in ua:
+        browser = "Chrome"
+    elif "safari" in ua:
+        browser = "Safari"
+    else:
+        browser = "Browser"
+    if "android" in ua:
+        os_name = "Android"
+    elif "iphone" in ua or "ipad" in ua or "ios" in ua:
+        os_name = "iPhone/iPad"
+    elif "mac os" in ua or "macintosh" in ua:
+        os_name = "Mac"
+    elif "windows" in ua:
+        os_name = "Windows"
+    elif "linux" in ua:
+        os_name = "Linux"
+    else:
+        os_name = "Unknown device"
+    mobile = " (mobile)" if ("mobile" in ua and "ipad" not in ua) else ""
+    return f"{browser} on {os_name}{mobile}"
+
+
+@router.get("/overview", summary="Admin overview: people, sign-ins, activity, AI usage")
+async def get_admin_overview(
+    current_user: TokenData = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Everything an admin wants at a glance, org-scoped, read-only."""
+    from datetime import datetime, timedelta
+
+    from sqlalchemy import func, select
+
+    from app.models.audit_log import AuditLog
+    from app.models.document import Document
+    from app.models.finding import Finding
+    from app.models.review import Review
+
+    org_id = UUID(str(current_user.org_id))
+    now = datetime.utcnow()
+    week_ago = now - timedelta(days=7)
+    month_ago = now - timedelta(days=30)
+
+    users = await list_org_users(db, org_id, 0, 1000)
+
+    # Per-user document / review counts + last activity, in three grouped
+    # queries instead of N per user.
+    doc_counts = dict(
+        (await db.execute(
+            select(Document.uploaded_by_user_id, func.count())
+            .where(Document.org_id == org_id, Document.deleted_at.is_(None))
+            .group_by(Document.uploaded_by_user_id)
+        )).all()
+    )
+    review_counts = dict(
+        (await db.execute(
+            select(Review.triggered_by_user_id, func.count())
+            .where(Review.org_id == org_id, Review.deleted_at.is_(None))
+            .group_by(Review.triggered_by_user_id)
+        )).all()
+    )
+    last_activity = dict(
+        (await db.execute(
+            select(AuditLog.user_id, func.max(AuditLog.created_at))
+            .where(AuditLog.org_id == org_id)
+            .group_by(AuditLog.user_id)
+        )).all()
+    )
+
+    people = [
+        {
+            "name": u.full_name or u.email.split("@")[0],
+            "email": u.email,
+            "role": u.role,
+            "active": u.is_active,
+            "joined": u.created_at.isoformat() if u.created_at else None,
+            "last_sign_in": u.last_login.isoformat() if u.last_login else None,
+            "documents_uploaded": doc_counts.get(u.user_id, 0),
+            "reviews_run": review_counts.get(u.user_id, 0),
+            "last_activity": (
+                last_activity[u.user_id].isoformat() if last_activity.get(u.user_id) else None
+            ),
+        }
+        for u in users
+    ]
+    names_by_id = {u.user_id: (u.full_name or u.email) for u in users}
+
+    # Sign-ins (from the audit trail; device/IP captured at login as of
+    # 2026-07-23 -- older rows have neither).
+    signin_rows = (
+        await db.execute(
+            select(AuditLog)
+            .where(AuditLog.org_id == org_id, AuditLog.action.in_(_LOGIN_ACTIONS))
+            .order_by(AuditLog.created_at.desc())
+            .limit(15)
+        )
+    ).scalars().all()
+    signins_7d = (
+        await db.execute(
+            select(func.count()).where(
+                AuditLog.org_id == org_id,
+                AuditLog.action.in_(_LOGIN_ACTIONS),
+                AuditLog.created_at >= week_ago,
+            )
+        )
+    ).scalar() or 0
+    signins_30d = (
+        await db.execute(
+            select(func.count()).where(
+                AuditLog.org_id == org_id,
+                AuditLog.action.in_(_LOGIN_ACTIONS),
+                AuditLog.created_at >= month_ago,
+            )
+        )
+    ).scalar() or 0
+
+    # Recent activity feed (all actions, humanized).
+    activity_rows = (
+        await db.execute(
+            select(AuditLog)
+            .where(AuditLog.org_id == org_id)
+            .order_by(AuditLog.created_at.desc())
+            .limit(25)
+        )
+    ).scalars().all()
+
+    # Documents + AI usage.
+    docs_total = (
+        await db.execute(
+            select(func.count()).where(Document.org_id == org_id, Document.deleted_at.is_(None))
+        )
+    ).scalar() or 0
+    docs_7d = (
+        await db.execute(
+            select(func.count()).where(
+                Document.org_id == org_id,
+                Document.deleted_at.is_(None),
+                Document.created_at >= week_ago,
+            )
+        )
+    ).scalar() or 0
+
+    review_stats = (
+        await db.execute(
+            select(
+                func.count(),
+                func.count().filter(Review.status == "completed"),
+                func.count().filter(Review.status == "failed"),
+                func.count().filter(Review.created_at >= week_ago),
+                func.avg(Review.processing_time_seconds),
+                func.max(Review.completed_at),
+            ).where(Review.org_id == org_id, Review.deleted_at.is_(None))
+        )
+    ).one()
+    reviews_total, reviews_completed, reviews_failed, reviews_7d, avg_seconds, last_review_at = review_stats
+
+    findings_total = (
+        await db.execute(
+            select(func.count()).where(Finding.org_id == org_id, Finding.deleted_at.is_(None))
+        )
+    ).scalar() or 0
+
+    # AI models actually used -- from recent reviews' audit metadata.
+    recent_meta = (
+        await db.execute(
+            select(Review.audit_meta)
+            .where(Review.org_id == org_id, Review.audit_meta.isnot(None))
+            .order_by(Review.completed_at.desc())
+            .limit(20)
+        )
+    ).scalars().all()
+    models_in_use = sorted(
+        {m for meta in recent_meta for m in (meta.get("models_used") or {}).values() if m}
+    )
+
+    # Each completed review runs 6 specialist reviewers + 1 consistency
+    # check = 7 AI calls (before any retries) -- an honest approximation.
+    return {
+        "generated_at": now.isoformat() + "Z",
+        "totals": {
+            "members": len(people),
+            "active_members": sum(1 for p in people if p["active"]),
+            "sign_ins_last_7_days": signins_7d,
+            "sign_ins_last_30_days": signins_30d,
+            "documents": docs_total,
+            "documents_last_7_days": docs_7d,
+            "reviews": reviews_total,
+            "reviews_last_7_days": reviews_7d,
+            "findings": findings_total,
+        },
+        "people": people,
+        "recent_sign_ins": [
+            {
+                "who": names_by_id.get(r.user_id, "Unknown"),
+                "when": r.created_at.isoformat(),
+                "how": _LOGIN_METHOD.get(r.action, "Unknown"),
+                "device": _device_from_ua(r.user_agent),
+                "from_ip": r.ip_address,
+            }
+            for r in signin_rows
+        ],
+        "recent_activity": [
+            {
+                "who": names_by_id.get(r.user_id, "Someone"),
+                "what": _humanize_action(r.action),
+                "when": r.created_at.isoformat(),
+            }
+            for r in activity_rows
+        ],
+        "ai_usage": {
+            "reviews_completed": reviews_completed or 0,
+            "reviews_failed": reviews_failed or 0,
+            "checks_per_review": 7,
+            "ai_calls_estimate": (reviews_completed or 0) * 7,
+            "average_review_seconds": round(float(avg_seconds), 1) if avg_seconds else None,
+            "models_in_use": models_in_use,
+            "last_review_at": last_review_at.isoformat() if last_review_at else None,
+        },
+    }
+
+
 @router.get("/organization", summary="Get current org settings")
 async def get_organization_settings(
     current_user: TokenData = Depends(require_role("admin")),

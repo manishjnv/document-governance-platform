@@ -2,9 +2,10 @@
 
 import logging
 from datetime import datetime, timedelta
+from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -92,7 +93,9 @@ async def _find_candidate_users_by_email(db: AsyncSession, email: str) -> list[U
         429: {"description": "Too many failed login attempts"},
     },
 )
-async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)) -> LoginResponse:
+async def login(
+    request: LoginRequest, http_request: Request, db: AsyncSession = Depends(get_db)
+) -> LoginResponse:
     """
     Login with email and password.
 
@@ -139,15 +142,33 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)) -> Lo
     user = matches[0]
     record_success(request.email)
 
-    response = await _issue_login_response(db, user, action="user.login")
+    response = await _issue_login_response(db, user, action="user.login", http_request=http_request)
     logger.info(f"Successful login for {request.email}")
     return response
 
 
-async def _issue_login_response(db: AsyncSession, user: User, action: str) -> LoginResponse:
+def _client_info(http_request) -> tuple[Optional[str], Optional[str]]:
+    """(ip, user_agent) for the audit trail. Behind Cloudflare + Caddy the
+    real client IP is in CF-Connecting-IP / X-Forwarded-For, not the socket
+    peer."""
+    if http_request is None:
+        return None, None
+    headers = http_request.headers
+    ip = (
+        headers.get("cf-connecting-ip")
+        or (headers.get("x-forwarded-for") or "").split(",")[0].strip()
+        or (http_request.client.host if http_request.client else None)
+    )
+    return (ip or None), headers.get("user-agent")
+
+
+async def _issue_login_response(
+    db: AsyncSession, user: User, action: str, http_request=None
+) -> LoginResponse:
     """Shared by password login, OTP-verify, and Google Sign-In: mint
     tokens, record last_login, write the audit trail, and build the
     response. An audit-log failure must never break login."""
+    ip_address, user_agent = _client_info(http_request)
     access_token, access_expires = create_access_token(
         user_id=user.user_id,
         email=user.email,
@@ -173,6 +194,8 @@ async def _issue_login_response(db: AsyncSession, user: User, action: str) -> Lo
             action=action,
             resource_type="user",
             resource_id=user.user_id,
+            ip_address=ip_address,
+            user_agent=user_agent,
         )
         await db.commit()
     except Exception as e:
@@ -273,7 +296,9 @@ async def request_otp(request: OtpRequestRequest, db: AsyncSession = Depends(get
     summary="Verify an email login code",
     responses={401: {"description": "Invalid or expired code"}},
 )
-async def verify_otp(request: OtpVerifyRequest, db: AsyncSession = Depends(get_db)) -> LoginResponse:
+async def verify_otp(
+    request: OtpVerifyRequest, http_request: Request, db: AsyncSession = Depends(get_db)
+) -> LoginResponse:
     """Step 2 of passwordless email login."""
     from app.models.otp_code import OtpCode
 
@@ -306,7 +331,7 @@ async def verify_otp(request: OtpVerifyRequest, db: AsyncSession = Depends(get_d
     await db.commit()
 
     user = await _get_or_create_user(db, request.email.lower())
-    response = await _issue_login_response(db, user, action="user.login.otp")
+    response = await _issue_login_response(db, user, action="user.login.otp", http_request=http_request)
     logger.info(f"Successful OTP login for {request.email}")
     return response
 
@@ -321,7 +346,7 @@ async def verify_otp(request: OtpVerifyRequest, db: AsyncSession = Depends(get_d
     },
 )
 async def google_login(
-    request: GoogleLoginRequest, db: AsyncSession = Depends(get_db)
+    request: GoogleLoginRequest, http_request: Request, db: AsyncSession = Depends(get_db)
 ) -> LoginResponse:
     """Verifies the Google ID token from the frontend's Google Identity
     Services button, then seamlessly logs in an existing user matched by
@@ -365,7 +390,7 @@ async def google_login(
         user.google_sub = google_sub
         await db.commit()
 
-    response = await _issue_login_response(db, user, action="user.login.google")
+    response = await _issue_login_response(db, user, action="user.login.google", http_request=http_request)
     logger.info(f"Successful Google login for {email}")
     return response
 

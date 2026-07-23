@@ -176,3 +176,49 @@ async def test_non_admin_gets_403_on_all_admin_endpoints(db_session):
             f"/api/v1/admin/users/{target.user_id}/role", json={"role": "admin"}
         )
     ).status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_admin_overview_shape_and_counts(db_session):
+    org = await _seed_org(db_session)
+    admin = await _seed_user(db_session, org.org_id, "admin", "boss@example.com")
+    await _seed_user(db_session, org.org_id, "viewer", "member@example.com")
+    client = _make_client(db_session, org.org_id, role="admin", user_id=admin.user_id)
+
+    resp = await client.get("/api/v1/admin/overview")
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert body["totals"]["members"] == 2
+    assert body["totals"]["documents"] == 0
+    assert body["ai_usage"]["checks_per_review"] == 7
+    emails = {p["email"] for p in body["people"]}
+    assert emails == {"boss@example.com", "member@example.com"}
+    for p in body["people"]:
+        assert set(p) >= {
+            "name", "email", "role", "active", "joined",
+            "last_sign_in", "documents_uploaded", "reviews_run", "last_activity",
+        }
+    assert isinstance(body["recent_sign_ins"], list)
+    assert isinstance(body["recent_activity"], list)
+
+
+@pytest.mark.asyncio
+async def test_admin_overview_forbidden_for_non_admin(db_session):
+    org = await _seed_org(db_session)
+    client = _make_client(db_session, org.org_id, role="reviewer")
+    assert (await client.get("/api/v1/admin/overview")).status_code == 403
+
+
+def test_device_summary_is_human_readable():
+    from app.routers.admin import _device_from_ua
+
+    assert _device_from_ua(
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+    ) == "Chrome on Windows"
+    assert _device_from_ua(
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 "
+        "(KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"
+    ) == "Safari on iPhone/iPad (mobile)"
+    assert _device_from_ua(None) is None

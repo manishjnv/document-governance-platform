@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { FileText, LayoutDashboard, Search, Upload, Menu, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileText, LayoutDashboard, Search, Upload, Menu, LogOut, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
@@ -14,17 +14,28 @@ const NAV_ITEMS = [
   { href: '/search', label: 'Search', icon: Search },
 ];
 
+const ADMIN_NAV_ITEM = { href: '/admin', label: 'Admin', icon: ShieldCheck };
+
 const MIN_WIDTH = 180;
 const MAX_WIDTH = 400;
 const COLLAPSED_WIDTH = 56;
 const STORAGE_KEY = 'sidebar_width';
 const COLLAPSED_KEY = 'sidebar_collapsed';
 
-function NavLinks({ onNavigate, collapsed }: { onNavigate?: () => void; collapsed?: boolean }) {
+function NavLinks({
+  onNavigate,
+  collapsed,
+  isAdmin,
+}: {
+  onNavigate?: () => void;
+  collapsed?: boolean;
+  isAdmin?: boolean;
+}) {
   const pathname = usePathname();
+  const items = isAdmin ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS;
   return (
     <nav className="flex flex-col gap-1">
-      {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+      {items.map(({ href, label, icon: Icon }) => {
         const active = pathname === href || pathname?.startsWith(`${href}/`);
         return (
           <Link
@@ -61,7 +72,19 @@ export function AppShell({
   // Default collapsed unless the user has an explicit saved preference.
   const [collapsed, setCollapsed] = useState(true);
   const [resizing, setResizing] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((me) => setIsAdmin(me?.role === 'admin'))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const savedWidth = localStorage.getItem(STORAGE_KEY);
@@ -135,7 +158,7 @@ export function AppShell({
           </p>
         )}
         {collapsed && <div className="pb-5" />}
-        <NavLinks collapsed={collapsed} />
+        <NavLinks collapsed={collapsed} isAdmin={isAdmin} />
         <div className="mt-auto">
           <Button
             variant="ghost"
@@ -185,7 +208,7 @@ export function AppShell({
             <FileText size={18} strokeWidth={2} className="text-primary" aria-hidden="true" />
             ScopeWise
           </SheetTitle>
-          <NavLinks onNavigate={() => setMobileOpen(false)} />
+          <NavLinks onNavigate={() => setMobileOpen(false)} isAdmin={isAdmin} />
           <Button
             variant="ghost"
             size="sm"
