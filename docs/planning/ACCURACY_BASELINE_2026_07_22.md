@@ -125,6 +125,30 @@ wrong. The 4 heading-keyword FPs and the self-negating finding are gone.
 measured 0 FPs, 93.1%). Already past the >90% strict-recall launch target for
 this document; next gate is after Phase C.
 
+## Third measurement — 2026-07-23 (second session): last 2 partials closed
+
+After the ScopeReviewer #9 (environment inventory) and PMOReviewer #7
+(open-items governance) prompt additions, a fresh 6/6 production run
+(doc `04fe42e5`, 81 findings, 147.2s, audit git_sha `8f9370a`):
+
+- **SOW-002 🟡→✅** — ScopeReviewer "Incomplete Environment Inventory" ×2:
+  no endpoint/server/subscription counts, and critical business
+  applications explicitly deferred.
+- **SOW-020 🟡→✅** — PMOReviewer "Unmanaged Open Items": Section 12's
+  eight deferred decisions have no owner, priority, or resolution process.
+
+**Strict recall on this document: 29/29 = 100%.** All 29 ground-truth rows
+now have direct matches. Caveat unchanged: one document, one ground-truth
+set — the ≥10-doc labeled corpus is still the real launch gate.
+
+Same session also validated: RFP pipeline (RFP Sample - 2RFP.pdf →
+detected RFP, 13 RFP-rule violations, 0 SOW rules, 40 real agent findings
+across all 6 reviewers, 30.4s) — model routing works beyond the single
+SOW test doc. Confidence calibration snapshot: avg confidence 87.7 vs
+≈97% precision → ≈9-point gap, now UNDER-confident (was 17.95%
+over-confident 2026-07-18); no prompt tuning warranted from a
+single-document sample.
+
 ## Phase C measurement note — 2026-07-23 (later same session)
 
 Phase C (broken-reference detector REF-SCAN + conflict LLM scan
