@@ -128,9 +128,11 @@ last incident.
   reload` (not restart) to avoid downtime for other sites.
 - Standard deploy loop: `git push` locally → `ssh a11yos-vps "cd
   /opt/scopewise && git pull && docker compose -f docker-compose.vps.yml
-  --env-file .env build && docker compose -f docker-compose.vps.yml
-  --env-file .env up -d"` → apply any new migration (see above) → smoke
-  test `https://scopewise.assessiq.in/login`.
+  --env-file .env build && GIT_SHA=\$(git rev-parse --short HEAD) docker
+  compose -f docker-compose.vps.yml --env-file .env up -d"` → apply any
+  new migration (see above) → smoke test
+  `https://scopewise.assessiq.in/login`. The `GIT_SHA=...` prefix on
+  `up -d` matters — it lands in every review's audit_meta.
 - `docker-compose.vps.yml` is distinct from `docker-compose.prod.yml`
   (the latter assumes a dedicated host on standard ports — not this
   VPS). Don't conflate the two.

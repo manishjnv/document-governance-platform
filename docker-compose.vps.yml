@@ -50,6 +50,9 @@ services:
       ALLOWED_HOSTS: ${ALLOWED_HOSTS}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      # Set by the deploy command (GIT_SHA=$(git rev-parse --short HEAD));
+      # recorded in every review's audit_meta.
+      GIT_SHA: ${GIT_SHA:-unknown}
       SMTP_SERVER: ${SMTP_SERVER}
       SMTP_PORT: ${SMTP_PORT}
       SMTP_USERNAME: ${SMTP_USERNAME}
