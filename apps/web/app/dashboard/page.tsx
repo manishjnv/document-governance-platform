@@ -9,7 +9,8 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Link from 'next/link';
-import { ArrowDown, ArrowUp } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronRight, FolderOpen } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -182,7 +183,7 @@ function AssignProjectControl({
   );
 }
 
-function DocumentsTable({
+function DocumentRows({
   documents,
   reviewingDocId,
   onReview,
@@ -279,20 +280,8 @@ function DocumentsTable({
   };
 
   return (
-    <div className="rounded-lg border overflow-hidden">
-      <Table className="text-xs [&_th]:h-8 [&_th]:py-1.5 [&_th]:px-3 [&_td]:py-1.5 [&_td]:px-3">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Filename</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Completeness</TableHead>
-            <TableHead>Accuracy</TableHead>
-            <TableHead>Uploaded</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {versionGroups.map((versions) => {
+    <>
+      {versionGroups.map((versions) => {
             const latest = versions[0];
             const previous = versions[1];
             const isExpanded = expandedGroups.has(latest.document_group_id);
@@ -308,7 +297,12 @@ function DocumentsTable({
                           className="text-muted-foreground hover:text-foreground w-4"
                           aria-label={isExpanded ? 'Collapse versions' : 'Expand versions'}
                         >
-                          {isExpanded ? '▾' : '▸'}
+                          <ChevronRight
+                            size={13}
+                            strokeWidth={2}
+                            className={cn('transition-transform duration-150', isExpanded && 'rotate-90')}
+                            aria-hidden="true"
+                          />
                         </button>
                       )}
                       <span>{latest.original_filename || latest.filename}</span>
@@ -360,10 +354,8 @@ function DocumentsTable({
                   ))}
               </Fragment>
             );
-          })}
-        </TableBody>
-      </Table>
-    </div>
+      })}
+    </>
   );
 }
 
@@ -376,7 +368,17 @@ export default function DashboardPage() {
   const [filterType, setFilterType] = useState('');
   const [reviewingDocId, setReviewingDocId] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<LinkSuggestion[]>([]);
+  const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
   const router = useRouter();
+
+  const toggleProject = (id: string) => {
+    setCollapsedProjects((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -679,71 +681,105 @@ export default function DashboardPage() {
           </Button>
         </div>
       ) : (
-        <div className="space-y-2">
-          {groups.projectGroups.map(({ project, documents: projectDocs }) => (
-            <details key={project.project_id} className="rounded-lg border" open>
-              <summary className="cursor-pointer select-none px-3 py-2 text-sm flex items-center justify-between gap-4">
-                <span className="font-medium">
-                  {project.name}{' '}
-                  <span className="text-muted-foreground font-normal">
-                    ({projectDocs.length} document{projectDocs.length === 1 ? '' : 's'})
-                  </span>
-                </span>
-                <span className="flex items-center gap-4 text-xs text-muted-foreground">
-                  {project.average_latest_score !== null && (
-                    <span>Avg score: {project.average_latest_score.toFixed(0)}</span>
-                  )}
-                  {project.open_critical_count > 0 && (
-                    <span className="text-red-600 font-medium">
-                      {project.open_critical_count} critical
-                    </span>
-                  )}
-                  <Link
-                    href={`/projects/${project.project_id}`}
-                    className="text-primary hover:underline"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    View project
-                  </Link>
-                </span>
-              </summary>
-              <div className="px-2 pb-2">
-                <DocumentsTable
-                  documents={projectDocs}
-                  reviewingDocId={reviewingDocId}
-                  onReview={handleReview}
-                  onView={handleView}
-                  onDelete={handleDelete}
-                  projectOptions={projects}
-                  onAssignProject={handleAssignProject}
-                  onSetDocumentType={handleSetDocumentType}
-                />
-              </div>
-            </details>
-          ))}
-
-          {groups.ungrouped.length > 0 && (
-            <details className="rounded-lg border" open>
-              <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium">
-                No Project{' '}
-                <span className="text-muted-foreground font-normal">
-                  ({groups.ungrouped.length} document{groups.ungrouped.length === 1 ? '' : 's'})
-                </span>
-              </summary>
-              <div className="px-2 pb-2">
-                <DocumentsTable
-                  documents={groups.ungrouped}
-                  reviewingDocId={reviewingDocId}
-                  onReview={handleReview}
-                  onView={handleView}
-                  onDelete={handleDelete}
-                  projectOptions={projects}
-                  onAssignProject={handleAssignProject}
-                  onSetDocumentType={handleSetDocumentType}
-                />
-              </div>
-            </details>
-          )}
+        <div className="rounded-lg border overflow-hidden">
+          <Table className="text-xs [&_th]:h-8 [&_th]:py-1.5 [&_th]:px-3 [&_td]:py-1.5 [&_td]:px-3">
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>Filename</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Completeness</TableHead>
+                <TableHead>Accuracy</TableHead>
+                <TableHead>Uploaded</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[
+                ...groups.projectGroups.map(({ project, documents: projectDocs }) => ({
+                  id: project.project_id,
+                  name: project.name,
+                  project,
+                  docs: projectDocs,
+                })),
+                ...(groups.ungrouped.length > 0
+                  ? [{ id: '__none__', name: 'No Project', project: null, docs: groups.ungrouped }]
+                  : []),
+              ].map(({ id, name, project, docs }) => {
+                const collapsed = collapsedProjects.has(id);
+                return (
+                  <Fragment key={id}>
+                    {/* Project group row -- one slim band, not a nested box */}
+                    <TableRow className="bg-muted/50 hover:bg-muted/70 border-t">
+                      <TableCell colSpan={6} className="py-1">
+                        <div className="flex items-center justify-between gap-4 flex-wrap">
+                          <button
+                            onClick={() => toggleProject(id)}
+                            className="flex items-center gap-1.5 text-[13px] font-semibold"
+                            aria-expanded={!collapsed}
+                          >
+                            <ChevronRight
+                              size={14}
+                              strokeWidth={2}
+                              className={cn(
+                                'text-muted-foreground transition-transform duration-150',
+                                !collapsed && 'rotate-90'
+                              )}
+                              aria-hidden="true"
+                            />
+                            <FolderOpen
+                              size={13}
+                              strokeWidth={2}
+                              className="text-muted-foreground"
+                              aria-hidden="true"
+                            />
+                            {name}
+                            <span className="text-muted-foreground font-normal">
+                              · {docs.length}
+                            </span>
+                          </button>
+                          <span className="flex items-center gap-3 text-xs">
+                            {project?.average_latest_score != null && (
+                              <span className="text-muted-foreground">
+                                Avg score{' '}
+                                <span className="font-medium text-foreground">
+                                  {project.average_latest_score.toFixed(0)}
+                                </span>
+                              </span>
+                            )}
+                            {project && project.open_critical_count > 0 && (
+                              <span className="rounded bg-red-100 px-1.5 py-0.5 font-medium text-red-800">
+                                {project.open_critical_count} critical
+                              </span>
+                            )}
+                            {project && (
+                              <Link
+                                href={`/projects/${project.project_id}`}
+                                className="text-primary hover:underline"
+                              >
+                                View project
+                              </Link>
+                            )}
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    {!collapsed && (
+                      <DocumentRows
+                        documents={docs}
+                        reviewingDocId={reviewingDocId}
+                        onReview={handleReview}
+                        onView={handleView}
+                        onDelete={handleDelete}
+                        projectOptions={projects}
+                        onAssignProject={handleAssignProject}
+                        onSetDocumentType={handleSetDocumentType}
+                      />
+                    )}
+                  </Fragment>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
       )}
     </AppShell>
