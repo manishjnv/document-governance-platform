@@ -180,6 +180,20 @@ async def trigger_review(
     # Verify org access
     await verify_org_access(str(doc.org_id), current_user)
 
+    # An unreadable document (failed parse, image-only scan) must fail
+    # loudly here -- running the pipeline on empty text "succeeds" with a
+    # page of bogus missing-section findings (observed live 2026-07-23 on
+    # an image-only PDF: 28 false rule violations, 6 agents parsing
+    # garbage). 200 chars is well below any reviewable contract.
+    if len((doc.parsed_text or "").strip()) < 200:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                "This document could not be read (it may be a scanned/"
+                "image-only file). Re-upload a text-based PDF or DOCX."
+            ),
+        )
+
     # Create review record
     from uuid import uuid4
 
