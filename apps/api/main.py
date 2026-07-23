@@ -136,8 +136,11 @@ app.include_router(search_history.router)
 app.include_router(teams.router)
 
 
-# Health Check Endpoint
+# Health Check Endpoint. /api/v1/health alias: the VPS reverse proxy only
+# routes /api/* to this container, so external uptime monitors need the
+# aliased path -- bare /health is only reachable inside the network.
 @app.get("/health", tags=["health"])
+@app.get("/api/v1/health", tags=["health"])
 async def health_check():
     """Health check endpoint for monitoring."""
     return {
