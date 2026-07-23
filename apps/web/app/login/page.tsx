@@ -151,7 +151,7 @@ function OtpLogin({ onError }: { onError: (msg: string) => void }) {
     return (
       <form onSubmit={requestCode} className="space-y-3">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium mb-2">
+          <label htmlFor="email" className="sr-only">
             Your email address
           </label>
           <input
