@@ -37,6 +37,7 @@ function storeTokensAndRedirect(router: ReturnType<typeof useRouter>, data: any)
 
 function GoogleSignInButton({ onError }: { onError: (msg: string) => void }) {
   const buttonRef = useRef<HTMLDivElement>(null);
+  const [ready, setReady] = useState(false);
   const router = useRouter();
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
@@ -63,6 +64,7 @@ function GoogleSignInButton({ onError }: { onError: (msg: string) => void }) {
         size: 'large',
         width: 336,
       });
+      setReady(true);
     };
 
     if (window.google) {
@@ -80,7 +82,21 @@ function GoogleSignInButton({ onError }: { onError: (msg: string) => void }) {
 
   if (!clientId) return null;
 
-  return <div ref={buttonRef} className="flex justify-center" />;
+  // Reserve the button's exact footprint while Google's script loads, so
+  // the page doesn't jump and the button doesn't pop in late.
+  return (
+    <div className="relative flex justify-center" style={{ minHeight: 44 }}>
+      {!ready && (
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 mx-auto flex h-[44px] w-[336px] max-w-full items-center justify-center rounded-md border bg-muted/40 text-sm text-muted-foreground animate-pulse"
+        >
+          Loading Google sign-in…
+        </div>
+      )}
+      <div ref={buttonRef} className={ready ? '' : 'invisible'} />
+    </div>
+  );
 }
 
 function OtpLogin({ onError }: { onError: (msg: string) => void }) {
@@ -136,7 +152,7 @@ function OtpLogin({ onError }: { onError: (msg: string) => void }) {
       <form onSubmit={requestCode} className="space-y-3">
         <div>
           <label htmlFor="email" className="block text-sm font-medium mb-2">
-            Email Address
+            Your email address
           </label>
           <input
             id="email"
@@ -149,8 +165,11 @@ function OtpLogin({ onError }: { onError: (msg: string) => void }) {
           />
         </div>
         <Button type="submit" disabled={loading} className="w-full">
-          {loading ? 'Sending...' : 'Continue with email'}
+          {loading ? 'Sending your code...' : 'Email me a sign-in code'}
         </Button>
+        <p className="text-xs text-muted-foreground text-center">
+          We&apos;ll email you a 4-digit code — no password needed.
+        </p>
       </form>
     );
   }
@@ -225,7 +244,7 @@ export default function LoginPage() {
               <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">Or</span>
+              <span className="bg-card px-2 text-muted-foreground">Or sign in with a code</span>
             </div>
           </div>
 

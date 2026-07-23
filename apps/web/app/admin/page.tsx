@@ -120,6 +120,19 @@ export default function AdminPage() {
 
   useEffect(() => {
     load();
+    // Keep the numbers fresh without the admin having to click Refresh --
+    // re-fetch every 60s while the tab is visible.
+    const interval = setInterval(() => {
+      if (!document.hidden) load();
+    }, 60_000);
+    const onVisible = () => {
+      if (!document.hidden) load();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
