@@ -7,7 +7,7 @@ from pathlib import Path
 
 _spec = importlib.util.spec_from_file_location(
     "accuracy_harness",
-    Path(__file__).resolve().parents[2] / "scripts" / "accuracy_harness.py",
+    Path(__file__).resolve().parents[3] / "scripts" / "accuracy_harness.py",
 )
 harness = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(harness)
