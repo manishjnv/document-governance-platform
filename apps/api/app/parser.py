@@ -452,9 +452,21 @@ class PdfParser:
             raw_text = []
             sections = []
 
+            page_texts = [page.extract_text() or "" for page in pdf.pages]
+
+            # Image-only/scanned PDF: no text layer to extract. Fall back to
+            # OCR (tesseract via pypdfium2 rendering) when available.
+            ocr_used = False
+            if page_count and sum(len(t.strip()) for t in page_texts) < 200:
+                import asyncio
+
+                ocr_texts = await asyncio.to_thread(PdfParser._ocr_pages, file_content)
+                if ocr_texts is not None:
+                    page_texts = ocr_texts + [""] * (page_count - len(ocr_texts))
+                    ocr_used = True
+
             # Extract text from all pages
-            for page_num, page in enumerate(pdf.pages, 1):
-                text = page.extract_text()
+            for page_num, text in enumerate(page_texts, 1):
                 raw_text.append(f"--- Page {page_num} ---\n{text}")
 
                 # Try to detect sections by font size changes (simplified)
@@ -476,11 +488,27 @@ class PdfParser:
             full_text = "\n".join(raw_text)
             tokens = len(full_text) // 4
 
+            # "--- Page N ---" markers alone are not content: without this
+            # check a scanned PDF parsed as "success" with an empty body and
+            # produced a page of bogus missing-section findings downstream.
+            body_chars = sum(len(t.strip()) for t in page_texts)
+            if body_chars < 200:
+                return ParseResult(
+                    status="failed",
+                    raw_text="",
+                    sections=[],
+                    page_count=page_count,
+                    error_message=(
+                        "No extractable text (scanned/image-only PDF?); "
+                        + ("OCR found no text" if ocr_used else "OCR not available")
+                    ),
+                )
+
             # Detect document type
             detected_type = PdfParser._detect_type(full_text)
 
             return ParseResult(
-                status="success" if full_text else "partial",
+                status="success",
                 raw_text=full_text,
                 sections=sections,
                 page_count=page_count,
@@ -497,6 +525,38 @@ class PdfParser:
                 page_count=0,
                 error_message=str(e),
             )
+
+    # ponytail: 30-page OCR cap at ~200 DPI -- a scanned contract beyond that
+    # is rare, and OCR is CPU-bound on a shared VPS; raise if it ever bites.
+    _OCR_MAX_PAGES = 30
+
+    @staticmethod
+    def _ocr_pages(file_content: bytes) -> Optional[list[str]]:
+        """OCR each page; None when tesseract/pytesseract isn't installed
+        (callers keep the no-text-layer failure path)."""
+        import shutil
+
+        if not shutil.which("tesseract"):
+            logger.warning("Scanned PDF but tesseract binary not installed -- skipping OCR")
+            return None
+        try:
+            import pypdfium2 as pdfium
+            import pytesseract
+        except ImportError:
+            logger.warning("Scanned PDF but pypdfium2/pytesseract not installed -- skipping OCR")
+            return None
+
+        try:
+            doc = pdfium.PdfDocument(file_content)
+            texts = []
+            for i in range(min(len(doc), PdfParser._OCR_MAX_PAGES)):
+                image = doc[i].render(scale=200 / 72).to_pil()
+                texts.append(pytesseract.image_to_string(image))
+            logger.info(f"OCR extracted {sum(len(t) for t in texts)} chars from {len(texts)} pages")
+            return texts
+        except Exception as e:
+            logger.error(f"OCR failed: {e}")
+            return None
 
     @staticmethod
     def _detect_type(text: str) -> DocumentType:

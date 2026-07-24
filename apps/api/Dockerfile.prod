@@ -38,6 +38,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcairo2 \
     shared-mime-info \
     fonts-liberation \
+    tesseract-ocr \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user first so the copied packages can be owned by it --

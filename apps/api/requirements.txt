@@ -93,3 +93,7 @@ black==23.12.1
 flake8==6.1.0
 isort==5.13.2
 mypy==1.7.1
+# OCR fallback for scanned/image-only PDFs (app/parser.py PdfParser._ocr_pages)
+pypdfium2==4.30.0
+pytesseract==0.3.13
+Pillow>=10.0

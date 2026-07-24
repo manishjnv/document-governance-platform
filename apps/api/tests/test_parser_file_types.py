@@ -218,3 +218,53 @@ class TestDocxPageNumbers:
         assert result.status == "success"
         assert result.page_count >= 2  # ~6000 chars / 3000-char estimate
         assert result.sections[0].page_number == 1
+
+
+@pytest.mark.asyncio
+class TestScannedPdfHandling:
+    """A PDF with no text layer must never parse as 'success' with an empty
+    body (the pre-2026-07-24 behavior fed empty text to the review pipeline
+    and produced bogus findings). OCR runs when tesseract is installed;
+    otherwise the parse fails loudly with a plain-language error."""
+
+    async def test_scanned_pdf_fails_loudly_or_ocrs(self):
+        import shutil
+        from pathlib import Path
+
+        from app.parser import PdfParser
+
+        pdf_path = (
+            Path(__file__).resolve().parents[3]
+            / "docs" / "sample" / "SOW_Template" / "sample-statement-work.pdf"
+        )
+        if not pdf_path.exists():
+            pytest.skip("sample scanned PDF not present")
+
+        result = await PdfParser.parse(pdf_path.read_bytes())
+
+        if shutil.which("tesseract"):
+            # OCR available: either it extracted real text (success) or the
+            # scan was unreadable (failed) -- never success-with-empty-body.
+            if result.status == "success":
+                assert len(result.raw_text) > 200
+        else:
+            assert result.status == "failed"
+            assert "OCR not available" in (result.error_message or "")
+
+    async def test_text_pdf_unaffected(self):
+        from pypdf import PdfWriter
+        from io import BytesIO
+
+        # pypdf can't author text easily; assert via the real sample corpus.
+        from pathlib import Path
+        from app.parser import PdfParser
+
+        pdf_path = (
+            Path(__file__).resolve().parents[3]
+            / "docs" / "sample" / "RFP_Sample" / "RFP Sample - 2RFP.pdf"
+        )
+        if not pdf_path.exists():
+            pytest.skip("sample text PDF not present")
+        result = await PdfParser.parse(pdf_path.read_bytes())
+        assert result.status == "success"
+        assert len(result.raw_text) > 5000
