@@ -5,6 +5,7 @@ T-509: Store review results in database
 """
 
 import logging
+import re
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -93,42 +94,56 @@ async def _verify_against_previous_version(db: AsyncSession, doc: Document, revi
     apply_verification(previous_findings, diff, review.review_id)
 
 
+def _normalize_for_match(text: str) -> str:
+    return re.sub(r"\s+", " ", text.lower()).strip()
+
+
 def _locate_finding(evidence, document_text, sections):
     """Best-effort: (section label, page number) a finding's evidence falls in.
 
-    Matches the finding's `evidence` (agents are prompted to quote clause
-    language directly) against the document's parsed_sections content, same
-    substring-position approach as app/rules/ambiguous_language.py's
-    _find_section. Findings without evidence, or where the evidence text
-    doesn't match verbatim, simply get no location -- not every agent
-    quotes evidence as strictly as Legal/PMO do.
+    Agents are prompted to quote clause language directly, but in practice
+    they paraphrase, trim, or re-punctuate. Tiered matching, strict first:
+    1. the whole evidence, whitespace/case-normalized;
+    2. each sentence of it (longest first, >=5 words);
+    3. any verbatim 8-word window of it (strong enough that a hit is not a
+       coincidence -- avoids false anchors on generic short phrases).
+    Matching is per-section against parsed_sections content, so it behaves
+    identically for DOCX/PDF/DOC. No match -> no location, never a guess.
     """
-    if not evidence or not document_text or not sections:
+    if not evidence or not sections:
         return None, None
 
-    # Agents are prompted to "quote exactly" but often drop/add a trailing
-    # period or the surrounding quote marks (e.g. quoting `"apply"` for
-    # text that actually reads `"apply."` -- period inside the quote).
-    # Strip both before matching instead of requiring byte-exact equality.
-    normalized = evidence.strip().strip("\"'“”").rstrip(".,;: ")
-    if not normalized:
+    norm_evidence = _normalize_for_match(str(evidence).strip("\"'“”"))
+    if not norm_evidence:
         return None, None
 
-    idx = document_text.find(normalized)
-    if idx == -1:
-        return None, None
+    # A 1-3 word "quote" ("monthly", "net 30") matches half the document --
+    # too generic to anchor. Sentences/shingles carry their own floors.
+    candidates = [norm_evidence.rstrip(".,;: ")] if len(norm_evidence.split()) >= 4 else []
+    sentences = [
+        s.strip() for s in re.split(r"[.;|]", norm_evidence) if len(s.split()) >= 5
+    ]
+    candidates.extend(sorted(sentences, key=len, reverse=True))
+    words = norm_evidence.split()
+    shingles = [" ".join(words[i : i + 8]) for i in range(0, max(0, len(words) - 7), 4)]
 
-    for section in sections:
-        content = section.get("content") or ""
-        if not content:
-            continue
-        start = document_text.find(content)
-        if start == -1:
-            continue
-        if start <= idx < start + len(content):
-            heading = section.get("heading") or "Unknown section"
-            page = section.get("page_number")
-            return (f"{heading} (p.{page})" if page else heading), page
+    def _located(section):
+        heading = section.get("heading") or "Unknown section"
+        page = section.get("page_number")
+        return (f"{heading} (p.{page})" if page else heading), page
+
+    normalized_sections = [
+        (section, _normalize_for_match(section.get("content") or ""))
+        for section in sections
+        if section.get("content")
+    ]
+    for candidate in candidates:
+        for section, content in normalized_sections:
+            if candidate and candidate in content:
+                return _located(section)
+    for section, content in normalized_sections:
+        if any(sh in content for sh in shingles):
+            return _located(section)
 
     return None, None
 

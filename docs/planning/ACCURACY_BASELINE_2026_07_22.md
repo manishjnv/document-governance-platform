@@ -120,6 +120,11 @@ Still not strict matches (both were 🟡 partial at baseline and remain so):
 Remaining questionable findings (~2 of 79): SOW-008/SOW-009 word-count rules
 fire on sections whose prose lives partly in tables — borderline, not clearly
 wrong. The 4 heading-keyword FPs and the self-negating finding are gone.
+*(Resolved 2026-07-24: measured directly — Scope of Services has 56 words,
+Deliverables 32, vs 100/150 thresholds, and DOCX table text already counts
+toward section content. These firings are correct thin-detail detection —
+the ground truth itself flags the same thinness (SOW-003/SOW-007). Not FPs;
+no change made.)*
 
 **Phase A exit criteria: PASS** (target was 4 FPs gone + strict recall ≥79%;
 measured 0 FPs, 93.1%). Already past the >90% strict-recall launch target for
