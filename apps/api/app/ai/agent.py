@@ -142,6 +142,8 @@ class ReviewAgent(ABC):
             models_to_try = [self.model, *self._fallback_models]
             response = None
             last_error = None
+            unparsed_text = None
+            unparsed_model = None
             for attempt, model in enumerate(models_to_try):
                 try:
                     # to_thread: self.client (Anthropic or the OpenRouter
@@ -176,35 +178,39 @@ class ReviewAgent(ABC):
                     )
                     if attempt > 0:
                         logger.warning(f"{self.name}: succeeded on fallback model {model}")
-                    break
                 except Exception as e:
                     last_error = e
                     logger.warning(f"{self.name}: model {model} failed ({e}), trying next")
-            if response is None:
-                raise last_error
+                    continue
 
-            # Extract text response
-            response_text = response.content[0].text
-
-            # Try to parse JSON from response
-            try:
-                # Look for JSON block
-                import re
-
-                json_match = re.search(r"```json\s*(.*?)\s*```", response_text, re.DOTALL)
-                if json_match:
-                    result = json.loads(json_match.group(1))
-                else:
-                    # Try parsing the whole response as JSON
-                    result = json.loads(response_text)
-            except json.JSONDecodeError:
-                # If JSON parsing fails, return raw text
-                logger.warning(f"{self.name}: Could not parse JSON response")
+                # Unparseable JSON is a model failure too: advance the chain
+                # instead of silently returning zero findings. Measured
+                # 2026-07-24 (AI_MODEL_ROUTING.md): some models drop 2-3 of
+                # 6 agents per review this way -- a recall hole invisible in
+                # the "success" status.
+                response_text = response.content[0].text
+                result = self._parse_response(response_text)
+                if result is None:
+                    last_error = ValueError("unparseable JSON response")
+                    unparsed_text, unparsed_model = response_text, model
+                    logger.warning(
+                        f"{self.name}: model {model} returned unparseable JSON, trying next"
+                    )
+                    continue
+                break
+            else:
+                if unparsed_text is None:
+                    raise last_error
+                # Every model either errored or answered unparseably --
+                # degrade to raw text (old behavior) rather than failing
+                # the whole review.
+                logger.warning(f"{self.name}: Could not parse JSON response from any model")
                 result = {
-                    "raw_response": response_text,
+                    "raw_response": unparsed_text,
                     "confidence": 0.5,
                     "findings": [],
                 }
+                model = unparsed_model
 
             # Phase D auditability: record which model actually answered
             # (primary or a fallback) -- consumed into review.audit_meta.
@@ -217,6 +223,17 @@ class ReviewAgent(ABC):
         except Exception as e:
             logger.error(f"{self.name}: Review failed - {e}")
             raise
+
+    @staticmethod
+    def _parse_response(response_text: str) -> Optional[dict]:
+        """JSON from a ```json fence or the whole body; None if neither parses."""
+        import re
+
+        json_match = re.search(r"```json\s*(.*?)\s*```", response_text, re.DOTALL)
+        try:
+            return json.loads(json_match.group(1) if json_match else response_text)
+        except json.JSONDecodeError:
+            return None
 
     def validate_output(self, output: dict) -> bool:
         """Validate output against schema. Can be overridden."""

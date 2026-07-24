@@ -51,10 +51,13 @@ class Settings(BaseSettings):
     platform_admin_emails: str = "manishjnvk@gmail.com"
 
     openrouter_model: str = "z-ai/glm-5.2"
+    # Order set by the 2026-07-24 measured comparison (docs/planning/
+    # AI_MODEL_ROUTING.md "Measured accuracy comparison"): deepseek first --
+    # only fallback with all 6 agents returning parseable JSON.
     openrouter_fallback_models: list[str] = [
+        "deepseek/deepseek-chat",
         "minimax/minimax-m3",
         "qwen/qwen3.7-plus",
-        "deepseek/deepseek-chat",
     ]
 
     # Storage

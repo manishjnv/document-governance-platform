@@ -97,6 +97,27 @@ output (once it completes) was not inspected further.
 - Kimi K3 excluded — real quality, wrong cost/latency shape for a
   fallback slot in a 6-agents-per-review pipeline.
 
+## Measured accuracy comparison — 2026-07-24 (all 6 agents, ground truth)
+
+First full-pipeline comparison: SOC_SOW_Testing.docx through all 6 agents
+per model (fallbacks disabled per run via `OPENROUTER_FALLBACK_MODELS=[]`),
+scored with `scripts/accuracy_harness.py` against the 29-row ground truth:
+
+| Model | Strict recall | Findings | Agents w/ usable output |
+|---|---|---|---|
+| z-ai/glm-5.2 (primary) | **28/29 = 96.6%** | 81 | 6/6 |
+| minimax/minimax-m3 | 24/29 = 82.8% | 54 | **4/6** |
+| deepseek/deepseek-chat | 21/29 = 72.4% | 54 | 6/6 |
+| qwen/qwen3.7-plus | 19/29 = 65.5% | 38 | **3/6** |
+
+Two conclusions: (a) GLM-5.2 as primary is validated by a wide margin;
+(b) MiniMax and Qwen silently lose 2-3 agents per review to unparseable
+JSON at the full-pipeline level — the earlier LegalReviewer-only benchmark
+missed this. **Fallback order changed accordingly** (config.py,
+2026-07-24): DeepSeek first (the only fallback where all 6 agents work),
+MiniMax second, Qwen last. This supersedes the "MiniMax first fallback"
+ordering from the Decision section above.
+
 ## Known gaps / not yet done
 
 - Only `LegalReviewer` was benchmarked, on one document. The other 5
