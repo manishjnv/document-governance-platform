@@ -154,6 +154,26 @@ SOW test doc. Confidence calibration snapshot: avg confidence 87.7 vs
 over-confident 2026-07-18); no prompt tuning warranted from a
 single-document sample.
 
+## Conflict detector — subtle-conflict validation (2026-07-24)
+
+`docs/sample/SOW_Sample/Subtle_Conflicts_Test.docx` (checked in as the
+regression doc) plants 5 realistic clause-vs-clause tensions, no numeric
+side-by-sides. Live prod run: **4/4 true contradictions caught, 0 false
+conflicts** — termination-for-convenience vs 100% exit charge, interest
+accruing 15 days before the Net-45 due date, liability cap vs
+"without limitation" indemnity, IP vesting vs retained-ownership license —
+each with correct legal reasoning in the description. The 5th planted item
+(England & Wales law + Singapore courts) is deliberately NOT a
+contradiction (law/forum split is unusual but coherent); the detector
+correctly declined it and LegalReviewer flagged it as "Ambiguous Legal
+Language, major" instead. Conflict-scan quality no longer "unproven";
+prompt unchanged.
+
+Also 2026-07-24: measured 4-model accuracy comparison + fallback reorder +
+parse-failure chain advance — see docs/planning/AI_MODEL_ROUTING.md
+"Measured accuracy comparison". Evidence anchoring (fuzzy matching):
+38/62 agent findings now carry section+page vs ~2 before.
+
 ## Phase C measurement note — 2026-07-23 (later same session)
 
 Phase C (broken-reference detector REF-SCAN + conflict LLM scan
