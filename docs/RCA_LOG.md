@@ -423,3 +423,37 @@ listed below — several of these are copy-pasted patterns that recur.
 
 *(Append new entries above this line, most recent first is NOT required —
 keep chronological.)*
+
+### 19. Review of an unreadable (image-only) PDF "succeeded" with 28 bogus findings (2026-07-23/24)
+
+- **Symptom:** During RFP pipeline validation, an image-only PDF uploaded
+  to production stored `parsed_text=""`/`page_count=0`, yet triggering a
+  review returned `status: completed` with 28 findings — every SOW
+  section-presence rule fired "missing section" against an empty
+  document, and all 6 agents received empty text (returning unparseable
+  chatter that the old parse-fallback silently converted to zero
+  findings). A real user would have seen a plausible-looking, entirely
+  fictional review.
+- **Root cause:** two layers, both "empty success". (a)
+  `PdfParser.parse()` counted its own `--- Page N ---` markers as
+  content, so a PDF with no text layer returned `status="success"` with
+  an empty body — the exact failure class RCA #16 documented for DOCX
+  and whose prevention note ("minimum-extracted-length sanity check")
+  was flagged but not built. (b) `trigger_review` ran the pipeline on
+  `doc.parsed_text or ""` with no floor.
+- **Fix (both layers + capability):** `trigger_review` now 422s with a
+  plain-language error when parsed text is under 200 chars
+  (`test_review_trigger_guard.py`); `PdfParser` fails loudly when the
+  body (excluding page markers) is under 200 chars; and scanned PDFs now
+  actually parse via OCR fallback (tesseract + pypdfium2 rendering,
+  30-page cap, in the prod image) — the sample scanned SOW extracts
+  8.3K chars. Unparseable agent JSON also now advances the model
+  fallback chain instead of silently yielding zero findings
+  (`test_agent_parse_fallback.py`).
+- **Prevention:** the RCA #16 prevention item is now built and enforced
+  at the trust boundary (trigger), not just logged. Regression tests:
+  `test_review_trigger_guard.py`,
+  `test_parser_file_types.py::TestScannedPdfHandling`,
+  `test_agent_parse_fallback.py`. Pattern to remember: any parser or
+  model adapter that can produce "empty but status=success" needs a
+  content floor at the next trust boundary — status flags alone lie.

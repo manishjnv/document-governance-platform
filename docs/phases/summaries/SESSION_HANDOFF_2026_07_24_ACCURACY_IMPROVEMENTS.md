@@ -39,6 +39,39 @@ validation (4/4, 0 false), and OCR for scanned PDFs (validated in prod).
   (human labeling), calibration tuning (needs that set), RFP labels,
   legal SME severity sign-off.
 
+## UI / admin work (same day, earlier)
+
+- **Super-admin page** (`/admin`, manishjnvk@gmail.com only via
+  `settings.platform_admin_emails` → `is_platform_admin` on /auth/me):
+  platform-wide people/sign-ins (device+IP)/activity/AI usage across all
+  workspaces, search boxes on each list, 60s auto-refresh. Ordinary
+  workspace admins get 403 + no nav link. Login endpoints capture
+  IP (Cloudflare-aware) + user-agent into the audit trail.
+- **Dashboard** flattened to one table with project band rows (no
+  box-in-box). **Findings**: "Section N"/"Appendix X" mentions in
+  description/document text/recommendation are jump links into the
+  document panel. **DOCX page numbers** real (Word page markers +
+  chars-per-page fallback). **Login**: blank OTP box
+  (autocomplete=one-time-code), inline wrong-code message, Google button
+  placeholder, plain-language wording.
+- RCA #19 added (unreadable-PDF review produced 28 bogus findings —
+  fixed at both parser and trigger layers; closes RCA #16's open
+  prevention item).
+
+## How to test on prod as a user
+
+1. Sign in at scopewise.assessiq.in (Google, manishjnvk@gmail.com) →
+   sidebar **Admin**: all 4 users with workspaces, searchable sign-ins/
+   activity; auto-refreshes.
+2. Dashboard: single flat table, collapsible project bands.
+3. ConflictTest project → open a review → red "Contradiction" findings;
+   expand any finding → click blue "Section N" pin-links → document
+   scrolls + highlights; section (p.N) tags on findings.
+4. Upload `docs/sample/SOW_Template/sample-statement-work.pdf` (scanned)
+   → parses + reviews via OCR now.
+5. Log out → code box blank, "Email me a sign-in code" wording; wrong
+   code → inline message.
+
 ## Next action
 
 Hand-label ground truth for ≥10 real documents (the only remaining blocker
