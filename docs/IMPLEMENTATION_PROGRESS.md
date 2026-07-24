@@ -63,6 +63,31 @@ positives and fix list in `docs/planning/ACCURACY_BASELINE_2026_07_22.md`.
 Plan's "Excludes" honored: no multi-backend AI, no customer-managed keys,
 no dual review, no explainability sub-scores.
 
+**Accuracy improvement sweep — 2026-07-24** (all dependency-free items;
+details in `docs/phases/summaries/SESSION_HANDOFF_2026_07_24_ACCURACY_IMPROVEMENTS.md`):
+
+- `scripts/accuracy_harness.py` — deterministic keyword scoring of any
+  review run vs the 29-row ground truth (fast regression trend signal).
+- Third dated measurement: **29/29 strict recall** on the test doc after
+  ScopeReviewer environment-inventory + PMOReviewer open-items checks.
+- Fuzzy evidence anchoring: 38/62 agent findings carry section+page (was ~2).
+- **Measured 4-model comparison** (AI_MODEL_ROUTING.md): GLM-5.2 28/29
+  (6/6 agents) >> MiniMax 24/29 (4/6) > DeepSeek 21/29 (6/6) > Qwen 19/29
+  (3/6). Fallback order now DeepSeek>MiniMax>Qwen; unparseable JSON
+  advances the model chain instead of silently dropping an agent.
+- Conflict detector validated on subtle conflicts: 4/4 caught, 0 false
+  (`Subtle_Conflicts_Test.docx` checked in as regression doc).
+- **OCR for scanned PDFs** (tesseract in prod image, 30-page cap):
+  previously-unreadable image-only PDF now parses (8.3K chars); without
+  OCR, scanned PDFs fail loudly and reviews of unreadable docs 422.
+- Admin: platform-wide super-admin page (search over people/sign-ins/
+  activity); dashboard flattened to one table; findings' "Section N"
+  mentions are jump links; DOCX page numbers real.
+
+Remaining accuracy work is human-dependency-blocked: ≥10-doc labeled
+ground truth, calibration tuning against it, RFP labels, legal SME
+severity sign-off.
+
 **Scoring & reporting:** 7-category weighted scoring, severity now actually
 read from findings (was keyword-matching only — fixed), PDF report
 generation via `xhtml2pdf` (was a placeholder), stored-XSS fix in HTML
