@@ -275,6 +275,53 @@ export default function ResultsPage() {
     }, showDocument ? 0 : 100);
   };
 
+  // "Section 5" / "Appendix A" mentions inside finding text resolve to the
+  // parsed section whose heading carries that number/letter, so they can be
+  // rendered as jump links into the document panel.
+  const sectionByToken = useMemo(() => {
+    const map = new Map<string, string>();
+    docInfo?.parsed_sections?.forEach((s) => {
+      const num = s.heading.match(/^\s*(\d+(?:\.\d+)*)[.)]?\s/);
+      if (num && !map.has(num[1])) map.set(num[1], s.heading);
+      const app = s.heading.match(/appendix\s+([a-z0-9]+)/i);
+      if (app) {
+        const key = `appendix ${app[1].toLowerCase()}`;
+        if (!map.has(key)) map.set(key, s.heading);
+      }
+    });
+    return map;
+  }, [docInfo]);
+
+  const SECTION_REF_RE = /\b(?:Section|§)\s*(\d+(?:\.\d+)*)|\bAppendix\s+([A-Z0-9]+)\b/gi;
+
+  const renderWithSectionLinks = (text: string | null) => {
+    if (!text) return text;
+    const nodes: React.ReactNode[] = [];
+    let last = 0;
+    for (const m of text.matchAll(SECTION_REF_RE)) {
+      const token = m[1] ? m[1] : `appendix ${(m[2] || '').toLowerCase()}`;
+      const heading = sectionByToken.get(token);
+      if (!heading || m.index === undefined) continue; // no such section -- leave plain
+      nodes.push(text.slice(last, m.index));
+      nodes.push(
+        <button
+          key={`${m.index}-${token}`}
+          type="button"
+          onClick={() => handleLocateInDoc(heading)}
+          title={`Jump to "${heading}" in the document`}
+          className="inline-flex items-baseline gap-0.5 rounded-sm px-0.5 font-medium text-primary underline decoration-primary/50 underline-offset-2 hover:bg-primary/10 hover:decoration-primary"
+        >
+          <MapPin size={10} strokeWidth={2.5} className="self-center" aria-hidden="true" />
+          {m[0]}
+        </button>
+      );
+      last = m.index + m[0].length;
+    }
+    if (nodes.length === 0) return text;
+    nodes.push(text.slice(last));
+    return nodes;
+  };
+
   const visibleFindings = useMemo(() => {
     if (!review) return [];
     return review.findings
@@ -676,19 +723,19 @@ export default function ResultsPage() {
                       <div id={`finding-detail-${finding.finding_id}`} className="border-t px-2.5 py-2 space-y-2 text-xs">
                         <div>
                           <h4 className="font-semibold mb-1 text-xs uppercase tracking-wide text-muted-foreground">Description</h4>
-                          <p>{finding.description}</p>
+                          <p>{renderWithSectionLinks(finding.description)}</p>
                         </div>
                         {finding.matched_text && (
                           <div>
                             <h4 className="font-semibold mb-1 text-xs uppercase tracking-wide text-muted-foreground">Document Text</h4>
                             <blockquote className="border-l-2 border-muted-foreground/30 pl-2 italic text-muted-foreground">
-                              {finding.matched_text}
+                              {renderWithSectionLinks(finding.matched_text)}
                             </blockquote>
                           </div>
                         )}
                         <div>
                           <h4 className="font-semibold mb-1 text-xs uppercase tracking-wide text-muted-foreground">Recommendation</h4>
-                          <p>{finding.recommendation}</p>
+                          <p>{renderWithSectionLinks(finding.recommendation)}</p>
                         </div>
                         <div>
                           <h4 className="font-semibold mb-1 text-xs uppercase tracking-wide text-muted-foreground">Confidence</h4>
