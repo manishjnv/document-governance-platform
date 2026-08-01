@@ -143,3 +143,40 @@ def test_environment_mobile_detection_and_missing_assets_sheet():
 def test_environment_must_be_excel():
     with pytest.raises(IngestError, match="Excel"):
         parse_environment_file(b"a,b,c", "csv")
+
+
+# ---------------------------------------------------------------------------
+# workbook-wide budgets (2026-08-01 adversarial review, blocking finding #2)
+# ---------------------------------------------------------------------------
+
+
+def test_workbook_sheet_cap():
+    wb = Workbook()
+    for i in range(ingest.MAX_SHEETS + 1):
+        wb.create_sheet(f"extra{i}")
+    buf = io.BytesIO()
+    wb.save(buf)
+    with pytest.raises(IngestError, match="sheets"):
+        ingest._xlsx_grids(buf.getvalue())
+
+
+def test_workbook_cumulative_row_cap():
+    wb = Workbook()
+    half = ingest.MAX_TOTAL_ROWS // 2 + 100
+    for title in ("a", "b"):
+        ws = wb.create_sheet(title)
+        for _ in range(half):
+            ws.append(["x"])
+    buf = io.BytesIO()
+    wb.save(buf)
+    with pytest.raises(IngestError, match="overall limit"):
+        ingest._xlsx_grids(buf.getvalue())
+
+
+def test_workbook_row_width_cap():
+    wb = Workbook()
+    wb.active.append(["c"] * (ingest.MAX_ROW_CELLS + 1))
+    buf = io.BytesIO()
+    wb.save(buf)
+    with pytest.raises(IngestError, match="wider than"):
+        ingest._xlsx_grids(buf.getvalue())

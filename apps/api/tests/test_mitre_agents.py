@@ -306,3 +306,34 @@ async def test_all_batches_fail_zero_customer_tags_fails_assessment(
         await asyncio.sleep(0.1)
     assert body["status"] == "failed"
     assert "AI tagging is temporarily unavailable" in body["error_message"]
+
+
+# ---------------------------------------------------------------------------
+# extraction budgets (2026-08-01 adversarial review, blocking finding #3)
+# ---------------------------------------------------------------------------
+
+
+async def test_extraction_row_cap(monkeypatch):
+    monkeypatch.setattr(agents, "MAX_USE_CASE_ROWS", 3)
+    response = json.dumps({
+        "use_cases": [
+            {"name": f"rule {i}", "description": "d", "technique_ids": [], "confidence": 0.9}
+            for i in range(6)
+        ],
+    })
+    result = await extract_use_cases_from_text(
+        "some pdf text", index=_index(), agent=_agent([response])
+    )
+    assert len(result["rows"]) == 3
+    assert any("stopped at the" in a for a in result["assumptions"])
+
+
+async def test_extraction_chunk_cap(monkeypatch):
+    monkeypatch.setattr(agents, "MAX_EXTRACTION_CHUNKS", 2)
+    empty = json.dumps({"use_cases": []})
+    long_text = ("line of rule text\n" * 600) * 3  # > 2 chunks at 9000 chars
+    result = await extract_use_cases_from_text(
+        long_text, index=_index(), agent=_agent([empty, empty])
+    )
+    assert result["chunks_total"] == 2
+    assert any("first" in a and "sections" in a for a in result["assumptions"])

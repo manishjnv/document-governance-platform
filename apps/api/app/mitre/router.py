@@ -97,8 +97,10 @@ def _parse_intake(raw: Optional[str]) -> dict:
             detail="count_disabled_as_coverage must be true/false",
         )
     return {
-        "industry": str(intake.get("industry") or "").strip() or None,
-        "region": str(intake.get("region") or "").strip() or None,
+        # length-capped: these flow into the narrative LLM prompt
+        # (2026-08-01 adversarial review, non-blocking finding #5)
+        "industry": str(intake.get("industry") or "").strip()[:200] or None,
+        "region": str(intake.get("region") or "").strip()[:200] or None,
         "count_disabled_as_coverage": disabled,
         "exclusions": exclusions,
     }

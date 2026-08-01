@@ -21,6 +21,12 @@ MAX_FILE_SIZE = 50 * 1024 * 1024  # matches documents.py
 MAX_USE_CASE_ROWS = 5_000
 MAX_ASSET_ROWS = 10_000
 _HEADER_SCAN_ROWS = 10  # header row must appear in the first N rows
+# Workbook-wide budgets (2026-08-01 adversarial review, blocking finding #2:
+# the old per-sheet row cap let a many-sheet zip-bomb xlsx buffer unbounded
+# memory in the synchronous create handler).
+MAX_SHEETS = 20
+MAX_TOTAL_ROWS = MAX_USE_CASE_ROWS + MAX_ASSET_ROWS + 5 * _HEADER_SCAN_ROWS  # cumulative, whole workbook
+MAX_ROW_CELLS = 64
 
 TAG_RE = re.compile(r"T\d{4}(?:\.\d{3})?", re.IGNORECASE)
 
@@ -156,8 +162,8 @@ def _rows_to_use_cases(rows, header_idx, columns, ref_prefix, row_number):
             {
                 "row_ref": f"{ref_prefix}:{row_number(idx)}",
                 "name": name[:500],
-                "description": cell(row, "description"),
-                "log_source": cell(row, "log_source"),
+                "description": (cell(row, "description") or "")[:2000] or None,
+                "log_source": (cell(row, "log_source") or "")[:255] or None,
                 "enabled": parse_enabled(row[columns["enabled"]])
                 if "enabled" in columns and columns["enabled"] < len(row)
                 else None,
@@ -176,13 +182,29 @@ def _xlsx_grids(content: bytes) -> list[tuple[str, list[list]]]:
     except Exception as exc:
         raise IngestError(f"Could not read the Excel file: {exc}") from exc
     grids = []
+    total_rows = 0
     try:
+        if len(wb.sheetnames) > MAX_SHEETS:
+            raise IngestError(
+                f"Workbook has more than {MAX_SHEETS} sheets — remove the "
+                "extra sheets and retry."
+            )
         for ws in wb.worksheets:
             rows = []
             for row in ws.iter_rows(values_only=True):
+                if len(row) > MAX_ROW_CELLS:
+                    raise IngestError(
+                        f"Sheet '{ws.title}' has rows wider than "
+                        f"{MAX_ROW_CELLS} columns — this doesn't look like a "
+                        "rule or asset export. Please use the template."
+                    )
+                total_rows += 1
+                if total_rows > MAX_TOTAL_ROWS:
+                    raise IngestError(
+                        f"Workbook exceeds the {MAX_TOTAL_ROWS:,}-row overall "
+                        "limit. Split the export and run separate assessments."
+                    )
                 rows.append(list(row))
-                if len(rows) > MAX_USE_CASE_ROWS + MAX_ASSET_ROWS + _HEADER_SCAN_ROWS:
-                    break
             grids.append((ws.title, rows))
     finally:
         wb.close()
@@ -196,10 +218,28 @@ def _xls_grids(content: bytes) -> list[tuple[str, list[list]]]:
         wb = xlrd.open_workbook(file_contents=content)
     except Exception as exc:
         raise IngestError(f"Could not read the legacy .xls file: {exc}") from exc
-    return [
-        (sheet.name, [sheet.row_values(r) for r in range(sheet.nrows)])
-        for sheet in wb.sheets()
-    ]
+    sheets = wb.sheets()
+    if len(sheets) > MAX_SHEETS:
+        raise IngestError(
+            f"Workbook has more than {MAX_SHEETS} sheets — remove the extra "
+            "sheets and retry."
+        )
+    grids, total_rows = [], 0
+    for sheet in sheets:
+        if sheet.ncols > MAX_ROW_CELLS:
+            raise IngestError(
+                f"Sheet '{sheet.name}' has rows wider than {MAX_ROW_CELLS} "
+                "columns — this doesn't look like a rule or asset export. "
+                "Please use the template."
+            )
+        total_rows += sheet.nrows
+        if total_rows > MAX_TOTAL_ROWS:
+            raise IngestError(
+                f"Workbook exceeds the {MAX_TOTAL_ROWS:,}-row overall limit. "
+                "Split the export and run separate assessments."
+            )
+        grids.append((sheet.name, [sheet.row_values(r) for r in range(sheet.nrows)]))
+    return grids
 
 
 def _csv_grid(content: bytes) -> list[list]:

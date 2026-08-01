@@ -24,12 +24,17 @@ from app.ai.agent import ReviewAgent, _CONFIDENCE_CALIBRATION
 
 from .attack_data import DEFAULT
 from .coverage import PARTIAL_CONFIDENCE
+from .ingest import MAX_USE_CASE_ROWS
 
 logger = logging.getLogger(__name__)
 
 BATCH_SIZE = 25          # rules per tagging call (plan §7 stage 3)
 EXCERPT_CAP = 500        # chars of description/logic sent per rule
 CHUNK_CHARS = 9000       # extraction-mode text chunk size
+# Extraction budgets (2026-08-01 adversarial review, blocking finding #3:
+# a bloated pdf/docx must not drive unbounded LLM calls or row inserts).
+# 40 chunks ≈ 360KB of text; the OCR path caps scanned PDFs at 30 pages.
+MAX_EXTRACTION_CHUNKS = 40
 TIMEOUTS = (60, 120)     # first try, one retry (house pattern)
 CONFIDENCE_FLOOR = PARTIAL_CONFIDENCE  # < floor -> unmapped + assumption
 
@@ -280,9 +285,18 @@ async def extract_use_cases_from_text(text: str, *, index=None, agent=None) -> d
     rows, assumptions, models_used = [], [], set()
     stats = {"invalid_ids": 0, "remapped_ids": 0, "low_confidence": 0}
     chunks = _chunk_text(text)
+    if len(chunks) > MAX_EXTRACTION_CHUNKS:
+        assumptions.append(
+            f"the document is very large — only its first "
+            f"{MAX_EXTRACTION_CHUNKS} sections were scanned for rules"
+        )
+        chunks = chunks[:MAX_EXTRACTION_CHUNKS]
     chunks_failed = 0
+    row_cap_hit = False
 
     for chunk_no, chunk in enumerate(chunks, start=1):
+        if row_cap_hit:
+            break
         try:
             result = await _call_with_retry(agent, chunk, "extraction")
         except Exception:  # noqa: BLE001
@@ -294,6 +308,13 @@ async def extract_use_cases_from_text(text: str, *, index=None, agent=None) -> d
         if result.get("_model_used"):
             models_used.add(result["_model_used"])
         for i, entry in enumerate(entries, start=1):
+            if len(rows) >= MAX_USE_CASE_ROWS:
+                row_cap_hit = True
+                assumptions.append(
+                    f"rule extraction stopped at the {MAX_USE_CASE_ROWS:,}-row "
+                    "limit — rules beyond it are not included"
+                )
+                break
             if not isinstance(entry, dict):
                 continue
             name = str(entry.get("name") or "").strip()

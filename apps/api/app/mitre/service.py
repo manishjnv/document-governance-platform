@@ -9,6 +9,7 @@ AI tagging and narrative are Phase 2 — untagged rows stay 'unmapped' with an
 assumption line.
 """
 
+import asyncio
 import json
 import logging
 from datetime import datetime, timezone
@@ -27,6 +28,13 @@ from app.models.mitre_file import MitreFile
 from app.models.mitre_use_case import MitreUseCase
 
 logger = logging.getLogger(__name__)
+
+# Cap concurrent pipelines process-wide: each run makes long sequential LLM
+# calls, and unbounded parallel runs could exhaust the shared DB pool / CPU
+# (2026-08-01 adversarial review, blocking finding #1).
+# ponytail: process-wide cap; per-org fairness only if multi-tenant load grows
+_PIPELINE_CAP = 3
+_PIPELINE_SEMAPHORE = asyncio.Semaphore(_PIPELINE_CAP)
 
 
 class MitreAssessmentError(Exception):
@@ -123,7 +131,14 @@ def build_mappings(tags: list[str]) -> tuple[list[dict], str, list[str]]:
 
 async def run_assessment_pipeline(assessment_id: UUID, org_id: UUID) -> None:
     """Fire-and-forget task body. Own AsyncSession; any failure lands the
-    assessment in status=failed with error_message (lifecycle CHECKs)."""
+    assessment in status=failed with error_message (lifecycle CHECKs).
+    Concurrency-capped; queued runs simply wait their turn (the 30-min
+    stale-run guard is generous enough to cover realistic queue waits)."""
+    async with _PIPELINE_SEMAPHORE:
+        await _run_pipeline_body(assessment_id, org_id)
+
+
+async def _run_pipeline_body(assessment_id: UUID, org_id: UUID) -> None:
     async with AsyncSessionLocal() as db:
         try:
             result = await db.execute(
@@ -147,6 +162,11 @@ async def run_assessment_pipeline(assessment_id: UUID, org_id: UUID) -> None:
             params = dict(assessment.params or {})
             pipeline_assumptions = []
             models_used = {}
+            # Release the pooled connection before any long LLM wait — a
+            # transaction left open across sequential LLM batches holds a
+            # pool slot for the whole run (expire_on_commit=False, so loaded
+            # objects stay usable after commit).
+            await db.commit()
 
             # Stage 0 — extraction: pdf/docx dumps arrive with parsed text
             # but no rows (plan §7 stage 1); AI-extract use cases now.
@@ -194,6 +214,7 @@ async def run_assessment_pipeline(assessment_id: UUID, org_id: UUID) -> None:
                     )
                 )
                 use_case_rows = rows.scalars().all()
+                await db.commit()  # release connection before the tagging LLM stage
                 pipeline_assumptions.extend(extraction["assumptions"])
                 if extraction["models_used"]:
                     models_used["extraction"] = extraction["models_used"]
@@ -263,6 +284,7 @@ async def run_assessment_pipeline(assessment_id: UUID, org_id: UUID) -> None:
             }
 
             settings = await get_mitre_settings(db, org_id)
+            await db.commit()  # release connection before the narrative LLM stage
             intake = params.get("intake", {})
             disabled_policy = intake.get("count_disabled_as_coverage")
             if disabled_policy is None:
