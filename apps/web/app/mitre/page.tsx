@@ -22,7 +22,71 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { AssessmentListItem, STATUS_META, fmtDate } from './lib';
+import { AssessmentListItem, DOMAIN_LABELS, STATUS_META, fmtDate } from './lib';
+
+function TrendArrow({ item, items }: { item: AssessmentListItem; items: AssessmentListItem[] }) {
+  if (item.status !== 'completed' || item.strict_pct === null) return null;
+  const index = items.findIndex((x) => x.assessment_id === item.assessment_id);
+  const previous = items
+    .slice(index + 1)
+    .find((x) => x.status === 'completed' && x.strict_pct !== null);
+  if (!previous) return null;
+  const delta = Math.round((item.strict_pct - (previous.strict_pct as number)) * 10) / 10;
+  return (
+    <Tooltip delayDuration={150}>
+      <TooltipTrigger asChild>
+        <span
+          className={cn(
+            'cursor-default text-xs font-semibold',
+            delta > 0 && 'text-emerald-600',
+            delta < 0 && 'text-rose-600',
+            delta === 0 && 'text-muted-foreground'
+          )}
+        >
+          {delta > 0 ? '▲' : delta < 0 ? '▼' : '–'}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs text-xs">
+        {delta === 0
+          ? 'No change vs the previous completed run.'
+          : `${delta > 0 ? '+' : ''}${delta} points vs the previous completed run (${previous.strict_pct}%). Open the assessment's Compare tab for the full diff.`}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function DomainMiniBars({ item }: { item: AssessmentListItem }) {
+  const brief = Object.entries(item.domains_brief ?? {}).filter(
+    ([, d]) => (d.applicable ?? 0) > 0
+  );
+  if (brief.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
+  return (
+    <div className="flex flex-col gap-1">
+      {brief.map(([key, d]) => (
+        <Tooltip key={key} delayDuration={150}>
+          <TooltipTrigger asChild>
+            <div className="flex cursor-default items-center gap-1.5">
+              <span className="w-4 text-[10px] font-semibold text-muted-foreground">
+                {(DOMAIN_LABELS[key] ?? key)[0]}
+              </span>
+              <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-primary"
+                  style={{ width: `${Math.min(100, d.strict_pct ?? 0)}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-muted-foreground">{d.strict_pct}%</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs text-xs">
+            {DOMAIN_LABELS[key] ?? key}: {d.covered} of {d.applicable} applicable techniques
+            covered ({d.strict_pct}% strict).
+          </TooltipContent>
+        </Tooltip>
+      ))}
+    </div>
+  );
+}
 
 export default function MitreListPage() {
   const router = useRouter();
@@ -92,6 +156,7 @@ export default function MitreListPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Coverage</TableHead>
+                  <TableHead className="hidden lg:table-cell">By matrix</TableHead>
                   <TableHead className="hidden sm:table-cell">ATT&CK</TableHead>
                   <TableHead className="hidden md:table-cell">Created</TableHead>
                 </TableRow>
@@ -118,27 +183,33 @@ export default function MitreListPage() {
                       </TableCell>
                       <TableCell>
                         {item.strict_pct !== null ? (
-                          <Tooltip delayDuration={150}>
-                            <TooltipTrigger asChild>
-                              <div className="flex cursor-default items-center gap-2">
-                                <span className="w-12 text-sm font-semibold">{item.strict_pct}%</span>
-                                <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
-                                  <div
-                                    className="h-full rounded-full bg-primary"
-                                    style={{ width: `${Math.min(100, item.strict_pct)}%` }}
-                                  />
+                          <div className="flex items-center gap-2">
+                            <Tooltip delayDuration={150}>
+                              <TooltipTrigger asChild>
+                                <div className="flex cursor-default items-center gap-2">
+                                  <span className="w-12 text-sm font-semibold">{item.strict_pct}%</span>
+                                  <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
+                                    <div
+                                      className="h-full rounded-full bg-primary"
+                                      style={{ width: `${Math.min(100, item.strict_pct)}%` }}
+                                    />
+                                  </div>
                                 </div>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs text-xs">
-                              Strict coverage: techniques with a qualifying detection, out of
-                              those applicable to your environment. Weighted (partial counts
-                              as half): {item.weighted_pct}%.
-                            </TooltipContent>
-                          </Tooltip>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs text-xs">
+                                Strict coverage: techniques with a qualifying detection, out of
+                                those applicable to your environment. Weighted (partial counts
+                                as half): {item.weighted_pct}%.
+                              </TooltipContent>
+                            </Tooltip>
+                            <TrendArrow item={item} items={items} />
+                          </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        <DomainMiniBars item={item} />
                       </TableCell>
                       <TableCell className="hidden text-xs text-muted-foreground sm:table-cell">
                         v{item.attack_version}

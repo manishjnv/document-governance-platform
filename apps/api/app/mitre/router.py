@@ -5,6 +5,8 @@ Report/export/compare endpoints are Phase 4; AI tagging is Phase 2.
 """
 
 import asyncio
+import base64
+import io
 import json
 import logging
 from datetime import datetime, timedelta, timezone
@@ -12,14 +14,17 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.compliance.audit import log_action
 from app.core.cache import invalidate_cache
 from app.db.session import get_db
 from app.dependencies import get_current_user, require_role
 from app.mitre import attack_data, ingest, service
+from app.mitre import report as mitre_report
 from app.models.mitre_assessment import MitreAssessment
 from app.models.mitre_file import MitreFile
 from app.models.mitre_use_case import MitreUseCase
@@ -389,7 +394,8 @@ async def list_assessments(
     )
     items = []
     for a in result.scalars().all():
-        overall = (a.summary or {}).get("overall", {})
+        summary = a.summary or {}
+        overall = summary.get("overall", {})
         items.append(
             {
                 "assessment_id": str(a.assessment_id),
@@ -400,6 +406,16 @@ async def list_assessments(
                 "completed_at": a.completed_at.isoformat() if a.completed_at else None,
                 "strict_pct": overall.get("strict_pct"),
                 "weighted_pct": overall.get("weighted_pct"),
+                # Phase 4: per-domain mini-bars on the list page without N+1
+                # detail fetches — read from the stored summary JSONB.
+                "domains_brief": {
+                    key: {
+                        "strict_pct": d.get("strict_pct"),
+                        "covered": d.get("covered"),
+                        "applicable": d.get("applicable"),
+                    }
+                    for key, d in (summary.get("domains") or {}).items()
+                },
             }
         )
     return items
@@ -477,6 +493,108 @@ async def list_use_cases(
             for uc in result.scalars().all()
         ],
     }
+
+
+async def _completed_assessment(db, assessment_id: UUID, org_id) -> MitreAssessment:
+    assessment = await _get_assessment(db, assessment_id, org_id)
+    if assessment.status != "completed":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Available once the assessment has completed",
+        )
+    return assessment
+
+
+async def _load_use_case_dicts(db, assessment_id: UUID, org_id) -> list:
+    result = await db.execute(
+        select(MitreUseCase)
+        .where(
+            (MitreUseCase.assessment_id == assessment_id)
+            & (MitreUseCase.org_id == org_id)
+            & (MitreUseCase.deleted_at.is_(None))
+        )
+        .order_by(MitreUseCase.row_ref)
+    )
+    return [
+        {
+            "row_ref": uc.row_ref,
+            "name": uc.name,
+            "description": uc.description,
+            "log_source": uc.log_source,
+            "enabled": uc.enabled,
+            "mappings": uc.mappings or [],
+            "mapping_status": uc.mapping_status,
+        }
+        for uc in result.scalars().all()
+    ]
+
+
+@router.get("/assessments/{assessment_id}/report", summary="Executive + detailed report (html/pdf)")
+async def assessment_report(
+    assessment_id: UUID,
+    format: str = Query("html"),
+    current_user: TokenData = Depends(get_current_user),  # viewers may read (plan §15 Q1)
+    db: AsyncSession = Depends(get_db),
+):
+    """Mirrors reviews.py's report shape: {"format", "data"} with PDF as
+    base64-in-JSON so the existing frontend blob pattern works."""
+    org_id = UUID(str(current_user.org_id))
+    assessment = await _completed_assessment(db, assessment_id, org_id)
+    use_cases = await _load_use_case_dicts(db, assessment_id, org_id)
+    # Report/xlsx generation is CPU-bound and unbounded on large assessments;
+    # offload so it can't stall the single-worker event loop (2026-08-02
+    # adversarial review, non-blocking finding #2).
+    html = await run_in_threadpool(mitre_report.build_html_report, assessment, use_cases)
+
+    if format.lower() == "pdf":
+        try:
+            pdf_bytes = await run_in_threadpool(mitre_report.generate_pdf, html)
+        except Exception as exc:  # noqa: BLE001 — WeasyPrint native libs absent locally
+            logger.error(f"MITRE PDF rendering failed: {exc}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="PDF rendering is unavailable in this environment — use format=html",
+            )
+        return {"format": "pdf", "data": base64.b64encode(pdf_bytes).decode("ascii")}
+    return {"format": "html", "data": html}
+
+
+@router.get("/assessments/{assessment_id}/export.xlsx", summary="Detailed XLSX gap register")
+async def assessment_export_xlsx(
+    assessment_id: UUID,
+    current_user: TokenData = Depends(get_current_user),  # viewers may download (plan §15 Q1)
+    db: AsyncSession = Depends(get_db),
+):
+    """StreamingResponse with the real xlsx content-type — deliberately NOT
+    the base64-in-JSON shape (plan §10)."""
+    org_id = UUID(str(current_user.org_id))
+    assessment = await _completed_assessment(db, assessment_id, org_id)
+    use_cases = await _load_use_case_dicts(db, assessment_id, org_id)
+    content = await run_in_threadpool(mitre_report.build_xlsx_export, assessment, use_cases)
+    filename = _sanitize_filename(assessment.name)[:80] or "assessment"
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}-attack-coverage.xlsx"'
+        },
+    )
+
+
+@router.get("/assessments/{assessment_id}/compare/{other_id}", summary="Trend diff vs an older run")
+async def compare_assessments_endpoint(
+    assessment_id: UUID,
+    other_id: UUID,
+    current_user: TokenData = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """{assessment_id} is the run being viewed, {other_id} the baseline.
+    Both must belong to the caller's org (cross-org -> 404) and be
+    completed (else 409)."""
+    org_id = UUID(str(current_user.org_id))
+    current = await _completed_assessment(db, assessment_id, org_id)
+    baseline = await _completed_assessment(db, other_id, org_id)
+    return service.compare_assessments(current, baseline)
 
 
 @router.get("/settings", summary="Get org MITRE tunables")

@@ -129,6 +129,99 @@ def build_mappings(tags: list[str]) -> tuple[list[dict], str, list[str]]:
     return [], ("invalid" if tags else "unmapped"), notes
 
 
+def compare_assessments(current, baseline) -> dict:
+    """Trend diff of two COMPLETED assessments (plan §8). Pure Python over
+    the stored technique_results/summary — nothing recomputed.
+
+    Direction: `current` is the run being viewed, `baseline` the older run
+    compared against; positive deltas mean more coverage now. Techniques
+    present in only one run (ATT&CK version drift) are skipped —
+    `attack_version_mismatch` flags that case. A technique that entered/left
+    the applicable set appears in na_changed (and also in newly_covered when
+    it went straight to covered — both facts are true).
+    """
+    cur_by_id = {r["technique_id"]: r for r in current.technique_results or []}
+    base_by_id = {r["technique_id"]: r for r in baseline.technique_results or []}
+
+    newly_covered, regressed, na_changed = [], [], []
+    for tid in sorted(cur_by_id.keys() & base_by_id.keys()):
+        cur, base = cur_by_id[tid], base_by_id[tid]
+        # .get() throughout: technique_results is unenforced JSONB — a row from
+        # a future/older schema missing 'state' must degrade, not 500.
+        cur_state, base_state = cur.get("state"), base.get("state")
+        if cur_state == base_state:
+            continue
+        tech = attack_data.DEFAULT.get(tid)
+        entry = {
+            "technique_id": tid,
+            "name": tech.get("name", tid) if tech else tid,
+            "domain": cur.get("domain"),
+            "from": base_state,
+            "to": cur_state,
+        }
+        if cur_state == "covered":
+            newly_covered.append(entry)
+        elif base_state == "covered" and cur_state in ("partial", "not_covered"):
+            regressed.append(entry)
+        if (cur_state == "not_applicable") != (base_state == "not_applicable"):
+            na_changed.append(entry)
+
+    def _overall(a):
+        return (a.summary or {}).get("overall", {})
+
+    keys = ("strict_pct", "weighted_pct", "covered", "partial", "not_covered",
+            "not_applicable", "applicable")
+    overall_delta = {
+        k: round((_overall(current).get(k) or 0) - (_overall(baseline).get(k) or 0), 1)
+        for k in keys
+    }
+
+    def _tactics(a):
+        return {
+            (dk, t.get("id")): t
+            for dk, d in ((a.summary or {}).get("domains") or {}).items()
+            for t in d.get("tactics", [])
+            if t.get("id")
+        }
+
+    cur_tactics, base_tactics = _tactics(current), _tactics(baseline)
+    tactic_deltas = [
+        {
+            "domain": dk,
+            "id": tid,
+            "name": cur_tactics[(dk, tid)].get("name"),
+            "current_strict_pct": cur_tactics[(dk, tid)].get("strict_pct"),
+            "baseline_strict_pct": base_tactics[(dk, tid)].get("strict_pct"),
+            "delta": round(
+                (cur_tactics[(dk, tid)].get("strict_pct") or 0)
+                - (base_tactics[(dk, tid)].get("strict_pct") or 0),
+                1,
+            ),
+        }
+        for (dk, tid) in sorted(cur_tactics.keys() & base_tactics.keys())
+    ]
+
+    def _meta(a):
+        return {
+            "assessment_id": str(a.assessment_id),
+            "name": a.name,
+            "completed_at": a.completed_at.isoformat() if a.completed_at else None,
+            "attack_version": a.attack_version,
+            "strict_pct": _overall(a).get("strict_pct"),
+        }
+
+    return {
+        "current": _meta(current),
+        "baseline": _meta(baseline),
+        "attack_version_mismatch": current.attack_version != baseline.attack_version,
+        "overall_delta": overall_delta,
+        "tactic_deltas": tactic_deltas,
+        "newly_covered": newly_covered,
+        "regressed": regressed,
+        "na_changed": na_changed,
+    }
+
+
 async def run_assessment_pipeline(assessment_id: UUID, org_id: UUID) -> None:
     """Fire-and-forget task body. Own AsyncSession; any failure lands the
     assessment in status=failed with error_message (lifecycle CHECKs).

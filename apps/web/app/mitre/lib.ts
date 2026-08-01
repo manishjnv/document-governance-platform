@@ -4,6 +4,12 @@
  * NOT an API client — pages keep their own inline axios calls (house rule).
  */
 
+export interface DomainBrief {
+  strict_pct: number | null;
+  covered: number | null;
+  applicable: number | null;
+}
+
 export interface AssessmentListItem {
   assessment_id: string;
   name: string;
@@ -13,6 +19,26 @@ export interface AssessmentListItem {
   completed_at: string | null;
   strict_pct: number | null;
   weighted_pct: number | null;
+  domains_brief?: Record<string, DomainBrief>;
+}
+
+export interface CompareEntry {
+  technique_id: string;
+  name: string;
+  domain: string;
+  from: string;
+  to: string;
+}
+
+export interface CompareResult {
+  current: { assessment_id: string; name: string; completed_at: string | null; attack_version: string; strict_pct: number | null };
+  baseline: { assessment_id: string; name: string; completed_at: string | null; attack_version: string; strict_pct: number | null };
+  attack_version_mismatch: boolean;
+  overall_delta: Record<string, number>;
+  tactic_deltas: { domain: string; id: string; name: string; current_strict_pct: number; baseline_strict_pct: number; delta: number }[];
+  newly_covered: CompareEntry[];
+  regressed: CompareEntry[];
+  na_changed: CompareEntry[];
 }
 
 export interface Rollup {

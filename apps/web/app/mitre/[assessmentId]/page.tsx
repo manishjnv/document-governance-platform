@@ -3,13 +3,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { useParams, useRouter } from 'next/navigation';
-import { Loader2, Play, Target } from 'lucide-react';
+import { FileDown, FileSpreadsheet, Loader2, Play, Target } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { Assessment, STATUS_META, UseCaseItem, fmtDate } from '../lib';
+import {
+  Assessment,
+  AssessmentListItem,
+  CompareResult,
+  STATUS_META,
+  UseCaseItem,
+  fmtDate,
+} from '../lib';
 import { AssumptionsNA } from '../components/AssumptionsNA';
+import { CompareView } from '../components/CompareView';
 import { CoverageHeatmap } from '../components/CoverageHeatmap';
 import { ExecutiveBand } from '../components/ExecutiveBand';
 import { GapsRoadmap } from '../components/GapsRoadmap';
@@ -18,7 +26,7 @@ import { TechniqueDrawer } from '../components/TechniqueDrawer';
 const POLL_MS = 5_000;
 const USE_CASE_FETCH_LIMIT = 500;
 
-type Tab = 'coverage' | 'gaps' | 'assumptions';
+type Tab = 'coverage' | 'gaps' | 'assumptions' | 'compare';
 
 export default function MitreResultsPage() {
   const router = useRouter();
@@ -32,6 +40,12 @@ export default function MitreResultsPage() {
   const [tab, setTab] = useState<Tab>('coverage');
   const [selectedTechnique, setSelectedTechnique] = useState<string | null>(null);
   const [runError, setRunError] = useState('');
+  const [downloadError, setDownloadError] = useState('');
+  const [compareOptions, setCompareOptions] = useState<AssessmentListItem[] | null>(null);
+  const [compareWith, setCompareWith] = useState('');
+  const [compareResult, setCompareResult] = useState<CompareResult | null>(null);
+  const [compareLoading, setCompareLoading] = useState(false);
+  const [compareError, setCompareError] = useState('');
   const statusRef = useRef<string>('');
 
   const authHeaders = () => ({
@@ -92,6 +106,83 @@ export default function MitreResultsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assessment?.status, assessmentId]);
 
+  // Lazily load the compare options the first time the Compare tab opens.
+  useEffect(() => {
+    if (tab !== 'compare' || compareOptions !== null) return;
+    axios
+      .get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments`, {
+        headers: authHeaders(),
+      })
+      .then((res) =>
+        setCompareOptions(
+          (res.data as AssessmentListItem[]).filter(
+            (a) => a.status === 'completed' && a.assessment_id !== assessmentId
+          )
+        )
+      )
+      .catch(() => setCompareOptions([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, assessmentId]);
+
+  const handleCompareSelect = async (otherId: string) => {
+    setCompareWith(otherId);
+    setCompareResult(null);
+    setCompareError('');
+    if (!otherId) return;
+    setCompareLoading(true);
+    try {
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments/${assessmentId}/compare/${otherId}`,
+        { headers: authHeaders() }
+      );
+      setCompareResult(res.data);
+    } catch (err: any) {
+      setCompareError(err.response?.data?.detail || 'Comparison failed');
+    } finally {
+      setCompareLoading(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    setDownloadError('');
+    try {
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments/${assessmentId}/report?format=pdf`,
+        { headers: authHeaders() }
+      );
+      const binary = atob(res.data.data);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${assessment?.name || 'assessment'}-attack-coverage.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setDownloadError(err.response?.data?.detail || 'Failed to download the PDF report');
+    }
+  };
+
+  const handleDownloadXlsx = async () => {
+    setDownloadError('');
+    try {
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments/${assessmentId}/export.xlsx`,
+        { headers: authHeaders(), responseType: 'blob' }
+      );
+      const url = URL.createObjectURL(res.data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${assessment?.name || 'assessment'}-attack-coverage.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setDownloadError(err.response?.data?.detail || 'Failed to download the XLSX export');
+    }
+  };
+
   const handleRun = async () => {
     setRunError('');
     try {
@@ -115,7 +206,9 @@ export default function MitreResultsPage() {
     { key: 'coverage', label: 'Coverage' },
     { key: 'gaps', label: 'Gaps & Roadmap' },
     { key: 'assumptions', label: 'Assumptions & N/A' },
+    { key: 'compare', label: 'Compare' },
   ];
+  const completed = assessment?.status === 'completed';
 
   return (
     <AppShell fullWidth>
@@ -138,10 +231,45 @@ export default function MitreResultsPage() {
                   {status.label}
                 </span>
               )}
-              <span className="ml-auto text-xs text-muted-foreground">
-                created {fmtDate(assessment.created_at)}
-              </span>
+              <div className="ml-auto flex items-center gap-1.5">
+                <Tooltip delayDuration={150}>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button size="sm" variant="outline" onClick={handleDownloadPdf} disabled={!completed}>
+                        <FileDown size={14} className="mr-1" aria-hidden="true" /> PDF
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs text-xs">
+                    {completed
+                      ? 'Executive + detailed report as a PDF.'
+                      : 'Available once the assessment completes.'}
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip delayDuration={150}>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button size="sm" variant="outline" onClick={handleDownloadXlsx} disabled={!completed}>
+                        <FileSpreadsheet size={14} className="mr-1" aria-hidden="true" /> XLSX
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs text-xs">
+                    {completed
+                      ? 'Full gap register as a spreadsheet — every technique, rule, gap and assumption.'
+                      : 'Available once the assessment completes.'}
+                  </TooltipContent>
+                </Tooltip>
+                <span className="hidden text-xs text-muted-foreground sm:inline">
+                  created {fmtDate(assessment.created_at)}
+                </span>
+              </div>
             </div>
+            {downloadError && (
+              <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {downloadError}
+              </div>
+            )}
 
             {assessment.status === 'running' && (
               <div className="flex items-center gap-3 rounded-md bg-sky-50 p-5 text-sm text-sky-900">
@@ -219,6 +347,17 @@ export default function MitreResultsPage() {
                   <GapsRoadmap summary={summary} onSelectTechnique={setSelectedTechnique} />
                 )}
                 {tab === 'assumptions' && <AssumptionsNA summary={summary} />}
+                {tab === 'compare' && (
+                  <CompareView
+                    options={compareOptions ?? []}
+                    selectedId={compareWith}
+                    onSelect={handleCompareSelect}
+                    result={compareResult}
+                    loading={compareLoading}
+                    error={compareError}
+                    onSelectTechnique={setSelectedTechnique}
+                  />
+                )}
 
                 <TechniqueDrawer
                   techniqueId={selectedTechnique}
