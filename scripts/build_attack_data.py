@@ -47,6 +47,10 @@ CACHE_DIR = Path(tempfile.gettempdir()) / "attack-stix-cache"
 # Sanity floors for validation (counts include revoked/deprecated entries).
 MIN_TECHNIQUES = {"enterprise": 600, "ics": 50, "mobile": 75}
 
+# MITRE ships these revoked techniques with no revoked-by successor (verified
+# against the upstream bundles). Any NEW orphan on a version bump still fails.
+KNOWN_REVOKED_WITHOUT_SUCCESSOR = {("mobile", "T1454")}
+
 TECHNIQUE_ID_RE = re.compile(r"^T\d{4}(\.\d{3})?$")
 CITATION_RE = re.compile(r"\s*\(Citation:[^)]*\)")
 
@@ -122,13 +126,19 @@ def compact_domain(bundle: dict) -> dict:
             if ext:
                 revoked_by[o["source_ref"]] = ext
 
-    # Tactic order follows the matrix definition when present.
-    matrix = next((o for o in objs if o["type"] == "x-mitre-matrix"), None)
+    # Tactic order follows the matrix definitions; Mobile ships TWO matrices
+    # (Device Access + Network-Based Effects), so union tactic_refs across all
+    # of them, then append any tactic no matrix referenced.
     tactic_objs = {o["id"]: o for o in objs if o["type"] == "x-mitre-tactic"}
-    ordered = (
-        [tactic_objs[t] for t in matrix.get("tactic_refs", []) if t in tactic_objs]
-        if matrix
-        else sorted(tactic_objs.values(), key=lambda o: attack_external_id(o) or "")
+    seen, ordered = set(), []
+    for matrix in (o for o in objs if o["type"] == "x-mitre-matrix"):
+        for ref in matrix.get("tactic_refs", []):
+            if ref in tactic_objs and ref not in seen:
+                seen.add(ref)
+                ordered.append(tactic_objs[ref])
+    ordered += sorted(
+        (t for tid, t in tactic_objs.items() if tid not in seen),
+        key=lambda o: attack_external_id(o) or "",
     )
     tactics, shortname_to_id = [], {}
     for t in ordered:
@@ -184,7 +194,11 @@ def validate(domains: dict) -> list[str]:
                 f"{name}: {len(techs)} techniques < sanity floor {MIN_TECHNIQUES[name]}"
             )
         for t in techs:
-            if t["revoked"] and not t["superseded_by"]:
+            if (
+                t["revoked"]
+                and not t["superseded_by"]
+                and (name, t["id"]) not in KNOWN_REVOKED_WITHOUT_SUCCESSOR
+            ):
                 errors.append(f"{name}: revoked {t['id']} has no superseded_by")
             if t["is_subtechnique"] and t["parent_id"] not in ids:
                 errors.append(f"{name}: sub-technique {t['id']} parent missing")
