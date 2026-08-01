@@ -427,9 +427,7 @@ visible), PDF button surfaces the graceful local-env error (WeasyPrint
 is prod-image-only — full PDF check lands with Phase 5 deploy), compare
 between two seeded runs showed correct deltas (+0.3 pts, 2 newly
 covered, N/A change from the dropped exclusion), mobile 390px at 0px
-overflow (one fix: `max-w-full` on the compare `<select>`). OpenRouter
-key still over its cap (usage 2.046/2.00) — **AI-tagging quality smoke
-still pending**.
+overflow (one fix: `max-w-full` on the compare `<select>`).
 **Phase 4 adversarial sign-off + PROD DEPLOY (2026-08-02):** pre-push
 Sonnet-takeover review of the new surfaces (compare cross-org authz,
 report XSS, XLSX injection across all 8 sheets) returned **ACCEPT**;
@@ -471,13 +469,20 @@ feature is a separate content task, not part of this build. Q3 —
 **Deferred by design (plan §14 — NOT blockers):** interactive
 column-mapping wizard, per-mapping AI-override UI, threat-informed
 actor/industry weighting, ATT&CK Navigator layer export, scheduled/
-continuous re-assessment, per-rule detection-quality scoring. **One
-externally-blocked follow-up:** the AI-tagging *quality* spot-check
-(hand-checking live AI mappings) still waits on the OpenRouter account
-daily cap (usage 2.046/2.00) — the tagging code paths and their
-degrade-to-unmapped behavior are verified; only the human quality
-eyeball on real AI output is outstanding, and prod tagging degrades
-gracefully until the cap resets.
+continuous re-assessment, per-rule detection-quality scoring. **No
+residual blockers.** The AI-tagging *quality* spot-check was run
+2026-08-02 against the real prod key (the SOW-audit key in `apps/api`
+config / VPS `.env`, unlimited, account balance ~$17.26) inside the
+`scopewise-api` container: **6/6 correct** (PowerShell `-enc`→T1059.001
++T1027, LSASS→T1003.001, schtasks→T1053.005, RDP brute force→T1110,
+mimikatz→T1003.001, service 7045→T1543.003), one clean GLM-5.2 batch, no
+hallucinated IDs. Correction to earlier notes in this doc: the prior
+"AI tagging cap-blocked/pending" claim was wrong — it checked a separate
+local tooling key ($OPENROUTER_API_KEY / ~/.openrouter-key, $2-capped),
+not ScopeWise's key; prod AI tagging was never blocked. The project's
+LLM key is read from `settings.openrouter_api_key` (app config / `.env`),
+never the shell env — verify the app's LLM budget there or in-container,
+not via a global env var.
 
 ---
 
