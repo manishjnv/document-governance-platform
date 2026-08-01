@@ -101,7 +101,8 @@ fixed, S3 encryption added, login lockout wired to actual config, signup
 endpoint added, review status lifecycle fixed (pending→running before
 orchestrator dispatch).
 
-**Test suite:** 402 passed, 2 skipped (full suite, last run 2026-07-17).
+**Test suite:** 622 passed, 6 skipped (full suite, last run 2026-08-01 —
+includes the 39 MITRE Phase 0+1 tests).
 
 **Router scope audit (2026-07-18, Step 1 of fix plan):** all 16 "extra"
 routers beyond the original Phase 1 MVP list are mounted in `main.py` and
@@ -288,12 +289,53 @@ applicability-filtered denominator with N/A-with-reason, assumptions,
 exact per-gap recommendations, short/mid/long-term roadmap, PDF + XLSX
 exports, trend comparison between runs. All decisions + 6-phase
 implementation plan in `docs/planning/MITRE_ASSESSMENT_PLAN.md`.
-**Phase 0 started (2026-08-01):** `scripts/build_attack_data.py` (pinned
-ATT&CK v19.1 dataset builder, dev-run only) committed in `ba645bc`.
-`apps/api/app/mitre/` and the generated `attack.json` do NOT exist yet —
-resume from `docs/phases/prompts/MITRE_PHASE_0_PROMPT.md`: run the build
-script, review its validation summary, commit `attack.json`, continue
-Phase 0's remaining items.
+**Phase 0 COMPLETE (2026-08-01):** pinned ATT&CK **v19.1** dataset
+generated and checked in (`apps/api/app/mitre/data/attack.json`, 0.7 MB:
+enterprise 858 techniques / 15 tactics, ics 118 / 12, mobile 190 / 14,
+revoked+deprecated flagged; build via `scripts/build_attack_data.py`,
+committed `ba645bc`). New pure-logic modules under `apps/api/app/mitre/`:
+`attack_data.py` (module-level loader, `AttackIndex`, `resolve()` with
+revoked→`superseded_by` remap), `applicability.py` (domain gating,
+platform filter with PRE exemption + skip inside gated/excluded domains,
+technique/platform/domain-scoped customer exclusions, most-specific-
+reason-wins, loud no-inventory assumption) and `coverage.py`
+(covered/partial/not_covered/not_applicable, 0.7/0.4 confidence
+thresholds, `disabled_counts_as_coverage` param, sub-technique rollup,
+multi-tactic counting, strict + weighted %). Curated
+`data/technique_priorities.json` (40 techniques, tiers 1–3, sourced) —
+**pending user review** (plan §15 Q3). Tests:
+`tests/test_mitre_{applicability,coverage}.py`, 23 passed; full suite
+**606 passed / 6 skipped**, 0 failures (the "402 passed / 2 skipped"
+baseline in CLAUDE.md is stale — suite was already 571/6 on 2026-07-24).
+Gotchas baked into the data: ATT&CK v19 restructured defense tampering
+(T1562.001→T1685, T1070.001→T1685.005); mobile T1454 is revoked upstream
+with no successor (allowlisted in the build validation); Mobile ships two
+matrices (tactic extraction unions them).
+**Phase 1 COMPLETE (2026-08-01):** persistence + ingest + API, tagged-only
+end-to-end. Migration `029_mitre_assessment.sql` (4 new tables, zero
+ALTERs, applied to `edgp_dev` + `edgp_test`; prod in Phase 5), models
+`MitreAssessment/MitreFile/MitreUseCase` (+registry), `app/mitre/ingest.py`
+(openpyxl/xlrd/csv direct-cell readers, header-synonym detection,
+ATT&CK-platform normalization, 50MB/5k/10k caps, pdf/docx deferred to
+Phase 2 with a plain-English 422), `router.py` (create+parse-preview /
+run-202-with-stale-guard / list / get / use-cases / settings GET+PATCH /
+soft-delete, all org-scoped) + `service.py` (fire-and-forget pipeline on
+its own session; tag validation at create time so the preview shows the
+tagged/untagged/invalid split; org tunables in `mitre_settings`). Shared
+files touched: `main.py` (+2 lines), `app/models/__init__.py` (+3
+imports/entries) — exactly the allowed set. Tests
+`test_mitre_{ingest,api}.py` (16) green; **full suite 622 passed / 6
+skipped**; live dev-server smoke run verified create→run→poll→results
+with correct states and %s. Deviations (all declared in the handoff):
+coverage thresholds became optional kwargs so org settings aren't dead
+knobs; ICS "None"-platform techniques exempted from platform filtering
+(real-data bug); audit rows use `resource_type='organization'`
+(audit_logs CHECK is closed; extending it needs an ALTER — Phase 5
+decision); timestamps in the module are tz-aware (naive utcnow breaks the
+30-min stale-run guard on a +05:30 host). **Next: Phase 2** per
+`docs/planning/MITRE_ASSESSMENT_PLAN.md` §13 — MitreTaggingAgent +
+MitreNarrativeAgent (read PROMPT_ENGINEERING_GUIDE first), batching,
+timeout/degrade paths.
 
 ---
 

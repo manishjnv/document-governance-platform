@@ -90,7 +90,9 @@ last incident.
 ## Testing
 
 - Full backend suite: `cd apps/api && python -m pytest` — baseline is
-  **402 passed, 2 skipped**. Don't regress this.
+  **622 passed, 6 skipped** (measured 2026-08-01 after MITRE Phase 1; the
+  long-stale "402/2" figure predated Jul-24 growth). Don't regress this;
+  update this line when new tests land.
 - Frontend type-check: `cd apps/web && npx tsc --noEmit` — must be clean
   before committing any frontend change.
 - `apps/web` dev server on Windows: if `next dev`/`next build` hangs
