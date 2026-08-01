@@ -429,10 +429,21 @@ between two seeded runs showed correct deltas (+0.3 pts, 2 newly
 covered, N/A change from the dropped exclusion), mobile 390px at 0px
 overflow (one fix: `max-w-full` on the compare `<select>`). OpenRouter
 key still over its cap (usage 2.046/2.00) — **AI-tagging quality smoke
-still pending**. **Next: Phase 5** per plan §13 — adversarial pass on
-the new surfaces (report XSS, XLSX injection, compare authz),
-audit_logs resource_type enum decision, prod deploy + smoke, close the
-tagging spot-check.
+still pending**.
+**Phase 4 adversarial sign-off + PROD DEPLOY (2026-08-02):** pre-push
+Sonnet-takeover review of the new surfaces (compare cross-org authz,
+report XSS, XLSX injection across all 8 sheets) returned **ACCEPT**;
+both non-blocking items fixed in the same commit — `compare_assessments`
+now uses `.get()` on the unenforced `technique_results`/`summary` JSONB
+so schema drift degrades instead of 500ing (+regression test), and the
+three synchronous report/xlsx builders run via `run_in_threadpool` so a
+large assessment can't stall the single-worker event loop. Pushed
+through `8a608c0`, VPS rebuilt with `GIT_SHA=8a608c0`, live smoke green
+(`/mitre` 200, `/api/v1/mitre/assessments` 401 unauth, health 200).
+**Next: Phase 5** (closeout) per `docs/phases/prompts/MITRE_PHASE_5_PROMPT.md`
+— real-PDF render smoke on prod, `audit_logs` resource_type enum
+decision, whole-module cross-org review, close the tagging spot-check,
+and mark the module launch-ready.
 
 ---
 
