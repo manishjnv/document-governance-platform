@@ -117,10 +117,11 @@ is small enough to be a single ticket.
 - [x] Glossary terms, first 5 (liability cap, indemnification, scope
   creep, MSA, SOW) — done 2026-07-20, 150-300+ words each per
   `CONTENT_CALENDAR.md`'s target.
-- [ ] Blog posts #1-8 (Month 1-2 batch) — **not done this pass**. These
-  require the CMS/authoring decision above plus a named human reviewer
-  per `CONTENT_CALENDAR.md`'s editorial rule (E-E-A-T) — not something a
-  coding session can complete unilaterally.
+- [x] Blog posts #1-8 (Month 1-2 batch) — **all 8 published**. #1/#2/#5
+  drafted + reviewed + published 2026-07-20; #3/#4/#6/#7/#8 drafted
+  2026-07-22 behind a `pendingReview` noindex flag, user-reviewed and
+  published 2026-08-01 (flags removed, auto-entered sitemap). Month 3-4
+  batch (#9-16) still not drafted.
 
 **Phase 2 exit criteria:** 15-20 pages indexed in GSC; first organic
 sessions appear in GA4 (even if low volume). 9 new pages + glossary index
