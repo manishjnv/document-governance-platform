@@ -118,7 +118,6 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedDate: '2026-07-20',
     author: 'ScopeWise Team',
     relatedUseCase: '/use-cases/scope-creep-prevention',
-    pendingReview: true,
     body: [
       {
         heading: 'Open-ended deliverable language',
@@ -154,7 +153,6 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedDate: '2026-07-20',
     author: 'ScopeWise Team',
     relatedUseCase: '/use-cases/rfp-review',
-    pendingReview: true,
     body: [
       {
         heading: 'Score against your criteria, not the vendor\'s pitch',
@@ -185,7 +183,6 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedDate: '2026-07-20',
     author: 'ScopeWise Team',
     relatedUseCase: '/use-cases/rfp-review',
-    pendingReview: true,
     body: [
       {
         heading: 'Pricing that does not follow your requested format',
@@ -221,7 +218,6 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedDate: '2026-07-20',
     author: 'ScopeWise Team',
     relatedUseCase: '/use-cases/sow-review',
-    pendingReview: true,
     body: [
       {
         heading: 'Undefined effort and quality standards',
@@ -257,7 +253,6 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedDate: '2026-07-20',
     author: 'ScopeWise Team',
     relatedUseCase: '/use-cases/sow-review',
-    pendingReview: true,
     body: [
       {
         heading: 'What AI review does well',
