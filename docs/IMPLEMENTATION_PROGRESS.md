@@ -440,10 +440,44 @@ three synchronous report/xlsx builders run via `run_in_threadpool` so a
 large assessment can't stall the single-worker event loop. Pushed
 through `8a608c0`, VPS rebuilt with `GIT_SHA=8a608c0`, live smoke green
 (`/mitre` 200, `/api/v1/mitre/assessments` 401 unauth, health 200).
-**Next: Phase 5** (closeout) per `docs/phases/prompts/MITRE_PHASE_5_PROMPT.md`
-— real-PDF render smoke on prod, `audit_logs` resource_type enum
-decision, whole-module cross-org review, close the tagging spot-check,
-and mark the module launch-ready.
+**Phase 5 COMPLETE — MITRE module LAUNCH-READY (2026-08-02):** closeout
+phase, all tasks done. (1) **Real-PDF render smoke on prod: PASS** —
+`generate_pdf` in the `scopewise-api` container returns a valid `%PDF`
+(WeasyPrint native libs present), closing the only capability that
+couldn't be tested locally. (2) **audit_logs resource_type enum**: chose
+to extend the CHECK (audit clarity matters for a security product) —
+migration `030_audit_mitre_resource_type.sql` adds `mitre_assessment`
+(idempotent, transaction-wrapped), `enums.AuditResourceType` +
+`app/models/audit_log.py`'s ORM `CheckConstraint` updated in lockstep,
+and the create/complete/delete audit calls now use it (settings_updated
+stays `organization` — genuinely an org-level change). (3) **Whole-module
+adversarial review (Sonnet takeout)**: REVISE → fixed same-session — the
+blocking find was a real bug this session introduced (the ORM
+`CheckConstraint` in audit_log.py was the pre-030 5-value set; a
+`create_all`-bootstrapped DB would 500 every mitre audit write — now a
+documented 5th migration sync-point in CLAUDE.md); two non-blocking fixes
+also applied (org_id added to the fire-and-forget pipeline queries to
+honor the stated invariant; migration wrapped in a transaction). Endpoint
+cross-org isolation, XSS/formula/prompt-injection containment, and
+agents-absent-from-orchestrator all re-confirmed clean. Migration 030
+applied to edgp_dev + edgp_test (prod on this deploy). Full suite **650
+passed / 7 skipped**, `tsc` clean.
+
+**§15 open questions resolved:** Q1 — viewers MAY download the XLSX/PDF
+(same as review reports; accepted). Q2 — a marketing/SEO page for the
+feature is a separate content task, not part of this build. Q3 —
+`technique_priorities.json` is user-approved (stamped in-file 2026-08-01).
+
+**Deferred by design (plan §14 — NOT blockers):** interactive
+column-mapping wizard, per-mapping AI-override UI, threat-informed
+actor/industry weighting, ATT&CK Navigator layer export, scheduled/
+continuous re-assessment, per-rule detection-quality scoring. **One
+externally-blocked follow-up:** the AI-tagging *quality* spot-check
+(hand-checking live AI mappings) still waits on the OpenRouter account
+daily cap (usage 2.046/2.00) — the tagging code paths and their
+degrade-to-unmapped behavior are verified; only the human quality
+eyeball on real AI output is outstanding, and prod tagging degrades
+gracefully until the cap resets.
 
 ---
 

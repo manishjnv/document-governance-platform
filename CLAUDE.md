@@ -87,10 +87,20 @@ Forgetting any of these four is the single most common bug this session
 hit (repeatedly). Check all four every time, not just the one from the
 last incident.
 
+5. **If the migration ALTERs a CHECK/enum that is ALSO declared as an ORM
+   `CheckConstraint` in a model** (e.g. `audit_logs.resource_type` in
+   `app/models/audit_log.py`), update that constraint string too — it's a
+   5th sync point the four above miss. `app/db/session.py`'s `init_db()`
+   uses `Base.metadata.create_all`, so a DB bootstrapped that way gets the
+   *stale* constraint and every affected INSERT 500s (caught in the MITRE
+   Phase 5 review — migration 030 vs. audit_log.py). Grep models for
+   `CheckConstraint` naming the column before shipping any CHECK-altering
+   migration.
+
 ## Testing
 
 - Full backend suite: `cd apps/api && python -m pytest` — baseline is
-  **649 passed, 7 skipped** (measured 2026-08-02 after MITRE Phase 4; the
+  **650 passed, 7 skipped** (measured 2026-08-02 after MITRE Phase 5; the
   7th skip is the prod-only WeasyPrint PDF render test; the
   long-stale "402/2" figure predated Jul-24 growth). Don't regress this;
   update this line when new tests land.
