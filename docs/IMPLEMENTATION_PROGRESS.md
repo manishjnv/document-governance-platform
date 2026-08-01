@@ -101,8 +101,8 @@ fixed, S3 encryption added, login lockout wired to actual config, signup
 endpoint added, review status lifecycle fixed (pending→running before
 orchestrator dispatch).
 
-**Test suite:** 636 passed, 6 skipped (full suite, last run 2026-08-01 —
-includes the 53 MITRE Phase 0-2 tests).
+**Test suite:** 641 passed, 6 skipped (full suite, last run 2026-08-01 —
+includes the 58 MITRE Phase 0-2 + hardening tests).
 
 **Router scope audit (2026-07-18, Step 1 of fix plan):** all 16 "extra"
 routers beyond the original Phase 1 MVP list are mounted in `main.py` and
@@ -356,8 +356,26 @@ outage — the key is over its account spending cap (403 on all 4 models),
 so the degrade paths are live-verified (unmapped + template narrative +
 completed with honest assumptions) but the **AI-tagging quality
 spot-check is PENDING a working key** — re-run
-`mitre_smoke2`-style once the cap resets. **Next: Phase 3 (frontend)**
-per plan §13 — three `/mitre` pages + nav entry + templates in `public/`.
+`mitre_smoke2`-style once the cap resets.
+**Hardened + DEPLOYED TO PROD (2026-08-01, night):** pre-push adversarial
+sign-off (Sonnet takeover per the codex:rescue outage) returned REVISE
+with 3 blocking resource-exhaustion findings, all fixed same-session:
+process-wide `Semaphore(3)` pipeline cap + early commits so the pooled DB
+connection is released before every LLM wait (`expire_on_commit=False`);
+workbook-wide xlsx/xls budgets (20 sheets / 15,050 cumulative rows /
+64-col width — the old per-sheet cap allowed a many-sheet zip bomb);
+pdf/docx extraction capped at 40 chunks + 5,000 rows with assumption
+lines. Plus non-blocking: `log_source[:255]`, `description[:2000]`,
+intake `industry/region[:200]`. Cross-org isolation and prompt-injection
+containment passed clean. +5 cap tests → **full suite 641 passed / 6
+skipped**. Deployed: commits through `14b1b7b` pushed, VPS containers
+rebuilt with GIT_SHA, **migration 029 applied to `scopewise_prod`** (all
+4 mitre tables verified), smoke: health 200, `/api/v1/mitre/assessments`
+401 unauthenticated, /login 200. Note: prod AI tagging will degrade
+gracefully (unmapped + template narrative) until the OpenRouter account
+cap resets. **Next: Phase 3 (frontend)** per plan §13 — three `/mitre`
+pages + nav entry + templates in `public/`
+(`docs/phases/prompts/MITRE_PHASE_3_PROMPT.md`).
 
 ---
 
