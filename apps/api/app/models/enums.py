@@ -82,3 +82,4 @@ class AuditResourceType(str, Enum):
     FINDING = "finding"
     USER = "user"
     ORGANIZATION = "organization"
+    MITRE_ASSESSMENT = "mitre_assessment"  # migration 030

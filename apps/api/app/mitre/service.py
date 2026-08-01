@@ -248,6 +248,7 @@ async def _run_pipeline_body(assessment_id: UUID, org_id: UUID) -> None:
             rows = await db.execute(
                 select(MitreUseCase).where(
                     (MitreUseCase.assessment_id == assessment_id)
+                    & (MitreUseCase.org_id == org_id)
                     & (MitreUseCase.deleted_at.is_(None))
                 )
             )
@@ -276,6 +277,7 @@ async def _run_pipeline_body(assessment_id: UUID, org_id: UUID) -> None:
                 file_result = await db.execute(
                     select(MitreFile).where(
                         (MitreFile.assessment_id == assessment_id)
+                        & (MitreFile.org_id == org_id)
                         & (MitreFile.kind == "use_cases")
                         & (MitreFile.deleted_at.is_(None))
                     )
@@ -303,6 +305,7 @@ async def _run_pipeline_body(assessment_id: UUID, org_id: UUID) -> None:
                 rows = await db.execute(
                     select(MitreUseCase).where(
                         (MitreUseCase.assessment_id == assessment_id)
+                        & (MitreUseCase.org_id == org_id)
                         & (MitreUseCase.deleted_at.is_(None))
                     )
                 )
@@ -506,8 +509,7 @@ async def _run_pipeline_body(assessment_id: UUID, org_id: UUID) -> None:
                 org_id=org_id,
                 user_id=assessment.created_by,
                 action="mitre.assessment_completed",
-                # closed audit_logs CHECK — see resource_type note in router.py
-                resource_type="organization",
+                resource_type="mitre_assessment",  # migration 030
                 resource_id=assessment_id,
             )
             await db.commit()
@@ -518,7 +520,8 @@ async def _run_pipeline_body(assessment_id: UUID, org_id: UUID) -> None:
                 await db.rollback()
                 result = await db.execute(
                     select(MitreAssessment).where(
-                        MitreAssessment.assessment_id == assessment_id
+                        (MitreAssessment.assessment_id == assessment_id)
+                        & (MitreAssessment.org_id == org_id)
                     )
                 )
                 assessment = result.scalar_one_or_none()

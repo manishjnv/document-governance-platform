@@ -321,10 +321,7 @@ async def create_assessment(
         org_id=org_id,
         user_id=UUID(str(current_user.user_id)),
         action="mitre.assessment_created",
-        # audit_logs.resource_type has a closed DB CHECK (document/review/
-        # finding/user/organization); extending it needs an ALTER, which
-        # Phase 1 forbids — the mitre.* action string carries the semantics.
-        resource_type="organization",
+        resource_type="mitre_assessment",  # migration 030
         resource_id=assessment_id,
     )
     await db.commit()
@@ -631,7 +628,7 @@ async def patch_settings(
         org_id=org_id,
         user_id=UUID(str(current_user.user_id)),
         action="mitre.settings_updated",
-        resource_type="organization",  # see resource_type note in create_assessment
+        resource_type="organization",  # org-level config change, not an assessment
         resource_id=org_id,
     )
     await db.commit()
@@ -655,7 +652,7 @@ async def delete_assessment(
         org_id=org_id,
         user_id=UUID(str(current_user.user_id)),
         action="mitre.assessment_deleted",
-        resource_type="organization",  # see resource_type note in create_assessment
+        resource_type="mitre_assessment",  # migration 030
         resource_id=assessment_id,
     )
     await db.commit()
