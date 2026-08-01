@@ -14,6 +14,9 @@ from app.models.filter_template import FilterTemplate
 from app.models.finding import Finding
 from app.models.ip_allowlist import IPAllowlistEntry
 from app.models.kb_article import KBArticle
+from app.models.mitre_assessment import MitreAssessment
+from app.models.mitre_file import MitreFile
+from app.models.mitre_use_case import MitreUseCase
 from app.models.notification import Notification, NotificationPreference
 from app.models.organization import Organization
 from app.models.otp_code import OtpCode
@@ -46,6 +49,9 @@ __all__ = [
     "FilterTemplate",
     "IPAllowlistEntry",
     "KBArticle",
+    "MitreAssessment",
+    "MitreFile",
+    "MitreUseCase",
     "Notification",
     "NotificationPreference",
     "OtpCode",
