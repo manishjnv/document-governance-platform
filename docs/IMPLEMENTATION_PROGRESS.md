@@ -288,7 +288,12 @@ applicability-filtered denominator with N/A-with-reason, assumptions,
 exact per-gap recommendations, short/mid/long-term roadmap, PDF + XLSX
 exports, trend comparison between runs. All decisions + 6-phase
 implementation plan in `docs/planning/MITRE_ASSESSMENT_PLAN.md`.
-**Not started.**
+**Phase 0 started (2026-08-01):** `scripts/build_attack_data.py` (pinned
+ATT&CK v19.1 dataset builder, dev-run only) committed in `ba645bc`.
+`apps/api/app/mitre/` and the generated `attack.json` do NOT exist yet —
+resume from `docs/phases/prompts/MITRE_PHASE_0_PROMPT.md`: run the build
+script, review its validation summary, commit `attack.json`, continue
+Phase 0's remaining items.
 
 ---
 
