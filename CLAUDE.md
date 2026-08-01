@@ -90,7 +90,7 @@ last incident.
 ## Testing
 
 - Full backend suite: `cd apps/api && python -m pytest` — baseline is
-  **622 passed, 6 skipped** (measured 2026-08-01 after MITRE Phase 1; the
+  **636 passed, 6 skipped** (measured 2026-08-01 after MITRE Phase 2; the
   long-stale "402/2" figure predated Jul-24 growth). Don't regress this;
   update this line when new tests land.
 - Frontend type-check: `cd apps/web && npx tsc --noEmit` — must be clean

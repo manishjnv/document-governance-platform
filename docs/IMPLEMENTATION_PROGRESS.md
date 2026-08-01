@@ -101,8 +101,8 @@ fixed, S3 encryption added, login lockout wired to actual config, signup
 endpoint added, review status lifecycle fixed (pending→running before
 orchestrator dispatch).
 
-**Test suite:** 622 passed, 6 skipped (full suite, last run 2026-08-01 —
-includes the 39 MITRE Phase 0+1 tests).
+**Test suite:** 636 passed, 6 skipped (full suite, last run 2026-08-01 —
+includes the 53 MITRE Phase 0-2 tests).
 
 **Router scope audit (2026-07-18, Step 1 of fix plan):** all 16 "extra"
 routers beyond the original Phase 1 MVP list are mounted in `main.py` and
@@ -332,10 +332,32 @@ knobs; ICS "None"-platform techniques exempted from platform filtering
 (real-data bug); audit rows use `resource_type='organization'`
 (audit_logs CHECK is closed; extending it needs an ALTER — Phase 5
 decision); timestamps in the module are tz-aware (naive utcnow breaks the
-30-min stale-run guard on a +05:30 host). **Next: Phase 2** per
-`docs/planning/MITRE_ASSESSMENT_PLAN.md` §13 — MitreTaggingAgent +
-MitreNarrativeAgent (read PROMPT_ENGINEERING_GUIDE first), batching,
-timeout/degrade paths.
+30-min stale-run guard on a +05:30 host).
+**Phase 2 COMPLETE (2026-08-01, evening):** LLM tagging + narrative + gap
+ranking. `app/mitre/agents.py`: `MitreTaggingAgent` (ConflictDetector
+pattern, registered nowhere; two prompt modes via the `document_type`
+param — "tagging" for ~25-row batches, "extraction" for pdf/docx text
+chunks; all AI-emitted IDs re-validated through `attack_data.resolve()`,
+sub-0.4-confidence dropped to unmapped) + `MitreNarrativeAgent`
+(never-introduces-numbers rule; degrades to deterministic template text),
+plus 60s/120s wait_for retry drivers — a failed batch degrades to unmapped;
+only all-batches-failed + zero-customer-tags fails the assessment.
+`app/mitre/ranking.py`: pure tier → feasibility → tactic gap ranking with
+a keyword bridge from customer log-sources/tooling to ATT&CK
+data-component categories; roadmap buckets short (source onboarded) /
+mid (tooling owned) / long (new capability). Pipeline order now: extract
+(pdf/docx, replaces the Phase 1 422) → AI-tag → applicability → coverage
+→ rank → narrative → persist; `params.models_used` audit stamp. Prompts
+documented in `PROMPT_ENGINEERING_GUIDE.md` (2026-08-01 section — NOT
+mirrored to `prompts/`). Tests: +14 (`test_mitre_{agents,ranking}.py`,
+LLM faked), all 53 mitre green, full suite **636 passed / 6 skipped**.
+Live smoke: pipeline exercised end-to-end against a real OpenRouter
+outage — the key is over its account spending cap (403 on all 4 models),
+so the degrade paths are live-verified (unmapped + template narrative +
+completed with honest assumptions) but the **AI-tagging quality
+spot-check is PENDING a working key** — re-run
+`mitre_smoke2`-style once the cap resets. **Next: Phase 3 (frontend)**
+per plan §13 — three `/mitre` pages + nav entry + templates in `public/`.
 
 ---
 

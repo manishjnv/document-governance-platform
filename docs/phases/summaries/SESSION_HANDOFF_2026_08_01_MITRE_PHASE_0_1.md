@@ -1,4 +1,8 @@
-# Session handoff — 2026-08-01: MITRE Phases 0 + 1 complete
+# Session handoff — 2026-08-01: MITRE Phases 0 + 1 + 2 complete
+
+> Phase 2 was appended the same day (evening session) — see the
+> "Phase 2 (evening)" section at the bottom. Phases 0+1 are committed
+> (`126faf5`, `645fe3e`); Phase 2 is uncommitted working tree.
 
 **Headline:** MITRE ATT&CK coverage assessment Phases 0 (pinned v19.1 data +
 pure applicability/coverage logic) and 1 (migration 029, models, ingest,
@@ -85,11 +89,49 @@ resource_type decision (below) worth revisiting in Phase 5.
 - Cross-org access returns 404 (org-scoped query), not 403 — matches
   no-info-leak preference; tests assert 404.
 
+## Phase 2 (evening session, 2026-08-01) — LLM tagging + narrative + ranking
+
+**Done:** `app/mitre/agents.py` (MitreTaggingAgent with tagging +
+extraction prompt modes selected via the `document_type` param;
+MitreNarrativeAgent; `_call_with_retry` 60s/120s; `tag_untagged_rows` /
+`extract_use_cases_from_text` / `generate_narrative` drivers with
+degrade-to-unmapped / degrade-to-template), `app/mitre/ranking.py` (pure
+tier → feasibility → tactic ranking; log-source/tooling → ATT&CK
+data-component-category keyword bridge; short/mid/long roadmap),
+pipeline wiring in `service.py` (extract → AI-tag → applicability →
+coverage → rank → narrative → persist; `MitreAssessmentError` for the
+all-batches-failed + zero-customer-tags case; `params.models_used`),
+`router.py` pdf/docx path (parse text at create + unreadable-text 422;
+AI extraction at run time — the Phase 1 "next release" 422 is gone).
+Changelog section added to `PROMPT_ENGINEERING_GUIDE.md`. Tests: +14
+(`test_mitre_agents.py` 10, `test_mitre_ranking.py` 4; LLM always faked;
+`test_mitre_api.py` gained an autouse no-LLM stub so a local key can
+never leak into tests). Full suite **636 passed / 6 skipped**.
+
+**Live smoke status: PENDING.** The local OpenRouter key is over its
+account spending cap — 403 "Key limit exceeded (total limit)" on all 4
+chain models. The smoke run still proved the failure discipline live:
+chain walked, one retry, batch degraded to unmapped, narrative fell back
+to template, assessment completed with honest assumptions. The
+AI-tagging quality spot-check (5 hand-checked mappings, models used,
+cost) must be re-run once the cap resets — script pattern:
+mixed 2-tagged/6-untagged dump through create → run → results.
+
+**Phase 2 gotchas for Phase 3+:** summary JSONB now carries `gaps`
+(ranked list), `roadmap` (short/mid/long buckets of the same gap dicts),
+and `narrative` (`generated_by: "ai"|"template"` + `model_used`) — the
+frontend should surface the template-fallback flag. `counts` gained
+`ai_tagged`. Preview gained `extraction_pending`. The ranking
+feasibility bridge is deliberately coarse keyword matching (documented
+in-file); Sysmon counts as network telemetry (event 3), which is why a
+network-only gap can be "short" for a Sysmon shop.
+
 ## Agent utilization
 
-- Opus/Fable (main): everything — recon, design judgment, all
-  implementation, tests, smoke run (kickoff prompts target the main
-  session; contracts too interlocked to delegate profitably).
+- Opus/Fable (main): everything across Phases 0-2 — recon, design
+  judgment, all implementation, tests, smoke runs (kickoff prompts
+  target the main session; contracts too interlocked to delegate
+  profitably).
 - Sonnet: n/a — no delegation this session.
 - Haiku: n/a — no bulk sweeps needed.
 - codex:rescue: n/a — broken on this account (memory 2026-07-23); the §11
