@@ -373,9 +373,32 @@ rebuilt with GIT_SHA, **migration 029 applied to `scopewise_prod`** (all
 4 mitre tables verified), smoke: health 200, `/api/v1/mitre/assessments`
 401 unauthenticated, /login 200. Note: prod AI tagging will degrade
 gracefully (unmapped + template narrative) until the OpenRouter account
-cap resets. **Next: Phase 3 (frontend)** per plan §13 — three `/mitre`
-pages + nav entry + templates in `public/`
-(`docs/phases/prompts/MITRE_PHASE_3_PROMPT.md`).
+cap resets.
+**Phase 3 COMPLETE (2026-08-01, night):** frontend. New
+`apps/web/app/mitre/`: list page (status badge, strict-% bar with
+weighted tooltip, empty state), `/mitre/new` single-page wizard (§2
+privacy notice before any file, two drag-drop zones with client
+validation, template download links, industry/region selects,
+disabled-rules toggle, scope-exclusions editor, inline parse preview with
+detected-column chips → run → redirect), `/mitre/[id]` results
+(full-width; 5s visibility-aware polling while running; failed/pending
+states with re-run; executive band; CSS-grid Navigator-style tactic
+heatmap with click-through technique drawer via shadcn Sheet; ranked gap
+table + short/mid/long roadmap with the narrative `generated_by` badge;
+assumptions + grouped N/A appendix). 5 modular panel components under
+`app/mitre/components/`, props-only. Templates
+`public/templates/scopewise-mitre-{use-cases,environment}.xlsx`
+(generated via throwaway script, verified through the real ingest
+parser). Shared-file edit: exactly the one `AppShell.tsx` NAV_ITEMS entry
+(`Target` icon). `tsc --noEmit` clean. **Verified in a real browser**
+(playwright-core + local dev stack): full walk new → preview → run →
+results, drawer, all three tabs, list; mobile 390px shows 0px horizontal
+overflow on every page (one real bug found and fixed: the roadmap grid
+lacked `grid-cols-1`, letting nowrap items force 48px page overflow).
+Known deviation: per-domain mini-bars on the LIST page skipped — the
+list endpoint returns only headline %s (API gap, noted for Phase 4's
+list-endpoint touch). **Next: Phase 4** per plan §13 — PDF/XLSX reports,
+compare/trend endpoint + UI.
 
 ---
 

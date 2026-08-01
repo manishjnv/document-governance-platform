@@ -1,8 +1,8 @@
-# Session handoff — 2026-08-01: MITRE Phases 0 + 1 + 2 complete
+# Session handoff — 2026-08-01: MITRE Phases 0 + 1 + 2 + 3 complete
 
-> Phase 2 was appended the same day (evening session) — see the
-> "Phase 2 (evening)" section at the bottom. Phases 0+1 are committed
-> (`126faf5`, `645fe3e`); Phase 2 is uncommitted working tree.
+> Phases 2 and 3 were appended the same day (evening/night sessions) —
+> see the dated sections at the bottom. Phases 0-2 are committed and
+> deployed to prod; Phase 3 (frontend) is uncommitted working tree.
 
 **Headline:** MITRE ATT&CK coverage assessment Phases 0 (pinned v19.1 data +
 pure applicability/coverage logic) and 1 (migration 029, models, ingest,
@@ -125,6 +125,45 @@ frontend should surface the template-fallback flag. `counts` gained
 feasibility bridge is deliberately coarse keyword matching (documented
 in-file); Sysmon counts as network telemetry (event 3), which is why a
 network-only gap can be "short" for a Sysmon shop.
+
+## Phase 3 (night session, 2026-08-01) — frontend
+
+**Done:** `apps/web/app/mitre/` — `lib.ts` (types mirroring router.py
+responses + STATE/FEASIBILITY/TIER display metadata with plain-English
+tooltip copy), list page, `/mitre/new` wizard (privacy notice → dual
+drag-drop with client validation → intake incl. scope-exclusions editor →
+inline parse preview with detected-column chips → run → redirect),
+`/mitre/[assessmentId]` results (5s visibility-aware polling, re-run for
+failed/pending, executive band, CSS-grid tactic heatmap, technique
+drawer on shadcn Sheet, ranked gap table + roadmap with
+`narrative.generated_by` badge, assumptions + grouped N/A). Components
+under `app/mitre/components/` (props-only): ExecutiveBand,
+CoverageHeatmap, TechniqueDrawer, GapsRoadmap, AssumptionsNA,
+StateBadge. Templates in `public/templates/` (verified through the real
+`ingest.py` parser before check-in). One shared-file edit: the
+AppShell.tsx NAV_ITEMS entry (`Target` icon). `tsc --noEmit` clean.
+
+**Browser-verified** (playwright-core in the scratchpad + existing local
+chromium — nothing added to the app): full walk on a seeded
+customer-tagged assessment (empty list → wizard → preview: 5 rules /
+5 tagged → run → completed results), drawer showed the mapped rule with
+enabled/source/confidence/log-source, all three tabs rendered, exclusion
+reason appeared verbatim in the N/A appendix, list showed the coverage
+bar. Mobile 390px: 0px horizontal overflow on list/new/results/all tabs
+after fixing one real bug — the roadmap grid needed `grid-cols-1`
+(minmax(0,1fr)) so nowrap truncate items can't force page overflow.
+
+**Deviations:** (1) per-domain mini-bars on the LIST page skipped — the
+list endpoint only returns headline %s; fetching full technique_results
+per row just for mini-bars is wasteful. Extend the list endpoint with
+per-domain %s in Phase 4 (it touches summary shape anyway) and add the
+bars then. (2) Heatmap cells use click→drawer + native `title` hover
+instead of a Radix tooltip per cell (~700 portals would be waste);
+shadcn tooltips cover tiles, badges, %s, tier/feasibility chips, and
+legend. (3) Local dev CORS note: the API's CORS_ORIGINS default doesn't
+include the 3005 dev port — the click-through ran the API with
+`CORS_ORIGINS=http://127.0.0.1:3005`. Not a code change; worth knowing
+for local UI work.
 
 ## Agent utilization
 
