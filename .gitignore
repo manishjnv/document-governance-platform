@@ -64,3 +64,6 @@ apps/api/data/
 
 # Claude Code local settings (personal, not shared)
 .claude/settings.local.json
+
+# claude-mem plugin context dump (internal session notes, not a deliverable)
+AGENTS.md
