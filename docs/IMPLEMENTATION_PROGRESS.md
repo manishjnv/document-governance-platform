@@ -397,8 +397,42 @@ overflow on every page (one real bug found and fixed: the roadmap grid
 lacked `grid-cols-1`, letting nowrap items force 48px page overflow).
 Known deviation: per-domain mini-bars on the LIST page skipped — the
 list endpoint returns only headline %s (API gap, noted for Phase 4's
-list-endpoint touch). **Next: Phase 4** per plan §13 — PDF/XLSX reports,
-compare/trend endpoint + UI.
+list-endpoint touch).
+**Phase 4 COMPLETE (2026-08-02, ~midnight):** reports + trend compare.
+`app/mitre/report.py`: exec+detailed HTML report (house ReportGenerator
+pattern — `_esc()` on every customer/LLM string, A4 print CSS, numbers
+ONLY from stored summary/technique_results; use-case appendix capped at
+500 rows with the XLSX holding everything) + lazy-WeasyPrint
+`generate_pdf` + 8-sheet XLSX register with the formula-injection guard
+(`=`/`+`/`-`/`@` → apostrophe prefix). `service.compare_assessments`:
+pure diff (newly_covered / regressed / na_changed, overall + per-tactic
+deltas, attack-version-mismatch flag). Endpoints:
+`GET .../report?format=html|pdf` (base64-in-JSON, 409 non-completed,
+viewer-readable per plan §15 Q1), `GET .../export.xlsx`
+(StreamingResponse, real content-type), `GET .../compare/{other_id}`
+(cross-org 404, non-completed 409), and `GET /assessments` now carries
+`domains_brief` (closes the Phase 3 deferral, no N+1). Frontend:
+PDF/XLSX download buttons (blob patterns, disabled-with-tooltip until
+completed), a Compare tab (delta chips with improvement-is-green
+semantics incl. inverted metrics, tactics-that-moved chips, 3-column
+newly/regressed/N-A-changed lists), list-page per-domain mini-bars +
+trend arrow vs previous completed run. Tests: +9
+(`test_mitre_report.py` — XSS escape, formula guard incl. real workbook
+readback, 409s, compare golden + cross-org 404, domains_brief; PDF test
+auto-skips where WeasyPrint's native libs are absent). Full suite **649
+passed / 7 skipped** (641 baseline + 8, +1 local-only PDF skip);
+`tsc --noEmit` clean. Browser click-through: real XLSX downloaded via
+the button and verified (8 sheets, `'=2+2` + `'=HYPERLINK` guards
+visible), PDF button surfaces the graceful local-env error (WeasyPrint
+is prod-image-only — full PDF check lands with Phase 5 deploy), compare
+between two seeded runs showed correct deltas (+0.3 pts, 2 newly
+covered, N/A change from the dropped exclusion), mobile 390px at 0px
+overflow (one fix: `max-w-full` on the compare `<select>`). OpenRouter
+key still over its cap (usage 2.046/2.00) — **AI-tagging quality smoke
+still pending**. **Next: Phase 5** per plan §13 — adversarial pass on
+the new surfaces (report XSS, XLSX injection, compare authz),
+audit_logs resource_type enum decision, prod deploy + smoke, close the
+tagging spot-check.
 
 ---
 

@@ -1,4 +1,4 @@
-# Session handoff — 2026-08-01: MITRE Phases 0 + 1 + 2 + 3 complete
+# Session handoff — 2026-08-01/02: MITRE Phases 0 + 1 + 2 + 3 + 4 complete
 
 > Phases 2 and 3 were appended the same day (evening/night sessions) —
 > see the dated sections at the bottom. Phases 0-2 are committed and
@@ -164,6 +164,40 @@ legend. (3) Local dev CORS note: the API's CORS_ORIGINS default doesn't
 include the 3005 dev port — the click-through ran the API with
 `CORS_ORIGINS=http://127.0.0.1:3005`. Not a code change; worth knowing
 for local UI work.
+
+## Phase 4 (2026-08-02, ~midnight) — reports + trend compare
+
+**Done:** `app/mitre/report.py` (HTML/PDF via lazy WeasyPrint + 8-sheet
+XLSX with `_guard()` formula-injection prefix; `_esc` imported from
+`app/scoring/report.py`; numbers only from stored JSONB),
+`service.compare_assessments` (pure diff; `current` vs `baseline`
+direction documented in-docstring; NA transitions land in na_changed and
+straight-to-covered also in newly_covered — both true), three endpoints
+(report base64-in-JSON / export.xlsx StreamingResponse / compare) +
+`domains_brief` on the list endpoint (Phase 3 deferral closed). Frontend:
+download buttons, Compare tab (CompareView props-only panel), list
+mini-bars + trend arrow. Tests +9 in `test_mitre_report.py` (seeded
+assessments, no pipeline/LLM). Suite 649/7 (extra skip = PDF test on a
+WeasyPrint-less dev box); tsc clean.
+
+**Browser-verified:** XLSX downloaded through the real button and
+re-opened with openpyxl — all 8 sheets, `'=2+2` (rule name) and
+`'=HYPERLINK` (description) guards visible; csv-upload path exercised
+end-to-end in the process. PDF button on local dev correctly surfaces
+"PDF rendering is unavailable in this environment" (WeasyPrint libs are
+prod-only — **verify the real PDF during the Phase 5 deploy smoke**).
+Compare between the two seeded runs: +0.3 pts, newly covered T1047 +
+T1566.001, T1200 N/A→Not covered (run 2 declared no exclusions), tactic
+chips Initial Access ▲4.8 / Execution ▲2.1. Mobile 390px: 0px overflow
+after adding `max-w-full` to the compare `<select>` (a select's
+intrinsic width follows its widest option).
+
+**Notes for Phase 5:** PDF end-to-end check outstanding (prod image
+only); OpenRouter key still capped (2.046/2.00 at 23:38 IST) — tagging
+quality smoke still open; adversarial pass should target report XSS,
+XLSX injection, compare authz (tests exist for all three, but that's the
+sign-off's job to distrust); audit_logs resource_type enum decision
+still parked.
 
 ## Agent utilization
 
