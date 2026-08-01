@@ -205,8 +205,49 @@ Targets the 2 remaining partial rows from the 93.1% measurement:
    priority, target date, approval workflow). New `type`
    `unmanaged_open_items`.
 
+## 2026-08-01 — MITRE module prompts (Phase 2)
+
+Two new prompts in `apps/api/app/mitre/agents.py` — NOT review personas,
+never registered in `ReviewOrchestrator` (same isolation as
+`ConflictDetector`), and NOT mirrored to `prompts/` (the generator covers
+only the 6 review agents; this section is their documentation of record).
+
+1. **`MitreTaggingAgent`** — maps SIEM detection rules to ATT&CK v19
+   technique IDs. Two modes via the `document_type` param: `"tagging"`
+   (batches of ~25 structured rows, JSON in → `mappings[]` out, every
+   row_ref echoed exactly once) and `"extraction"` (unstructured pdf/docx
+   text chunks → `use_cases[]`). Design choices: "map what the detection
+   logic OBSERVES, not the surrounding attack chain" (prevents the
+   over-tagging failure mode where one PowerShell rule gets 6 techniques);
+   "empty list is correct" stated explicitly (same lesson as
+   ConflictDetector — without it models force an answer); sub-technique
+   preferred only when clearly targeted; "never invent IDs" + all output
+   IDs still validated through `attack_data.resolve()` in code because
+   models emit revoked/hallucinated IDs regardless. Reuses
+   `_CONFIDENCE_CALIBRATION` verbatim so confidence semantics match the
+   product; mappings < 0.4 confidence are dropped to unmapped (the
+   coverage engine's partial floor).
+2. **`MitreNarrativeAgent`** — one call per assessment, input is ONLY the
+   computed JSON (rollups, ranked gaps + feasibility hints, roadmap
+   counts, industry/region). **Hard rule in-prompt: it may rephrase but
+   NEVER introduces, changes, rounds, or recomputes a number** — report
+   templates print all figures from the computed summary, so a
+   hallucinated percentage can never reach the customer even if the model
+   ignores the instruction. Plain-English register mandated with a
+   positive/negative example pair (the §9 UI-language requirement).
+   Degrades to deterministic template text on failure/timeout
+   (ConflictDetector-style), flagged in Assumptions.
+
+Failure discipline for both: `asyncio.wait_for` 60s + one retry at 120s
+(house pattern); failed tagging batches degrade to unmapped + assumption;
+only the all-batches-failed + zero-customer-tags combination fails the
+assessment (an all-unmapped "result" would be misleading).
+
 ## Changelog
 
+- **2026-08-01**: MITRE module prompts added (`MitreTaggingAgent` two-mode
+  tagging/extraction + `MitreNarrativeAgent` with the
+  never-introduce-numbers rule) — see the dated section above.
 - **2026-07-20**: Confidence calibration rubric added to all 6 agents.
   Scope (+2 checks), Delivery (+2), Commercial (+2), Security (+3), PMO
   (+2), Legal (+3) additive checklist items. See table above.

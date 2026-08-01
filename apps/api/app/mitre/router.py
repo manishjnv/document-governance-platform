@@ -138,10 +138,44 @@ async def create_assessment(
 
     uc_type = _resolve_file_type(use_cases, USE_CASE_FILE_TYPES)
     uc_content = _read_upload(await use_cases.read())
-    try:
-        parsed = ingest.parse_use_case_file(uc_content, uc_type)
-    except ingest.IngestError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.detail)
+    extraction_text = None
+    if uc_type in ("pdf", "docx"):
+        # Phase 2: text is parsed now (synchronous, fast); the AI extracts
+        # use-case rows during the run (LLM calls don't fit a sync request).
+        from app.parser import parse_document
+
+        try:
+            parse_result = await parse_document(uc_content, uc_type)
+            text = parse_result.raw_text or ""
+        except Exception:  # noqa: BLE001
+            text = ""
+        if len(text.strip()) < 200:  # mirror reviews.py's unreadable guard
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    "This document could not be read (it may be a scanned/"
+                    "image-only file with no extractable text). Re-upload a "
+                    "text-based PDF/DOCX, or use the XLSX template."
+                ),
+            )
+        extraction_text = text
+        parsed = {
+            "rows": [],
+            "columns": {},
+            "sheet": None,
+            "row_count": 0,
+            "warnings": [
+                "rules will be AI-extracted from this document when the "
+                "assessment runs — lower fidelity than the XLSX template"
+            ],
+        }
+    else:
+        try:
+            parsed = ingest.parse_use_case_file(uc_content, uc_type)
+        except ingest.IngestError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.detail
+            )
 
     env_parsed, env_content, env_type = None, None, None
     if environment is not None:
@@ -154,7 +188,15 @@ async def create_assessment(
 
     assessment_id = uuid4()
     storage = await get_storage_instance()
-    files_to_store = [("use_cases", use_cases.filename, uc_type, uc_content, parsed["row_count"])]
+    files_to_store = [
+        (
+            "use_cases",
+            use_cases.filename,
+            uc_type,
+            uc_content,
+            None if extraction_text else parsed["row_count"],
+        )
+    ]
     if env_parsed is not None:
         files_to_store.append(("environment", environment.filename, env_type, env_content, None))
 
@@ -213,7 +255,11 @@ async def create_assessment(
                 filename=filename,
                 file_type=file_type,
                 s3_path=storage_path,
-                parse_status="parsed",
+                parse_status=(
+                    "extraction_pending"
+                    if kind == "use_cases" and extraction_text
+                    else "parsed"
+                ),
                 row_count=row_count,
             )
         )
@@ -237,6 +283,7 @@ async def create_assessment(
             },
             "parse_assumptions": parse_assumptions,
             "warnings": warnings,
+            **({"extraction_text": extraction_text} if extraction_text else {}),
         },
         created_by=UUID(str(current_user.user_id)),
     )
@@ -287,6 +334,7 @@ async def create_assessment(
         "tagged": tagged,
         "untagged": unmapped,
         "invalid": invalid,
+        "extraction_pending": bool(extraction_text),
         "environment_provided": env_parsed is not None,
         "environment": environment_dict,
         "sheets_found": env_parsed["sheets_found"] if env_parsed else {},

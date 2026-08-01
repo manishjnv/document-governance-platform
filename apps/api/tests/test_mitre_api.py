@@ -15,11 +15,38 @@ from openpyxl import Workbook
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import create_access_token
+from app.mitre import agents
 from app.mitre.router import STALE_RUN_MESSAGE
 from app.models.mitre_assessment import MitreAssessment
 from app.models.organization import Organization
 from app.models.user import User
 from main import app
+
+
+@pytest.fixture(autouse=True)
+def _no_llm(monkeypatch):
+    """Phase 2 wired real LLM stages into the run pipeline — stub them so
+    these API tests stay deterministic and never call OpenRouter (a local
+    .env may carry a real key)."""
+
+    async def fake_tag(rows, **kwargs):
+        return {
+            "mappings_by_ref": {},
+            "assumptions": [],
+            "models_used": [],
+            "batches_total": 1 if rows else 0,
+            "batches_failed": 0,
+        }
+
+    async def fake_narrative(computed, **kwargs):
+        return {
+            "narrative": agents.build_template_narrative(computed),
+            "generated_by": "template",
+            "model_used": None,
+        }
+
+    monkeypatch.setattr(agents, "tag_untagged_rows", fake_tag)
+    monkeypatch.setattr(agents, "generate_narrative", fake_narrative)
 
 
 @pytest.fixture
@@ -139,9 +166,18 @@ async def test_create_run_results_end_to_end(client, db_session):
     assert overall["covered"] == 2 and overall["partial"] == 2
     assert overall["strict_pct"] == round(100 * 2 / overall["applicable"], 1)
     assert summary["counts"] == {
-        "use_cases": 4, "customer_tagged": 3, "unmapped": 1, "invalid": 0,
+        "use_cases": 4, "customer_tagged": 3, "ai_tagged": 0,
+        "unmapped": 1, "invalid": 0,
     }
-    assert any("untagged rules not yet AI-mapped" in a for a in summary["assumptions"])
+    assert any("remain unmapped" in a for a in summary["assumptions"])
+
+    # Phase 2 additions: ranked gaps, roadmap buckets, narrative (template
+    # here — the LLM is stubbed out).
+    assert summary["gaps"], "expected a non-empty ranked gap list"
+    assert summary["gaps"][0]["rank"] == 1
+    assert set(summary["roadmap"]) == {"short", "mid", "long"}
+    assert summary["narrative"]["generated_by"] == "template"
+    assert summary["narrative"]["executive_summary"]
 
     # listing shows the headline %
     listing = await client.get("/api/v1/mitre/assessments", headers=headers)
