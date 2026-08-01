@@ -1,6 +1,6 @@
 # EDGP Implementation Progress
 
-**Last Updated:** 2026-07-22 17:30 GMT+5:30
+**Last Updated:** 2026-08-01 09:30 GMT+5:30
 **Current Phase:** Phase 1-2 core product complete + deployed live; pre-launch fix plan Steps 1-2 done, Step 3 pending SME. Document Lifecycle & Multi-Project plan (Projects/Versioning/Fix-verification) — all three phases implemented, deployed, mandatory-project + fuzzy name matching added on top. Auth is now seamless Google Sign-In + email-OTP only (no password anywhere in the real UI; unrecognized emails auto-create an account). New file types (.doc/.xlsx/.xls/.csv) supported. Enterprise SEO strategy written, a live Cloudflare misconfiguration blocking all AI crawlers was found and fixed, and **SEO Phase 1 (Foundation) is implemented and deployed live** (real marketing homepage/product/pricing/about/contact/sitemap/schema -- only GSC/GA4/Lighthouse remain, blocked on dashboard access). Full detail: `docs/phases/summaries/SESSION_HANDOFF_2026_07_20_LIFECYCLE_SSO_SEO.md`.
 
 > Previous version of this doc (dated 07-17 02:00, showing "14% overall") was
@@ -274,6 +274,21 @@ homepage + `/product`, `/pricing`, `/about`, `/contact` pages, native
 `sitemap.ts`/`robots.ts`, per-page metadata, JSON-LD schema. All live
 and curl-verified on `scopewise.assessiq.in`. Full writeup:
 `docs/phases/summaries/SESSION_HANDOFF_2026_07_20_LIFECYCLE_SSO_SEO.md`.
+
+**MITRE ATT&CK coverage assessment — planning (2026-08-01):** design-only
+session (no code). New fully-isolated module (`app/mitre/` + `/mitre`
+frontend section, two one-line shared-file touchpoints): customer uploads
+a SIEM use-case dump (tagged or untagged; xlsx/xls/csv/pdf/docx) + a
+multi-sheet environment workbook (assets/platforms, log sources, security
+tooling, crown jewels) + a slim on-screen intake (industry/region,
+disabled-rules policy, scope exclusions with reasons), and gets an
+executive + detailed gap assessment: coverage % overall / per domain
+(Enterprise+ICS+Mobile) / per tactic / per technique,
+applicability-filtered denominator with N/A-with-reason, assumptions,
+exact per-gap recommendations, short/mid/long-term roadmap, PDF + XLSX
+exports, trend comparison between runs. All decisions + 6-phase
+implementation plan in `docs/planning/MITRE_ASSESSMENT_PLAN.md`.
+**Not started.**
 
 ---
 

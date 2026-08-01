@@ -25,12 +25,19 @@ Legal) + a rule engine, per `docs/planning/4_AI_AGENT_SPECS.md`.
 - `docs/RCA_LOG.md` — root-cause log for every bug found in live testing.
   **Check this before touching a file it mentions** — several entries are
   copy-pasted patterns that recur (see Migrations section below).
-- `docs/planning/` — specs, launch criteria, scoring methodology. Durable
-  reference docs, not session logs.
-- `docs/phases/prompts/` — **runnable plan/prompt documents meant to kick
-  off a future session** (e.g. `PRELAUNCH_FIX_PLAN_PROMPT.md`,
-  `DOCUMENT_LIFECYCLE_PLAN_PROMPT.md`). Any plan, prompt, or "run this
-  next session" deliverable goes here, **never in the scratchpad/Temp
+- `docs/planning/` — durable reference docs, not session logs: specs,
+  launch criteria, scoring methodology, and **feature design/spec +
+  implementation-plan documents** (e.g. `MITRE_ASSESSMENT_PLAN.md`). This
+  is the original 2026-07-17 docs-reorganization intent: planning/ holds
+  anything whose content outlives the session that wrote it.
+- `docs/phases/prompts/` — **short runnable kickoff prompts that start a
+  future session** (e.g. `PHASE_3_PROMPT.md`,
+  `PRELAUNCH_FIX_PLAN_PROMPT.md`); a kickoff prompt may simply point at a
+  design doc in `docs/planning/`. Historical note: a few full plans
+  landed here (e.g. `DOCUMENT_LIFECYCLE_PLAN_PROMPT.md`) under an earlier
+  overly-broad version of this rule — they stay put, but new full
+  design/plan docs go in `docs/planning/` (clarified 2026-08-01). Session
+  deliverables always go in the repo, **never in the scratchpad/Temp
   directory** — scratch is for throwaway session-local files (test
   scripts, one-off debug output), not for anything meant to persist or be
   read by a future session.
