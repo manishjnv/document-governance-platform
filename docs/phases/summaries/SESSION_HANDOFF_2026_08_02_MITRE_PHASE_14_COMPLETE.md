@@ -49,6 +49,31 @@ Earlier the same session: 14a deployed standalone (`db0726b`), sample kit
   new template renders via the same lazy-import path (verified live in
   the post-deploy smoke below).
 
+## Sample-kit acceptance run (post-deploy)
+
+The full kit (`usecases_primary.xlsx` + `environment_full.xlsx` + the
+README intake values) was run through the real deterministic pipeline
+stages locally (no LLM, no DB) and the Phase-14 XLSX/HTML builders —
+**18/18 valid acceptance checks passed** (a 19th check wrongly expected a
+rollup why-phrase on T1059, which the kit tags directly — correct
+behavior, wrong expectation):
+
+- Rows 4/5 (covered) vs row 15 (disabled) produce visibly different
+  why-text; row 16's revoked T1562.001 remaps to T1685 with the
+  assumption note; row 17 lands `invalid`.
+- ESXi reads "skipped — you marked it Present = No"; Mainframe z/OS
+  reads "not recognized — ignored for platform filtering" — exactly the
+  plan's 14g examples.
+- XLSX: Read Me first, How We Read Your Files present, register
+  Name/plain-words/Why populated for all 955 rows, numeric sort.
+- HTML: TOC target-counter, per-gap why lines, evidence appendix, cover
+  metadata, threat-match badges. Deterministic coverage 2.1% (19/908) —
+  matches the prod kit run modulo the AI-tagged residue rows 29–31.
+- The new PDF template also renders in the prod container (28KB, %PDF).
+
+Note: `docs/sample/MITRE_Sample/result/` still holds the pre-Phase-14
+prod exports — refresh them on the next real prod kit run.
+
 ## Next action
 
 Phase 14 closes the planned UX work. Open (optional, on request only):
