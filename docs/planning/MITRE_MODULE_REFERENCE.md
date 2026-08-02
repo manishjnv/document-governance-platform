@@ -16,9 +16,15 @@ without WeasyPrint's native libs — prod image has them, prod render smoke
 PASSED 2026-08-02); `npx tsc --noEmit` clean (re-verified 2026-08-02). Backend count after optional Phases 8–12:
 **723 passed / 7 skipped** (certified solo on shared `edgp_test` — see
 the `edgp-test-single-runner-rule` memory for why runs from two sessions
-at once deadlock). Prod state: **deployed through Phase 12** —
+at once deadlock). Backend count after the accuracy-improvement plan
+(phases A1–A8, `docs/planning/MITRE_ACCURACY_IMPROVEMENT_PLAN.md`):
+**858 passed / 7 skipped** (+135 over the 723/7 gate, certified solo on
+`edgp_test` 2026-08-03); `npx tsc --noEmit` clean. Migration 036
+(`mitre_use_cases.severity`/`last_triggered`) applied to `edgp_dev` +
+`edgp_test` 2026-08-03. Prod state: **deployed through Phase 12** —
 `/opt/scopewise` at `436612a`; migrations 029–033 all applied to
-`scopewise_prod` (Phases 11–12 add none).
+`scopewise_prod` (Phases 11–12 add none); A1–A8 deploy pending (see
+`docs/planning/MITRE_ACCURACY_IMPROVEMENT_PLAN.md` for status).
 
 ---
 
@@ -169,7 +175,10 @@ All UUID v4 PKs, `org_id` FK → organizations CASCADE, tz-aware timestamps
 - **`mitre_use_cases`** — `row_ref` (e.g. `Rules:14`, `csv:3`,
   `doc:2:1`), `name`, `description`, **`logic`** (migration 032, router
   caps at 2000 chars), `log_source`, `enabled` BOOL NULL (NULL = unknown →
-  treated as enabled + assumption), `mappings` JSONB
+  treated as enabled + assumption), **`severity`, `last_triggered`**
+  (migration 036, plan phase A6 — both nullable VARCHAR(50), leniently
+  parsed optional template columns; feed small `quality.py` strength
+  deltas only, never coverage/state), `mappings` JSONB
   `[{technique_id, source: customer|keyword|ai, confidence, rationale}]`,
   `mapping_status` CHECK
   `customer_tagged|keyword_tagged|ai_tagged|manual|unmapped|invalid`
@@ -179,8 +188,9 @@ All UUID v4 PKs, `org_id` FK → organizations CASCADE, tz-aware timestamps
   `confidence_covered=0.7`, `confidence_partial_floor=0.4`,
   `partial_credit=0.5`, `count_disabled_as_coverage=false`,
   `threat_weighting_enabled=true` (Phase 11 — gap-ordering only),
-  `quality_ai_enabled=false` (Phase 12 — optional AI strength re-rating;
-  quality never depends on it).
+  `crown_jewel_weighting_enabled=true` (plan phase A4 — gap-ordering
+  only, no migration), `quality_ai_enabled=false` (Phase 12 — optional AI
+  strength re-rating; quality never depends on it).
 
 **`summary` JSONB shape** (what reports/frontend/compare consume):
 
@@ -190,7 +200,8 @@ overall / domains.{enterprise|ics|mobile}:   covered, partial, not_covered,
 domains.*.tactics[]:  {id, shortname, name, <same rollup fields>}
 gaps[]:      {technique_id, name, domain, state, tier, tactics[], feasibility
               (short|mid|long), via, category, hint,
-              threat_relevance (labels[]|null, Phase 11), rank}
+              threat_relevance (labels[]|null, Phase 11),
+              crown_jewel_relevant (bool, plan phase A4), rank}
 roadmap:     {short[], mid[], long[]}   (same gap dicts, bucketed)
 narrative:   {executive_summary, gap_recommendations{tid→text},
               roadmap_prose{short,mid,long}, generated_by: ai|template,
@@ -220,17 +231,28 @@ write (a real bug caught by the Phase 5 adversarial review).
   found by scanning the first 10 rows for the best synonym-match (title
   rows above headers are fine). Column synonyms per field
   (name/tags/logic/description/enabled/log_source — ~90 variants incl.
-  "att&ck id", "mitre_ttp", "kql query"); no detectable name column →
-  422 pointing at the template. Technique tags extracted by regex from
-  the tags cell; status cells parsed to True/False/None.
+  "att&ck id", "mitre_ttp", "kql query"), plus **`severity`/`last_triggered`**
+  (plan phase A6 — optional columns appended after Status; leniently
+  parsed, native Excel dates normalized to ISO, the literal "never"
+  recognized); no detectable name column → 422 pointing at the template.
+  Technique tags extracted by regex from the tags cell; status cells
+  parsed to True/False/None.
 - **Environment workbook** (xlsx/xls): sheets located by name synonyms
-  (Assets, Log Sources, Security Tooling, Crown Jewels); missing sheets
+  (Assets, Log Sources, Security Tooling, Crown Jewels — plus a tolerated,
+  ignored "Read Me" first sheet, plan phase A6); missing sheets
   tolerated → assumption lines. Asset rows normalize to the ATT&CK
   platform vocabulary (Windows/Linux/macOS/Containers/ESXi/IaaS/SaaS/
   Office Suite/Identity Provider/Network Devices/Android/iOS) via
   longest-first word-boundary rules ("cisco ios" → Network Devices, not
-  iOS); OT/ICS and mobile/MDM marker rows set the domain gates; unmatched
-  rows become an assumption, never an error.
+  iOS); the header-row recognition set is widened for ServiceNow/
+  Lansweeper CMDB exports ("os", "operating system", "ci type", "class",
+  "ostype" — plan phase A6); OT/ICS and mobile/MDM marker rows set the
+  domain gates; unmatched rows become an assumption, never an error.
+  Log Sources rows also accept 3 optional positional columns after the
+  existing name/present? pair — Parser/Format, Normalized (Y/N), Last
+  Event Seen (plan phase A6) — captured as `log_source_health` and
+  consumed by `ranking.py`'s feasibility bucketing (§6); absent → no
+  health entry, old 2-column dumps parse identically.
 - **pdf/docx dumps**: text via the existing `parse_document()` (OCR
   fallback + 30-page cap inherited); <200 extractable chars → 422
   (mirrors the review pipeline's unreadable guard); rows AI-extracted at
@@ -239,7 +261,13 @@ write (a real bug caught by the Phase 5 adversarial review).
   `_sanitize_filename`, row caps 5,000 use-case / 10,000 asset rows (422
   beyond, stated in the error), empty-parse 422, intake exclusions
   require both target AND reason, industry/region capped at 200 chars
-  (they flow into the narrative prompt).
+  (they flow into the narrative prompt and, for region, the plan phase A8
+  region-weighting lookup in §6).
+- **Sentinel auto-import** (plan phase A7): when an assessment is created
+  from a connected Sentinel workspace, a best-effort second read of
+  `Microsoft.SecurityInsights/dataConnectors` (same host/token as the
+  rule pull) auto-populates Log Sources when it yields ≥1 mapped source —
+  see `MITRE_SIEM_INTEGRATION_PLAN.md` §2.2a for the full contract.
 
 ---
 
@@ -260,6 +288,14 @@ filters nothing except exclusions and adds the loud
 "coverage % is a lower bound" assumption. Revoked techniques are not part
 of the register at all.
 
+**Shelfware detector** (`quality.telemetry_shelfware_check`, plan phase
+A3) — flags a covered/partial technique whose supporting rule(s) ALL
+declare a log source that maps (reusing the ranking category bridge) to a
+telemetry category absent from the customer's own Log Sources/Tooling
+sheets; one assumption per flagged technique, gated on a Log Sources
+sheet actually being uploaded (or auto-imported — plan phase A7). Never
+changes state/coverage/ranking.
+
 **Coverage** (`compute_coverage(use_cases, applicability, *, thresholds…)`)
 — per applicable technique: `covered` (≥1 enabled mapping with confidence
 ≥ 0.7), `partial` (only disabled-rule mappings, or only 0.4–0.7
@@ -275,23 +311,35 @@ assumption.
 
 **Ranking** (`rank_gaps`) — gaps = applicable techniques in
 `not_covered|partial`, sorted by priority tier (priorities file; unlisted
-= tier 4) → feasibility → not_covered-before-partial → tactic order →
-id. Feasibility bridges the customer's Log Sources/Tooling sheets to
+= tier 4) → threat lift → crown-jewel lift → feasibility →
+not_covered-before-partial → tactic order → id. Feasibility bridges the
+customer's Log Sources/Tooling sheets to
 ATT&CK data-component categories via keyword maps (endpoint / registry /
 network / identity / cloud / application / mobile / ot — extended in
 Phase 6 from a scan of all 113 data components): **short** = a needed
 category is already onboarded (names the exact source), **mid** =
-obtainable from tooling they own, **long** = new capability (or no
-standard telemetry → "bespoke detection engineering"). Every gap carries a
-plain-English `hint`; the narrative's `gap_recommendations` override it in
-displays when present. **Phase 11 threat weighting:**
-`build_threat_profile(industry, actors)` looks up the curated
-`threat_profiles.json` (exact technique IDs; unknown industry/actor =
-no-op) and matching gaps carry `threat_relevance` labels and sort above
-EQUAL-TIER peers (a second sort key right after tier — never a tier jump,
+obtainable from tooling they own (or a short source downgraded because
+its optional health columns show `normalized: false` or a stale Last
+Event Seen — plan phase A6, reason in the hint), **long** = new capability
+(or no standard telemetry → "bespoke detection engineering"). Every gap
+carries a plain-English `hint`; the narrative's `gap_recommendations`
+override it in displays when present. **Phase 11 threat weighting:**
+`build_threat_profile(industry, actors, region)` looks up the curated
+`threat_profiles.json` (exact technique IDs; unknown industry/actor/region
+= no-op) and matching gaps carry `threat_relevance` labels and sort above
+EQUAL-TIER peers (a sort key right after tier — never a tier jump,
 never a coverage/state change). Org-toggleable via
 `threat_weighting_enabled` (default on); when off, ordering reverts but
-the annotation stays (provenance).
+the annotation stays (provenance). **Plan phase A8** adds a third `region`
+input (free text, word-boundary keyword matched against 5 coarse curated
+buckets — NA/Europe/APAC/MEA/LATAM — in `region_profiles`) that pulls in
+the SAME actor technique lists through the identical lift. **Plan phase
+A4 crown jewels:** `crown_jewel_hints()` — a deterministic keyword bridge
+from Crown Jewels free text to ATT&CK platform names and/or telemetry
+categories — marks matching gaps `crown_jewel_relevant: true` and lifts
+them above equal-tier peers (a THIRD sort key, after tier and
+threat_relevance); toggleable via `crown_jewel_weighting_enabled`
+(default on); unmatched crown-jewel entries surface as one assumption.
 
 **Quality** (`quality.compute_quality(results, use_cases, …)`, Phase 12)
 — annotates covered/partial techniques that have direct qualifying rules
@@ -301,7 +349,11 @@ enabled bonus (30/15 unknown/0 disabled — a disabled rule can never
 reach "strong") + logic present (10) + telemetry match (30 — the rule's
 log_source/logic run through ranking's category bridge against the
 technique's data sources), best rule + redundancy bonus (5/extra rule,
-cap 10). Buckets: strong ≥75 / moderate ≥45 / weak. Rationale built from
+cap 10). **Plan phase A6:** optional severity/last-triggered deltas when
+the use-case dump populates them — severity critical/high/medium/low/
+informational → +10/+5/0/-5/-10; the literal "never" triggered caps
+strength at 70 (can't reach "strong"); a Last Triggered older than 180
+days applies -10 — all no-ops when the columns are absent. Buckets: strong ≥75 / moderate ≥45 / weak. Rationale built from
 fixed fragments only. Returns the "inconclusive" items (logic present,
 expected telemetry known, no match) for the OPTIONAL AI pass (§8) —
 gated by `quality_ai_enabled` (off), capped, degrade-to-heuristic.
@@ -336,8 +388,14 @@ Priority order, each level never overridden by a lower one:
    `keyword_tagged`, Phase 6) — two high-precision signal classes only:
    exact multi-word ATT&CK technique names (word-boundary, ambiguous
    cross-domain names dropped, pre-compromise TA0042/TA0043 excluded — a
-   SIEM rule can't observe recon) and the curated alias file matched
-   against raw punctuation-significant text (`at.exe` never fires in
+   SIEM rule can't observe recon) and the curated alias file (55 entries
+   after plan phase A5's expansion — LOLBAS binaries, a credential tool,
+   persistence artifacts, DNS tunneling, backup-destruction markers;
+   validated with `scripts/benchmark_tagging.py`, plan phase A2's
+   dev-run-only offline benchmark against public Sigma rules — measured
+   300-rule sample: exact precision 0.366/recall 0.150, parent-credit
+   precision 0.482/recall 0.196) matched against raw punctuation-significant
+   text (`at.exe` never fires in
    "look at exe files"). Scans name+description+logic capped at 2000
    chars/field. Measured on a 22-rule realistic dump: 14 keyword-tagged /
    8 to AI (63% fewer LLM calls), zero false positives. An AI-down run
