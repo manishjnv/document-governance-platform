@@ -398,8 +398,8 @@ stamping. Registered nowhere in `ReviewOrchestrator`.
 | `PATCH /assessments/{id}` | admin, reviewer | Phase 14f housekeeping: `{"name"?, "archived"?}` — rename (1-255 chars) and/or soft-archive (params JSONB flag; archived rows leave the default list but stay selectable in Compare). Audited `mitre.assessment_updated`. Deliberately no delete here. |
 | `GET /assessments/{id}` | any | Status + params + summary + technique_results. Applies the 30-min stale-run guard. |
 | `GET /assessments/{id}/use-cases` | any | Paginated rows (skip/limit≤500), `mapping_status` filter. |
-| `GET /assessments/{id}/report?format=html\|pdf` | any (viewers may read — plan §15 Q1) | 409 unless completed. `{"format","data"}`; PDF as base64-in-JSON (matches reviews.py so the frontend blob pattern is shared). PDF unavailable locally → graceful 500 with message. |
-| `GET /assessments/{id}/export.xlsx` | any | 409 unless completed. StreamingResponse, real xlsx content-type + attachment disposition (deliberately NOT base64 — plan §10). |
+| `GET /assessments/{id}/report?format=html\|pdf&scope=…` | any (viewers may read — plan §15 Q1) | 409 unless completed. `{"format","data"}`; PDF as base64-in-JSON (matches reviews.py so the frontend blob pattern is shared). PDF unavailable locally → graceful 500 with message. `scope`: `full` (default) \| `executive` (1–3 page leadership cut: cover + executive section, TOC/xrefs stripped) \| `coverage` / `gaps` / `assumptions` (title + just that tab's section). Passes the previous completed run for the trend block and the files list for the cover. |
+| `GET /assessments/{id}/export.xlsx?scope=…` | any | 409 unless completed. StreamingResponse, real xlsx content-type + attachment disposition (deliberately NOT base64 — plan §10). `scope`: `full` \| `coverage` \| `gaps` \| `assumptions` — workbook built once, non-tab sheets pruned; filename suffixed with the scope. |
 | `GET /assessments/{id}/navigator` | any | 409 unless completed. ATT&CK Navigator layer export (Phase 8): 1 applicable domain → layer JSON attachment; >1 → zip of per-domain layers. Pure `navigator.py`, layer format 4.5, colors mirror the report palette, N/A → `enabled:false`. |
 | `POST /assessments/{id}/remap` | admin/reviewer | 409 unless `pending` (atomic status-conditional guard in the row-replacement transaction — run/remap race closed). Phase 9 wizard: `{"columns": {field: 0-based index}}` re-parses the stored dump with an explicit map (`validate_column_override` 422s bad fields/indexes), replaces rows, updates `params.columns`, audits `mitre.assessment_remapped`, returns a fresh parse preview (`headers` + `sample_rows` now on create too). 422 for pdf/docx extraction dumps. |
 | `POST /assessments/from-siem` | admin, reviewer | Phase 13a token-at-trigger Sentinel pull: `{platform, config, secret, name?, intake?}` — secret used once, NEVER persisted/logged/echoed; connector emits a template CSV through the exact upload create path; provenance in `params.siem`. Config 422; upstream failures 502 with actionable, secret-free messages. |
@@ -493,12 +493,17 @@ results, data-dense, minimal borders, plain-English shadcn tooltips on
 every %, badge, tier and reason; mobile 390px verified 0px horizontal
 overflow on every page (real-browser checked).
 
-- **`/mitre`** — list: status badge, strict-% bar (weighted in tooltip),
-  per-domain mini-bars (`domains_brief`), trend arrow vs the previous
-  completed run, empty-state explainer, New assessment CTA. Phase 14f:
-  client-side search (name/project), status filter, show-archived
-  toggle, coverage sparkline over completed runs, 14d project name on
-  rows, inline rename + archive/unarchive actions (admin/reviewer).
+- **`/mitre`** — list, redesigned post-14 as a responsive card grid
+  (1/2/3 columns by screen; the old six-column table read as cryptic and
+  empty): each card carries the name + project/Sentinel/archived chips,
+  a big coverage % with the plain-words "your rules detect X of Y
+  applicable techniques" line, delta vs the previous completed run,
+  per-matrix bars with full labels (Enterprise / ICS-OT / Mobile), a
+  status + ATT&CK-version + date footer, plain-English helper lines for
+  pending/running/failed, and inline rename/archive actions. Whole card
+  is clickable and keyboard-navigable. Toolbar: client-side search
+  (name/project), status filter, show-archived toggle, coverage
+  sparkline over completed runs.
 - **Phase 14b drill-down layer** — `DrillDownPanel` (technique list with
   state colors, plain phrases, partial why-brief) + `RuleListPanel`
   (rules with plain-words mapping status and, 14g, the per-mapping
@@ -506,6 +511,21 @@ overflow on every page (real-browser checked).
   number: tiles, heatmap headers, N/A group counts, rules-by-status
   chips, the 14d `UploadSummaryCard` counts, and the wizard's
   parse-preview tiles. Rows click through to the technique drawer.
+- **Post-14 polish layer** (2026-08-02 evening): all three side panels
+  are mouse-resizable via a left-edge drag handle (`useSheetResize` —
+  shared remembered width, keyboard arrows, phones stay full-width);
+  heatmap cells show "ID Name" with one delegated hover-intent tooltip
+  (solid bg, glides between cells), collapsible matrix sections, and the
+  legend doubles as an in-place state filter; the gaps table runs dense
+  dot+text badges ("P1 · Critical", "70 · Moderate", "Build now · via
+  Sysmon"); Assumptions & N/A is a two-column card layout with
+  reason-aggregated technique chips; the tab bar hosts the on-page
+  **"is it covered?" search** (matches technique ID/name, tactic,
+  ATT&CK platform — enriched per-technique into GET — and rule
+  names/log sources; results open the drill-down panel grouped by
+  state) plus per-tab PDF/Excel download icons; the header offers
+  **Exec PDF** (scope=executive) alongside Full PDF, and the Navigator
+  tooltip states plainly it is a technical layer file, not a document.
 - **`/mitre/new`** — single-page wizard: the plan-§2 privacy notice shown
   BEFORE any file; two drag-drop zones (client validation mirrors server
   rules); template download links; intake (industry/region selects,
@@ -655,7 +675,7 @@ you're alone on `edgp_test`.
 | 14e | `c15ab34` | 08-02 | PDF redesign: cover (metadata, upload summary, TOC with `target-counter` page numbers) → executive ≤2 pages (traffic-light scorecard, top-5 fixes with curated definitions + threat tie-ins + cross-refs, effort-to-impact projection, trend vs previous completed run — the report endpoint now fetches it) → detailed (stacked tactic bars + tactic one-liners, parent-level heatmap grids, feasibility-grouped gap register with why/sketch/via/AI-badge per entry) → appendices (incl. how-we-read-your-files). Running header + page N of M. |
 | 14f | `c64b324` | 08-02 | Past-run history: header "Past runs" dropdown (delta vs current, jump, Compare shortcut), list search/status filter/sparkline/project names, inline rename + soft archive via `PATCH /assessments/{id}` (params JSONB flag — no migration, no deletes); archived hidden from default list (`include_archived` query), still selectable in Compare. |
 | 14g | `bee1f8f` | 08-02 | Evidence trail: explain gains `expected_telemetry` + `in_scope_because` (drawer renders both); rule panel shows the per-mapping journey (plain source, confidence, rationale verbatim); XLSX "How We Read Your Files" sheet; threat-profile-matches chip → drill panel. Suite at **800/7** after 14a–14g. |
-| 14-polish | `6051af6`,`bdde5f5`,`4f93523` | 08-02 | User-feedback pass after walking the deployed UI: (1) all three side panels mouse-resizable via a left-edge drag handle (`useSheetResize` — shared remembered width, keyboard arrows, viewport-clamped, phones stay full-width); (2) heatmap cells show "ID Name" truncated in the same footprint + ONE delegated custom tooltip for all ~900 cells (solid bg, smooth fade, plain-words state/N-A reason) replacing native `title`; drawer hides ICS "None"/PRE pseudo-platforms, a/an grammar fix; mobile guards (past-runs dropdown viewport clamp, header row wraps); (3) XLSX Summary rebuilt as a sectioned sheet — branded title band, EXECUTIVE SUMMARY (narrative + context line), KEY NUMBERS (traffic-light coverage cell, state-colored counts), TOP 5 THINGS TO FIX FIRST, ABOUT THIS ASSESSMENT; (4) gaps table ~50% denser (px-2/py-1.5, single-line technique) with dot+text badges that carry meaning (P1 · Critical / 70 · Moderate / Build now · via Sysmon) replacing pastel pills; (5) Assumptions & N/A rebuilt — two-column accent-border assumptions grid, N/A appendix as reason-aggregated group cards with clickable technique chips. Suite unchanged 800/7. |
+| 14-polish | `6051af6`…`2698eda` | 08-02 | User-feedback passes after walking the deployed UI (full per-commit detail: `SESSION_HANDOFF_2026_08_02_MITRE_PHASE_14_POLISH.md`): (1) all three side panels mouse-resizable via a left-edge drag handle (`useSheetResize` — shared remembered width, keyboard arrows, viewport-clamped, phones stay full-width); (2) heatmap cells show "ID Name" truncated in the same footprint + ONE delegated custom tooltip for all ~900 cells (solid bg, smooth fade, plain-words state/N-A reason) replacing native `title`; drawer hides ICS "None"/PRE pseudo-platforms, a/an grammar fix; mobile guards (past-runs dropdown viewport clamp, header row wraps); (3) XLSX Summary rebuilt as a sectioned sheet — branded title band, EXECUTIVE SUMMARY (narrative + context line), KEY NUMBERS (traffic-light coverage cell, state-colored counts), TOP 5 THINGS TO FIX FIRST, ABOUT THIS ASSESSMENT; (4) gaps table ~50% denser (px-2/py-1.5, single-line technique) with dot+text badges that carry meaning (P1 · Critical / 70 · Moderate / Build now · via Sysmon) replacing pastel pills; (5) Assumptions & N/A rebuilt — two-column accent-border assumptions grid, N/A appendix as reason-aggregated group cards with clickable technique chips. Later waves: heatmap hover fixes + collapsible matrices + legend filter (`9eabcd1`,`4d579c2`); report tables bordered grid + branded headers + zebra (`35f5d40`); darker fonts, filled state/priority pills, one-row-per-reason N/A, two-column assumptions, compact appendix tables (`a9534b5`); attack-stage table headers + balanced columns, XLSX all-cell borders (`9256ab1`); list page table→card grid (`b8d0e75`); export scopes (executive/per-tab PDF + scoped XLSX), XLSX Summary emphasis pass (visible borders, pointer-style exec summary, bold/centered values), on-page coverage search + platforms enrichment (`2698eda`). Suite 801/7 after the scope test. |
 
 ## 16. Optional feature work (plan §14 — not launch blockers)
 

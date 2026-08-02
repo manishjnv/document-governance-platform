@@ -1,9 +1,12 @@
 # Session handoff — MITRE Phase 14 polish pass (2026-08-02, evening)
 
-**Headline:** five user-feedback refinements after walking the deployed
-Phase-14 UI, all shipped and DEPLOYED (prod at `4f93523`). Frontend-heavy
-+ one XLSX rework; **no backend logic or number changes**, no migrations.
-Suite stays **800 passed / 7 skipped**; `tsc --noEmit` clean.
+**Headline:** user-feedback refinement waves after walking the deployed
+Phase-14 UI — panels, heatmap, gaps table, assumptions tab, list page,
+PDF/XLSX styling, export scopes (executive + per-tab), and the on-page
+coverage search — all shipped and DEPLOYED (prod at `2698eda`; see the
+commit table below for every wave). **No coverage-number changes**, no
+migrations. Suite **801 passed / 7 skipped** (executive-scope test
+added); `tsc --noEmit` clean throughout.
 
 ## What the user asked for → what shipped
 

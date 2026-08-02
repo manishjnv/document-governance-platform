@@ -821,6 +821,25 @@ as reason-aggregated group cards (37 identical "deprecated" rows → one
 line) with technique chips that open the drawer. Numbers untouched;
 suite stays **800/7**, `tsc` clean.
 
+**Polish wave 2 (same evening, deployed `2698eda`):** heatmap hover
+fixes — tooltip out of the space-y margin flow (`9eabcd1`), hover-intent
+glide between cells + collapsible matrices + legend-as-filter
+(`4d579c2`); report tables bordered grid with brand-blue headers and
+zebra rows (`35f5d40`); readability + space pass — no light-grey fonts,
+filled state/priority pills, N/A appendix one-row-per-reason,
+two-column assumptions, compact appendix tables (`a9534b5`);
+attack-stage tables gain header rows + balanced columns and the XLSX
+gains all-cell borders (`9256ab1`); the `/mitre` list page becomes a
+responsive card grid with plain-words coverage lines and labeled matrix
+bars (`b8d0e75`); export scopes land — `scope=executive` 1–3 page
+leadership PDF, per-tab PDF/Excel cuts inline in the tab bar, clarified
+Navigator tooltip — plus the XLSX Summary emphasis pass (visible
+all-cell borders, executive summary as five compact bold/italic
+pointers, bold centered values) and the on-page "is it covered?"
+search over technique/tactic/platform/rule with state-grouped results
+(`2698eda`). Suite **801 passed / 7 skipped** (executive-scope test
+added); `tsc` clean; all render-verified in the prod container.
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)
