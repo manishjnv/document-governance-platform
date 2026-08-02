@@ -15,6 +15,7 @@ from app.models.finding import Finding
 from app.models.ip_allowlist import IPAllowlistEntry
 from app.models.kb_article import KBArticle
 from app.models.mitre_assessment import MitreAssessment
+from app.models.mitre_connection import MitreConnection
 from app.models.mitre_file import MitreFile
 from app.models.mitre_use_case import MitreUseCase
 from app.models.notification import Notification, NotificationPreference
@@ -50,6 +51,7 @@ __all__ = [
     "IPAllowlistEntry",
     "KBArticle",
     "MitreAssessment",
+    "MitreConnection",
     "MitreFile",
     "MitreUseCase",
     "Notification",

@@ -25,8 +25,10 @@ from app.db.session import get_db
 from app.dependencies import get_current_user, require_role
 from app.mitre import attack_data, ingest, navigator, service
 from app.mitre.connectors import base as connectors
+from app.mitre.connectors import vault
 from app.mitre.connectors.base import ConnectorConfigError, ConnectorError
 from app.mitre.connectors.egress import EgressError
+from app.models.mitre_connection import MitreConnection
 from app.mitre import report as mitre_report
 from app.models.mitre_assessment import MitreAssessment
 from app.models.mitre_file import MitreFile
@@ -472,9 +474,38 @@ async def create_assessment_from_siem(
 
     platform = str(payload.get("platform") or "")
     try:
+        return await _create_assessment_from_pull(
+            db,
+            current_user,
+            platform=platform,
+            config=payload.get("config"),
+            secret=secret,
+            name=str(payload.get("name") or ""),
+            intake_data=intake_data,
+            connection=None,
+        )
+    finally:
+        del secret  # best-effort: no lingering reference in this frame
+
+
+async def _create_assessment_from_pull(
+    db,
+    current_user,
+    *,
+    platform,
+    config,
+    secret,
+    name,
+    intake_data,
+    connection,
+):
+    """Shared pull→CSV→create path for token-at-trigger (13a) AND saved
+    connections (13b). The secret is a transient argument only — callers
+    own its lifetime; nothing here stores, logs, or returns it."""
+    try:
         # Blocking network pull — off the event loop (house pattern).
         result = await run_in_threadpool(
-            connectors.pull_rules, platform, payload.get("config"), secret
+            connectors.pull_rules, platform, config, secret
         )
     except ConnectorConfigError as exc:
         raise HTTPException(
@@ -483,8 +514,6 @@ async def create_assessment_from_siem(
     except (ConnectorError, EgressError) as exc:
         # Actionable, secret-free message from the connector layer.
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
-    finally:
-        del secret  # best-effort: no lingering reference in this frame
 
     try:
         parsed = await run_in_threadpool(
@@ -506,11 +535,11 @@ async def create_assessment_from_siem(
     }
     pulled_at = datetime.now(timezone.utc)
     default_name = f"Sentinel pull {pulled_at.strftime('%Y-%m-%d %H:%M')}"
-    config = payload.get("config") or {}
+    config = config or {}
     response = await _persist_new_assessment(
         db,
         current_user,
-        name=str(payload.get("name") or "") or default_name,
+        name=name or default_name,
         files_to_store=[
             (
                 "use_cases",
@@ -542,11 +571,302 @@ async def create_assessment_from_siem(
                     for k in ("subscription_id", "resource_group", "workspace")
                 },
                 "stats": result["stats"],
+                **(
+                    {
+                        "connection_id": str(connection.connection_id),
+                        "connection_name": connection.name,
+                    }
+                    if connection is not None
+                    else {}
+                ),
             }
         },
     )
     response["siem"] = {"platform": "sentinel", "rule_count": result["rule_count"]}
     return response
+
+
+def _connection_out(connection: MitreConnection) -> dict:
+    """API shape for a saved connection. The secret is WRITE-ONLY: no field
+    here ever carries it (only the fact that one is set)."""
+    return {
+        "connection_id": str(connection.connection_id),
+        "name": connection.name,
+        "platform": connection.platform,
+        "config": connection.config,
+        "key_version": connection.key_version,
+        "secret_set": True,  # a row cannot exist without one (NOT NULL)
+        "created_at": connection.created_at.isoformat() if connection.created_at else None,
+        "updated_at": connection.updated_at.isoformat() if connection.updated_at else None,
+    }
+
+
+async def _get_connection(db, connection_id: UUID, org_id) -> MitreConnection:
+    result = await db.execute(
+        select(MitreConnection).where(
+            (MitreConnection.connection_id == connection_id)
+            & (MitreConnection.org_id == org_id)
+            & (MitreConnection.deleted_at.is_(None))
+        )
+    )
+    connection = result.scalar_one_or_none()
+    if connection is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found"
+        )
+    return connection
+
+
+def _validate_connection_secret(secret) -> str:
+    if not isinstance(secret, str) or not secret.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="secret is required (it is stored encrypted and never shown again)",
+        )
+    if len(secret) > _MAX_SECRET_CHARS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="secret is implausibly long",
+        )
+    return secret
+
+
+def _encrypt_or_503(secret: str, *, aad: str) -> tuple:
+    try:
+        return vault.encrypt_secret(secret, aad=aad)
+    except vault.VaultError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        )
+
+
+def _decrypt_or_error(connection: MitreConnection) -> str:
+    """Decrypt for immediate in-process connector use ONLY — the caller
+    must del the value after the pull and never log/store/return it."""
+    try:
+        return vault.decrypt_secret(
+            connection.secret_ciphertext,
+            connection.key_version,
+            aad=str(connection.connection_id),
+        )
+    except vault.VaultError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        )
+
+
+def _validated_platform_config(payload: dict) -> tuple:
+    platform = str(payload.get("platform") or "")
+    if platform != "sentinel":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unknown SIEM platform {platform[:30]!r}. Supported: sentinel",
+        )
+    from app.mitre.connectors import sentinel
+
+    try:
+        return platform, sentinel.validate_config(payload.get("config"))
+    except ConnectorConfigError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        )
+
+
+@router.get("/connections", summary="List saved SIEM connections (Phase 13b)")
+async def list_connections(
+    current_user: TokenData = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(MitreConnection)
+        .where(
+            (MitreConnection.org_id == UUID(str(current_user.org_id)))
+            & (MitreConnection.deleted_at.is_(None))
+        )
+        .order_by(MitreConnection.created_at.desc())
+    )
+    return [_connection_out(c) for c in result.scalars().all()]
+
+
+@router.post("/connections", status_code=status.HTTP_201_CREATED, summary="Save a SIEM connection (secret stored encrypted)")
+async def create_connection(
+    payload: dict = Body(...),
+    current_user: TokenData = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Body = {"platform": "sentinel", "config": {...}, "secret": "...",
+    "name"?}. The secret is AES-256-GCM-encrypted at rest (vault.py) and
+    WRITE-ONLY from here on: no endpoint ever returns it."""
+    org_id = UUID(str(current_user.org_id))
+    platform, config = _validated_platform_config(payload)
+    secret = _validate_connection_secret(payload.pop("secret", None))
+
+    connection_id = uuid4()
+    ciphertext, key_version = _encrypt_or_503(secret, aad=str(connection_id))
+    del secret
+    connection = MitreConnection(
+        connection_id=connection_id,
+        org_id=org_id,
+        name=(str(payload.get("name") or "").strip() or f"Sentinel · {config['workspace']}")[:255],
+        platform=platform,
+        config=config,
+        secret_ciphertext=ciphertext,
+        key_version=key_version,
+        created_by=UUID(str(current_user.user_id)),
+    )
+    db.add(connection)
+    await db.commit()
+
+    await log_action(
+        db,
+        org_id=org_id,
+        user_id=UUID(str(current_user.user_id)),
+        action="mitre.connection_created",
+        resource_type="organization",  # org-level config, like mitre.settings_updated
+        resource_id=connection_id,
+    )
+    await db.commit()
+    return _connection_out(connection)
+
+
+@router.patch("/connections/{connection_id}", summary="Update a SIEM connection (secret replace-only)")
+async def update_connection(
+    connection_id: UUID,
+    payload: dict = Body(...),
+    current_user: TokenData = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+):
+    """name/config/secret each optional; a supplied secret REPLACES the old
+    one (there is no way to read either). Config is revalidated whole."""
+    org_id = UUID(str(current_user.org_id))
+    connection = await _get_connection(db, connection_id, org_id)
+
+    if "config" in payload:
+        _, connection.config = _validated_platform_config(
+            {"platform": connection.platform, "config": payload["config"]}
+        )
+    if "name" in payload:
+        name = str(payload.get("name") or "").strip()
+        if name:
+            connection.name = name[:255]
+    if "secret" in payload:
+        secret = _validate_connection_secret(payload.pop("secret", None))
+        connection.secret_ciphertext, connection.key_version = _encrypt_or_503(
+            secret, aad=str(connection.connection_id)
+        )
+        del secret
+    connection.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+
+    await log_action(
+        db,
+        org_id=org_id,
+        user_id=UUID(str(current_user.user_id)),
+        action="mitre.connection_updated",
+        resource_type="organization",
+        resource_id=connection_id,
+    )
+    await db.commit()
+    return _connection_out(connection)
+
+
+@router.delete("/connections/{connection_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a SIEM connection")
+async def delete_connection(
+    connection_id: UUID,
+    current_user: TokenData = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+):
+    org_id = UUID(str(current_user.org_id))
+    connection = await _get_connection(db, connection_id, org_id)
+    connection.deleted_at = datetime.now(timezone.utc)
+    connection.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+
+    await log_action(
+        db,
+        org_id=org_id,
+        user_id=UUID(str(current_user.user_id)),
+        action="mitre.connection_deleted",
+        resource_type="organization",
+        resource_id=connection_id,
+    )
+    await db.commit()
+    return None
+
+
+@router.post("/connections/{connection_id}/test", summary="Dry-run a saved connection (rule count only)")
+async def test_connection(
+    connection_id: UUID,
+    current_user: TokenData = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Decrypts in-process, pulls, and reports the reachable rule count —
+    creates nothing, returns no rule content and never the secret."""
+    org_id = UUID(str(current_user.org_id))
+    connection = await _get_connection(db, connection_id, org_id)
+    secret = _decrypt_or_error(connection)
+    try:
+        result = await run_in_threadpool(
+            connectors.pull_rules, connection.platform, connection.config, secret
+        )
+    except ConnectorConfigError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+    except (ConnectorError, EgressError) as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+    finally:
+        del secret
+
+    await log_action(
+        db,
+        org_id=org_id,
+        user_id=UUID(str(current_user.user_id)),
+        action="mitre.connection_tested",
+        resource_type="organization",
+        resource_id=connection_id,
+    )
+    await db.commit()
+    return {"ok": True, "rule_count": result["rule_count"], "warnings": result["warnings"]}
+
+
+@router.post(
+    "/assessments/from-connection/{connection_id}",
+    status_code=status.HTTP_201_CREATED,
+    summary="Create assessment from a saved SIEM connection (Phase 13b)",
+)
+async def create_assessment_from_connection(
+    connection_id: UUID,
+    payload: dict = Body(default={}),
+    current_user: TokenData = Depends(require_role("admin", "reviewer")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Same pipeline as /assessments/from-siem, but the secret comes from
+    the encrypted vault (decrypted in-process for this pull only). Body =
+    {"name"?, "intake"?}."""
+    org_id = UUID(str(current_user.org_id))
+    connection = await _get_connection(db, connection_id, org_id)
+
+    intake_raw = payload.get("intake")
+    if intake_raw is not None and not isinstance(intake_raw, dict):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="intake must be a JSON object",
+        )
+    intake_data = _parse_intake(json.dumps(intake_raw) if intake_raw else None)
+
+    secret = _decrypt_or_error(connection)
+    try:
+        return await _create_assessment_from_pull(
+            db,
+            current_user,
+            platform=connection.platform,
+            config=connection.config,
+            secret=secret,
+            name=str(payload.get("name") or ""),
+            intake_data=intake_data,
+            connection=connection,
+        )
+    finally:
+        del secret
 
 
 @router.post("/assessments/{assessment_id}/run", status_code=status.HTTP_202_ACCEPTED, summary="Run assessment")
