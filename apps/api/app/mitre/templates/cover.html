@@ -1,0 +1,33 @@
+<!-- ============================= COVER ============================= -->
+<h1>MITRE ATT&amp;CK Coverage Assessment</h1>
+<p><strong>{{ doc_title_esc }}</strong>{{ doc_title_suffix }}</p>
+<table class="cover-meta"><tbody>{{ meta_rows }}
+<tr><th>ATT&amp;CK version</th><td>v{{ attack_version_esc }}</td></tr>
+<tr><th>Run completed</th><td>{{ completed_esc }}</td></tr>
+</tbody></table>
+<div class="tiles" style="margin-top:14px">
+  <div class="tile"><b class="headline">{{ overall_strict_pct_esc }}%</b>coverage of applicable techniques<br>
+  <span class="muted">weighted (partial = half): {{ overall_weighted_pct_esc }}%</span></div>
+</div>
+<p>Of the {{ overall_applicable_esc }} attacker techniques that apply to your
+environment, your detection rules can catch {{ overall_covered_esc }}
+(plus {{ overall_partial_esc }} partially). Early SIEM detection programs typically
+start under 10% — the roadmap in this report matters more than the grade.</p>
+<h3>What this assessment is based on</h3>
+{{ upload_html }}
+<p class="muted">Methodology: coverage is computed deterministically against the pinned
+MITRE ATT&amp;CK v{{ attack_version_esc }} dataset; techniques impossible in this
+environment (or excluded by you) leave the denominator as “not applicable”.
+A technique counts as covered when at least one enabled rule maps to it with qualifying
+confidence. This assessment scores detection <em>presence</em>, not rule efficacy.</p>
+<h3>Contents</h3>
+<ul class="toc">
+<li><a href="#exec">Executive summary</a></li>
+<li><a href="#tactics">Coverage by attack stage</a></li>
+<li><a href="#gapreg">Gap register &amp; recommendations</a></li>
+<li><a href="#register">Appendix: technique register</a></li>
+<li><a href="#na">Appendix: not-applicable techniques</a></li>
+<li><a href="#assumptions">Appendix: assumptions</a></li>
+{{ toc_how_read_li }}
+<li><a href="#mappings">Appendix: rule mappings</a></li>
+</ul>

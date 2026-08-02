@@ -1,0 +1,19 @@
+<!-- ========================== APPENDICES =========================== -->
+<h2 id="register" class="page-break">Appendix: technique register ({{ results_len }})</h2>
+<table class="compact"><thead><tr><th>Technique</th><th>Name</th><th>Matrix</th><th>State</th><th>Rules</th></tr></thead>
+<tbody>{{ register_rows }}</tbody></table>
+
+<h2 id="na">Appendix: not-applicable techniques ({{ not_applicable_len }})</h2>
+<p class="muted">These techniques leave the coverage denominator — the headline percentage
+makes no claim about them.</p>
+{{ na_sections }}
+
+<h2 id="assumptions">Appendix: assumptions</h2>
+<ul class="two-col">{{ assumptions_html_or_default }}</ul>
+
+{{ how_read_html }}
+
+<h2 id="mappings">Appendix: rule mappings ({{ use_cases_len }})</h2>
+{{ appendix_note }}
+<table class="compact"><thead><tr><th>Row</th><th>Rule</th><th>Status</th><th>Techniques</th><th>How it was mapped</th><th>Log source</th></tr></thead>
+<tbody>{{ uc_rows }}</tbody></table>
