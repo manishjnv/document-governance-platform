@@ -902,8 +902,7 @@ exactly three read-only places, no new UI area: `explain` endpoint gains
 like?" block (one compact line per component — fields, where, then the
 gotcha in muted text); XLSX Gaps & Recommendations gains a "Log fields
 needed" column (existing bordered/wrapped styling helpers reused, no new
-styling code); PDF/HTML gap register gains one "Log fields needed" line
-per gap under the existing detection sketch. Honesty boundary held
+styling code); PDF/HTML gap register names each gap's telemetry components under the existing detection sketch, with the guidance itself printed ONCE in a "Log fields reference" table right after the register. (Review fix before commit: the first cut repeated the full guidance on every gap, adding **1.23 MB / ~680 pages** on the real 842-gap customer sample because 487 techniques share "Process Creation". The table is 35 rows / 19 KB and sits inside the register section, so the per-tab `gaps` PDF keeps it while the `executive` cut still drops it.) Honesty boundary held
 throughout — every surface reads "your query needs X; your `<source>`
 should carry it," never "your source is missing X," since the product
 never ingests raw logs and cannot verify field-level coverage. No
@@ -916,7 +915,9 @@ curated-vs-uncurated-degrade goldens for T1059.001/T1219.003, explain
 endpoint wiring) + the XLSX structure golden in `test_mitre_report.py`
 extended for the new column. Verified end to end against the regenerated
 sample kit (T1059.001 gap shows fields+where+gotcha identically in the
-drawer data, the XLSX cell, and the PDF/HTML register). Suite **809
+drawer data, the XLSX cell, and the PDF/HTML register). Committed as `75b58bf` and DEPLOYED (prod smoke: curated
+guidance returned from the running container for T1059.001). Committed as `75b58bf` and DEPLOYED (prod smoke: curated guidance
+returned live from the running container for T1059.001). Suite **809
 passed / 7 skipped** (+6 over the 803/7 baseline); `tsc --noEmit` clean;
 `docs/planning/MITRE_MODULE_REFERENCE.md` updated (file map, API table,
 §11 reports, §13 tests, §15 history).
