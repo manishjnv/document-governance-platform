@@ -9,7 +9,19 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { DOMAIN_LABELS, NaEntry, Summary } from '../lib';
+import { DOMAIN_LABELS, NaEntry, Summary, TechniqueResult } from '../lib';
+import type { DrillHandler } from './ExecutiveBand';
+
+/** Phase 14b: rules-by-mapping-status chips ("4 rules AI-tagged" → the
+ * affected rules). Keys must exist in summary.counts to render. */
+const RULE_COUNT_CHIPS: [string, string][] = [
+  ['customer_tagged', 'tagged by you'],
+  ['keyword_tagged', 'keyword-matched (no AI)'],
+  ['ai_tagged', 'AI-tagged'],
+  ['manual', 'reviewer-edited'],
+  ['unmapped', 'unmapped'],
+  ['invalid', 'with invalid tags'],
+];
 
 /** Assumptions list + the N/A appendix grouped by why each technique left
  * the denominator. Grouping keys off the backend's own reason phrasing
@@ -42,7 +54,17 @@ const GROUPS = [
   },
 ];
 
-export function AssumptionsNA({ summary }: { summary: Summary }) {
+export function AssumptionsNA({
+  summary,
+  techniques,
+  onDrill,
+  onDrillRules,
+}: {
+  summary: Summary;
+  techniques: TechniqueResult[];
+  onDrill: DrillHandler;
+  onDrillRules: (status: string | null, title: string) => void;
+}) {
   const grouped = useMemo(() => {
     const buckets = new Map<string, NaEntry[]>();
     for (const entry of summary.not_applicable) {
@@ -54,6 +76,15 @@ export function AssumptionsNA({ summary }: { summary: Summary }) {
     return buckets;
   }, [summary.not_applicable]);
 
+  const techniqueByKey = useMemo(
+    () => new Map(techniques.map((t) => [`${t.domain}:${t.technique_id}`, t])),
+    [techniques]
+  );
+
+  const ruleChips = RULE_COUNT_CHIPS.filter(
+    ([key]) => (summary.counts?.[key] ?? 0) > 0
+  );
+
   return (
     <div className="space-y-6">
       <section>
@@ -62,6 +93,33 @@ export function AssumptionsNA({ summary }: { summary: Summary }) {
           Read these before trusting the numbers — they describe what we had to assume or
           could not verify.
         </p>
+        {/* Phase 14b: the rule counts behind the tagging assumptions — each
+            opens the affected rules. */}
+        {ruleChips.length > 0 && (
+          <div className="mb-3 flex flex-wrap items-center gap-1.5 text-xs">
+            <span className="text-muted-foreground">
+              Your {summary.counts?.use_cases ?? 0} rules:
+            </span>
+            {ruleChips.map(([key, label]) => {
+              const count = summary.counts[key];
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() =>
+                    onDrillRules(
+                      key,
+                      `${count} rule${count === 1 ? '' : 's'} ${label}`
+                    )
+                  }
+                  className="rounded-full border bg-muted/40 px-2 py-0.5 font-medium transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {count} {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
         <ul className="space-y-1.5">
           {summary.assumptions.map((assumption, i) => (
             <li key={i} className="rounded-md bg-muted/40 px-3 py-2 text-sm leading-snug">
@@ -89,7 +147,32 @@ export function AssumptionsNA({ summary }: { summary: Summary }) {
             return (
               <div key={group.key}>
                 <h4 className="text-xs font-semibold">
-                  {group.title} <span className="font-normal text-muted-foreground">({entries.length})</span>
+                  {group.title}{' '}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onDrill(
+                        `${group.title} (${entries.length})`,
+                        entries
+                          .map(
+                            (e) =>
+                              techniqueByKey.get(`${e.domain}:${e.technique_id}`) ?? {
+                                technique_id: e.technique_id,
+                                domain: e.domain,
+                                tactics: [],
+                                state: 'not_applicable',
+                                na_reason: e.reason,
+                                use_case_refs: [],
+                              }
+                          )
+                          .filter((t): t is TechniqueResult => t !== null),
+                        { subtitle: group.blurb }
+                      )
+                    }
+                    className="font-normal text-muted-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    ({entries.length})
+                  </button>
                 </h4>
                 <p className="mb-1.5 text-xs text-muted-foreground">{group.blurb}</p>
                 <div className="max-h-72 overflow-y-auto rounded-md border">

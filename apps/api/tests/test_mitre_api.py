@@ -173,7 +173,8 @@ async def test_create_run_results_end_to_end(client, db_session):
         "use_cases": 4, "customer_tagged": 3, "keyword_tagged": 0,
         "ai_tagged": 0, "unmapped": 1, "invalid": 0,
     }
-    assert any("remain unmapped" in a for a in summary["assumptions"])
+    # Phase 14b pluralization: exactly one unmapped rule here -> singular.
+    assert any("1 rule remains unmapped to ATT&CK" in a for a in summary["assumptions"])
 
     # Phase 2 additions: ranked gaps, roadmap buckets, narrative (template
     # here — the LLM is stubbed out).

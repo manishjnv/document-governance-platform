@@ -9,7 +9,8 @@ import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { ParsePreview } from '../lib';
+import { ParsePreview, UseCaseItem } from '../lib';
+import { RuleListPanel } from '../components/RuleListPanel';
 
 const MAX_SIZE = 50 * 1024 * 1024;
 const USE_CASE_EXTS = ['.xlsx', '.xls', '.csv', '.pdf', '.docx'];
@@ -151,6 +152,11 @@ export default function NewMitreAssessmentPage() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [preview, setPreview] = useState<ParsePreview | null>(null);
+  // Phase 14b: parse-preview tiles drill into the matching uploaded rows.
+  const [rulePanel, setRulePanel] = useState<{
+    title: string;
+    rules: UseCaseItem[];
+  } | null>(null);
   const [running, setRunning] = useState(false);
   const [adjustOpen, setAdjustOpen] = useState(false);
   // field -> 0-based column index; '' = not mapped
@@ -269,6 +275,27 @@ export default function NewMitreAssessmentPage() {
       else setError(err.response?.data?.detail || (source === 'sentinel' ? 'Sentinel pull failed' : 'Upload failed'));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Phase 14b: fetch the rows behind a parse-preview tile (rows exist as
+  // soon as the assessment is created; empty for pdf/docx extraction dumps).
+  const openRuleTile = async (title: string, mappingStatus: string | null) => {
+    if (!preview) return;
+    try {
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments/${preview.assessment_id}/use-cases`,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+          params: {
+            limit: 500,
+            ...(mappingStatus ? { mapping_status: mappingStatus } : {}),
+          },
+        }
+      );
+      setRulePanel({ title, rules: res.data.items });
+    } catch {
+      // non-fatal: the tile stays informational
     }
   };
 
@@ -658,23 +685,59 @@ export default function NewMitreAssessmentPage() {
               <CardTitle className="text-base">Parse preview — check before running</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
+              {/* Phase 14b: each tile opens the matching uploaded rows. */}
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <div className="rounded-md bg-muted/40 p-2.5 text-center">
-                  <div className="text-lg font-bold">{preview.row_count}</div>
-                  <div className="text-[11px] text-muted-foreground">rules found</div>
-                </div>
-                <div className="rounded-md bg-emerald-50 p-2.5 text-center">
-                  <div className="text-lg font-bold text-emerald-700">{preview.tagged}</div>
-                  <div className="text-[11px] text-muted-foreground">already tagged</div>
-                </div>
-                <div className="rounded-md bg-amber-50 p-2.5 text-center">
-                  <div className="text-lg font-bold text-amber-700">{preview.untagged}</div>
-                  <div className="text-[11px] text-muted-foreground">for AI tagging</div>
-                </div>
-                <div className="rounded-md bg-rose-50 p-2.5 text-center">
-                  <div className="text-lg font-bold text-rose-700">{preview.invalid}</div>
-                  <div className="text-[11px] text-muted-foreground">invalid tags</div>
-                </div>
+                {(
+                  [
+                    {
+                      value: preview.row_count,
+                      label: `rule${preview.row_count === 1 ? '' : 's'} found`,
+                      status: null,
+                      box: 'bg-muted/40',
+                      accent: '',
+                    },
+                    {
+                      value: preview.tagged,
+                      label: 'already tagged',
+                      status: 'customer_tagged',
+                      box: 'bg-emerald-50',
+                      accent: 'text-emerald-700',
+                    },
+                    {
+                      value: preview.untagged,
+                      label: 'for AI tagging',
+                      status: 'unmapped',
+                      box: 'bg-amber-50',
+                      accent: 'text-amber-700',
+                    },
+                    {
+                      value: preview.invalid,
+                      label: `invalid tag${preview.invalid === 1 ? '' : 's'}`,
+                      status: 'invalid',
+                      box: 'bg-rose-50',
+                      accent: 'text-rose-700',
+                    },
+                  ] as const
+                ).map((tile) => (
+                  <button
+                    key={tile.label}
+                    type="button"
+                    onClick={() =>
+                      openRuleTile(
+                        `${tile.value} ${tile.label}`,
+                        tile.status
+                      )
+                    }
+                    className={cn(
+                      'rounded-md p-2.5 text-center transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      tile.box
+                    )}
+                    title="Click to see these rows"
+                  >
+                    <div className={cn('text-lg font-bold', tile.accent)}>{tile.value}</div>
+                    <div className="text-[11px] text-muted-foreground">{tile.label}</div>
+                  </button>
+                ))}
               </div>
 
               {preview.extraction_pending && (
@@ -828,6 +891,17 @@ export default function NewMitreAssessmentPage() {
             </CardContent>
           </Card>
         )}
+
+        <RuleListPanel
+          title={rulePanel?.title ?? null}
+          subtitle={
+            preview?.extraction_pending
+              ? 'Rows from PDF/DOCX documents are AI-extracted when the assessment runs, so this list may be empty until then.'
+              : null
+          }
+          rules={rulePanel?.rules ?? []}
+          onClose={() => setRulePanel(null)}
+        />
       </div>
     </AppShell>
   );

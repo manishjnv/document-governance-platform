@@ -14,9 +14,12 @@ import {
   CompareResult,
   STATUS_META,
   TechniqueExplain,
+  TechniqueResult,
   UseCaseItem,
   fmtDate,
 } from '../lib';
+import { DrillDownPanel } from '../components/DrillDownPanel';
+import { RuleListPanel } from '../components/RuleListPanel';
 import { AssumptionsNA } from '../components/AssumptionsNA';
 import { CompareView } from '../components/CompareView';
 import { CoverageHeatmap } from '../components/CoverageHeatmap';
@@ -41,6 +44,17 @@ export default function MitreResultsPage() {
   const [tab, setTab] = useState<Tab>('coverage');
   const [selectedTechnique, setSelectedTechnique] = useState<string | null>(null);
   const [explain, setExplain] = useState<TechniqueExplain | null>(null);
+  // Phase 14b: drill-down panels — every number opens one of these.
+  const [drill, setDrill] = useState<{
+    title: string;
+    subtitle?: string | null;
+    items: TechniqueResult[];
+    grouped?: boolean;
+  } | null>(null);
+  const [ruleDrill, setRuleDrill] = useState<{
+    title: string;
+    status: string | null;
+  } | null>(null);
   const [runError, setRunError] = useState('');
   const [downloadError, setDownloadError] = useState('');
   const [compareOptions, setCompareOptions] = useState<AssessmentListItem[] | null>(null);
@@ -288,6 +302,20 @@ export default function MitreResultsPage() {
   ];
   const completed = assessment?.status === 'completed';
 
+  // Phase 14b handlers shared by all number-bearing components.
+  const openDrill = (
+    title: string,
+    items: TechniqueResult[],
+    opts?: { grouped?: boolean; subtitle?: string }
+  ) => setDrill({ title, items, grouped: opts?.grouped, subtitle: opts?.subtitle });
+  const openRuleDrill = (mappingStatus: string | null, title: string) =>
+    setRuleDrill({ title, status: mappingStatus });
+  const ruleDrillRules = ruleDrill
+    ? ruleDrill.status
+      ? useCases.filter((uc) => uc.mapping_status === ruleDrill.status)
+      : useCases
+    : [];
+
   return (
     <AppShell fullWidth>
       <TooltipProvider>
@@ -421,7 +449,9 @@ export default function MitreResultsPage() {
                 <ExecutiveBand
                   assessment={assessment}
                   summary={summary}
+                  techniques={techniques}
                   onSelectTechnique={setSelectedTechnique}
+                  onDrill={openDrill}
                 />
 
                 <div className="flex gap-1 border-b" role="tablist" aria-label="Assessment result views">
@@ -449,6 +479,7 @@ export default function MitreResultsPage() {
                     summary={summary}
                     techniques={techniques}
                     onSelectTechnique={setSelectedTechnique}
+                    onDrill={openDrill}
                   />
                 )}
                 {tab === 'gaps' && (
@@ -458,7 +489,14 @@ export default function MitreResultsPage() {
                     onSelectTechnique={setSelectedTechnique}
                   />
                 )}
-                {tab === 'assumptions' && <AssumptionsNA summary={summary} />}
+                {tab === 'assumptions' && (
+                  <AssumptionsNA
+                    summary={summary}
+                    techniques={techniques}
+                    onDrill={openDrill}
+                    onDrillRules={openRuleDrill}
+                  />
+                )}
                 {tab === 'compare' && (
                   <CompareView
                     options={compareOptions ?? []}
@@ -471,6 +509,22 @@ export default function MitreResultsPage() {
                   />
                 )}
 
+                <DrillDownPanel
+                  title={drill?.title ?? null}
+                  subtitle={drill?.subtitle}
+                  items={drill?.items ?? []}
+                  grouped={drill?.grouped}
+                  useCases={useCases}
+                  onSelectTechnique={setSelectedTechnique}
+                  onClose={() => setDrill(null)}
+                />
+                <RuleListPanel
+                  title={ruleDrill?.title ?? null}
+                  rules={ruleDrillRules}
+                  truncated={useCasesTotal > useCases.length}
+                  onSelectTechnique={setSelectedTechnique}
+                  onClose={() => setRuleDrill(null)}
+                />
                 <TechniqueDrawer
                   techniqueId={selectedTechnique}
                   explain={explain}

@@ -145,6 +145,8 @@ export interface TechniqueResult {
   /** Phase 12: 0-100 detection strength (covered/partial with direct rules only). */
   strength?: number | null;
   strength_rationale?: string | null;
+  /** Phase 14b: technique name, enriched by the API at read time. */
+  name?: string | null;
 }
 
 export interface Assessment {
@@ -318,6 +320,47 @@ export const STRENGTH_META: Record<string, { label: string; chip: string }> = {
 
 export const STRENGTH_TIP =
   'Detection strength estimates how well the mapped rules would actually catch this technique (rule provenance, enabled state, and whether the logic references the telemetry the technique expects). It is separate from the coverage % — coverage only says whether a rule exists.';
+
+/** Phase 14b: short plain phrase per state for drill-down list rows. */
+export const STATE_PLAIN: Record<string, string> = {
+  covered: 'A rule detects this',
+  partial: 'Half-covered',
+  not_covered: 'No rule detects this',
+  not_applicable: "Doesn't apply to your environment",
+};
+
+/** Phase 14b: mapping-status in plain words (rule list panel + wizard). */
+export const MAPPING_STATUS_PLAIN: Record<string, string> = {
+  customer_tagged: 'Tagged by you',
+  keyword_tagged: 'Matched by rule keyword',
+  ai_tagged: 'AI-mapped — verify',
+  manual: 'Edited by reviewer',
+  unmapped: 'Not mapped to any technique',
+  invalid: 'Tags invalid — treated as untagged',
+};
+
+/** Phase 14b: one short client-side why-phrase for a partial technique,
+ * derived from the loaded rules (the drawer's explain endpoint stays the
+ * authoritative, richer version). */
+export function partialWhyBrief(
+  useCases: UseCaseItem[],
+  techniqueId: string
+): string | null {
+  const mapped = useCases
+    .map((uc) => {
+      const m = uc.mappings.find((x) => x.technique_id === techniqueId);
+      return m ? { uc, m } : null;
+    })
+    .filter((x): x is { uc: UseCaseItem; m: UseCaseMapping } => x !== null);
+  const disabled = mapped.find(({ uc }) => uc.enabled === false);
+  if (disabled) return `rule '${disabled.uc.name}' is disabled`;
+  const lowConf = mapped.find(({ m }) => m.confidence > 0 && m.confidence < 0.7);
+  if (lowConf) {
+    return `AI-tagged at ${Math.round(lowConf.m.confidence * 100)}% — confirm`;
+  }
+  if (mapped.length === 0) return 'only sub-techniques are covered';
+  return null;
+}
 
 export const TIER_TIPS: Record<number, string> = {
   1: 'Priority 1: top-prevalence technique across independent threat reports — near-universal in real intrusions.',

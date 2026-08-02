@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { DOMAIN_LABELS, STATE_META, Summary, TechniqueResult } from '../lib';
+import type { DrillHandler } from './ExecutiveBand';
 
 /** Navigator-style tactic-column heatmap, plain CSS grid — no charting
  * dependency. Cells use click -> drawer for full detail plus a native
@@ -13,10 +14,12 @@ export function CoverageHeatmap({
   summary,
   techniques,
   onSelectTechnique,
+  onDrill,
 }: {
   summary: Summary;
   techniques: TechniqueResult[];
   onSelectTechnique: (techniqueId: string) => void;
+  onDrill: DrillHandler;
 }) {
   const byDomainTactic = useMemo(() => {
     const map = new Map<string, TechniqueResult[]>();
@@ -58,9 +61,21 @@ export function CoverageHeatmap({
         <section key={domainKey}>
           <h3 className="mb-2 text-sm font-semibold">
             {DOMAIN_LABELS[domainKey] ?? domainKey}{' '}
-            <span className="font-normal text-muted-foreground">
+            <button
+              type="button"
+              onClick={() =>
+                onDrill(
+                  `${DOMAIN_LABELS[domainKey] ?? domainKey} techniques`,
+                  techniques.filter(
+                    (t) => t.domain === domainKey && t.state !== 'not_applicable'
+                  ),
+                  { grouped: true }
+                )
+              }
+              className="font-normal text-muted-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
               — {domain.covered}/{domain.applicable} covered ({domain.strict_pct}%)
-            </span>
+            </button>
           </h3>
           <div className="overflow-x-auto rounded-md bg-muted/30 p-2">
             <div
@@ -75,17 +90,27 @@ export function CoverageHeatmap({
                   <div key={tactic.id} className="min-w-0">
                     <Tooltip delayDuration={150}>
                       <TooltipTrigger asChild>
-                        <div className="mb-1 cursor-default px-1">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onDrill(
+                              `${tactic.name} — ${DOMAIN_LABELS[domainKey] ?? domainKey}`,
+                              cells,
+                              { grouped: true }
+                            )
+                          }
+                          className="mb-1 w-full rounded px-1 text-left hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
                           <div className="truncate text-xs font-semibold">{tactic.name}</div>
                           <div className="text-[10px] text-muted-foreground">
                             {tactic.covered}/{tactic.applicable} covered
                           </div>
-                        </div>
+                        </button>
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs text-xs">
                         {tactic.name}: {tactic.covered} covered, {tactic.partial} partial,{' '}
                         {tactic.not_covered} not covered, {tactic.not_applicable} not applicable
-                        (strict {tactic.strict_pct}%).
+                        (strict {tactic.strict_pct}%). Click for the list.
                       </TooltipContent>
                     </Tooltip>
                     <div className="flex flex-col gap-1">

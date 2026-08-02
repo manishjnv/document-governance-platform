@@ -498,11 +498,12 @@ async def _run_pipeline_body(
                     for uc in to_tag
                     if uc.mapping_status in ("unmapped", "invalid")
                 ]
+                matched_count = len(to_tag) - len(still_to_tag)
                 pipeline_assumptions.append(
-                    f"{len(to_tag) - len(still_to_tag)} rules matched "
-                    "deterministically by ATT&CK technique or attacker-tool "
-                    f"name (no AI involved); {len(still_to_tag)} sent to AI "
-                    "tagging"
+                    f"{matched_count} rule{'s' if matched_count != 1 else ''} "
+                    "matched deterministically by ATT&CK technique or "
+                    "attacker-tool name (no AI involved); "
+                    f"{len(still_to_tag)} sent to AI tagging"
                 )
                 to_tag = still_to_tag
 
@@ -583,9 +584,13 @@ async def _run_pipeline_body(
             unmapped = sum(1 for uc in use_case_rows if uc.mapping_status == "unmapped")
             invalid = sum(1 for uc in use_case_rows if uc.mapping_status == "invalid")
             if unmapped or invalid:
+                unmapped_total = unmapped + invalid
                 applicability["assumptions"].append(
-                    f"{unmapped + invalid} rules remain unmapped to ATT&CK — "
-                    "they do not count toward coverage"
+                    f"{unmapped_total} "
+                    + ("rules remain" if unmapped_total != 1 else "rule remains")
+                    + " unmapped to ATT&CK — "
+                    + ("they do" if unmapped_total != 1 else "it does")
+                    + " not count toward coverage"
                 )
             if params.get("columns"):
                 applicability["assumptions"].append(

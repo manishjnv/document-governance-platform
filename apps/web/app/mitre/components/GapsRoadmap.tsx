@@ -129,7 +129,22 @@ export function GapsRoadmap({
               <TableHead className="w-10">#</TableHead>
               <TableHead>Technique</TableHead>
               <TableHead className="hidden md:table-cell">Tactic</TableHead>
-              <TableHead>Priority</TableHead>
+              <TableHead>
+                <Tooltip delayDuration={150}>
+                  <TooltipTrigger asChild>
+                    <span className="cursor-default underline decoration-dotted underline-offset-2">
+                      Priority
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs text-xs">
+                    How commonly attackers use this technique in real intrusions,
+                    from independent threat reports: P1 near-universal, P2 very
+                    common, P3 common, — unranked. A &quot;Threat match&quot; chip
+                    means it is also tied to your declared industry or threat
+                    actors.
+                  </TooltipContent>
+                </Tooltip>
+              </TableHead>
               <TableHead className="hidden lg:table-cell">
                 <Tooltip delayDuration={150}>
                   <TooltipTrigger asChild>
@@ -140,7 +155,21 @@ export function GapsRoadmap({
                   <TooltipContent className="max-w-xs text-xs">{STRENGTH_TIP}</TooltipContent>
                 </Tooltip>
               </TableHead>
-              <TableHead>Feasibility</TableHead>
+              <TableHead>
+                <Tooltip delayDuration={150}>
+                  <TooltipTrigger asChild>
+                    <span className="cursor-default underline decoration-dotted underline-offset-2">
+                      Feasibility
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs text-xs">
+                    How soon you could realistically build this detection: short
+                    term = the needed logs are already onboarded; mid term = your
+                    existing tooling can provide them; long term = needs a new
+                    telemetry capability.
+                  </TooltipContent>
+                </Tooltip>
+              </TableHead>
               <TableHead className="min-w-[280px]">Recommendation</TableHead>
             </TableRow>
           </TableHeader>

@@ -1200,6 +1200,19 @@ async def get_assessment(
             assessment.updated_at = datetime.now(timezone.utc)
             await db.commit()
 
+    # Phase 14b: enrich stored results with technique names at read time
+    # (drill-down panels need names for non-gap techniques; names live in the
+    # pinned index, never in the JSONB — computed, not stored).
+    technique_results = assessment.technique_results
+    if technique_results:
+        technique_results = [
+            {
+                **r,
+                "name": (attack_data.DEFAULT.get(r.get("technique_id")) or {}).get("name"),
+            }
+            for r in technique_results
+        ]
+
     return {
         "assessment_id": str(assessment.assessment_id),
         "name": assessment.name,
@@ -1207,7 +1220,7 @@ async def get_assessment(
         "attack_version": assessment.attack_version,
         "params": assessment.params,
         "summary": assessment.summary,
-        "technique_results": assessment.technique_results,
+        "technique_results": technique_results,
         "error_message": assessment.error_message,
         "created_at": assessment.created_at.isoformat() if assessment.created_at else None,
         "completed_at": assessment.completed_at.isoformat() if assessment.completed_at else None,
