@@ -940,6 +940,14 @@ bookmarks don't 404; `SearchFilter`/`SearchResults`/`AnalyticsChart`/
 exercised by `tests/accessibility.test.tsx`) but were left in place --
 not part of this task's scope. Frontend-only, no backend/API changes.
 `tsc --noEmit` clean.
+**Reviewed + DEPLOYED same day:** diff review passed (design decisions
+upheld; two silent drops from the old `/search` page noted and accepted:
+search-history logging, CSV export, analytics chart -- backend endpoints
+remain if wanted later); `tsc` independently re-verified. Commits
+`9f6e091` (code) + `d306e5f` (docs); prod at `d306e5f`, smoke green
+(`/dashboard` 200 serving "SOW Review", `/search` redirect, `/upload` +
+`/mitre` 200, API 401 unauth). Interactive click-through (search box,
+clear button, mobile nav) still recommended -- checklist in the handoff.
 
 ---
 

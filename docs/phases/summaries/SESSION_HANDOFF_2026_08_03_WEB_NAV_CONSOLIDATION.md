@@ -89,3 +89,28 @@ this session), Admin page, auth/login flows.
 Run the manual smoke checklist above in a browser against a local dev
 server before considering this done. No commit/push was made this
 session (not requested) -- one commit for this logical unit when asked.
+
+---
+
+## Addendum — review + deploy outcome (2026-08-03, follow-up session)
+
+The build session's output was diff-reviewed and shipped:
+
+- **Review verdict: passed.** The section-vs-merged-table choice, the
+  untouched type-facet filter, `router.replace` for the redirect, and
+  leaving the a11y-tested `SearchFilter` in place were all upheld. Two
+  functional drops the build report didn't mention were identified and
+  accepted (recorded in the code commit message): the old `/search`
+  page's search-history logging (`POST /api/v1/search/history`), CSV
+  export, and analytics chart do not carry over — the backend endpoints
+  remain if any is wanted later. `tsc --noEmit` was independently
+  re-verified clean. Not security-adjacent → no adversarial gate.
+- **Shipped:** `9f6e091` (code, 4 files +179/−255) + `d306e5f` (docs).
+  Deployed to the VPS (frontend-only, no migration); prod at `d306e5f`,
+  all `scopewise-*` containers up. Smoke: `/dashboard` 200 and serving
+  the "SOW Review" markup, `/search` 200 (client redirect), `/upload` +
+  `/mitre` 200, API 401 unauthenticated.
+- **Still open:** the manual click-through checklist above was not run
+  in a browser (neither session started one) — worth 60 seconds on the
+  live site: search box results + clear button, upload back-link,
+  mobile nav parity.
