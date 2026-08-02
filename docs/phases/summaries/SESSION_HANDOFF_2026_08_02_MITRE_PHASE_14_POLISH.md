@@ -126,6 +126,7 @@ styled page instead of a flat metric list (numbers unchanged):
 | `9eabcd1` | Fix: hover page-jump (tooltip out of the space-y margin flow) |
 | `4d579c2` | Smooth cell-to-cell tooltip; collapsible matrices; legend state filter |
 | `35f5d40` | Report tables professional grid: bordered cells, brand-blue header rows, zebra striping; gap/top-5 entries as bordered cards; cover metadata stays borderless (CSS only, prod PDF render re-verified) |
+| `a9534b5` | Report readability + space pass: no light-grey fonts (body #1f2937, muted/footer/TOC darkened to slate); tags visually distinct — filled state pills (green/amber/red/grey), P1/P2/P3 badges filled rose/amber/sky, stronger violet AI/threat badges; N/A appendix aggregated one-row-per-reason with technique lists; assumptions in two CSS columns; register + rule-mappings appendix tables compact (10px); gap/fix cards tightened. Prod render re-verified (aggregation + badges asserted in-container) |
 
 ## Verification
 
