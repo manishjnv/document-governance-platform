@@ -76,6 +76,28 @@ interface SearchResponse {
   results: SearchResult[];
 }
 
+/** ts_headline marks query matches with <b>…</b>. Render ONLY those markers
+ * as highlights and everything else as plain (auto-escaped) text — never
+ * dangerouslySetInnerHTML: parsed_text is uploaded-document content, so raw
+ * HTML rendering would be a stored-XSS sink (house rule). Unbalanced tags
+ * worst-case mis-bold a segment; they can never inject markup. */
+function SnippetText({ snippet }: { snippet: string }) {
+  const parts = snippet.split(/<\/?b>/);
+  return (
+    <>
+      {parts.map((part, i) =>
+        i % 2 === 1 ? (
+          <mark key={i} className="bg-transparent font-semibold text-foreground">
+            {part}
+          </mark>
+        ) : (
+          <Fragment key={i}>{part}</Fragment>
+        )
+      )}
+    </>
+  );
+}
+
 function ScoreCell({ value }: { value: number | null }) {
   if (value === null || value === undefined) {
     return <span className="text-muted-foreground">-</span>;
@@ -721,8 +743,11 @@ export default function DashboardPage() {
                     <TableCell className="font-medium">{r.filename}</TableCell>
                     <TableCell>{r.document_type || 'Unknown'}</TableCell>
                     <TableCell>{(r.rank * 100).toFixed(0)}%</TableCell>
-                    <TableCell className="max-w-xs truncate text-muted-foreground" title={r.snippet}>
-                      {r.snippet}
+                    <TableCell
+                      className="max-w-xs truncate text-muted-foreground"
+                      title={r.snippet.replace(/<\/?b>/g, '')}
+                    >
+                      <SnippetText snippet={r.snippet} />
                     </TableCell>
                     <TableCell>{new Date(r.created_at).toLocaleDateString()}</TableCell>
                     <TableCell>
