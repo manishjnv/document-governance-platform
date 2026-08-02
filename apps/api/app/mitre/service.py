@@ -208,6 +208,9 @@ def recompute_results(assessment, use_case_rows) -> None:
             # Phase 12 quality signals (coverage ignores extras)
             "logic": uc.logic,
             "log_source": uc.log_source,
+            # Phase A6 quality signals (coverage ignores extras)
+            "severity": uc.severity,
+            "last_triggered": uc.last_triggered,
         }
         for uc in use_case_rows
     ]
@@ -267,6 +270,7 @@ def recompute_results(assessment, use_case_rows) -> None:
                 SETTING_DEFAULTS["crown_jewel_weighting_enabled"],
             )
         ),
+        log_source_health=env_lists.get("log_source_health") or {},
     )
 
     summary = dict(assessment.summary or {})
@@ -600,6 +604,9 @@ async def _run_pipeline_body(
                     # Phase 12 quality signals (coverage ignores extras)
                     "logic": uc.logic,
                     "log_source": uc.log_source,
+                    # Phase A6 quality signals (coverage ignores extras)
+                    "severity": uc.severity,
+                    "last_triggered": uc.last_triggered,
                 }
                 for uc in use_case_rows
             ]
@@ -719,6 +726,7 @@ async def _run_pipeline_body(
                 threat_weighting=bool(settings["threat_weighting_enabled"]),
                 crown_jewels=env_lists.get("crown_jewels") or [],
                 crown_jewel_weighting=bool(settings["crown_jewel_weighting_enabled"]),
+                log_source_health=env_lists.get("log_source_health") or {},
             )
             if profile["labels"]:
                 coverage["assumptions"].append(

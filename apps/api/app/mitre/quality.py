@@ -27,6 +27,8 @@ from .attack_data import DEFAULT
 from .coverage import COVERED_CONFIDENCE, PARTIAL_CONFIDENCE
 from .ranking import _LOG_SOURCE_RULES, _categories_provided, component_category
 
+import datetime as _dt
+
 _FIELD_CAP = 2000  # same scan-cost discipline as keyword_tag (adversarial V2)
 
 _PROVENANCE_BASE = {"customer": 30, "manual": 30, "keyword": 25}
@@ -34,6 +36,21 @@ _AI_HIGH_BASE, _AI_MID_BASE = 20, 10
 _LOGIC_POINTS, _TELEMETRY_POINTS = 10, 30
 _ENABLED_BONUS = {True: 30, None: 15, False: 0}
 _REDUNDANCY_STEP, _REDUNDANCY_CAP = 5, 10
+
+# Phase A6: optional customer-provided health columns feed small,
+# deterministic adjustments. Absent (None) values are a no-op — these only
+# ever apply when the customer's dump actually populated the column.
+_SEVERITY_DELTAS = {
+    "critical": 10, "high": 5, "medium": 0, "low": -5,
+    "informational": -10, "info": -10,
+}
+# A rule that has literally never fired can't be trusted as "strong"
+# evidence of detection, however else it scores — same discipline as the
+# disabled-rule cap below.
+_NEVER_TRIGGERED_CAP = 70
+_STALE_TRIGGER_DAYS = 180
+_STALE_TRIGGER_PENALTY = -10
+_DATE_FORMATS = ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d")
 
 STRONG_FLOOR, MODERATE_FLOOR = 75, 45
 
@@ -105,7 +122,33 @@ def _hit_score(uc: dict, mapping_confidence: float, source: str,
         frags.append("log source/logic matches the telemetry this technique expects")
     else:
         frags.append("could not confirm the expected telemetry in the rule")
-    return score, frags, has_logic, telemetry_matched
+
+    # Phase A6: optional severity/last-triggered health columns.
+    severity = str(uc.get("severity") or "").strip().lower()
+    if severity in _SEVERITY_DELTAS:
+        delta = _SEVERITY_DELTAS[severity]
+        score += delta
+        if delta:
+            frags.append(f"severity '{severity}'")
+
+    never_triggered = False
+    last_triggered = str(uc.get("last_triggered") or "").strip()
+    if last_triggered.lower() == "never":
+        never_triggered = True
+        frags.append("has never triggered")
+    elif last_triggered:
+        parsed_date = None
+        for fmt in _DATE_FORMATS:
+            try:
+                parsed_date = _dt.datetime.strptime(last_triggered, fmt).date()
+                break
+            except ValueError:
+                continue
+        if parsed_date and (_dt.date.today() - parsed_date).days > _STALE_TRIGGER_DAYS:
+            score += _STALE_TRIGGER_PENALTY
+            frags.append(f"last triggered over {_STALE_TRIGGER_DAYS} days ago")
+
+    return score, frags, has_logic, telemetry_matched, never_triggered
 
 
 def compute_quality(results, use_cases, *,
@@ -158,19 +201,23 @@ def compute_quality(results, use_cases, *,
         tech_categories = _technique_categories(tech)
 
         best_score, best_frags, best_uc = -1, [], None
+        best_never_triggered = False
         any_unmatched_logic = False
         for uc, confidence, source in tech_hits:
-            score, frags, has_logic, matched = _hit_score(
+            score, frags, has_logic, matched, never_triggered = _hit_score(
                 uc, confidence, source, tech_categories, covered_confidence
             )
             if has_logic and tech_categories and not matched:
                 any_unmatched_logic = True
             if score > best_score:
                 best_score, best_frags, best_uc = score, frags, uc
+                best_never_triggered = never_triggered
         extra = len(tech_hits) - 1
         if extra > 0:
             best_score += min(extra * _REDUNDANCY_STEP, _REDUNDANCY_CAP)
             best_frags.append(f"+{extra} more mapped rule{'s' if extra > 1 else ''}")
+        if best_never_triggered:
+            best_score = min(best_score, _NEVER_TRIGGERED_CAP)
 
         entry["strength"] = min(best_score, 100)
         entry["strength_rationale"] = "; ".join(best_frags)

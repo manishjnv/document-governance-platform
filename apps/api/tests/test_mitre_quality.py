@@ -19,13 +19,15 @@ from tests.test_mitre_ranking import _index, _result
 
 
 def _uc(row_ref, tid, *, source="customer", confidence=1.0, enabled=True,
-        logic=None, log_source=None, name=None):
+        logic=None, log_source=None, name=None, severity=None, last_triggered=None):
     return {
         "row_ref": row_ref,
         "name": name or f"rule-{row_ref}",
         "enabled": enabled,
         "logic": logic,
         "log_source": log_source,
+        "severity": severity,
+        "last_triggered": last_triggered,
         "mappings": [
             {"technique_id": tid, "source": source, "confidence": confidence}
         ],
@@ -71,6 +73,59 @@ def test_telemetry_match_raises_score():
     assert without["strength"] == 60   # 30 + 30, telemetry unconfirmed
     assert with_match["strength"] == 90
     assert "could not confirm" in without["strength_rationale"]
+
+
+# --- Phase A6: optional severity/last-triggered health columns ---
+
+def test_severity_delta_applied_when_present():
+    baseline = _score([_uc("r1", "T1059.001")])[0]["strength"]  # 60
+    critical, _ = _score([_uc("r1", "T1059.001", severity="Critical")])
+    low, _ = _score([_uc("r1", "T1059.001", severity="low")])
+    unknown, _ = _score([_uc("r1", "T1059.001", severity="banana")])
+    assert critical["strength"] == baseline + 10
+    assert "severity 'critical'" in critical["strength_rationale"]
+    assert low["strength"] == baseline - 5
+    assert unknown["strength"] == baseline  # unrecognized text -> no-op
+
+
+def test_severity_absent_is_a_noop():
+    with_none = _score([_uc("r1", "T1059.001", severity=None)])[0]
+    without_field = _score([{k: v for k, v in _uc("r1", "T1059.001").items() if k != "severity"}])[0]
+    assert with_none["strength"] == without_field["strength"] == 60
+
+
+def test_never_triggered_caps_strength_below_strong():
+    entry, _ = _score(
+        [_uc("r1", "T1059.001", logic="proc where cmdline like '-enc'",
+             log_source="Sysmon", last_triggered="never")]
+    )
+    assert entry["strength"] == 70  # would be 100 uncapped
+    assert strength_bucket(entry["strength"]) == "moderate"
+    assert "has never triggered" in entry["strength_rationale"]
+
+
+def test_stale_last_triggered_applies_penalty():
+    from datetime import date, timedelta
+
+    stale_date = (date.today() - timedelta(days=200)).isoformat()
+    fresh_date = (date.today() - timedelta(days=10)).isoformat()
+    stale, _ = _score(
+        [_uc("r1", "T1059.001", logic="x", log_source="Sysmon", last_triggered=stale_date)]
+    )
+    fresh, _ = _score(
+        [_uc("r1", "T1059.001", logic="x", log_source="Sysmon", last_triggered=fresh_date)]
+    )
+    assert stale["strength"] == 90       # 100 - 10 stale penalty
+    assert "over 180 days ago" in stale["strength_rationale"]
+    assert fresh["strength"] == 100      # within the freshness window -> no penalty
+
+
+def test_last_triggered_absent_or_unparseable_is_a_noop():
+    absent = _score([_uc("r1", "T1059.001", logic="x", log_source="Sysmon")])[0]
+    unparseable, _ = _score(
+        [_uc("r1", "T1059.001", logic="x", log_source="Sysmon", last_triggered="sometime last quarter")]
+    )
+    assert absent["strength"] == unparseable["strength"] == 100
 
 
 def test_low_confidence_ai_mapping_scores_weak():

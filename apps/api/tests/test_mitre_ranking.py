@@ -305,3 +305,54 @@ def test_no_crown_jewels_sheet_is_a_noop():
     ranked = _rank([_result("T1046", "not_covered")], log_sources=["Sysmon"])
     assert ranked["gaps"][0]["crown_jewel_relevant"] is False
     assert ranked["crown_jewel_unmatched"] == []
+
+
+# --- Phase A6: Log Sources health columns downgrade short -> mid ---
+
+def test_log_source_health_normalized_false_downgrades_to_mid():
+    ranked = rank_gaps(
+        [_result("T1059.001", "not_covered")], ["WinEventLog"], [],
+        index=_index(), priorities=_PRIORITIES,
+        log_source_health={"WinEventLog": {"normalized": False, "last_event_seen": None, "parser_format": None}},
+    )
+    gap = ranked["gaps"][0]
+    assert gap["feasibility"] == "mid"
+    assert gap["via"] == "WinEventLog"
+    assert "not normalized" in gap["hint"]
+
+
+def test_log_source_health_stale_last_event_downgrades_to_mid():
+    from datetime import date, timedelta
+    stale = (date.today() - timedelta(days=90)).isoformat()
+    ranked = rank_gaps(
+        [_result("T1059.001", "not_covered")], ["WinEventLog"], [],
+        index=_index(), priorities=_PRIORITIES,
+        log_source_health={"WinEventLog": {"normalized": True, "last_event_seen": stale, "parser_format": None}},
+    )
+    gap = ranked["gaps"][0]
+    assert gap["feasibility"] == "mid"
+    assert "no recent events" in gap["hint"]
+
+
+def test_log_source_health_fresh_and_normalized_stays_short():
+    from datetime import date, timedelta
+    fresh = (date.today() - timedelta(days=1)).isoformat()
+    ranked = rank_gaps(
+        [_result("T1059.001", "not_covered")], ["WinEventLog"], [],
+        index=_index(), priorities=_PRIORITIES,
+        log_source_health={"WinEventLog": {"normalized": True, "last_event_seen": fresh, "parser_format": "CIM"}},
+    )
+    gap = ranked["gaps"][0]
+    assert gap["feasibility"] == "short"
+
+
+def test_log_source_health_absent_changes_nothing():
+    ranked_without = rank_gaps(
+        [_result("T1059.001", "not_covered")], ["WinEventLog"], [],
+        index=_index(), priorities=_PRIORITIES,
+    )
+    ranked_with_empty = rank_gaps(
+        [_result("T1059.001", "not_covered")], ["WinEventLog"], [],
+        index=_index(), priorities=_PRIORITIES, log_source_health={},
+    )
+    assert ranked_without["gaps"][0]["feasibility"] == ranked_with_empty["gaps"][0]["feasibility"] == "short"

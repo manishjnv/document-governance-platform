@@ -410,6 +410,10 @@ async def _persist_new_assessment(
                 logic=(row["logic"] or "")[:2000] or None,
                 log_source=row["log_source"],
                 enabled=row["enabled"],
+                # Phase A6: optional health columns, already capped/leniently
+                # parsed by ingest.py.
+                severity=row.get("severity"),
+                last_triggered=row.get("last_triggered"),
                 mappings=item["mappings"],
                 mapping_status=item["mapping_status"],
             )
@@ -1076,6 +1080,10 @@ async def remap_assessment_columns(
                 logic=(row["logic"] or "")[:2000] or None,
                 log_source=row["log_source"],
                 enabled=row["enabled"],
+                # Phase A6: optional health columns, already capped/leniently
+                # parsed by ingest.py.
+                severity=row.get("severity"),
+                last_triggered=row.get("last_triggered"),
                 mappings=item["mappings"],
                 mapping_status=item["mapping_status"],
             )

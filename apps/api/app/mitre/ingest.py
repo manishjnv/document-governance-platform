@@ -16,6 +16,7 @@ Phase 2 with the tagging agent.
 import csv
 import io
 import re
+from datetime import date, datetime
 
 MAX_FILE_SIZE = 50 * 1024 * 1024  # matches documents.py
 MAX_USE_CASE_ROWS = 5_000
@@ -120,6 +121,19 @@ COLUMN_SYNONYMS = {
         "log source used", "datasources used", "data connector", "source index", "device type",
         "log source type", "siem index",
     },
+    # Phase A6: optional customer health columns, appended AFTER Status in
+    # the template. Leniently parsed; absent -> None, no behavior change
+    # for any existing dump (COLUMN_SYNONYMS additions never touch the
+    # matching semantics of the fields above).
+    "severity": {
+        "severity", "priority", "criticality", "risk", "risk level",
+        "risk rating", "severity level", "priority level",
+    },
+    "last_triggered": {
+        "last triggered", "last fired", "last alert", "last triggered date",
+        "last fired date", "last alert date", "last trigger", "last hit",
+        "last match", "last activation", "last activated",
+    },
 }
 
 _TRUE_WORDS = {"enabled", "true", "yes", "active", "on", "1", "prod", "production", "live"}
@@ -136,6 +150,24 @@ def parse_enabled(value) -> bool | None:
     if word in _FALSE_WORDS:
         return False
     return None
+
+
+def _parse_last_triggered(value) -> str | None:
+    """Lenient Last Triggered cell -> a capped display string, the literal
+    'never', or None (blank/unrecognizable -> no claim, never an error).
+    Actual staleness math happens at consumption time (quality.py)."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    text = str(value).strip()
+    if not text:
+        return None
+    if _norm(text) == "never":
+        return "never"
+    return text[:50]
 
 
 def extract_tags(value) -> list[str]:
@@ -204,6 +236,14 @@ def _rows_to_use_cases(rows, header_idx, columns, ref_prefix, row_number):
                 else None,
                 "tags": extract_tags(cell(row, "tags")),
                 "logic": cell(row, "logic"),
+                # Phase A6: optional health columns — None when absent/blank,
+                # never an error; only feed small quality.py strength deltas.
+                "severity": (cell(row, "severity") or "")[:50] or None,
+                "last_triggered": _parse_last_triggered(
+                    row[columns["last_triggered"]]
+                    if "last_triggered" in columns and columns["last_triggered"] < len(row)
+                    else None
+                ),
             }
         )
     return use_cases, skipped
@@ -529,6 +569,21 @@ def _match_platform(entry_norm: str) -> str | None:
     return None
 
 
+_SHEET_HEADER_WORDS = {
+    "platform", "platforms", "asset", "assets", "name", "log source",
+    "log sources", "source", "tool", "tooling", "crown jewel",
+    "crown jewels", "entry", "item",
+    # real-world inventory header variants (2026-08-02 customer sample)
+    "asset platform", "asset platforms", "asset type", "asset name",
+    "device technology", "device vendor", "technology", "technologies",
+    "log source name", "tool name", "security tooling", "crown jewel name",
+    "system", "systems", "description",
+    # Phase A6: common CMDB export column-A headers (ServiceNow/Lansweeper)
+    # — synonym widening only, same header-row-skip mechanism as above.
+    "os", "operating system", "ci type", "class", "ostype",
+}
+
+
 def _sheet_entries(rows: list[list], skipped: list | None = None) -> list[str]:
     """First-column entries of a sheet, honoring an optional second
     'present?' column (a recognizable False skips the row) and skipping a
@@ -539,16 +594,7 @@ def _sheet_entries(rows: list[list], skipped: list | None = None) -> list[str]:
         first = str(row[0]).strip() if row and row[0] is not None else ""
         if not first:
             continue
-        if idx == 0 and _norm(first) in {
-            "platform", "platforms", "asset", "assets", "name", "log source",
-            "log sources", "source", "tool", "tooling", "crown jewel",
-            "crown jewels", "entry", "item",
-            # real-world inventory header variants (2026-08-02 customer sample)
-            "asset platform", "asset platforms", "asset type", "asset name",
-            "device technology", "device vendor", "technology", "technologies",
-            "log source name", "tool name", "security tooling", "crown jewel name",
-            "system", "systems", "description",
-        }:
+        if idx == 0 and _norm(first) in _SHEET_HEADER_WORDS:
             continue
         if len(row) > 1 and parse_enabled(row[1]) is False:
             if skipped is not None:
@@ -560,6 +606,61 @@ def _sheet_entries(rows: list[list], skipped: list | None = None) -> list[str]:
                 f"Environment workbook exceeds the {MAX_ASSET_ROWS:,}-row limit."
             )
     return entries
+
+
+def _parse_log_source_extra(row: list) -> dict | None:
+    """(parser_format, normalized, last_event_seen) from columns C/D/E of a
+    Log Sources sheet row — purely positional, same discipline as the
+    existing B='present?' column. None when none of the 3 are populated
+    (old 2-column dumps parse identically — no health entry emitted)."""
+    parser_format = None
+    if len(row) > 2 and row[2] not in (None, ""):
+        parser_format = str(row[2]).strip()[:100] or None
+    normalized = parse_enabled(row[3]) if len(row) > 3 else None
+    last_event_seen = None
+    if len(row) > 4 and row[4] is not None:
+        raw = row[4]
+        if isinstance(raw, datetime):
+            last_event_seen = raw.date().isoformat()
+        elif isinstance(raw, date):
+            last_event_seen = raw.isoformat()
+        else:
+            text = str(raw).strip()
+            last_event_seen = text[:50] or None
+    if parser_format is None and normalized is None and last_event_seen is None:
+        return None
+    return {
+        "parser_format": parser_format,
+        "normalized": normalized,
+        "last_event_seen": last_event_seen,
+    }
+
+
+def _log_source_entries(rows: list[list]) -> tuple[list[str], dict, list[str]]:
+    """Log Sources sheet -> (names, health, skipped). Phase A6: health maps
+    an entry name to its optional Parser/Format + Normalized(Y/N) + Last
+    Event Seen columns (appended AFTER the existing name/present? columns)
+    — a name with none of the 3 populated has no health entry at all, so a
+    pre-A6 two-column Log Sources sheet parses byte-identically."""
+    names, health, skipped = [], {}, []
+    for idx, row in enumerate(rows):
+        first = str(row[0]).strip() if row and row[0] is not None else ""
+        if not first:
+            continue
+        if idx == 0 and _norm(first) in _SHEET_HEADER_WORDS:
+            continue
+        if len(row) > 1 and parse_enabled(row[1]) is False:
+            skipped.append(first)
+            continue
+        names.append(first)
+        extra = _parse_log_source_extra(row)
+        if extra:
+            health[first] = extra
+        if len(names) > MAX_ASSET_ROWS:
+            raise IngestError(
+                f"Environment workbook exceeds the {MAX_ASSET_ROWS:,}-row limit."
+            )
+    return names, health, skipped
 
 
 def parse_environment_file(content: bytes, file_type: str) -> dict:
@@ -595,6 +696,10 @@ def parse_environment_file(content: bytes, file_type: str) -> dict:
     # Phase 14g: per-entry evidence trail — additive output only, no
     # semantic change to platforms/flags/lists.
     interpretations: list[dict] = []
+    # Phase A6: entry name -> {parser_format, normalized, last_event_seen},
+    # only for Log Sources rows that populate at least one of the 3
+    # optional health columns.
+    log_source_health: dict = {}
 
     if "assets" in sheets_found:
         skipped_assets: list = []
@@ -654,15 +759,28 @@ def parse_environment_file(content: bytes, file_type: str) -> dict:
         "crown_jewels": "noted as a crown-jewel asset",
     }
 
-    def _plain_list(kind: str, label: str) -> list[str]:
+    def _plain_list(kind: str, label: str, health: bool = False) -> list[str]:
         if kind in sheets_found:
             skipped: list = []
-            entries = _sheet_entries(sheets_found[kind][1], skipped=skipped)
-            interpretations.extend(
-                {"entry": e, "sheet": label,
-                 "interpretation": _LIST_INTERPRETATIONS[kind]}
-                for e in entries
-            )
+            if health:
+                entries, health_map, skipped = _log_source_entries(sheets_found[kind][1])
+                log_source_health.update(health_map)
+            else:
+                entries = _sheet_entries(sheets_found[kind][1], skipped=skipped)
+            for entry in entries:
+                note = _LIST_INTERPRETATIONS[kind]
+                extra = health_map.get(entry) if health else None
+                if extra:
+                    bits = []
+                    if extra.get("parser_format"):
+                        bits.append(f"parser/format: {extra['parser_format']}")
+                    if extra.get("normalized") is not None:
+                        bits.append("normalized: " + ("Yes" if extra["normalized"] else "No"))
+                    if extra.get("last_event_seen"):
+                        bits.append(f"last event seen: {extra['last_event_seen']}")
+                    if bits:
+                        note = f"{note} ({'; '.join(bits)})"
+                interpretations.append({"entry": entry, "sheet": label, "interpretation": note})
             interpretations.extend(
                 {"entry": e, "sheet": label,
                  "interpretation": "skipped — you marked it Present = No"}
@@ -674,7 +792,7 @@ def parse_environment_file(content: bytes, file_type: str) -> dict:
         )
         return []
 
-    log_sources = _plain_list("log_sources", "Log Sources")
+    log_sources = _plain_list("log_sources", "Log Sources", health=True)
     tooling = _plain_list("tooling", "Security Tooling")
     crown_jewels = _plain_list("crown_jewels", "Crown Jewels")
 
@@ -688,6 +806,7 @@ def parse_environment_file(content: bytes, file_type: str) -> dict:
             "exclusions": [],
         },
         "log_sources": log_sources,
+        "log_source_health": log_source_health,
         "tooling": tooling,
         "crown_jewels": crown_jewels,
         "sheets_found": {k: v[0] for k, v in sheets_found.items()},

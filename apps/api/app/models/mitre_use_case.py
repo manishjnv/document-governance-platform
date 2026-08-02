@@ -52,5 +52,12 @@ class MitreUseCase(Base, TimestampMixin, SoftDeleteMixin):
     logic: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     log_source: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     enabled: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    # Migration 036 (Phase A6): optional customer-provided health columns.
+    # severity: leniently-parsed free text (critical/high/medium/low/... or
+    # raw). last_triggered: an ISO-ish date string or the literal "never";
+    # NULL when the column was absent/blank in the dump. Both feed small
+    # quality.py strength adjustments only — never coverage/state.
+    severity: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    last_triggered: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     mappings: Mapped[Any] = mapped_column(JSONB, nullable=False, default=list)
     mapping_status: Mapped[str] = mapped_column(String(30), nullable=False, default="unmapped")

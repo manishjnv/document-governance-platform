@@ -19,6 +19,7 @@ if real customer dumps defeat them.
 """
 
 import re
+from datetime import date, datetime
 
 from .attack_data import DEFAULT, load_technique_priorities, load_threat_profiles
 
@@ -181,6 +182,31 @@ def _norm(value) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", str(value or "").lower())).strip()
 
 
+# Phase A6: a log source's Last Event Seen is expected to be near-continuous
+# (unlike a use-case rule's Last Triggered, which can legitimately go
+# months between fires) — a much shorter staleness window.
+_STALE_LOG_SOURCE_DAYS = 30
+_DATE_FORMATS = ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d")
+
+
+def _is_stale_last_event(value) -> bool:
+    """True when a Last Event Seen cell is the literal 'never' or a
+    parseable date older than the staleness window. Unparseable/blank ->
+    False (no claim, never an error)."""
+    if not value:
+        return False
+    text = str(value).strip()
+    if text.lower() == "never":
+        return True
+    for fmt in _DATE_FORMATS:
+        try:
+            parsed = datetime.strptime(text, fmt).date()
+            return (date.today() - parsed).days > _STALE_LOG_SOURCE_DAYS
+        except ValueError:
+            continue
+    return False
+
+
 def component_category(component_name: str):
     """ATT&CK data-component name -> coarse telemetry category (or None)."""
     name = _norm(component_name)
@@ -202,8 +228,15 @@ def _categories_provided(entries, rules) -> dict:
     return provided
 
 
-def _feasibility(tech: dict, onboarded: dict, ownable: dict):
-    """(bucket, via, category, hint) for one technique."""
+def _feasibility(tech: dict, onboarded: dict, ownable: dict, log_source_health: dict = None):
+    """(bucket, via, category, hint) for one technique.
+
+    Phase A6: when the onboarded source for a category has an optional
+    health record (Normalized=N and/or a stale Last Event Seen from the Log
+    Sources sheet), downgrade short -> mid with the reason in the hint —
+    absent health data changes nothing (log_source_health defaults to {}).
+    """
+    log_source_health = log_source_health or {}
     categories = []
     for component in tech.get("data_sources") or []:
         category = component_category(component)
@@ -217,9 +250,22 @@ def _feasibility(tech: dict, onboarded: dict, ownable: dict):
         )
     for category in categories:
         if category in onboarded:
+            source = onboarded[category]
+            health = log_source_health.get(source)
+            if health and (health.get("normalized") is False or _is_stale_last_event(health.get("last_event_seen"))):
+                reasons = []
+                if health.get("normalized") is False:
+                    reasons.append("not normalized")
+                if _is_stale_last_event(health.get("last_event_seen")):
+                    reasons.append("no recent events seen")
+                return (
+                    "mid", source, category,
+                    f"{source} covers {category} but is {' and '.join(reasons)} — "
+                    "fix the pipeline before relying on this detection",
+                )
             return (
-                "short", onboarded[category], category,
-                f"telemetry already onboarded ({onboarded[category]} covers "
+                "short", source, category,
+                f"telemetry already onboarded ({source} covers "
                 f"{category}) — build the detection now",
             )
     for category in categories:
@@ -235,13 +281,13 @@ def _feasibility(tech: dict, onboarded: dict, ownable: dict):
     )
 
 
-def technique_feasibility(tech: dict, log_sources, tooling):
+def technique_feasibility(tech: dict, log_sources, tooling, log_source_health: dict = None):
     """(bucket, via, category, hint) for one technique outside the gap list —
     Phase 14a drawer explain for covered/N-A techniques (gaps already carry
     the same fields from rank_gaps)."""
     onboarded = _categories_provided(log_sources, _LOG_SOURCE_RULES)
     ownable = _categories_provided(tooling, _TOOLING_RULES)
-    return _feasibility(tech, onboarded, ownable)
+    return _feasibility(tech, onboarded, ownable, log_source_health)
 
 
 def build_threat_profile(industry, actors, profiles=None) -> dict:
@@ -279,7 +325,7 @@ def build_threat_profile(industry, actors, profiles=None) -> dict:
 def rank_gaps(
     techniques, log_sources, tooling, *,
     index=None, priorities=None, profile=None, threat_weighting=True,
-    crown_jewels=None, crown_jewel_weighting=True,
+    crown_jewels=None, crown_jewel_weighting=True, log_source_health=None,
 ) -> dict:
     """Coverage per-technique results -> ranked gap list + roadmap buckets.
 
@@ -292,7 +338,12 @@ def rank_gaps(
     gaps carry crown_jewel_relevant=True and, when crown_jewel_weighting is
     on (org tunable `crown_jewel_weighting_enabled`, default on), rank above
     equal-tier peers — a THIRD sort key, after tier and threat_relevance,
-    never a tier jump. Never changes coverage %, states, or tier.
+    never a tier jump. log_source_health: Phase A6, {entry name: {parser_
+    format, normalized, last_event_seen}} from the Log Sources sheet's
+    optional health columns (or None) — downgrades that source's short
+    feasibility to mid with the reason in the hint when normalized=False
+    or the last event looks stale; absent -> no change to feasibility.
+    Never changes coverage %, states, or tier.
     Returns {"gaps": [gap...], "roadmap": {"short": [...], "mid": [...],
     "long": [...]}, "crown_jewel_unmatched": [str, ...]} — gap dicts carry
     technique_id, name, domain, state, tier, tactics, feasibility, via,
@@ -319,7 +370,7 @@ def rank_gaps(
         tech = index.get(result["technique_id"])
         if tech is None:
             continue
-        bucket, via, category, hint = _feasibility(tech, onboarded, ownable)
+        bucket, via, category, hint = _feasibility(tech, onboarded, ownable, log_source_health)
         positions = [
             tactic_position.get((result["domain"], t), 99) for t in result["tactics"]
         ] or [99]

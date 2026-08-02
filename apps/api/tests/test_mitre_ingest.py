@@ -6,12 +6,17 @@ installed; the code path is symmetric with xlsx.)
 """
 
 import io
+from pathlib import Path
 
 import pytest
 from openpyxl import Workbook
 
 from app.mitre import ingest
 from app.mitre.ingest import IngestError, parse_use_case_file, parse_environment_file
+
+TEMPLATES_DIR = (
+    Path(__file__).resolve().parents[3] / "apps" / "web" / "public" / "templates"
+)
 
 
 def _xlsx(rows, sheet_name="Sheet1", extra_sheets=()) -> bytes:
@@ -36,6 +41,9 @@ TEMPLATE_HEADERS = [
 
 
 def test_template_layout_happy_path():
+    """Plan phase A6 old-layout regression: a dump with NO Severity/Last
+    Triggered columns must still detect exactly the pre-A6 column set and
+    produce rows with those two new fields present but None."""
     content = _xlsx([
         TEMPLATE_HEADERS,
         ["Suspicious PowerShell", "T1059.001", "process where ...", "PS abuse", "Sysmon", "Enabled"],
@@ -50,6 +58,7 @@ def test_template_layout_happy_path():
         "row_ref": "Sheet1:2", "name": "Suspicious PowerShell",
         "description": "PS abuse", "log_source": "Sysmon", "enabled": True,
         "tags": ["T1059.001"], "logic": "process where ...",
+        "severity": None, "last_triggered": None,
     }
     assert r2["tags"] == ["T1110", "T1021.001"]
     assert r2["enabled"] is False
@@ -116,6 +125,7 @@ def test_environment_workbook_parsing():
     assert env["has_ics_assets"] is True          # OT/SCADA row
     assert env["has_managed_mobile"] is False
     assert parsed["log_sources"] == ["Sysmon", "CloudTrail"]
+    assert parsed["log_source_health"] == {}  # Phase A6 old-layout: no health columns -> no-op
     assert parsed["sheets_found"] == {"assets": "Assets", "log_sources": "Log Sources"}
     # missing sheets + unmapped assets become assumption lines
     assert any("Security Tooling" in a for a in parsed["assumptions"])
@@ -297,3 +307,119 @@ def test_widened_environment_sheet_and_platform_synonyms():
     assert env["has_ics_assets"] is True       # Modbus marker
     assert parsed["tooling"] == ["CrowdStrike"]
     assert parsed["crown_jewels"] == ["Payment gateway"]
+
+
+# --- Phase A6: severity/last-triggered use-case columns (new-column goldens) ---
+
+def test_use_case_severity_and_last_triggered_columns_parsed():
+    content = _xlsx([
+        TEMPLATE_HEADERS + ["Severity", "Last Triggered"],
+        ["Old critical rule", "T1059.001", "q", "", "Sysmon", "Enabled", "Critical", "never"],
+        ["Fresh medium rule", "T1021.001", "q", "", "Sysmon", "Enabled", "Medium", "2026-07-01"],
+        ["No health data", "T1047", "q", "", "Sysmon", "Enabled", "", ""],
+    ])
+    parsed = parse_use_case_file(content, "xlsx")
+    assert "severity" in parsed["columns"] and "last_triggered" in parsed["columns"]
+    r1, r2, r3 = parsed["rows"]
+    assert r1["severity"] == "Critical" and r1["last_triggered"] == "never"
+    assert r2["severity"] == "Medium" and r2["last_triggered"] == "2026-07-01"
+    assert r3["severity"] is None and r3["last_triggered"] is None
+
+
+def test_use_case_last_triggered_native_excel_date_normalized():
+    import datetime as dt
+
+    from openpyxl import Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.append(TEMPLATE_HEADERS + ["Severity", "Last Triggered"])
+    ws.append(["Rule with real date", "T1059.001", "q", "", "Sysmon", "Enabled", "High", dt.date(2026, 1, 15)])
+    buf = io.BytesIO()
+    wb.save(buf)
+    parsed = parse_use_case_file(buf.getvalue(), "xlsx")
+    assert parsed["rows"][0]["last_triggered"] == "2026-01-15"
+
+
+# --- Phase A6: Log Sources health columns (Parser/Format, Normalized, Last Event Seen) ---
+
+def test_log_sources_health_columns_parsed_and_old_layout_unaffected():
+    content = _xlsx(
+        [["Platform"], ["Windows"]],
+        sheet_name="Assets",
+        extra_sheets=[(
+            "Log Sources",
+            [
+                ["Source", "Present?", "Parser / Format", "Normalized (Y/N)", "Last Event Seen"],
+                ["Sysmon", "Yes", "Sysmon XML", "Yes", "2026-08-01"],
+                ["Legacy Syslog", "Yes", "Raw syslog", "No", "2025-01-01"],
+                ["CloudTrail", "Yes", "", "", ""],
+            ],
+        )],
+    )
+    parsed = parse_environment_file(content, "xlsx")
+    assert parsed["log_sources"] == ["Sysmon", "Legacy Syslog", "CloudTrail"]
+    health = parsed["log_source_health"]
+    assert health["Sysmon"] == {
+        "parser_format": "Sysmon XML", "normalized": True, "last_event_seen": "2026-08-01",
+    }
+    assert health["Legacy Syslog"] == {
+        "parser_format": "Raw syslog", "normalized": False, "last_event_seen": "2025-01-01",
+    }
+    assert "CloudTrail" not in health  # no health columns populated -> no entry
+    by_entry = {i["entry"]: i for i in parsed["interpretations"] if i["sheet"] == "Log Sources"}
+    assert "normalized: No" in by_entry["Legacy Syslog"]["interpretation"]
+
+
+def test_log_sources_old_two_column_layout_still_parses_identically():
+    content = _xlsx(
+        [["Platform"], ["Windows"]],
+        sheet_name="Assets",
+        extra_sheets=[("Log Sources", [["Source"], ["Sysmon"], ["CloudTrail"]])],
+    )
+    parsed = parse_environment_file(content, "xlsx")
+    assert parsed["log_sources"] == ["Sysmon", "CloudTrail"]
+    assert parsed["log_source_health"] == {}
+
+
+# --- Phase A6: Assets CMDB header-synonym widening (ServiceNow/Lansweeper) ---
+
+def test_assets_cmdb_header_synonyms_recognized_as_header_row():
+    content = _xlsx(
+        [["OS"], ["Windows Server 2022"], ["RHEL 9"]],
+        sheet_name="Assets",
+    )
+    parsed = parse_environment_file(content, "xlsx")
+    # "OS" header row skipped -> only the two real entries counted
+    assert set(parsed["environment"]["platforms"]) == {"Windows", "Linux"}
+    by_entry = {i["entry"] for i in parsed["interpretations"]}
+    assert "OS" not in by_entry
+
+    content = _xlsx(
+        [["CI Type"], ["Windows Server 2022"]],
+        sheet_name="Assets",
+    )
+    parsed = parse_environment_file(content, "xlsx")
+    assert parsed["environment"]["platforms"] == ["Windows"]
+
+
+# --- Phase A6 acceptance: the real shipped templates round-trip through ingest ---
+
+def test_real_use_case_template_round_trips():
+    content = (TEMPLATES_DIR / "scopewise-mitre-use-cases.xlsx").read_bytes()
+    parsed = parse_use_case_file(content, "xlsx")
+    assert parsed["row_count"] >= 1
+    assert {"name", "tags", "logic", "description", "log_source", "enabled",
+            "severity", "last_triggered"} <= set(parsed["columns"])
+    assert not parsed["warnings"]
+
+
+def test_real_environment_template_round_trips():
+    content = (TEMPLATES_DIR / "scopewise-mitre-environment.xlsx").read_bytes()
+    parsed = parse_environment_file(content, "xlsx")
+    assert set(parsed["sheets_found"]) == {"assets", "log_sources", "tooling", "crown_jewels"}
+    assert parsed["log_sources"]
+    assert parsed["log_source_health"]  # the shipped example rows populate it
+    assert parsed["environment"]["inventory_provided"] is True
+    # "Read Me" is an unrecognized sheet name -> tolerated, never surfaced
+    # as a data sheet or an unmapped-entry assumption.
+    assert not any("Read Me" in a for a in parsed["assumptions"])
