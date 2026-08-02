@@ -125,6 +125,7 @@ styled page instead of a flat metric list (numbers unchanged):
 | `4f93523` | Gaps-table density + dot badges; Assumptions & N/A card redesign |
 | `9eabcd1` | Fix: hover page-jump (tooltip out of the space-y margin flow) |
 | `4d579c2` | Smooth cell-to-cell tooltip; collapsible matrices; legend state filter |
+| `35f5d40` | Report tables professional grid: bordered cells, brand-blue header rows, zebra striping; gap/top-5 entries as bordered cards; cover metadata stays borderless (CSS only, prod PDF render re-verified) |
 
 ## Verification
 
