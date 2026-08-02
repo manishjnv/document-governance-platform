@@ -1043,6 +1043,21 @@ entry could have crashed past the narrow exception handler, violating
 the never-fails contract) before commit — **verdict: ACCEPT**. 8 new
 tests; suite green (269 MITRE tests); `tsc --noEmit` clean.
 
+**MITRE accuracy plan, phase A8 (2026-08-03):** threat-profile expansion
++ region weighting. `data/threat_profiles.json` industries 10→19, actors
+10→20 (all new actors G-coded, cited to ATT&CK Groups pages/CISA/
+Mandiant), new `region_profiles` (5 coarse buckets: NA/Europe/APAC/MEA/
+LATAM) mapping free-text region keywords — word-boundary matched to
+avoid short-code false hits (e.g. "us" inside "Australia") — to curated
+actor lists. `build_threat_profile()` gains a third `region` input using
+the identical within-tier lift as industry/actors; wizard Region field
+converted from a fixed dropdown to free text + a datalist matching the
+backend's actual contract; 7 new industries added to the wizard
+dropdown too. 9 new technique IDs required matching
+`technique_plain_language.json` additions (coverage rule is
+test-enforced). 8 new tests; suite green (275 MITRE tests); `tsc
+--noEmit` clean.
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)
