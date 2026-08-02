@@ -674,6 +674,147 @@ async def list_use_cases(
     }
 
 
+_MAX_MAPPINGS_PER_RULE = 20  # a rule genuinely mapping to more is noise
+
+
+@router.patch(
+    "/assessments/{assessment_id}/use-cases/{use_case_id}/mappings",
+    summary="Manually correct one rule's technique mappings",
+)
+async def edit_use_case_mappings(
+    assessment_id: UUID,
+    use_case_id: UUID,
+    payload: dict = Body(...),
+    current_user: TokenData = Depends(require_role("admin", "reviewer")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Phase 10: reviewer override of a rule's mappings. Body =
+    {"technique_ids": [...]} — the FULL new list for the rule (empty list =
+    "this rule maps to nothing"). Every ID is validated through
+    attack_data.resolve(); the row gets mapping_status='manual' with each
+    mapping source='manual' @ confidence 1.0, and coverage/gaps/roadmap are
+    recomputed inline from the pure engines (no LLM). Only on completed
+    assessments — before a run there is nothing to recompute, and a running
+    pipeline would overwrite the edit."""
+    org_id = UUID(str(current_user.org_id))
+
+    ids = payload.get("technique_ids")
+    if not isinstance(ids, list) or not all(isinstance(t, str) for t in ids):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="technique_ids must be a list of ATT&CK technique ID strings",
+        )
+    if len(ids) > _MAX_MAPPINGS_PER_RULE:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"a rule can map to at most {_MAX_MAPPINGS_PER_RULE} techniques",
+        )
+
+    index = attack_data.DEFAULT
+    canonical_ids, invalid_ids, notes = [], [], []
+    for raw in ids:
+        canonical, resolve_status = index.resolve(raw.strip().upper())
+        if resolve_status in ("malformed", "unknown", "deprecated"):
+            invalid_ids.append(raw)
+            continue
+        if resolve_status == "remapped":
+            notes.append(
+                f"'{raw}' is revoked in ATT&CK v{index.version} — "
+                f"remapped to {canonical}"
+            )
+        if canonical not in canonical_ids:
+            canonical_ids.append(canonical)
+    if invalid_ids:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"Not valid ATT&CK v{index.version} technique IDs: "
+                + ", ".join(str(t)[:20] for t in invalid_ids[:10])
+            ),
+        )
+
+    # Row lock: serializes concurrent edits on the same assessment so the
+    # recompute below always sees a consistent full row set.
+    result = await db.execute(
+        select(MitreAssessment)
+        .where(
+            (MitreAssessment.assessment_id == assessment_id)
+            & (MitreAssessment.org_id == org_id)
+            & (MitreAssessment.deleted_at.is_(None))
+        )
+        .with_for_update()
+    )
+    assessment = result.scalar_one_or_none()
+    if assessment is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found"
+        )
+    if assessment.status != "completed":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Mappings can be edited once the assessment has completed",
+        )
+
+    uc_result = await db.execute(
+        select(MitreUseCase).where(
+            (MitreUseCase.use_case_id == use_case_id)
+            & (MitreUseCase.assessment_id == assessment_id)
+            & (MitreUseCase.org_id == org_id)
+            & (MitreUseCase.deleted_at.is_(None))
+        )
+    )
+    use_case = uc_result.scalar_one_or_none()
+    if use_case is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Use case not found"
+        )
+
+    use_case.mappings = [
+        {"technique_id": tid, "source": "manual", "confidence": 1.0}
+        for tid in canonical_ids
+    ]
+    use_case.mapping_status = "manual"
+    use_case.updated_at = datetime.now(timezone.utc)
+
+    rows = await db.execute(
+        select(MitreUseCase)
+        .where(
+            (MitreUseCase.assessment_id == assessment_id)
+            & (MitreUseCase.org_id == org_id)
+            & (MitreUseCase.deleted_at.is_(None))
+        )
+        .order_by(MitreUseCase.row_ref)
+    )
+    service.recompute_results(assessment, rows.scalars().all())
+    await db.commit()
+
+    await log_action(
+        db,
+        org_id=org_id,
+        user_id=UUID(str(current_user.user_id)),
+        action="mitre.mappings_edited",
+        resource_type="mitre_assessment",  # migration 030
+        resource_id=assessment_id,
+    )
+    await db.commit()
+    await invalidate_cache(f"cache:*:{org_id}:*")
+
+    return {
+        "use_case": {
+            "use_case_id": str(use_case.use_case_id),
+            "row_ref": use_case.row_ref,
+            "name": use_case.name,
+            "description": use_case.description,
+            "log_source": use_case.log_source,
+            "enabled": use_case.enabled,
+            "mappings": use_case.mappings,
+            "mapping_status": use_case.mapping_status,
+        },
+        "notes": notes,
+        "overall": (assessment.summary or {}).get("overall"),
+    }
+
+
 async def _completed_assessment(db, assessment_id: UUID, org_id) -> MitreAssessment:
     assessment = await _get_assessment(db, assessment_id, org_id)
     if assessment.status != "completed":

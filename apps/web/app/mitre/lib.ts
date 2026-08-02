@@ -233,6 +233,10 @@ export const SOURCE_META: Record<string, { label: string; tip: string }> = {
     label: 'AI-mapped',
     tip: 'An AI model read the rule and suggested this technique — spot-check before relying on it.',
   },
+  manual: {
+    label: 'Edited by reviewer',
+    tip: 'A reviewer manually set this mapping — it overrides the original tag, and coverage was recomputed from it.',
+  },
 };
 
 export const TIER_TIPS: Record<number, string> = {

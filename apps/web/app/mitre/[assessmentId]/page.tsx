@@ -46,6 +46,7 @@ export default function MitreResultsPage() {
   const [compareResult, setCompareResult] = useState<CompareResult | null>(null);
   const [compareLoading, setCompareLoading] = useState(false);
   const [compareError, setCompareError] = useState('');
+  const [userRole, setUserRole] = useState('');
   const statusRef = useRef<string>('');
 
   const authHeaders = () => ({
@@ -90,21 +91,55 @@ export default function MitreResultsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assessmentId]);
 
+  const loadUseCases = useCallback(async () => {
+    try {
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments/${assessmentId}/use-cases`,
+        { headers: authHeaders(), params: { limit: USE_CASE_FETCH_LIMIT } }
+      );
+      setUseCases(res.data.items);
+      setUseCasesTotal(res.data.total);
+    } catch {
+      // non-fatal: the drawer just shows no mapped rules
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assessmentId]);
+
   // Once completed, fetch the parsed rules once (feeds the technique drawer).
   useEffect(() => {
     if (assessment?.status !== 'completed') return;
-    axios
-      .get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments/${assessmentId}/use-cases`,
-        { headers: authHeaders(), params: { limit: USE_CASE_FETCH_LIMIT } }
-      )
-      .then((res) => {
-        setUseCases(res.data.items);
-        setUseCasesTotal(res.data.total);
-      })
-      .catch(() => {});
+    loadUseCases();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assessment?.status, assessmentId]);
+
+  // Role gates the mapping-edit controls (server enforces regardless).
+  useEffect(() => {
+    axios
+      .get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/me`, { headers: authHeaders() })
+      .then((res) => setUserRole(res.data.role ?? ''))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Phase 10: reviewer mapping correction — PATCH the full new technique-ID
+  // list for one rule, then refresh results (coverage is recomputed
+  // server-side) and the drawer's rule list.
+  const handleEditMappings = useCallback(
+    async (useCaseId: string, techniqueIds: string[]) => {
+      try {
+        await axios.patch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments/${assessmentId}/use-cases/${useCaseId}/mappings`,
+          { technique_ids: techniqueIds },
+          { headers: authHeaders() }
+        );
+      } catch (err: any) {
+        throw new Error(err.response?.data?.detail || 'Could not save the mapping change');
+      }
+      await Promise.all([load(), loadUseCases()]);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [assessmentId, load, loadUseCases]
+  );
 
   // Lazily load the compare options the first time the Compare tab opens.
   useEffect(() => {
@@ -399,6 +434,8 @@ export default function MitreResultsPage() {
                   summary={summary}
                   useCases={useCases}
                   useCasesTruncated={useCasesTotal > useCases.length}
+                  canEdit={userRole === 'admin' || userRole === 'reviewer'}
+                  onEditMappings={handleEditMappings}
                 />
               </>
             )}

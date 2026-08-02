@@ -13,6 +13,7 @@ keyword_tag.py) — only what it can't confidently map goes to the LLM.
 import asyncio
 import json
 import logging
+from collections import Counter
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -128,6 +129,101 @@ def build_mappings(tags: list[str]) -> tuple[list[dict], str, list[str]]:
     if mappings:
         return mappings, "customer_tagged", notes
     return [], ("invalid" if tags else "unmapped"), notes
+
+
+def recompute_results(assessment, use_case_rows) -> None:
+    """Phase 10: refresh technique_results + summary in place after a manual
+    mapping edit. Re-runs ONLY the pure engines (applicability/coverage/
+    ranking) with the thresholds stamped at run time — no tagging, no LLM.
+    Narrative text and the assumption history are preserved (a note marks
+    the edit); the narrative may predate the correction, but every number
+    shown to the customer comes from the recomputed data.
+    """
+    params = dict(assessment.params or {})
+    thresholds = params.get("thresholds") or {}
+    environment = params.get("environment") or {
+        "platforms": [],
+        "has_ics_assets": False,
+        "has_managed_mobile": False,
+        "inventory_provided": False,
+        "exclusions": params.get("intake", {}).get("exclusions", []),
+    }
+    applicability = compute_applicability(environment)
+    use_cases = [
+        {
+            "row_ref": uc.row_ref,
+            "name": uc.name,
+            "enabled": uc.enabled,
+            "mappings": uc.mappings or [],
+        }
+        for uc in use_case_rows
+    ]
+    coverage = compute_coverage(
+        use_cases,
+        applicability,
+        disabled_counts_as_coverage=bool(
+            thresholds.get(
+                "count_disabled_as_coverage",
+                SETTING_DEFAULTS["count_disabled_as_coverage"],
+            )
+        ),
+        covered_confidence=thresholds.get(
+            "confidence_covered", SETTING_DEFAULTS["confidence_covered"]
+        ),
+        partial_confidence=thresholds.get(
+            "confidence_partial_floor", SETTING_DEFAULTS["confidence_partial_floor"]
+        ),
+        partial_weight=thresholds.get(
+            "partial_credit", SETTING_DEFAULTS["partial_credit"]
+        ),
+    )
+    env_lists = params.get("environment_lists") or {}
+    ranked = ranking.rank_gaps(
+        coverage["techniques"],
+        env_lists.get("log_sources") or [],
+        env_lists.get("tooling") or [],
+    )
+
+    summary = dict(assessment.summary or {})
+    assumptions = list(summary.get("assumptions") or [])
+    edit_note = (
+        "technique mappings were manually edited by a reviewer — coverage, "
+        "gaps and roadmap were recomputed; narrative prose may predate the edit"
+    )
+    if edit_note not in assumptions:
+        assumptions.append(edit_note)
+    by_status = Counter(uc.mapping_status for uc in use_case_rows)
+    summary.update(
+        {
+            "overall": coverage["overall"],
+            "domains": coverage["domains"],
+            "assumptions": assumptions,
+            "gaps": ranked["gaps"],
+            "roadmap": ranked["roadmap"],
+            "not_applicable": [
+                {
+                    "technique_id": r["technique_id"],
+                    "domain": r["domain"],
+                    "reason": r["na_reason"],
+                }
+                for r in coverage["techniques"]
+                if r["state"] == "not_applicable"
+            ],
+            "applicable_domains": applicability["applicable_domains"],
+            "counts": {
+                "use_cases": len(use_case_rows),
+                "customer_tagged": by_status["customer_tagged"],
+                "keyword_tagged": by_status["keyword_tagged"],
+                "ai_tagged": by_status["ai_tagged"],
+                "manual": by_status["manual"],
+                "unmapped": by_status["unmapped"],
+                "invalid": by_status["invalid"],
+            },
+        }
+    )
+    assessment.technique_results = coverage["techniques"]
+    assessment.summary = summary
+    assessment.updated_at = datetime.now(timezone.utc)
 
 
 def compare_assessments(current, baseline) -> dict:
