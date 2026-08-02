@@ -4,17 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Archive, ArchiveRestore, Check, Pencil, Plus, Target, X } from 'lucide-react';
+import { Archive, ArchiveRestore, Check, Loader2, Pencil, Plus, Target, X } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Tooltip,
   TooltipContent,
@@ -23,70 +15,6 @@ import {
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { AssessmentListItem, DOMAIN_LABELS, STATUS_META, fmtDate } from './lib';
-
-function TrendArrow({ item, items }: { item: AssessmentListItem; items: AssessmentListItem[] }) {
-  if (item.status !== 'completed' || item.strict_pct === null) return null;
-  const index = items.findIndex((x) => x.assessment_id === item.assessment_id);
-  const previous = items
-    .slice(index + 1)
-    .find((x) => x.status === 'completed' && x.strict_pct !== null);
-  if (!previous) return null;
-  const delta = Math.round((item.strict_pct - (previous.strict_pct as number)) * 10) / 10;
-  return (
-    <Tooltip delayDuration={150}>
-      <TooltipTrigger asChild>
-        <span
-          className={cn(
-            'cursor-default text-xs font-semibold',
-            delta > 0 && 'text-emerald-600',
-            delta < 0 && 'text-rose-600',
-            delta === 0 && 'text-muted-foreground'
-          )}
-        >
-          {delta > 0 ? '▲' : delta < 0 ? '▼' : '–'}
-        </span>
-      </TooltipTrigger>
-      <TooltipContent className="max-w-xs text-xs">
-        {delta === 0
-          ? 'No change vs the previous completed run.'
-          : `${delta > 0 ? '+' : ''}${delta} points vs the previous completed run (${previous.strict_pct}%). Open the assessment's Compare tab for the full diff.`}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-function DomainMiniBars({ item }: { item: AssessmentListItem }) {
-  const brief = Object.entries(item.domains_brief ?? {}).filter(
-    ([, d]) => (d.applicable ?? 0) > 0
-  );
-  if (brief.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
-  return (
-    <div className="flex flex-col gap-1">
-      {brief.map(([key, d]) => (
-        <Tooltip key={key} delayDuration={150}>
-          <TooltipTrigger asChild>
-            <div className="flex cursor-default items-center gap-1.5">
-              <span className="w-4 text-[10px] font-semibold text-muted-foreground">
-                {(DOMAIN_LABELS[key] ?? key)[0]}
-              </span>
-              <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{ width: `${Math.min(100, d.strict_pct ?? 0)}%` }}
-                />
-              </div>
-              <span className="text-[10px] text-muted-foreground">{d.strict_pct}%</span>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-xs text-xs">
-            {DOMAIN_LABELS[key] ?? key}: {d.covered} of {d.applicable} applicable techniques
-            covered ({d.strict_pct}% strict).
-          </TooltipContent>
-        </Tooltip>
-      ))}
-    </div>
-  );
-}
 
 /** Phase 14f: tiny inline SVG sparkline over completed runs' coverage %. */
 function CoverageSparkline({ items }: { items: AssessmentListItem[] }) {
@@ -126,6 +54,13 @@ function CoverageSparkline({ items }: { items: AssessmentListItem[] }) {
     </Tooltip>
   );
 }
+
+/** Plain-words helper line per non-completed status. */
+const STATUS_HELP: Record<string, string> = {
+  pending: 'Uploaded and parsed — open it to run the assessment.',
+  running: 'Running now — mapping your rules to ATT&CK techniques. This takes a few minutes.',
+  failed: 'The run didn’t finish — open it to see why and re-run.',
+};
 
 export default function MitreListPage() {
   const router = useRouter();
@@ -191,6 +126,17 @@ export default function MitreListPage() {
     );
   }, [items, search, statusFilter, showArchived]);
 
+  /** Delta vs the previous completed run (chronological, from ALL items). */
+  const deltaFor = (item: AssessmentListItem): number | null => {
+    if (item.status !== 'completed' || item.strict_pct === null || items === null) return null;
+    const index = items.findIndex((x) => x.assessment_id === item.assessment_id);
+    const previous = items
+      .slice(index + 1)
+      .find((x) => x.status === 'completed' && x.strict_pct !== null);
+    if (!previous) return null;
+    return Math.round((item.strict_pct - (previous.strict_pct as number)) * 10) / 10;
+  };
+
   return (
     <AppShell>
       <TooltipProvider>
@@ -239,15 +185,17 @@ export default function MitreListPage() {
                 <option key={key} value={key}>{meta.label}</option>
               ))}
             </select>
-            <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={showArchived}
-                onChange={(e) => setShowArchived(e.target.checked)}
-                className="h-3.5 w-3.5"
-              />
-              Show archived ({items.filter((i) => i.archived).length})
-            </label>
+            {items.some((i) => i.archived) && (
+              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={showArchived}
+                  onChange={(e) => setShowArchived(e.target.checked)}
+                  className="h-3.5 w-3.5"
+                />
+                Show archived ({items.filter((i) => i.archived).length})
+              </label>
+            )}
             <span className="ml-auto">
               <CoverageSparkline items={items} />
             </span>
@@ -272,195 +220,215 @@ export default function MitreListPage() {
           </div>
         )}
 
-        {visible !== null && items !== null && items.length > 0 && (
-          <div className="overflow-x-auto rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Coverage</TableHead>
-                  <TableHead className="hidden lg:table-cell">By matrix</TableHead>
-                  <TableHead className="hidden sm:table-cell">ATT&CK</TableHead>
-                  <TableHead className="hidden md:table-cell">Created</TableHead>
-                  <TableHead className="w-16"><span className="sr-only">Actions</span></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visible.map((item) => {
-                  const status = STATUS_META[item.status] ?? STATUS_META.pending;
-                  return (
-                    <TableRow
-                      key={item.assessment_id}
-                      className="cursor-pointer"
-                      onClick={() => router.push(`/mitre/${item.assessment_id}`)}
-                    >
-                      <TableCell className="text-sm font-medium">
-                        {renamingId === item.assessment_id ? (
-                          <span
-                            className="flex items-center gap-1"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <input
-                              autoFocus
-                              value={renameValue}
-                              onChange={(e) => setRenameValue(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' && renameValue.trim()) {
-                                  patchAssessment(item.assessment_id, { name: renameValue.trim() });
-                                  setRenamingId(null);
-                                }
-                                if (e.key === 'Escape') setRenamingId(null);
-                              }}
-                              aria-label="New assessment name"
-                              className="h-7 w-48 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            />
-                            <button
-                              type="button"
-                              aria-label="Save name"
-                              disabled={!renameValue.trim()}
-                              onClick={() => {
-                                patchAssessment(item.assessment_id, { name: renameValue.trim() });
-                                setRenamingId(null);
-                              }}
-                              className="rounded p-1 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
-                            >
-                              <Check size={14} aria-hidden="true" />
-                            </button>
-                            <button
-                              type="button"
-                              aria-label="Cancel rename"
-                              onClick={() => setRenamingId(null)}
-                              className="rounded p-1 text-muted-foreground hover:bg-muted"
-                            >
-                              <X size={14} aria-hidden="true" />
-                            </button>
-                          </span>
-                        ) : (
-                        <span className="inline-flex flex-wrap items-center gap-1.5">
-                          {item.name}
-                          {item.project_name && (
-                            <span className="text-xs font-normal text-muted-foreground">
-                              · {item.project_name}
-                            </span>
-                          )}
-                          {item.archived && (
-                            <span className="inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                              Archived
-                            </span>
-                          )}
-                          {item.siem && (
-                            <Tooltip delayDuration={150}>
-                              <TooltipTrigger asChild>
-                                <span className="inline-flex cursor-default items-center rounded-full border border-sky-200 bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-800">
-                                  Sentinel{item.siem.trigger === 'scheduled' ? ' · auto' : ''}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs text-xs">
-                                Rules pulled read-only from Microsoft Sentinel
-                                {item.siem.trigger === 'scheduled'
-                                  ? ' by the automatic schedule.'
-                                  : ' (manual pull).'}
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                        </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={cn(
-                            'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium',
-                            status.chip
-                          )}
+        {visible !== null && visible.length === 0 && items !== null && items.length > 0 && (
+          <p className="rounded-md bg-muted/40 p-6 text-center text-sm text-muted-foreground">
+            No assessments match your search or filters.
+          </p>
+        )}
+
+        {/* Compact card grid — one card per run, everything readable at a
+            glance, whole card clickable, scales 1 → 3 columns by screen. */}
+        {visible !== null && visible.length > 0 && (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {visible.map((item) => {
+              const status = STATUS_META[item.status] ?? STATUS_META.pending;
+              const brief = Object.entries(item.domains_brief ?? {}).filter(
+                ([, d]) => (d.applicable ?? 0) > 0
+              );
+              const covered = brief.reduce((s, [, d]) => s + (d.covered ?? 0), 0);
+              const applicable = brief.reduce((s, [, d]) => s + (d.applicable ?? 0), 0);
+              const delta = deltaFor(item);
+              const renaming = renamingId === item.assessment_id;
+              return (
+                <div
+                  key={item.assessment_id}
+                  role="link"
+                  tabIndex={0}
+                  aria-label={`Open assessment ${item.name}`}
+                  onClick={() => !renaming && router.push(`/mitre/${item.assessment_id}`)}
+                  onKeyDown={(e) => {
+                    if (!renaming && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault();
+                      router.push(`/mitre/${item.assessment_id}`);
+                    }
+                  }}
+                  className="group cursor-pointer rounded-md border p-3.5 transition-colors hover:border-primary/50 hover:bg-primary/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {/* Header: name + chips, actions right */}
+                  <div className="flex items-start justify-between gap-2">
+                    {renaming ? (
+                      <span
+                        className="flex min-w-0 flex-1 items-center gap-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          autoFocus
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && renameValue.trim()) {
+                              patchAssessment(item.assessment_id, { name: renameValue.trim() });
+                              setRenamingId(null);
+                            }
+                            if (e.key === 'Escape') setRenamingId(null);
+                          }}
+                          aria-label="New assessment name"
+                          className="h-7 w-full min-w-0 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        />
+                        <button
+                          type="button"
+                          aria-label="Save name"
+                          disabled={!renameValue.trim()}
+                          onClick={() => {
+                            patchAssessment(item.assessment_id, { name: renameValue.trim() });
+                            setRenamingId(null);
+                          }}
+                          className="rounded p-1 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
                         >
-                          {status.label}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {item.strict_pct !== null ? (
-                          <div className="flex items-center gap-2">
-                            <Tooltip delayDuration={150}>
-                              <TooltipTrigger asChild>
-                                <div className="flex cursor-default items-center gap-2">
-                                  <span className="w-12 text-sm font-semibold">{item.strict_pct}%</span>
-                                  <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
-                                    <div
-                                      className="h-full rounded-full bg-primary"
-                                      style={{ width: `${Math.min(100, item.strict_pct)}%` }}
-                                    />
-                                  </div>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs text-xs">
-                                Strict coverage: techniques with a qualifying detection, out of
-                                those applicable to your environment. Weighted (partial counts
-                                as half): {item.weighted_pct}%.
-                              </TooltipContent>
-                            </Tooltip>
-                            <TrendArrow item={item} items={items} />
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
+                          <Check size={14} aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Cancel rename"
+                          onClick={() => setRenamingId(null)}
+                          className="rounded p-1 text-muted-foreground hover:bg-muted"
+                        >
+                          <X size={14} aria-hidden="true" />
+                        </button>
+                      </span>
+                    ) : (
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold leading-snug">{item.name}</p>
+                        {(item.project_name || item.archived || item.siem) && (
+                          <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                            {item.project_name && <span className="truncate">{item.project_name}</span>}
+                            {item.siem && (
+                              <span className="rounded-full border border-sky-200 bg-sky-100 px-1.5 py-0.5 font-medium text-sky-800">
+                                Sentinel{item.siem.trigger === 'scheduled' ? ' · auto' : ''}
+                              </span>
+                            )}
+                            {item.archived && (
+                              <span className="rounded-full border px-1.5 py-0.5 font-medium">Archived</span>
+                            )}
+                          </p>
                         )}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        <DomainMiniBars item={item} />
-                      </TableCell>
-                      <TableCell className="hidden text-xs text-muted-foreground sm:table-cell">
-                        v{item.attack_version}
-                      </TableCell>
-                      <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
-                        {fmtDate(item.created_at)}
-                      </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <span className="flex items-center gap-0.5">
-                          <Tooltip delayDuration={150}>
-                            <TooltipTrigger asChild>
-                              <button
-                                type="button"
-                                aria-label={`Rename ${item.name}`}
-                                onClick={() => {
-                                  setRenamingId(item.assessment_id);
-                                  setRenameValue(item.name);
-                                }}
-                                className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                              >
-                                <Pencil size={13} aria-hidden="true" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent className="text-xs">Rename</TooltipContent>
-                          </Tooltip>
-                          <Tooltip delayDuration={150}>
-                            <TooltipTrigger asChild>
-                              <button
-                                type="button"
-                                aria-label={item.archived ? `Unarchive ${item.name}` : `Archive ${item.name}`}
-                                onClick={() =>
-                                  patchAssessment(item.assessment_id, { archived: !item.archived })
-                                }
-                                className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                              >
-                                {item.archived ? (
-                                  <ArchiveRestore size={13} aria-hidden="true" />
-                                ) : (
-                                  <Archive size={13} aria-hidden="true" />
-                                )}
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs text-xs">
-                              {item.archived
-                                ? 'Bring back to the default list.'
-                                : 'Hide from the default list — stays available in Compare. Nothing is deleted.'}
-                            </TooltipContent>
-                          </Tooltip>
+                      </div>
+                    )}
+                    {!renaming && (
+                      <span
+                        className="flex shrink-0 items-center gap-0.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Tooltip delayDuration={150}>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label={`Rename ${item.name}`}
+                              onClick={() => {
+                                setRenamingId(item.assessment_id);
+                                setRenameValue(item.name);
+                              }}
+                              className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              <Pencil size={13} aria-hidden="true" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent className="text-xs">Rename</TooltipContent>
+                        </Tooltip>
+                        <Tooltip delayDuration={150}>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label={item.archived ? `Unarchive ${item.name}` : `Archive ${item.name}`}
+                              onClick={() =>
+                                patchAssessment(item.assessment_id, { archived: !item.archived })
+                              }
+                              className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              {item.archived ? (
+                                <ArchiveRestore size={13} aria-hidden="true" />
+                              ) : (
+                                <Archive size={13} aria-hidden="true" />
+                              )}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs text-xs">
+                            {item.archived
+                              ? 'Bring back to the default list.'
+                              : 'Hide from the default list — stays available in Compare. Nothing is deleted.'}
+                          </TooltipContent>
+                        </Tooltip>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Body */}
+                  {item.status === 'completed' && item.strict_pct !== null ? (
+                    <>
+                      <div className="mt-2.5 flex items-baseline gap-2">
+                        <span className="text-2xl font-bold leading-none text-primary">
+                          {item.strict_pct}%
                         </span>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                        <span className="min-w-0 text-[11px] leading-tight text-muted-foreground">
+                          coverage — your rules detect {covered} of {applicable} applicable
+                          techniques
+                        </span>
+                        {delta !== null && delta !== 0 && (
+                          <span
+                            className={cn(
+                              'ml-auto shrink-0 text-[11px] font-semibold',
+                              delta > 0 ? 'text-emerald-600' : 'text-rose-600'
+                            )}
+                            title={`${delta > 0 ? '+' : ''}${delta} points vs your previous completed run`}
+                          >
+                            {delta > 0 ? '▲' : '▼'} {Math.abs(delta)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-2 space-y-1">
+                        {brief.map(([key, d]) => (
+                          <div key={key} className="flex items-center gap-2 text-[11px]">
+                            <span className="w-16 shrink-0 text-muted-foreground">
+                              {DOMAIN_LABELS[key] ?? key}
+                            </span>
+                            <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+                              <div
+                                className="h-full rounded-full bg-primary"
+                                style={{ width: `${Math.min(100, d.strict_pct ?? 0)}%` }}
+                              />
+                            </div>
+                            <span className="w-10 shrink-0 text-right text-muted-foreground">
+                              {d.strict_pct}%
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="mt-2.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      {item.status === 'running' && (
+                        <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+                      )}
+                      {STATUS_HELP[item.status] ?? ''}
+                    </p>
+                  )}
+
+                  {/* Footer */}
+                  <div className="mt-2.5 flex items-center gap-2 border-t pt-2 text-[11px] text-muted-foreground">
+                    <span
+                      className={cn(
+                        'inline-flex items-center rounded-full border px-1.5 py-0.5 font-medium',
+                        status.chip
+                      )}
+                    >
+                      {status.label}
+                    </span>
+                    <span>ATT&CK v{item.attack_version}</span>
+                    <span className="ml-auto">{fmtDate(item.created_at)}</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </TooltipProvider>
