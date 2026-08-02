@@ -203,6 +203,15 @@ export function TechniqueDrawer({
                       Applies to: {explain.where.platforms.join(', ')}
                     </p>
                   )}
+                  {/* Phase 14g: why this technique is in scope for YOU */}
+                  {(explain.where.in_scope_because?.length ?? 0) > 0 && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      In scope because of your inventory:{' '}
+                      {explain.where.in_scope_because!
+                        .map((e) => `'${e.entry}'`)
+                        .join(', ')}
+                    </p>
+                  )}
                 </div>
 
                 <div className="rounded-md bg-muted/60 p-3 text-sm">
@@ -238,6 +247,16 @@ export function TechniqueDrawer({
                       </span>{' '}
                       ({explain.good.closest_rule.technique_id}{' '}
                       {explain.good.closest_rule.technique_name}).
+                    </p>
+                  )}
+                  {/* Phase 14g: expected vs actual telemetry */}
+                  {(explain.where.expected_telemetry?.length ?? 0) > 0 && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Telemetry ATT&amp;CK expects for this technique:{' '}
+                      {explain.where.expected_telemetry!.join(', ')}
+                      {explain.where.via
+                        ? ` — your '${explain.where.via}' can provide it.`
+                        : ' — none of your onboarded log sources matches it yet.'}
                     </p>
                   )}
                 </div>

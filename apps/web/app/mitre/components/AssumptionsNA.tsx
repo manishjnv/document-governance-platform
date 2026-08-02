@@ -85,6 +85,17 @@ export function AssumptionsNA({
     ([key]) => (summary.counts?.[key] ?? 0) > 0
   );
 
+  // Phase 14g intake effect: which gaps your industry/actors prioritized.
+  const threatIds = useMemo(
+    () =>
+      new Set(
+        summary.gaps
+          .filter((g) => (g.threat_relevance?.length ?? 0) > 0)
+          .map((g) => g.technique_id)
+      ),
+    [summary.gaps]
+  );
+
   return (
     <div className="space-y-6">
       <section>
@@ -118,6 +129,24 @@ export function AssumptionsNA({
                 </button>
               );
             })}
+            {threatIds.size > 0 && (
+              <button
+                type="button"
+                onClick={() =>
+                  onDrill(
+                    `${threatIds.size} gaps prioritized by your threat profile`,
+                    techniques.filter((t) => threatIds.has(t.technique_id)),
+                    {
+                      subtitle:
+                        'Your declared industry and threat actors lifted these within their priority tier — ordering only, never the coverage score.',
+                    }
+                  )
+                }
+                className="rounded-full border border-violet-200 bg-violet-100 px-2 py-0.5 font-medium text-violet-800 transition-colors hover:bg-violet-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {threatIds.size} threat-profile matches
+              </button>
+            )}
           </div>
         )}
         <ul className="space-y-1.5">

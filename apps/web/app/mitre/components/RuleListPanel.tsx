@@ -1,7 +1,7 @@
 'use client';
 
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
-import { MAPPING_STATUS_PLAIN, UseCaseItem } from '../lib';
+import { MAPPING_STATUS_PLAIN, SOURCE_META, UseCaseItem } from '../lib';
 
 /** Phase 14b: rule-centric drill-down — behind the parse-preview tiles and
  * the rules-by-mapping-status counts. Technique chips click through to the
@@ -45,26 +45,34 @@ export function RuleListPanel({
                 <span className="text-muted-foreground/70">{uc.row_ref}</span>
               </div>
               {uc.mappings.length > 0 && (
-                <div className="mt-1.5 flex flex-wrap gap-1">
-                  {uc.mappings.map((m) =>
-                    onSelectTechnique ? (
-                      <button
-                        key={m.technique_id}
-                        type="button"
-                        onClick={() => onSelectTechnique(m.technique_id)}
-                        className="rounded-full border bg-muted/40 px-2 py-0.5 text-[11px] font-medium transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        {m.technique_id}
-                      </button>
-                    ) : (
-                      <span
-                        key={m.technique_id}
-                        className="rounded-full border bg-muted/40 px-2 py-0.5 text-[11px] font-medium"
-                      >
-                        {m.technique_id}
+                <div className="mt-1.5 space-y-1">
+                  {/* Phase 14g: the mapping journey per technique — source in
+                      plain words, confidence, and the stored rationale
+                      verbatim (the evidence for the mapping). */}
+                  {uc.mappings.map((m) => (
+                    <div key={m.technique_id} className="flex flex-wrap items-baseline gap-x-1.5 text-[11px]">
+                      {onSelectTechnique ? (
+                        <button
+                          type="button"
+                          onClick={() => onSelectTechnique(m.technique_id)}
+                          className="rounded-full border bg-muted/40 px-2 py-0.5 font-medium transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {m.technique_id}
+                        </button>
+                      ) : (
+                        <span className="rounded-full border bg-muted/40 px-2 py-0.5 font-medium">
+                          {m.technique_id}
+                        </span>
+                      )}
+                      <span className="text-muted-foreground">
+                        {(SOURCE_META[m.source] ?? SOURCE_META.ai).label}
+                        {typeof m.confidence === 'number' && m.confidence < 1
+                          ? ` at ${Math.round(m.confidence * 100)}% confidence`
+                          : ''}
+                        {m.rationale ? ` — ${m.rationale}` : ''}
                       </span>
-                    )
-                  )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

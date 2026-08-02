@@ -931,6 +931,20 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
         [110],
     )
 
+    # Phase 14g: per-entry environment evidence trail (present for
+    # assessments created after the parser gained interpretations).
+    interpretations = (params.get("environment_lists") or {}).get("interpretations") or []
+    if interpretations:
+        sheet(
+            "How We Read Your Files",
+            ["Your entry", "Sheet", "How it was read"],
+            [
+                [i.get("entry"), i.get("sheet"), i.get("interpretation")]
+                for i in interpretations
+            ],
+            [40, 18, 80],
+        )
+
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()

@@ -1478,6 +1478,25 @@ async def explain_technique(
             tech, env_lists.get("log_sources") or [], env_lists.get("tooling") or []
         )
 
+    # Phase 14g: evidence for "why is this technique in scope for you" —
+    # the environment entries whose parsed interpretation put its domain or
+    # platforms in play (empty for pre-14g assessments).
+    env_lists = params.get("environment_lists") or {}
+    interpretations = env_lists.get("interpretations") or []
+    platforms = tech.get("platforms") or []
+    domain_markers = {
+        "ics": "enabled the ICS/OT matrix",
+        "mobile": "enabled the Mobile matrix",
+    }
+    in_scope_because = [
+        {"entry": i.get("entry"), "interpretation": i.get("interpretation")}
+        for i in interpretations
+        if (
+            any(f"counted as platform {p}" in (i.get("interpretation") or "") for p in platforms)
+            or domain_markers.get(result.get("domain"), "\x00") in (i.get("interpretation") or "")
+        )
+    ][:5]
+
     described = plain_language.describe_technique(technique_id, index)
     tactic_by_id = {t["id"]: t for t in index.tactics(result.get("domain"))}
     tactic_lines = [
@@ -1506,6 +1525,9 @@ async def explain_technique(
             "via": via,
             "feasibility": feasibility,
             "feasibility_hint": hint,
+            # Phase 14g evidence trail
+            "expected_telemetry": tech.get("data_sources") or [],
+            "in_scope_because": in_scope_because,
         },
         "why": why,
         "good": {

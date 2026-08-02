@@ -189,6 +189,9 @@ export interface TechniqueExplain {
     via: string | null;
     feasibility: string | null;
     feasibility_hint: string | null;
+    /** Phase 14g evidence trail (absent on pre-14g assessments). */
+    expected_telemetry?: string[];
+    in_scope_because?: { entry: string; interpretation: string }[];
   };
   why: string;
   good: {
