@@ -161,6 +161,16 @@ export default function NewMitreAssessmentPage() {
     { name: string; attack_id: string | null; note: string | null }[]
   >([]);
   const [threatActors, setThreatActors] = useState<string[]>([]);
+  // Phase 13a: rule source — upload a file, or pull from Microsoft Sentinel
+  const [source, setSource] = useState<'upload' | 'sentinel'>('upload');
+  const [siem, setSiem] = useState({
+    tenant_id: '',
+    client_id: '',
+    subscription_id: '',
+    resource_group: '',
+    workspace: '',
+  });
+  const [siemSecret, setSiemSecret] = useState('');
 
   useEffect(() => {
     if (!localStorage.getItem('access_token')) {
@@ -183,51 +193,80 @@ export default function NewMitreAssessmentPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!useCaseFile) {
+    if (source === 'upload' && !useCaseFile) {
       setError('Please add your detection-rule export first');
       return;
+    }
+    if (source === 'sentinel') {
+      const missing = Object.entries(siem).filter(([, v]) => !v.trim());
+      if (missing.length > 0 || !siemSecret.trim()) {
+        setError('Please fill in every Sentinel connection field, including the client secret');
+        return;
+      }
     }
     const cleanExclusions = exclusions.filter((x) => x.target.trim() || x.reason.trim());
     if (cleanExclusions.some((x) => !x.target.trim() || !x.reason.trim())) {
       setError('Every scope exclusion needs both a target and a reason');
       return;
     }
+    const intake = {
+      industry: industry || null,
+      region: region || null,
+      threat_actors: threatActors,
+      count_disabled_as_coverage: countDisabled,
+      exclusions: cleanExclusions.map((x) => ({
+        target: x.target.trim(),
+        reason: x.reason.trim(),
+      })),
+    };
 
     setSubmitting(true);
     setError('');
     try {
       const token = localStorage.getItem('access_token');
-      const formData = new FormData();
-      formData.append('use_cases', useCaseFile);
-      if (envFile) formData.append('environment', envFile);
-      if (name.trim()) formData.append('name', name.trim());
-      formData.append(
-        'intake',
-        JSON.stringify({
-          industry: industry || null,
-          region: region || null,
-          threat_actors: threatActors,
-          count_disabled_as_coverage: countDisabled,
-          exclusions: cleanExclusions.map((x) => ({
-            target: x.target.trim(),
-            reason: x.reason.trim(),
-          })),
-        })
-      );
-      const res = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data',
+      let res;
+      if (source === 'sentinel') {
+        // Phase 13a: token-at-trigger pull — the secret rides this one
+        // request and is never stored anywhere.
+        res = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments/from-siem`,
+          {
+            platform: 'sentinel',
+            config: {
+              tenant_id: siem.tenant_id.trim(),
+              client_id: siem.client_id.trim(),
+              subscription_id: siem.subscription_id.trim(),
+              resource_group: siem.resource_group.trim(),
+              workspace: siem.workspace.trim(),
+            },
+            secret: siemSecret,
+            ...(name.trim() ? { name: name.trim() } : {}),
+            intake,
           },
-        }
-      );
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setSiemSecret('');
+      } else {
+        const formData = new FormData();
+        formData.append('use_cases', useCaseFile as File);
+        if (envFile) formData.append('environment', envFile);
+        if (name.trim()) formData.append('name', name.trim());
+        formData.append('intake', JSON.stringify(intake));
+        res = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'multipart/form-data',
+            },
+          }
+        );
+      }
       setPreview(res.data);
     } catch (err: any) {
       if (err.response?.status === 401) router.push('/login');
-      else setError(err.response?.data?.detail || 'Upload failed');
+      else setError(err.response?.data?.detail || (source === 'sentinel' ? 'Sentinel pull failed' : 'Upload failed'));
     } finally {
       setSubmitting(false);
     }
@@ -312,7 +351,89 @@ export default function NewMitreAssessmentPage() {
 
         {!preview && (
           <form onSubmit={handleCreate} className="space-y-4">
-            <Card>
+            <div className="flex gap-1 rounded-md border p-1" role="tablist" aria-label="Rule source">
+              {(
+                [
+                  ['upload', 'Upload a file'],
+                  ['sentinel', 'Pull from Microsoft Sentinel'],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={source === key}
+                  onClick={() => setSource(key)}
+                  className={
+                    source === key
+                      ? 'flex-1 rounded bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary'
+                      : 'flex-1 rounded px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground'
+                  }
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {source === 'sentinel' && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Microsoft Sentinel connection</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Read-only pull of your analytics rules via a service principal with the{' '}
+                    <span className="font-medium">Microsoft Sentinel Reader</span> role.
+                    The client secret is used once for this pull and is{' '}
+                    <span className="font-medium">never stored</span>.
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {(
+                      [
+                        ['tenant_id', 'Tenant ID (GUID)'],
+                        ['client_id', 'Client ID (GUID)'],
+                        ['subscription_id', 'Subscription ID (GUID)'],
+                        ['resource_group', 'Resource group'],
+                        ['workspace', 'Log Analytics workspace'],
+                      ] as const
+                    ).map(([field, label]) => (
+                      <div key={field}>
+                        <label htmlFor={`siem-${field}`} className="mb-1.5 block text-sm font-medium">
+                          {label}
+                        </label>
+                        <input
+                          id={`siem-${field}`}
+                          type="text"
+                          value={siem[field]}
+                          onChange={(e) => setSiem((prev) => ({ ...prev, [field]: e.target.value }))}
+                          autoComplete="off"
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        />
+                      </div>
+                    ))}
+                    <div>
+                      <label htmlFor="siem-secret" className="mb-1.5 block text-sm font-medium">
+                        Client secret <span className="font-normal text-muted-foreground">(never stored)</span>
+                      </label>
+                      <input
+                        id="siem-secret"
+                        type="password"
+                        value={siemSecret}
+                        onChange={(e) => setSiemSecret(e.target.value)}
+                        autoComplete="off"
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    This path doesn&apos;t take an environment workbook yet, so the whole
+                    ATT&amp;CK matrix set is assessed — the score reads lower than reality.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            <Card className={source === 'sentinel' ? 'hidden' : undefined}>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Your files</CardTitle>
               </CardHeader>

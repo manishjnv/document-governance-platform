@@ -24,6 +24,9 @@ from app.core.cache import invalidate_cache
 from app.db.session import get_db
 from app.dependencies import get_current_user, require_role
 from app.mitre import attack_data, ingest, navigator, service
+from app.mitre.connectors import base as connectors
+from app.mitre.connectors.base import ConnectorConfigError, ConnectorError
+from app.mitre.connectors.egress import EgressError
 from app.mitre import report as mitre_report
 from app.models.mitre_assessment import MitreAssessment
 from app.models.mitre_file import MitreFile
@@ -243,8 +246,6 @@ async def create_assessment(
         except ingest.IngestError as exc:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.detail)
 
-    assessment_id = uuid4()
-    storage = await get_storage_instance()
     files_to_store = [
         (
             "use_cases",
@@ -272,9 +273,48 @@ async def create_assessment(
         }
     environment_dict["exclusions"] = intake_data.get("exclusions", [])
 
+    return await _persist_new_assessment(
+        db,
+        current_user,
+        name=name,
+        files_to_store=files_to_store,
+        parsed=parsed,
+        intake_data=intake_data,
+        environment_dict=environment_dict,
+        env_parsed=env_parsed,
+        extraction_text=extraction_text,
+        warnings=warnings,
+        parse_assumptions=parse_assumptions,
+    )
+
+
+async def _persist_new_assessment(
+    db,
+    current_user,
+    *,
+    name,
+    files_to_store,
+    parsed,
+    intake_data,
+    environment_dict,
+    env_parsed,
+    extraction_text,
+    warnings,
+    parse_assumptions,
+    extra_params: dict = None,
+):
+    """Shared tail of assessment creation (upload AND from-siem): store the
+    source file(s), persist the assessment + validated use-case rows, audit,
+    and return the parse-preview response. Phase 13a extracted this so the
+    SIEM pull reuses tag validation/preview/caps byte-for-byte."""
+    org_id = UUID(str(current_user.org_id))
+    assessment_id = uuid4()
+    storage = await get_storage_instance()
+
     use_case_models, tagged, unmapped, invalid, row_notes = _build_use_case_rows(
         parsed["rows"]
     )
+    parse_assumptions = list(parse_assumptions)
     parse_assumptions.extend(row_notes)
 
     file_rows = []
@@ -310,7 +350,8 @@ async def create_assessment(
     assessment = MitreAssessment(
         assessment_id=assessment_id,
         org_id=org_id,
-        name=(name or "").strip() or (use_cases.filename or "MITRE assessment")[:255],
+        name=(name or "").strip()
+        or (files_to_store[0][1] or "MITRE assessment")[:255],
         status="pending",
         attack_version=attack_data.DEFAULT.version,
         params={
@@ -327,6 +368,7 @@ async def create_assessment(
             "parse_assumptions": parse_assumptions,
             "warnings": warnings,
             **({"extraction_text": extraction_text} if extraction_text else {}),
+            **(extra_params or {}),
         },
         created_by=UUID(str(current_user.user_id)),
     )
@@ -387,6 +429,124 @@ async def create_assessment(
         "warnings": warnings,
         "assumptions": parse_assumptions,
     }
+
+
+_MAX_SECRET_CHARS = 4096
+
+
+@router.post(
+    "/assessments/from-siem",
+    status_code=status.HTTP_201_CREATED,
+    summary="Create assessment by pulling rules from a SIEM (Phase 13a)",
+)
+async def create_assessment_from_siem(
+    payload: dict = Body(...),
+    current_user: TokenData = Depends(require_role("admin", "reviewer")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Token-at-trigger pull (plan §2.1/§2.2): body =
+    {"platform": "sentinel", "config": {...}, "secret": "...", "name"?,
+    "intake"?}. The secret is used once for this pull and NEVER persisted,
+    logged, or echoed. The connector emits a canonical template CSV that
+    runs through the EXACT upload create path (tag validation, preview,
+    caps, stored artifact); provenance lands in params.siem."""
+    intake_raw = payload.get("intake")
+    if intake_raw is not None and not isinstance(intake_raw, dict):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="intake must be a JSON object",
+        )
+    intake_data = _parse_intake(json.dumps(intake_raw) if intake_raw else None)
+
+    secret = payload.pop("secret", None)  # no reference left on the payload dict
+    if not isinstance(secret, str) or not secret.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="secret is required (it is used once and never stored)",
+        )
+    if len(secret) > _MAX_SECRET_CHARS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="secret is implausibly long",
+        )
+
+    platform = str(payload.get("platform") or "")
+    try:
+        # Blocking network pull — off the event loop (house pattern).
+        result = await run_in_threadpool(
+            connectors.pull_rules, platform, payload.get("config"), secret
+        )
+    except ConnectorConfigError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        )
+    except (ConnectorError, EgressError) as exc:
+        # Actionable, secret-free message from the connector layer.
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+    finally:
+        del secret  # best-effort: no lingering reference in this frame
+
+    try:
+        parsed = await run_in_threadpool(
+            ingest.parse_use_case_file, result["csv_bytes"], "csv"
+        )
+    except ingest.IngestError as exc:  # defensive — our own CSV should parse
+        logger.error(f"SIEM pull CSV failed to parse: {exc.detail}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="the pulled rules could not be parsed — report this",
+        )
+
+    environment_dict = {
+        "platforms": [],
+        "has_ics_assets": False,
+        "has_managed_mobile": False,
+        "inventory_provided": False,
+        "exclusions": intake_data.get("exclusions", []),
+    }
+    pulled_at = datetime.now(timezone.utc)
+    default_name = f"Sentinel pull {pulled_at.strftime('%Y-%m-%d %H:%M')}"
+    config = payload.get("config") or {}
+    response = await _persist_new_assessment(
+        db,
+        current_user,
+        name=str(payload.get("name") or "") or default_name,
+        files_to_store=[
+            (
+                "use_cases",
+                f"sentinel-pull-{pulled_at.strftime('%Y%m%dT%H%M%SZ')}.csv",
+                "csv",
+                result["csv_bytes"],
+                parsed["row_count"],
+            )
+        ],
+        parsed=parsed,
+        intake_data=intake_data,
+        environment_dict=environment_dict,
+        env_parsed=None,
+        extraction_text=None,
+        warnings=list(parsed["warnings"]) + result["warnings"],
+        parse_assumptions=[
+            f"rules were pulled read-only from Microsoft Sentinel "
+            f"({result['rule_count']} rules) rather than uploaded"
+        ],
+        extra_params={
+            "siem": {
+                "platform": "sentinel",
+                "trigger": "manual",
+                "pulled_at": pulled_at.isoformat(),
+                "rule_count": result["rule_count"],
+                # non-secret workspace reference only — never the secret
+                "workspace_ref": {
+                    k: str(config.get(k) or "")
+                    for k in ("subscription_id", "resource_group", "workspace")
+                },
+                "stats": result["stats"],
+            }
+        },
+    )
+    response["siem"] = {"platform": "sentinel", "rule_count": result["rule_count"]}
+    return response
 
 
 @router.post("/assessments/{assessment_id}/run", status_code=status.HTTP_202_ACCEPTED, summary="Run assessment")
