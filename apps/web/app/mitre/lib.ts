@@ -22,6 +22,10 @@ export interface AssessmentListItem {
   domains_brief?: Record<string, DomainBrief>;
   /** Phase 13d: present when the rules were pulled from a SIEM. */
   siem?: { platform: string | null; trigger: string | null } | null;
+  /** Phase 14f: soft archive flag (hidden from the default list). */
+  archived?: boolean;
+  /** Phase 14d/14f: project name from the intake, shown on list rows. */
+  project_name?: string | null;
 }
 
 /** Phase 13d: a saved SIEM connection + pull health (admin view). */

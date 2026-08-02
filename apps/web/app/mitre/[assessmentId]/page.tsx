@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { useParams, useRouter } from 'next/navigation';
-import { FileDown, FileJson, FileSpreadsheet, Loader2, Play, Target } from 'lucide-react';
+import { FileDown, FileJson, FileSpreadsheet, History, Loader2, Play, Target } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -56,6 +56,9 @@ export default function MitreResultsPage() {
     title: string;
     rules: UseCaseItem[];
   } | null>(null);
+  // Phase 14f: past-run switcher
+  const [pastRuns, setPastRuns] = useState<AssessmentListItem[] | null>(null);
+  const [runsOpen, setRunsOpen] = useState(false);
   const [runError, setRunError] = useState('');
   const [downloadError, setDownloadError] = useState('');
   const [compareOptions, setCompareOptions] = useState<AssessmentListItem[] | null>(null);
@@ -180,12 +183,32 @@ export default function MitreResultsPage() {
     [assessmentId, load, loadUseCases]
   );
 
+  // Phase 14f: past-run switcher — completed runs (archived included, so
+  // history stays reachable) loaded once the assessment completes.
+  useEffect(() => {
+    if (assessment?.status !== 'completed' || pastRuns !== null) return;
+    axios
+      .get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments`, {
+        headers: authHeaders(),
+        params: { include_archived: true },
+      })
+      .then((res) =>
+        setPastRuns(
+          (res.data as AssessmentListItem[]).filter((a) => a.status === 'completed')
+        )
+      )
+      .catch(() => setPastRuns([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assessment?.status]);
+
   // Lazily load the compare options the first time the Compare tab opens.
+  // Archived runs stay selectable here (Phase 14f acceptance).
   useEffect(() => {
     if (tab !== 'compare' || compareOptions !== null) return;
     axios
       .get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments`, {
         headers: authHeaders(),
+        params: { include_archived: true },
       })
       .then((res) =>
         setCompareOptions(
@@ -352,6 +375,82 @@ export default function MitreResultsPage() {
                 </span>
               )}
               <div className="ml-auto flex items-center gap-1.5">
+                {/* Phase 14f: jump to any past run without going back to the list */}
+                {completed && pastRuns !== null && pastRuns.length > 1 && (
+                  <div className="relative">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      aria-expanded={runsOpen}
+                      aria-haspopup="listbox"
+                      onClick={() => setRunsOpen((v) => !v)}
+                    >
+                      <History size={14} className="mr-1" aria-hidden="true" />
+                      Past runs ({pastRuns.length})
+                    </Button>
+                    {runsOpen && (
+                      <div
+                        role="listbox"
+                        aria-label="Past assessment runs"
+                        className="absolute right-0 z-50 mt-1 max-h-80 w-80 overflow-y-auto rounded-md border bg-background p-1 shadow-md"
+                      >
+                        {pastRuns.map((run) => {
+                          const isCurrent = run.assessment_id === assessmentId;
+                          const delta =
+                            run.strict_pct !== null && summary
+                              ? Math.round((run.strict_pct - summary.overall.strict_pct) * 10) / 10
+                              : null;
+                          return (
+                            <div
+                              key={run.assessment_id}
+                              className={cn(
+                                'flex items-center gap-2 rounded px-2 py-1.5 text-xs',
+                                isCurrent ? 'bg-muted/60' : 'hover:bg-primary/5'
+                              )}
+                            >
+                              <button
+                                type="button"
+                                disabled={isCurrent}
+                                onClick={() => {
+                                  setRunsOpen(false);
+                                  router.push(`/mitre/${run.assessment_id}`);
+                                }}
+                                className="min-w-0 flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              >
+                                <span className="block truncate font-medium">
+                                  {run.name}
+                                  {run.archived ? ' (archived)' : ''}
+                                  {isCurrent ? ' — this run' : ''}
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {fmtDate(run.completed_at)} · {run.strict_pct}%
+                                  {!isCurrent && delta !== null && delta !== 0 && (
+                                    <span className={delta > 0 ? 'text-emerald-600' : 'text-rose-600'}>
+                                      {' '}({delta > 0 ? '+' : ''}{delta} vs this)
+                                    </span>
+                                  )}
+                                </span>
+                              </button>
+                              {!isCurrent && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setRunsOpen(false);
+                                    setTab('compare');
+                                    handleCompareSelect(run.assessment_id);
+                                  }}
+                                  className="shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                >
+                                  Compare
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <Tooltip delayDuration={150}>
                   <TooltipTrigger asChild>
                     <span>

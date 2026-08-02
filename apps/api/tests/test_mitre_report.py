@@ -346,6 +346,39 @@ async def test_xlsx_endpoint_streams_with_content_type(client, db_session):
 
 
 @pytest.mark.asyncio
+async def test_rename_archive_and_list_filter(client, db_session):
+    """Phase 14f: PATCH rename + soft-archive flag; archived rows leave the
+    default list but return with include_archived=true. No delete exists."""
+    org, user, headers = await _make_user(db_session, role="admin")
+    a = await _seed(db_session, org, user)
+    aid = str(a.assessment_id)
+
+    res = await client.patch(
+        f"/api/v1/mitre/assessments/{aid}", json={"name": "Renamed run"}, headers=headers
+    )
+    assert res.status_code == 200 and res.json()["name"] == "Renamed run"
+
+    res = await client.patch(
+        f"/api/v1/mitre/assessments/{aid}", json={"archived": True}, headers=headers
+    )
+    assert res.status_code == 200 and res.json()["archived"] is True
+
+    res = await client.get("/api/v1/mitre/assessments", headers=headers)
+    assert all(i["assessment_id"] != aid for i in res.json())
+
+    res = await client.get(
+        "/api/v1/mitre/assessments", params={"include_archived": True}, headers=headers
+    )
+    row = next(i for i in res.json() if i["assessment_id"] == aid)
+    assert row["archived"] is True and row["name"] == "Renamed run"
+
+    res = await client.patch(
+        f"/api/v1/mitre/assessments/{aid}", json={}, headers=headers
+    )
+    assert res.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_compare_endpoint_and_authz(client, db_session):
     org, user, headers = await _make_user(db_session)
     baseline = await _seed(

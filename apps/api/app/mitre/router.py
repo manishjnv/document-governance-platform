@@ -1142,15 +1142,23 @@ async def remap_assessment_columns(
 async def list_assessments(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
+    include_archived: bool = Query(False),
     current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    conditions = (
+        (MitreAssessment.org_id == UUID(str(current_user.org_id)))
+        & (MitreAssessment.deleted_at.is_(None))
+    )
+    if not include_archived:
+        # Phase 14f soft archive flag rides the params JSONB (no migration).
+        conditions = conditions & (
+            MitreAssessment.params["archived"].astext.is_(None)
+            | (MitreAssessment.params["archived"].astext != "true")
+        )
     result = await db.execute(
         select(MitreAssessment)
-        .where(
-            (MitreAssessment.org_id == UUID(str(current_user.org_id)))
-            & (MitreAssessment.deleted_at.is_(None))
-        )
+        .where(conditions)
         .order_by(MitreAssessment.created_at.desc())
         .offset(skip)
         .limit(limit)
@@ -1165,6 +1173,9 @@ async def list_assessments(
                 "assessment_id": str(a.assessment_id),
                 "name": a.name,
                 "status": a.status,
+                # Phase 14f: archive flag + 14d project name on list rows
+                "archived": bool((a.params or {}).get("archived")),
+                "project_name": ((a.params or {}).get("intake") or {}).get("project_name"),
                 # Phase 13d provenance chip: platform + trigger only
                 "siem": (
                     {"platform": siem.get("platform"), "trigger": siem.get("trigger")}
@@ -1189,6 +1200,60 @@ async def list_assessments(
             }
         )
     return items
+
+
+@router.patch("/assessments/{assessment_id}", summary="Rename / archive an assessment (Phase 14f)")
+async def update_assessment(
+    assessment_id: UUID,
+    payload: dict = Body(...),
+    current_user: TokenData = Depends(require_role("admin", "reviewer")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Housekeeping only: {"name"?: str, "archived"?: bool}. Archive is a
+    soft JSONB flag — hidden from the default list, still selectable in
+    Compare; there is deliberately no delete here."""
+    org_id = UUID(str(current_user.org_id))
+    assessment = await _get_assessment(db, assessment_id, org_id)
+
+    if "name" in payload:
+        new_name = str(payload.get("name") or "").strip()
+        if not new_name or len(new_name) > 255:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="name must be 1-255 characters",
+            )
+        assessment.name = new_name
+    if "archived" in payload:
+        if not isinstance(payload["archived"], bool):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="archived must be true/false",
+            )
+        params = dict(assessment.params or {})
+        params["archived"] = payload["archived"]
+        assessment.params = params
+    if "name" not in payload and "archived" not in payload:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="nothing to update — send name and/or archived",
+        )
+    assessment.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    await log_action(
+        db,
+        org_id=org_id,
+        user_id=UUID(str(current_user.user_id)),
+        action="mitre.assessment_updated",
+        resource_type="mitre_assessment",
+        resource_id=assessment_id,
+    )
+    await db.commit()
+    await invalidate_cache(f"cache:*:{org_id}:*")
+    return {
+        "assessment_id": str(assessment.assessment_id),
+        "name": assessment.name,
+        "archived": bool((assessment.params or {}).get("archived")),
+    }
 
 
 @router.get("/assessments/{assessment_id}", summary="Get assessment (status + results)")
