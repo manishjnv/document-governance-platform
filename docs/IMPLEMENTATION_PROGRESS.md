@@ -869,6 +869,17 @@ verified individually and together against the full backend suite (no
 regressions, no computed number changed anywhere) and `tsc --noEmit`;
 no DB migration in any of the four. Suite **802 passed / 7 skipped**
 after unit 3 (+1 new XLSX-polish test).
+**Post-14h (2026-08-02/03):** deploy exposed a missing `Jinja2` pin in
+`requirements.txt` (prod crash-loop, hotfixed + redeployed as
+`f7b5263` — dev-installed-but-undeclared deps are invisible locally,
+fatal in the image). **Independently verified 2026-08-03** by the
+orchestrating session: suite **803 passed / 7 skipped** (new baseline,
+CLAUDE.md updated), `tsc` clean, prod at `f7b5263` with all 5
+containers healthy and `/health` + login 200; no migrations, no
+scoring-code changes, no forbidden libs; a stray uncommitted
+`.gitignore` `*docs/` line (would have ignored the whole docs/ tree)
+was caught and reverted. Handoff:
+`docs/phases/summaries/SESSION_HANDOFF_2026_08_03_MITRE_KIT_P14_VERIFY.md`.
 
 ---
 
