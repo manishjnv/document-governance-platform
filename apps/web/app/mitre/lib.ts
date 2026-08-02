@@ -401,6 +401,18 @@ export const DOMAIN_LABELS: Record<string, string> = {
   mobile: 'Mobile',
 };
 
+/** Canonical display order. The stored summary follows the ATT&CK dataset's
+ * dict order (ICS, Mobile, Enterprise), which buries Enterprise — by far the
+ * largest and most relevant matrix — last. Always display through this. */
+export const DOMAIN_ORDER = ['enterprise', 'ics', 'mobile'];
+
+export function orderedDomains<T>(domains: Record<string, T>): [string, T][] {
+  return Object.entries(domains).sort(
+    (a, b) =>
+      (DOMAIN_ORDER.indexOf(a[0]) + 1 || 99) - (DOMAIN_ORDER.indexOf(b[0]) + 1 || 99)
+  );
+}
+
 export function fmtDate(iso: string | null): string {
   if (!iso) return '—';
   return new Date(iso).toLocaleString(undefined, {

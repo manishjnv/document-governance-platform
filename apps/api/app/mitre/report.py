@@ -36,6 +36,16 @@ STATE_COLORS = {
 }
 FEASIBILITY_LABELS = {"short": "Short term (0–3 mo)", "mid": "Mid term (3–9 mo)", "long": "Long term (9–18 mo)"}
 DOMAIN_LABELS = {"enterprise": "Enterprise", "ics": "ICS / OT", "mobile": "Mobile"}
+# Canonical display order: the stored summary follows the ATT&CK dataset's
+# dict order (ICS, Mobile, Enterprise), which buries Enterprise last.
+_DOMAIN_ORDER = ("enterprise", "ics", "mobile")
+
+
+def _ordered_domains(domains: dict):
+    return sorted(
+        (domains or {}).items(),
+        key=lambda kv: _DOMAIN_ORDER.index(kv[0]) if kv[0] in _DOMAIN_ORDER else 99,
+    )
 
 # PDF appendix cap — a 5,000-row use-case appendix belongs in the XLSX, not
 # a PDF. The cap is stated in the report when it bites.
@@ -202,13 +212,13 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
         f"{_esc(DOMAIN_LABELS.get(key, key))}<br>"
         f"<span class='muted'>{_esc(d.get('covered'))} of {_esc(d.get('applicable'))} techniques covered</span>"
         "</div>"
-        for key, d in domains.items()
+        for key, d in _ordered_domains(domains)
         if d.get("applicable", 0) > 0
     )
     gated_notes = "".join(
         f"<p class='muted'>{_esc(DOMAIN_LABELS.get(key, key))}: not assessed — "
         f"{_esc(next((n['reason'] for n in not_applicable if n.get('domain') == key), ''))}</p>"
-        for key, d in domains.items()
+        for key, d in _ordered_domains(domains)
         if d.get("applicable", 0) == 0
     )
 
@@ -273,7 +283,7 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
 
     # --- detailed: stacked tactic bars + one-liners ----------------------
     tactic_sections = ""
-    for key, d in domains.items():
+    for key, d in _ordered_domains(domains):
         if d.get("applicable", 0) == 0:
             continue
         rows = ""
@@ -298,7 +308,7 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
 
     # --- detailed: mini parent-level heatmap grids -----------------------
     heatmap_sections = ""
-    for key, d in domains.items():
+    for key, d in _ordered_domains(domains):
         if d.get("applicable", 0) == 0:
             continue
         cells = "".join(
@@ -914,7 +924,7 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full") -> bytes
     sum_row(["Applicable techniques", overall.get("applicable"),
              "The denominator: techniques that apply to your environment."],
             center=(2,))
-    for k, d in summary.get("domains", {}).items():
+    for k, d in _ordered_domains(summary.get("domains")):
         r = sum_row([f"{DOMAIN_LABELS.get(k, k)} coverage %", d.get("strict_pct"),
                      f"Coverage within the {DOMAIN_LABELS.get(k, k)} matrix only."],
                     center=(2,))
@@ -963,7 +973,7 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full") -> bytes
             [DOMAIN_LABELS.get(dk, dk), t.get("name"), t.get("covered"), t.get("partial"),
              t.get("not_covered"), t.get("not_applicable"), t.get("applicable"),
              t.get("strict_pct"), t.get("weighted_pct")]
-            for dk, d in summary.get("domains", {}).items()
+            for dk, d in _ordered_domains(summary.get("domains"))
             for t in d.get("tactics", [])
         ],
         [12, 26, 10, 10, 12, 8, 12, 12, 12],

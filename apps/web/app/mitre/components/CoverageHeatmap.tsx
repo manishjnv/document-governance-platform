@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { DOMAIN_LABELS, STATE_META, STATE_PLAIN, Summary, TechniqueResult } from '../lib';
+import { DOMAIN_LABELS, STATE_META, STATE_PLAIN, Summary, TechniqueResult, orderedDomains } from '../lib';
 import type { DrillHandler } from './ExecutiveBand';
 
 /** Navigator-style tactic-column heatmap, plain CSS grid — no charting
@@ -86,7 +86,7 @@ export function CoverageHeatmap({
     return map;
   }, [techniques]);
 
-  const activeDomains = Object.entries(summary.domains).filter(([, d]) => d.applicable > 0);
+  const activeDomains = orderedDomains(summary.domains).filter(([, d]) => d.applicable > 0);
 
   return (
     <div

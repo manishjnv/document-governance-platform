@@ -14,7 +14,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { AssessmentListItem, DOMAIN_LABELS, STATUS_META, fmtDate } from './lib';
+import { AssessmentListItem, DOMAIN_LABELS, STATUS_META, fmtDate, orderedDomains } from './lib';
 
 /** Phase 14f: tiny inline SVG sparkline over completed runs' coverage %. */
 function CoverageSparkline({ items }: { items: AssessmentListItem[] }) {
@@ -232,7 +232,7 @@ export default function MitreListPage() {
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {visible.map((item) => {
               const status = STATUS_META[item.status] ?? STATUS_META.pending;
-              const brief = Object.entries(item.domains_brief ?? {}).filter(
+              const brief = orderedDomains(item.domains_brief ?? {}).filter(
                 ([, d]) => (d.applicable ?? 0) > 0
               );
               const covered = brief.reduce((s, [, d]) => s + (d.covered ?? 0), 0);

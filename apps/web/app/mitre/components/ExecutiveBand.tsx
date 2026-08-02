@@ -11,6 +11,7 @@ import {
   Summary,
   TechniqueResult,
   fmtDate,
+  orderedDomains,
 } from '../lib';
 
 /** Phase 14b: how a tile opens the drill-down panel. */
@@ -86,8 +87,8 @@ export function ExecutiveBand({
   onDrill: DrillHandler;
 }) {
   const o = summary.overall;
-  const domains = Object.entries(summary.domains).filter(([, d]) => d.applicable > 0);
-  const gated = Object.entries(summary.domains).filter(([, d]) => d.applicable === 0);
+  const domains = orderedDomains(summary.domains).filter(([, d]) => d.applicable > 0);
+  const gated = orderedDomains(summary.domains).filter(([, d]) => d.applicable === 0);
   const topGaps = summary.gaps.slice(0, 5);
   const applicable = techniques.filter((t) => t.state !== 'not_applicable');
 
