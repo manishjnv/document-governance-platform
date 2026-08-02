@@ -47,6 +47,9 @@ class MitreUseCase(Base, TimestampMixin, SoftDeleteMixin):
     row_ref: Mapped[str] = mapped_column(String(100), nullable=False)
     name: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Detection condition/query text (migration 032) — kept distinct from
+    # description; capped at 2000 chars by the router at create time.
+    logic: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     log_source: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     enabled: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
     mappings: Mapped[Any] = mapped_column(JSONB, nullable=False, default=list)

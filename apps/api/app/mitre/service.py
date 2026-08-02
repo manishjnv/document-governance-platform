@@ -327,10 +327,6 @@ async def _run_pipeline_body(assessment_id: UUID, org_id: UUID) -> None:
             ]
             if to_tag:
                 # CPU-bound regex sweep — off the event loop.
-                # ponytail: logic arrives via description only (the model has
-                # no logic column; a dump with BOTH description and logic
-                # loses the logic text at create time — same for the AI
-                # stage below). Add a logic column if that recall matters.
                 keyword_maps = await asyncio.to_thread(
                     keyword_tag.keyword_tag_rows,
                     [
@@ -338,7 +334,7 @@ async def _run_pipeline_body(assessment_id: UUID, org_id: UUID) -> None:
                             "row_ref": uc.row_ref,
                             "name": uc.name,
                             "description": uc.description or "",
-                            "logic": "",
+                            "logic": uc.logic or "",  # persisted since migration 032
                         }
                         for uc in to_tag
                     ],
@@ -372,7 +368,7 @@ async def _run_pipeline_body(assessment_id: UUID, org_id: UUID) -> None:
                             "row_ref": uc.row_ref,
                             "name": uc.name,
                             "description": uc.description or "",
-                            "logic": "",
+                            "logic": uc.logic or "",  # persisted since migration 032
                         }
                         for uc in to_tag
                     ]

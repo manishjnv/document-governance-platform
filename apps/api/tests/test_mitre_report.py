@@ -160,8 +160,8 @@ async def test_xlsx_formula_injection_guard(db_session):
     org, user, _ = await _make_user(db_session)
     assessment = await _seed(db_session, org, user)
     use_cases = [{"row_ref": "s:1", "name": FORMULA, "description": "=HYPERLINK(evil)",
-                  "log_source": None, "enabled": True, "mappings": [],
-                  "mapping_status": "customer_tagged"}]
+                  "logic": "=cmd|'/C calc'!A0", "log_source": None, "enabled": True,
+                  "mappings": [], "mapping_status": "customer_tagged"}]
     wb = load_workbook(io.BytesIO(build_xlsx_export(assessment, use_cases)))
     assert set(wb.sheetnames) == {
         "Summary", "Coverage by Tactic", "Technique Register", "Use-Case Mappings",
@@ -170,6 +170,8 @@ async def test_xlsx_formula_injection_guard(db_session):
     ws = wb["Use-Case Mappings"]
     assert ws["B2"].value == "'" + FORMULA
     assert ws["I2"].value == "'=HYPERLINK(evil)"
+    assert ws["J1"].value == "Logic"                    # Phase 7 column
+    assert ws["J2"].value == "'=cmd|'/C calc'!A0"       # logic cell guarded
 
 
 def test_compare_golden():

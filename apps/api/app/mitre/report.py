@@ -413,7 +413,7 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
 
     sheet(
         "Use-Case Mappings",
-        ["Row", "Rule name", "Enabled", "Mapping status", "Techniques", "Confidence", "Source", "Log source", "Description"],
+        ["Row", "Rule name", "Enabled", "Mapping status", "Techniques", "Confidence", "Source", "Log source", "Description", "Logic"],
         [
             [uc.get("row_ref"), uc.get("name"),
              {True: "yes", False: "no"}.get(uc.get("enabled"), "unknown"),
@@ -421,10 +421,11 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
              ", ".join(m.get("technique_id", "") for m in (uc.get("mappings") or [])),
              ", ".join(str(m.get("confidence", "")) for m in (uc.get("mappings") or [])),
              ", ".join(m.get("source", "") for m in (uc.get("mappings") or [])),
-             uc.get("log_source") or "", uc.get("description") or ""]
+             uc.get("log_source") or "", uc.get("description") or "",
+             uc.get("logic") or ""]  # Phase 7; query text is attacker-controlled — _guard applies
             for uc in use_cases
         ],
-        [10, 42, 9, 16, 22, 12, 12, 16, 60],
+        [10, 42, 9, 16, 22, 12, 12, 16, 60, 60],
     )
 
     sheet(

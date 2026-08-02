@@ -307,10 +307,11 @@ async def create_assessment(
                 file_id=uc_file_id,
                 row_ref=row["row_ref"],
                 name=row["name"],
-                # logic-fallback capped like ingest's description cap — an
-                # XLSX cell may legally hold 32K chars (2026-08-02
-                # adversarial review, blocking finding V2).
-                description=row["description"] or (row["logic"] or "")[:2000] or None,
+                description=row["description"],
+                # Phase 7 (migration 032): logic persisted as its own field —
+                # no longer folded into description. Cap stays: an XLSX cell
+                # may legally hold 32K chars (2026-08-02 adversarial V2).
+                logic=(row["logic"] or "")[:2000] or None,
                 log_source=row["log_source"],
                 enabled=row["enabled"],
                 mappings=item["mappings"],
@@ -520,6 +521,7 @@ async def _load_use_case_dicts(db, assessment_id: UUID, org_id) -> list:
             "row_ref": uc.row_ref,
             "name": uc.name,
             "description": uc.description,
+            "logic": uc.logic,
             "log_source": uc.log_source,
             "enabled": uc.enabled,
             "mappings": uc.mappings or [],

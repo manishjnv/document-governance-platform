@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from httpx import ASGITransport, AsyncClient
 from openpyxl import Workbook
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import create_access_token
@@ -20,6 +21,7 @@ from app.mitre.attack_data import DEFAULT
 from app.mitre.router import STALE_RUN_MESSAGE
 from app.mitre.service import build_mappings
 from app.models.mitre_assessment import MitreAssessment
+from app.models.mitre_use_case import MitreUseCase
 from app.models.organization import Organization
 from app.models.user import User
 from main import app
@@ -388,6 +390,64 @@ async def test_keyword_prepass_tags_rows_and_ai_gets_only_residue(
     assert any("matched deterministically" in a for a in summary["assumptions"])
     # keyword mapping counts as coverage (0.9 >= the 0.7 default threshold)
     assert _tech(body, "T1003.001")["state"] == "covered"
+
+
+@pytest.mark.asyncio
+async def test_logic_persisted_and_fed_to_both_taggers(client, db_session, monkeypatch):
+    """Phase 7 regression: a dump with BOTH description and logic keeps both
+    (logic used to be dropped), the keyword pre-pass fires on a tool string
+    that lives ONLY in the logic column, and the AI tagger receives the
+    real logic text for the residue."""
+    captured = []
+
+    async def capture_tag(rows, **kwargs):
+        captured.extend(rows)
+        return {
+            "mappings_by_ref": {}, "assumptions": [], "models_used": [],
+            "batches_total": 1, "batches_failed": 0,
+        }
+
+    monkeypatch.setattr(agents, "tag_untagged_rows", capture_tag)
+
+    _, _, headers = await _make_user(db_session)
+    dump = _xlsx([
+        ["Use Case Name", "MITRE Technique(s)", "Detection Logic", "Description", "Status"],
+        # tool string ONLY in logic; description present (the dropped case)
+        ["Suspicious task watcher", "", "schtasks /create /tn maint", "Detects suspicious scheduled activity", "Enabled"],
+        ["Threshold breach", "", "stats count by host", "Volume anomaly per host", "Enabled"],
+    ], sheet_name="Rules")
+    created = await client.post(
+        "/api/v1/mitre/assessments",
+        headers=headers,
+        files={"use_cases": ("rules.xlsx", dump, _XLSX_MIME)},
+    )
+    assert created.status_code == 201, created.text
+    aid = created.json()["assessment_id"]
+
+    # both fields stored distinctly (regression for the dropped-logic bug)
+    rows = (
+        await db_session.execute(
+            select(MitreUseCase)
+            .where(MitreUseCase.assessment_id == uuid.UUID(aid))
+            .order_by(MitreUseCase.row_ref)
+        )
+    ).scalars().all()
+    assert [(r.description, r.logic) for r in rows] == [
+        ("Detects suspicious scheduled activity", "schtasks /create /tn maint"),
+        ("Volume anomaly per host", "stats count by host"),
+    ]
+
+    body = await _run_and_wait(client, headers, aid)
+    assert body["status"] == "completed", body.get("error_message")
+
+    # keyword pre-pass matched via the logic column (would miss pre-032)
+    assert body["summary"]["counts"]["keyword_tagged"] == 1
+    assert _tech(body, "T1053.005")["state"] == "covered"
+
+    # AI residue carried the real logic text
+    assert [(r["row_ref"], r["logic"]) for r in captured] == [
+        ("Rules:3", "stats count by host")
+    ]
 
 
 @pytest.mark.asyncio
