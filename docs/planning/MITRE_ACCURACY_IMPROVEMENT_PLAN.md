@@ -35,7 +35,7 @@ pasted into a fresh session. Check off phases here as they complete.
 
 | Phase | Item | Status |
 | --- | --- | --- |
-| A1 | Fix the consultant review prompt doc | ☐ |
+| A1 | Fix the consultant review prompt doc | ☑ |
 | A2 | Sigma-based tagging accuracy benchmark | ☐ |
 | A3 | Rule-vs-inventory telemetry cross-check | ☐ |
 | A4 | Crown Jewels → gap-ranking lift (or drop) | ☐ |

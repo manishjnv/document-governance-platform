@@ -949,6 +949,17 @@ remain if wanted later); `tsc` independently re-verified. Commits
 `/mitre` 200, API 401 unauth). Interactive click-through (search box,
 clear button, mobile nav) still recommended -- checklist in the handoff.
 
+**MITRE accuracy & template improvement plan, phase A1 (2026-08-03):**
+docs-only. Rewrote `docs/planning/Claude_MITRE_Assessment_Review_Prompt.md`
+so a fresh consultant session can run it standalone (embedded field
+inventory from the live `ingest.py` synonym tables + intake schema, a
+"Hard invariants" section, dropped "Sample logs" from the customer-provides
+list, demoted diagrams to optional context, marked Parser/Normalization
+coverage not-assessable until phase A6, added the ATT&CK v19.1 no-mainframe
+note, replaced "Final scoring" with a defined verdict rubric + 0-10
+data-sufficiency score). Full plan: `docs/planning/MITRE_ACCURACY_IMPROVEMENT_PLAN.md`
+(phases A1-A8, running sequentially this session).
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)
