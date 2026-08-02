@@ -100,7 +100,7 @@ last incident.
 ## Testing
 
 - Full backend suite: `cd apps/api && python -m pytest` — baseline is
-  **686 passed, 7 skipped** (measured 2026-08-02 after MITRE Phase 6; the
+  **687 passed, 7 skipped** (measured 2026-08-02 after MITRE Phase 7; the
   7th skip is the prod-only WeasyPrint PDF render test; the
   long-stale "402/2" figure predated Jul-24 growth). Don't regress this;
   update this line when new tests land.

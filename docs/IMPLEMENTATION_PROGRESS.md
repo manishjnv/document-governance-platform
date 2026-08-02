@@ -531,6 +531,35 @@ Phase 2 behavior; documented, needs a schema column — deferred to Phase 7,
 suite **686 passed / 7 skipped** (+36), `tsc` clean. DEPLOYED to prod
 2026-08-02 (see header of this section).
 
+**Phase 7 COMPLETE — persist detection logic (2026-08-02, built, NOT yet
+committed/deployed):** closes the one carried-over quality gap per
+`docs/phases/prompts/MITRE_PHASE_7_PERSIST_LOGIC_PROMPT.md` — a dump
+with BOTH a description and a logic column used to silently drop the
+logic text at create time, so neither tagger ever saw the actual rule
+condition. Migration `032_mitre_use_case_logic.sql` adds
+`mitre_use_cases.logic` (plain nullable TEXT, no CHECK → 5th-sync-point
+rule N/A; applied to edgp_dev+edgp_test, **prod pending deploy**);
+the model gains the field; `router.create_assessment` stores
+description and logic separately (logic keeps the Phase 6 `[:2000]`
+cap); `service.py` feeds `uc.logic` to BOTH the keyword pre-pass and
+the AI tagger (existing caps apply: `_FIELD_CAP=2000` scan,
+`EXCERPT_CAP=500` LLM); XLSX "Use-Case Mappings" gains a `_guard`ed
+"Logic" column (HTML report + drawer never showed description, so
+nothing added there per the prompt's only-if-shown rule; nothing in the
+frontend renders description — verified — so un-folding regresses no UI).
+**Before/after on a 12-rule both-columns dump: keyword-tagged 1/12 →
+10/12** (9 fewer rows to AI; all new mappings hand-verified; residue =
+genuinely fuzzy rules only). New E2E regression test covers
+persist-both + keyword-from-logic-only + AI-receives-logic; XLSX guard
+test extended (J-column payload apostrophe-guarded). Light Sonnet
+adversarial pass (logic-injection vectors): **ACCEPT, zero blocking**
+(prompt injection / caps / report injection / NULL safety all verified
+clean; narrative agent confirmed to never receive raw logic). Full suite
+**687 passed / 7 skipped** (+1), no frontend change. **The MITRE module
+now has NO known quality gaps** — everything remaining is plan-§14
+optional feature work, built only on request. Deploy checklist: commit
+→ push → VPS loop → **apply migration 032 to scopewise_prod** → smoke.
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)
