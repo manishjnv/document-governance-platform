@@ -63,13 +63,46 @@ def _state_chip(state: str) -> str:
     )
 
 
-def build_html_report(assessment, use_cases: list) -> str:
-    """Executive + detailed report as one self-contained HTML document.
+def _traffic_color(pct) -> str:
+    """Deterministic traffic-light band for the executive scorecard."""
+    value = float(pct or 0)
+    if value >= 50:
+        return "#10b981"
+    if value >= 15:
+        return "#f59e0b"
+    return "#f43f5e"
+
+
+def _stacked_bar(covered, partial, not_covered, applicable) -> str:
+    """CSS stacked horizontal bar for one tactic (deterministic widths)."""
+    total = max(1, int(applicable or 0))
+    seg = (
+        "<span style='display:inline-block;height:9px;background:{c};width:{w}%;'></span>"
+    )
+    return (
+        "<div style='background:#e5e7eb;border-radius:4px;height:9px;width:100%;"
+        "font-size:0;line-height:0;overflow:hidden;'>"
+        + seg.format(c="#10b981", w=round(100 * (covered or 0) / total, 2))
+        + seg.format(c="#f59e0b", w=round(100 * (partial or 0) / total, 2))
+        + seg.format(c="#f43f5e", w=round(100 * (not_covered or 0) / total, 2))
+        + "</div>"
+    )
+
+
+def build_html_report(assessment, use_cases: list, compare=None, files=None) -> str:
+    """Executive + detailed report as one self-contained HTML document
+    (rebuilt in Phase 14e: cover → executive ≤2 pages → detailed →
+    appendices, TOC with real page numbers, running header, deterministic
+    HTML/CSS only — numbers come solely from the stored JSONB).
 
     assessment: MitreAssessment ORM row (or anything with the same
-    attributes). use_cases: list of dicts {row_ref, name, description,
-    log_source, enabled, mappings, mapping_status}.
+    attributes). use_cases: dicts {row_ref, name, description, log_source,
+    enabled, mappings, mapping_status}. compare: optional
+    service.compare_assessments() output (+ baseline_name) for the trend
+    block. files: optional [{kind, filename, row_count}] for the cover.
     """
+    from app.mitre import attack_data, plain_language
+
     summary = assessment.summary or {}
     params = assessment.params or {}
     overall = summary.get("overall", {})
@@ -79,16 +112,77 @@ def build_html_report(assessment, use_cases: list) -> str:
     narrative = summary.get("narrative", {})
     assumptions = summary.get("assumptions", [])
     not_applicable = summary.get("not_applicable", [])
+    counts = summary.get("counts", {})
+    index = attack_data.DEFAULT
 
     completed = assessment.completed_at.strftime("%Y-%m-%d %H:%M UTC") if assessment.completed_at else "—"
+    intake = params.get("intake") or {}
+    doc_title = intake.get("project_name") or assessment.name
 
-    # --- executive block -------------------------------------------------
-    domain_rows = "".join(
-        f"<tr><td>{_esc(DOMAIN_LABELS.get(key, key))}</td>"
-        f"<td class='num'>{_esc(d.get('strict_pct'))}%</td>"
-        f"<td class='num'>{_esc(d.get('weighted_pct'))}%</td>"
-        f"<td class='num'>{_esc(d.get('covered'))}/{_esc(d.get('applicable'))}</td>"
-        f"<td style='width:35%'>{_pct_bar(d.get('strict_pct', 0))}</td></tr>"
+    # Per-technique mapped rules (feeds why-phrases). Same inputs the drawer
+    # explain endpoint uses — numbers/wording stay consistent across surfaces.
+    mapped_by_technique: dict = {}
+    for uc in use_cases:
+        for m in uc.get("mappings") or []:
+            mapped_by_technique.setdefault(m.get("technique_id"), []).append(
+                {"name": uc.get("name"), "enabled": uc.get("enabled"),
+                 "source": m.get("source"), "confidence": m.get("confidence")}
+            )
+    results = assessment.technique_results or []
+    state_by_id = {r.get("technique_id"): r.get("state") for r in results}
+    total_rules = counts.get("use_cases", len(use_cases))
+    confidence_covered = (params.get("thresholds") or {}).get("confidence_covered", 0.7)
+    gap_recs = narrative.get("gap_recommendations", {})
+    ai_badge = (
+        "<span class='badge ai'>AI-written text</span>"
+        if narrative.get("generated_by") == "ai"
+        else "<span class='badge'>Standard text</span>"
+    )
+
+    # --- cover ----------------------------------------------------------
+    meta_rows = "".join(
+        f"<tr><th>{_esc(label)}</th><td>{_esc(intake.get(key))}</td></tr>"
+        for key, label in (
+            ("project_name", "Organization / project"),
+            ("scope_label", "Scope"),
+            ("prepared_by", "Prepared by"),
+            ("purpose_note", "Purpose"),
+        )
+        if intake.get(key)
+    )
+    files = files or []
+    uc_file = next((f for f in files if f.get("kind") == "use_cases"), None)
+    env_file = next((f for f in files if f.get("kind") == "environment"), None)
+    env = params.get("environment") or {}
+    env_lists = params.get("environment_lists") or {}
+    upload_bits = [
+        (f"Detection rules: {_esc(uc_file.get('filename'))} — " if uc_file else "Detection rules: ")
+        + f"{_esc(total_rules)} rules ({_esc(counts.get('customer_tagged', 0))} tagged by you, "
+        + f"{_esc(counts.get('keyword_tagged', 0))} keyword-matched, {_esc(counts.get('ai_tagged', 0))} AI-tagged, "
+        + f"{_esc(counts.get('unmapped', 0))} unmapped, {_esc(counts.get('invalid', 0))} invalid)"
+    ]
+    if env_file or env.get("platforms"):
+        upload_bits.append(
+            (f"Environment: {_esc(env_file.get('filename'))} — " if env_file else "Environment: ")
+            + f"platforms {_esc(', '.join(env.get('platforms') or []) or 'none detected')}"
+            + (" · OT/ICS assets" if env.get("has_ics_assets") else "")
+            + (" · managed mobile" if env.get("has_managed_mobile") else "")
+            + f" · {len(env_lists.get('log_sources') or [])} log sources"
+            + f" · {len(env_lists.get('tooling') or [])} tooling entries"
+        )
+    else:
+        upload_bits.append(
+            "Environment: none provided — full ATT&CK matrices assessed, the score is a lower bound"
+        )
+    upload_html = "".join(f"<p class='muted'>{b}</p>" for b in upload_bits)
+
+    # --- executive: scorecard, top-5 fixes, roadmap glance, trend --------
+    scorecard = "".join(
+        "<div class='tile'>"
+        f"<b style='color:{_traffic_color(d.get('strict_pct'))}'>{_esc(d.get('strict_pct'))}%</b>"
+        f"{_esc(DOMAIN_LABELS.get(key, key))}<br>"
+        f"<span class='muted'>{_esc(d.get('covered'))} of {_esc(d.get('applicable'))} techniques covered</span>"
+        "</div>"
         for key, d in domains.items()
         if d.get("applicable", 0) > 0
     )
@@ -98,65 +192,161 @@ def build_html_report(assessment, use_cases: list) -> str:
         for key, d in domains.items()
         if d.get("applicable", 0) == 0
     )
-    top_gaps_html = "".join(
-        f"<li><strong>{_esc(g.get('technique_id'))}</strong> {_esc(g.get('name'))} — "
-        f"{_esc(narrative.get('gap_recommendations', {}).get(g.get('technique_id')) or g.get('hint'))}</li>"
-        for g in gaps[:5]
+
+    fixes_html = ""
+    for g in gaps[:5]:
+        tid = g.get("technique_id")
+        described = plain_language.describe_technique(tid, index)
+        relevance = g.get("threat_relevance") or []
+        matters = (
+            "Publicly reported technique of " + ", ".join(relevance)
+            if relevance
+            else ("Among the most-used attacker techniques in real intrusions"
+                  if g.get("tier", 4) <= 2 else "A common supporting attacker behavior")
+        )
+        sketch = plain_language.detection_sketch(tid, g.get("via")) or g.get("hint") or ""
+        fixes_html += (
+            "<div class='fix'>"
+            f"<p><strong>{_esc(tid)} {_esc(g.get('name'))}</strong> "
+            f"<span class='badge'>{_esc(FEASIBILITY_LABELS.get(g.get('feasibility'), ''))}</span> "
+            f"<a class='xref' href='#g-{_esc(tid)}'></a></p>"
+            + (f"<p>{_esc(described.get('definition'))}</p>" if described.get("definition") else "")
+            + f"<p class='muted'>Why it matters to you: {_esc(matters)}.</p>"
+            + f"<p class='muted'>The fix: {_esc(sketch)}</p>"
+            + "</div>"
+        )
+
+    short_items = roadmap.get("short", [])
+    applicable_total = overall.get("applicable") or 0
+    projected = (
+        round(100 * ((overall.get("covered") or 0) + len(short_items)) / applicable_total, 1)
+        if applicable_total
+        else None
     )
     roadmap_glance = " · ".join(
         f"{_esc(FEASIBILITY_LABELS[b])}: {len(roadmap.get(b, []))}" for b in ("short", "mid", "long")
     )
+    projection_html = (
+        f"<p><strong>Effort to impact:</strong> completing just the short-term items "
+        f"raises coverage from {_esc(overall.get('strict_pct'))}% to about {_esc(projected)}%.</p>"
+        if projected is not None and short_items
+        else ""
+    )
 
-    # --- per-tactic tables ----------------------------------------------
+    trend_html = ""
+    if compare:
+        delta = (compare.get("overall_delta") or {}).get("strict_pct")
+        arrow = "▲" if (delta or 0) > 0 else ("▼" if (delta or 0) < 0 else "•")
+        color = "#10b981" if (delta or 0) > 0 else ("#f43f5e" if (delta or 0) < 0 else "#6b7280")
+        trend_html = (
+            "<h3>Trend vs your previous run</h3>"
+            f"<p><span style='color:{color};font-weight:bold'>{arrow} "
+            f"{_esc(abs(delta) if delta is not None else 0)} points</span> vs "
+            f"“{_esc(compare.get('baseline_name'))}”"
+            f" — newly covered: {len(compare.get('newly_covered') or [])}, "
+            f"regressed: {len(compare.get('regressed') or [])}, "
+            f"applicability changed: {len(compare.get('na_changed') or [])}."
+            + (" <span class='muted'>ATT&CK versions differ between runs — "
+               "version-drift techniques were skipped.</span>"
+               if compare.get("attack_version_mismatch") else "")
+            + "</p>"
+        )
+
+    # --- detailed: stacked tactic bars + one-liners ----------------------
     tactic_sections = ""
     for key, d in domains.items():
         if d.get("applicable", 0) == 0:
             continue
-        rows = "".join(
-            f"<tr><td>{_esc(t.get('name'))}</td>"
-            f"<td class='num'>{_esc(t.get('covered'))}</td>"
-            f"<td class='num'>{_esc(t.get('partial'))}</td>"
-            f"<td class='num'>{_esc(t.get('not_covered'))}</td>"
-            f"<td class='num'>{_esc(t.get('not_applicable'))}</td>"
-            f"<td class='num'>{_esc(t.get('strict_pct'))}%</td>"
-            f"<td style='width:25%'>{_pct_bar(t.get('strict_pct', 0))}</td></tr>"
-            for t in d.get("tactics", [])
-        )
+        rows = ""
+        for t in d.get("tactics", []):
+            line = plain_language.TACTIC_LINES.get(t.get("shortname"))
+            rows += (
+                "<tr><td style='width:22%'>"
+                f"<strong>{_esc(t.get('name'))}</strong>"
+                + (f"<br><span class='muted'>{_esc(line)}</span>" if line else "")
+                + "</td>"
+                f"<td class='num'>{_esc(t.get('covered'))}/{_esc(t.get('applicable'))}"
+                f"<br><span class='muted'>{_esc(t.get('strict_pct'))}%</span></td>"
+                f"<td style='width:45%'>{_stacked_bar(t.get('covered'), t.get('partial'), t.get('not_covered'), t.get('applicable'))}</td></tr>"
+            )
         tactic_sections += (
-            f"<h3>{_esc(DOMAIN_LABELS.get(key, key))} — coverage by tactic</h3>"
-            "<table><thead><tr><th>Tactic</th><th>Covered</th><th>Partial</th>"
-            "<th>Not covered</th><th>N/A</th><th>Strict %</th><th></th></tr></thead>"
-            f"<tbody>{rows}</tbody></table>"
+            f"<h3>{_esc(DOMAIN_LABELS.get(key, key))} — coverage by attack stage</h3>"
+            f"<table><tbody>{rows}</tbody></table>"
         )
 
-    # --- gap register ----------------------------------------------------
-    gap_rows = "".join(
-        f"<tr><td class='num'>{_esc(g.get('rank'))}</td>"
-        f"<td><strong>{_esc(g.get('technique_id'))}</strong><br><span class='muted'>{_esc(g.get('name'))}</span></td>"
-        f"<td class='num'>{'P' + str(g['tier']) if g.get('tier', 4) < 4 else '—'}</td>"
-        f"<td>{_esc(FEASIBILITY_LABELS.get(g.get('feasibility'), g.get('feasibility')))}</td>"
-        f"<td>{_state_chip(g.get('state', ''))}</td>"
-        f"<td>{_esc(narrative.get('gap_recommendations', {}).get(g.get('technique_id')) or g.get('hint'))}</td></tr>"
-        for g in gaps
-    )
+    # --- detailed: mini parent-level heatmap grids -----------------------
+    heatmap_sections = ""
+    for key, d in domains.items():
+        if d.get("applicable", 0) == 0:
+            continue
+        cells = "".join(
+            f"<span class='cell' style='background:{STATE_COLORS.get(r.get('state'), '#9ca3af')}' "
+            f"title='{_esc(r.get('technique_id'))}'>{_esc(r.get('technique_id'))}</span>"
+            for r in results
+            if r.get("domain") == key and "." not in (r.get("technique_id") or "")
+        )
+        heatmap_sections += (
+            f"<h3>{_esc(DOMAIN_LABELS.get(key, key))} — technique map (parent level)</h3>"
+            f"<div class='heatmap'>{cells}</div>"
+        )
 
-    # --- roadmap detail --------------------------------------------------
-    roadmap_sections = ""
+    # --- detailed: gap register grouped by feasibility -------------------
+    gap_sections = ""
     for bucket in ("short", "mid", "long"):
-        items = roadmap.get(bucket, [])
-        prose = narrative.get("roadmap_prose", {}).get(bucket, "")
-        item_rows = "".join(
-            f"<tr><td><strong>{_esc(g.get('technique_id'))}</strong> {_esc(g.get('name'))}</td>"
-            f"<td>{_esc(g.get('hint'))}</td></tr>"
-            for g in items
-        )
-        roadmap_sections += (
-            f"<h3>{_esc(FEASIBILITY_LABELS[bucket])} — {len(items)} item(s)</h3>"
-            f"<p class='muted'>{_esc(prose)}</p>"
-            + (f"<table><tbody>{item_rows}</tbody></table>" if items else "")
+        bucket_gaps = [g for g in gaps if g.get("feasibility") == bucket]
+        if not bucket_gaps:
+            continue
+        entries = ""
+        for g in bucket_gaps:
+            tid = g.get("technique_id")
+            result = next((r for r in results if r.get("technique_id") == tid), None) or {
+                "technique_id": tid, "state": g.get("state"), "na_reason": None,
+            }
+            mapped = mapped_by_technique.get(tid, [])
+            why = plain_language.derive_why(
+                result, mapped, total_rules=total_rules,
+                sub_states=plain_language.sub_states_for(result, mapped, state_by_id, index),
+                confidence_covered=confidence_covered,
+            )
+            sketch = plain_language.detection_sketch(tid, g.get("via"))
+            via_line = (
+                f"Uses logs you already collect: {g.get('via')}" if bucket == "short" and g.get("via")
+                else f"Onboard telemetry from tooling you own: {g.get('via')}" if bucket == "mid" and g.get("via")
+                else "Needs a new telemetry capability"
+            )
+            tier = g.get("tier", 4)
+            relevance = g.get("threat_relevance") or []
+            entries += (
+                f"<div class='gap' id='g-{_esc(tid)}'>"
+                f"<p><span class='num muted'>#{_esc(g.get('rank'))}</span> "
+                f"<strong>{_esc(tid)} {_esc(g.get('name'))}</strong> "
+                f"<span class='badge'>{'P' + str(tier) if tier < 4 else 'Unranked'}</span> "
+                + ("<span class='badge threat'>Threat match: " + _esc(", ".join(relevance)) + "</span> "
+                   if relevance else "")
+                + f"{_state_chip(g.get('state', ''))}</p>"
+                f"<p><em>Why it's a gap:</em> {_esc(why)}</p>"
+                + (f"<p><em>What good looks like:</em> {_esc(sketch)}</p>" if sketch else "")
+                + f"<p class='muted'>{_esc(via_line)}</p>"
+                + (f"<p>{ai_badge} {_esc(gap_recs.get(tid))}</p>" if gap_recs.get(tid)
+                   else f"<p class='muted'>{_esc(g.get('hint') or '')}</p>")
+                + "</div>"
+            )
+        gap_sections += (
+            f"<h3 class='bucket {bucket}'>{_esc(FEASIBILITY_LABELS[bucket])} — "
+            f"{len(bucket_gaps)} item{'' if len(bucket_gaps) == 1 else 's'}</h3>"
+            f"<p class='muted'>{_esc(narrative.get('roadmap_prose', {}).get(bucket, ''))}</p>"
+            + entries
         )
 
-    # --- assumptions + N/A appendix -------------------------------------
+    # --- appendices ------------------------------------------------------
+    register_rows = "".join(
+        f"<tr><td>{_esc(r.get('technique_id'))}</td>"
+        f"<td>{_esc((index.get(r.get('technique_id')) or {}).get('name', ''))}</td>"
+        f"<td>{_esc(DOMAIN_LABELS.get(r.get('domain'), r.get('domain')))}</td>"
+        f"<td>{_state_chip(r.get('state', ''))}</td>"
+        f"<td class='num'>{len(r.get('use_case_refs', []))}</td></tr>"
+        for r in results
+    )
     assumptions_html = "".join(f"<li>{_esc(a)}</li>" for a in assumptions)
     na_sections = ""
     remaining = list(not_applicable)
@@ -177,11 +367,27 @@ def build_html_report(assessment, use_cases: list) -> str:
             f"<tbody>{rows}</tbody></table>"
         )
 
-    # --- use-case appendix ----------------------------------------------
+    # Phase 14g: "How we read your files" — the parser's per-entry evidence.
+    interpretations = env_lists.get("interpretations") or []
+    how_read_html = ""
+    if interpretations:
+        rows = "".join(
+            f"<tr><td>{_esc(i.get('entry'))}</td><td>{_esc(i.get('sheet'))}</td>"
+            f"<td>{_esc(i.get('interpretation'))}</td></tr>"
+            for i in interpretations
+        )
+        how_read_html = (
+            "<h2 id='how-read'>Appendix: how we read your files</h2>"
+            "<p class='muted'>Every environment entry and what the parser did with it — "
+            "the evidence behind platform filtering and roadmap feasibility.</p>"
+            "<table><thead><tr><th>Your entry</th><th>Sheet</th><th>How it was read</th></tr></thead>"
+            f"<tbody>{rows}</tbody></table>"
+        )
+
     appendix_note = ""
-    shown_use_cases = use_cases
-    if len(use_cases) > MAX_APPENDIX_ROWS:
-        shown_use_cases = use_cases[:MAX_APPENDIX_ROWS]
+    shown_use_cases = sorted(use_cases, key=_row_ref_sort_key)
+    if len(shown_use_cases) > MAX_APPENDIX_ROWS:
+        shown_use_cases = shown_use_cases[:MAX_APPENDIX_ROWS]
         appendix_note = (
             f"<p class='muted'>Showing the first {MAX_APPENDIX_ROWS} of "
             f"{len(use_cases)} rules — the XLSX export contains all of them.</p>"
@@ -190,7 +396,7 @@ def build_html_report(assessment, use_cases: list) -> str:
         f"<tr><td>{_esc(uc.get('row_ref'))}</td><td>{_esc(uc.get('name'))}</td>"
         f"<td>{'Enabled' if uc.get('enabled') else ('Disabled' if uc.get('enabled') is False else 'Unknown')}</td>"
         f"<td>{_esc(', '.join(m.get('technique_id', '') for m in (uc.get('mappings') or [])) or '—')}</td>"
-        f"<td>{_esc(uc.get('mapping_status'))}</td>"
+        f"<td>{_esc(_MAPPING_STATUS_PLAIN_XLSX.get(uc.get('mapping_status'), uc.get('mapping_status')))}</td>"
         f"<td>{_esc(uc.get('log_source') or '')}</td></tr>"
         for uc in shown_use_cases
     )
@@ -236,83 +442,131 @@ def build_html_report(assessment, use_cases: list) -> str:
             )
         )
 
-    counts = summary.get("counts", {})
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>MITRE ATT&amp;CK Coverage Assessment — {_esc(assessment.name)}</title>
 <style>
-@page {{ size: A4; margin: 1.5cm; }}
+@page {{
+  size: A4; margin: 1.6cm 1.4cm 1.8cm;
+  @top-center {{ content: string(doctitle); font-size: 9px; color: #6b7280; }}
+  @bottom-right {{ content: "Page " counter(page) " of " counter(pages); font-size: 9px; color: #6b7280; }}
+}}
 * {{ margin: 0; padding: 0; box-sizing: border-box; }}
 body {{ font-family: Arial, 'Liberation Sans', Helvetica, sans-serif; color: #333; line-height: 1.5; font-size: 12px; }}
 .container {{ max-width: 900px; margin: 0 auto; padding: 8px; }}
-h1 {{ font-size: 20px; color: #0057B8; margin-bottom: 2px; }}
+h1 {{ font-size: 22px; color: #0057B8; margin-bottom: 2px; string-set: doctitle content(); }}
 h2 {{ font-size: 15px; color: #003D82; margin: 18px 0 6px; border-bottom: 2px solid #0057B8; padding-bottom: 3px; }}
 h3 {{ font-size: 13px; margin: 12px 0 4px; }}
+h3.bucket {{ padding: 3px 6px; border-radius: 4px; }}
+h3.short {{ background: #d1fae5; }}
+h3.mid {{ background: #fef3c7; }}
+h3.long {{ background: #e5e7eb; }}
 p {{ margin: 4px 0; }}
 .muted {{ color: #6b7280; font-size: 11px; }}
-.headline {{ font-size: 34px; font-weight: bold; color: #0057B8; }}
+.headline {{ font-size: 40px; font-weight: bold; color: #0057B8; }}
 .tiles {{ display: flex; gap: 8px; margin: 8px 0; }}
 .tile {{ flex: 1; background: #f3f4f6; border-radius: 6px; padding: 8px; text-align: center; }}
 .tile b {{ display: block; font-size: 18px; }}
+.badge {{ display: inline-block; border: 1px solid #d1d5db; border-radius: 9px; padding: 0 6px; font-size: 9px; color: #6b7280; vertical-align: middle; }}
+.badge.ai {{ background: #ede9fe; border-color: #ddd6fe; color: #6d28d9; }}
+.badge.threat {{ background: #ede9fe; border-color: #ddd6fe; color: #6d28d9; }}
+.fix {{ border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 8px; margin: 6px 0; page-break-inside: avoid; }}
+.gap {{ border-bottom: 1px solid #e5e7eb; padding: 6px 0; page-break-inside: avoid; }}
+.heatmap {{ line-height: 1.15; }}
+.heatmap .cell {{ display: inline-block; color: #fff; font-size: 7px; padding: 1px 3px; margin: 1px; border-radius: 2px; }}
 table {{ width: 100%; border-collapse: collapse; margin: 6px 0 10px; font-size: 11px; }}
 th {{ text-align: left; background: #f3f4f6; padding: 4px 6px; border-bottom: 1px solid #d1d5db; }}
 td {{ padding: 4px 6px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }}
 td.num {{ text-align: right; white-space: nowrap; }}
 ul {{ margin: 4px 0 4px 18px; }}
+.cover-meta th {{ background: none; width: 30%; color: #6b7280; font-weight: normal; }}
+.toc {{ margin: 10px 0 0 0; }}
+.toc a {{ text-decoration: none; color: #333; }}
+.toc li {{ margin: 2px 0; }}
+.toc a::after {{ content: " — p. " target-counter(attr(href), page); color: #6b7280; }}
+a.xref {{ text-decoration: none; color: #0057B8; font-size: 10px; }}
+a.xref::after {{ content: "details p. " target-counter(attr(href), page); }}
+.page-break {{ page-break-before: always; }}
 .footer {{ margin-top: 20px; padding-top: 8px; border-top: 1px solid #d1d5db; font-size: 10px; color: #6b7280; }}
 </style>
 </head>
 <body><div class="container">
-<h1>MITRE ATT&amp;CK Coverage Assessment</h1>
-<p><strong>{_esc(assessment.name)}</strong></p>
-<p class="muted">Methodology: coverage is computed deterministically against the pinned
-MITRE ATT&amp;CK v{_esc(assessment.attack_version)} dataset; techniques impossible in this
-environment (or excluded by the customer) leave the denominator as “not applicable”.
-A technique counts as covered when at least one enabled rule maps to it with qualifying
-confidence. This assessment scores detection <em>presence</em>, not rule efficacy.</p>
 
-<h2>Executive summary</h2>
-<div class="tiles">
+<!-- ============================= COVER ============================= -->
+<h1>MITRE ATT&amp;CK Coverage Assessment</h1>
+<p><strong>{_esc(doc_title)}</strong>{'' if doc_title == assessment.name else f" — {_esc(assessment.name)}"}</p>
+<table class="cover-meta"><tbody>{meta_rows}
+<tr><th>ATT&amp;CK version</th><td>v{_esc(assessment.attack_version)}</td></tr>
+<tr><th>Run completed</th><td>{_esc(completed)}</td></tr>
+</tbody></table>
+<div class="tiles" style="margin-top:14px">
   <div class="tile"><b class="headline">{_esc(overall.get('strict_pct'))}%</b>coverage of applicable techniques<br>
   <span class="muted">weighted (partial = half): {_esc(overall.get('weighted_pct'))}%</span></div>
-  <div class="tile"><b style="color:#10b981">{_esc(overall.get('covered'))}</b>covered</div>
-  <div class="tile"><b style="color:#f59e0b">{_esc(overall.get('partial'))}</b>partial</div>
-  <div class="tile"><b style="color:#f43f5e">{_esc(overall.get('not_covered'))}</b>not covered</div>
-  <div class="tile"><b>{_esc(overall.get('not_applicable'))}</b>not applicable</div>
 </div>
-<p>{_esc(narrative.get('executive_summary', ''))}</p>
-<table><thead><tr><th>Matrix</th><th>Strict</th><th>Weighted</th><th>Covered</th><th></th></tr></thead>
-<tbody>{domain_rows}</tbody></table>
+<p>Of the {_esc(overall.get('applicable'))} attacker techniques that apply to your
+environment, your detection rules can catch {_esc(overall.get('covered'))}
+(plus {_esc(overall.get('partial'))} partially). Early SIEM detection programs typically
+start under 10% — the roadmap in this report matters more than the grade.</p>
+<h3>What this assessment is based on</h3>
+{upload_html}
+<p class="muted">Methodology: coverage is computed deterministically against the pinned
+MITRE ATT&amp;CK v{_esc(assessment.attack_version)} dataset; techniques impossible in this
+environment (or excluded by you) leave the denominator as “not applicable”.
+A technique counts as covered when at least one enabled rule maps to it with qualifying
+confidence. This assessment scores detection <em>presence</em>, not rule efficacy.</p>
+<h3>Contents</h3>
+<ul class="toc">
+<li><a href="#exec">Executive summary</a></li>
+<li><a href="#tactics">Coverage by attack stage</a></li>
+<li><a href="#gapreg">Gap register &amp; recommendations</a></li>
+<li><a href="#register">Appendix: technique register</a></li>
+<li><a href="#na">Appendix: not-applicable techniques</a></li>
+<li><a href="#assumptions">Appendix: assumptions</a></li>
+{'<li><a href="#how-read">Appendix: how we read your files</a></li>' if how_read_html else ''}
+<li><a href="#mappings">Appendix: rule mappings</a></li>
+</ul>
+
+<!-- ====================== EXECUTIVE (max 2 pages) ================== -->
+<h2 id="exec" class="page-break">Executive summary</h2>
+<div class="tiles">{scorecard}</div>
 {gated_notes}
-<h3>Top 5 gaps</h3>
-<ul>{top_gaps_html}</ul>
+<p>{_esc(narrative.get('executive_summary', ''))} {ai_badge}</p>
+<h3>Top 5 things to fix first</h3>
+{fixes_html or "<p class='muted'>No gaps — nothing to fix.</p>"}
 <p><strong>Roadmap at a glance:</strong> {roadmap_glance}</p>
-<p class="muted">Rules analyzed: {_esc(counts.get('use_cases'))} ({_esc(counts.get('customer_tagged'))} customer-tagged,
-{_esc(counts.get('ai_tagged'))} AI-tagged, {_esc(counts.get('unmapped'))} unmapped, {_esc(counts.get('invalid'))} invalid tags)</p>
+{projection_html}
+{trend_html}
 
-<h2>Coverage by tactic</h2>
+<!-- =========================== DETAILED ============================ -->
+<h2 id="tactics" class="page-break">Coverage by attack stage</h2>
 {tactic_sections}
+{heatmap_sections}
 
-<h2>Gap register ({len(gaps)})</h2>
-<table><thead><tr><th>#</th><th>Technique</th><th>Priority</th><th>Feasibility</th><th>State</th><th>Recommendation</th></tr></thead>
-<tbody>{gap_rows}</tbody></table>
+<h2 id="gapreg">Gap register &amp; recommendations ({len(gaps)})</h2>
+<p class="muted">Grouped by how soon you could realistically build each detection.
+Each entry explains why it is a gap and what a good detection would watch for.</p>
+{gap_sections}
 
-<h2>Remediation roadmap</h2>
-{roadmap_sections}
+<!-- ========================== APPENDICES =========================== -->
+<h2 id="register" class="page-break">Appendix: technique register ({len(results)})</h2>
+<table><thead><tr><th>Technique</th><th>Name</th><th>Matrix</th><th>State</th><th>Rules</th></tr></thead>
+<tbody>{register_rows}</tbody></table>
 
-<h2>Assumptions</h2>
-<ul>{assumptions_html or '<li>None.</li>'}</ul>
-
-<h2>Not-applicable appendix ({len(not_applicable)})</h2>
+<h2 id="na">Appendix: not-applicable techniques ({len(not_applicable)})</h2>
 <p class="muted">These techniques leave the coverage denominator — the headline percentage
 makes no claim about them.</p>
 {na_sections}
 
-<h2>Use-case mapping appendix ({len(use_cases)})</h2>
+<h2 id="assumptions">Appendix: assumptions</h2>
+<ul>{assumptions_html or '<li>None.</li>'}</ul>
+
+{how_read_html}
+
+<h2 id="mappings">Appendix: rule mappings ({len(use_cases)})</h2>
 {appendix_note}
-<table><thead><tr><th>Row</th><th>Rule</th><th>Status</th><th>Techniques</th><th>Mapping</th><th>Log source</th></tr></thead>
+<table><thead><tr><th>Row</th><th>Rule</th><th>Status</th><th>Techniques</th><th>How it was mapped</th><th>Log source</th></tr></thead>
 <tbody>{uc_rows}</tbody></table>
 
 <div class="footer">{' · '.join(footer_bits)}</div>

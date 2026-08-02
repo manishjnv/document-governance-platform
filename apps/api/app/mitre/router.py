@@ -1641,10 +1641,37 @@ async def assessment_report(
     org_id = UUID(str(current_user.org_id))
     assessment = await _completed_assessment(db, assessment_id, org_id)
     use_cases = await _load_use_case_dicts(db, assessment_id, org_id)
+    # Phase 14e: trend block — diff against the most recent completed run
+    # before this one, when one exists (pure compare, no extra cost at scale).
+    previous_result = await db.execute(
+        select(MitreAssessment)
+        .where(
+            (MitreAssessment.org_id == org_id)
+            & (MitreAssessment.status == "completed")
+            & (MitreAssessment.assessment_id != assessment_id)
+            & (MitreAssessment.completed_at < assessment.completed_at)
+            & (MitreAssessment.deleted_at.is_(None))
+        )
+        .order_by(MitreAssessment.completed_at.desc())
+        .limit(1)
+    )
+    previous = previous_result.scalars().first()
+    compare = None
+    if previous is not None:
+        try:
+            compare = service.compare_assessments(assessment, previous)
+            compare["baseline_name"] = previous.name
+            compare["baseline_completed_at"] = (
+                previous.completed_at.isoformat() if previous.completed_at else None
+            )
+        except Exception:  # noqa: BLE001 — trend is optional decoration
+            compare = None
     # Report/xlsx generation is CPU-bound and unbounded on large assessments;
     # offload so it can't stall the single-worker event loop (2026-08-02
     # adversarial review, non-blocking finding #2).
-    html = await run_in_threadpool(mitre_report.build_html_report, assessment, use_cases)
+    html = await run_in_threadpool(
+        mitre_report.build_html_report, assessment, use_cases, compare
+    )
 
     if format.lower() == "pdf":
         try:

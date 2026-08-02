@@ -153,6 +153,10 @@ async def test_html_report_escapes_untrusted_strings(db_session):
     assert "33.3%" in html                       # numbers from stored summary
     assert "Build a Sysmon registry detection." in html
     assert "accepted risk, physical controls" in html
+    # Phase 14e structure: TOC with real page numbers + per-gap why line
+    assert "target-counter(attr(href), page)" in html
+    assert "Why it's a gap:" in html
+    assert "Top 5 things to fix first" in html
 
 
 @pytest.mark.asyncio
