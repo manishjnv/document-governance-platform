@@ -15,7 +15,17 @@
     "Mandiant M-Trends 2025, HHS HC3 healthcare sector reports, FS-ISAC",
     "annual report, Dragos OT/ICS Year in Review 2025.",
     "Curation rule: 8-12 techniques per entry, only behaviors repeatedly",
-    "attributed in public reporting — high-confidence over exhaustive."
+    "attributed in public reporting — high-confidence over exhaustive.",
+    "Plan phase A8 (2026-08-03) added 9 industries (Professional Services,",
+    "Media & Entertainment, Hospitality & Food Service, Pharmaceuticals &",
+    "Life Sciences, Agriculture & Food Production, Mining & Metals,",
+    "Aerospace & Defense, Construction & Engineering, Maritime & Shipping),",
+    "10 actors (APT1, APT10, Kimsuky, APT33, APT34/OilRig, FIN8, Carbanak",
+    "Group, Turla, Mustang Panda, Indrik Spider), and region_profiles (NA/",
+    "Europe/APAC/MEA/LATAM, coarse keyword-matched free text -> curated",
+    "actor lists), same curation discipline and sourcing standard as the",
+    "Phase 11 seed set; every new technique id verified against the pinned",
+    "v19.1 dataset before being added."
   ],
   "industries": {
     "financial services": {
@@ -67,6 +77,51 @@
       "label": "Transportation & Logistics",
       "sources": "CISA #StopRansomware; IBM X-Force 2025 transportation snapshot",
       "techniques": ["T1566.001", "T1078", "T1133", "T1190", "T1486", "T1490"]
+    },
+    "professional services": {
+      "label": "Professional Services",
+      "sources": "Verizon DBIR 2025 Professional/Scientific/Technical Services snapshot (BEC + phishing dominant); FBI IC3 BEC advisories",
+      "techniques": ["T1566.001", "T1566.002", "T1078", "T1114.002", "T1071.001", "T1560.001", "T1041"]
+    },
+    "media & entertainment": {
+      "label": "Media & Entertainment",
+      "sources": "Verizon DBIR 2025 Entertainment/Information snapshot (DDoS + ransomware for content extortion)",
+      "techniques": ["T1566.001", "T1486", "T1490", "T1078", "T1567.002", "T1499"]
+    },
+    "hospitality & food service": {
+      "label": "Hospitality & Food Service",
+      "sources": "Verizon DBIR 2025 Accommodation and Food Services snapshot; FIN7/FIN8 public reporting (POS malware)",
+      "techniques": ["T1566.001", "T1078", "T1021.001", "T1560.001", "T1071.001", "T1486"]
+    },
+    "pharmaceuticals & life sciences": {
+      "label": "Pharmaceuticals & Life Sciences",
+      "sources": "CISA/FBI/NCSC joint advisory (2020) on nation-state targeting of COVID-19 vaccine research; Mandiant M-Trends life-sciences espionage coverage",
+      "techniques": ["T1566.001", "T1566.002", "T1078", "T1071.001", "T1560.001", "T1105", "T1027"]
+    },
+    "agriculture & food production": {
+      "label": "Agriculture & Food Production",
+      "sources": "FBI PIN / CISA advisories on ransomware targeting the food and agriculture sector",
+      "techniques": ["T1566.001", "T1486", "T1490", "T1078", "T1021.001"]
+    },
+    "mining & metals": {
+      "label": "Mining & Metals",
+      "sources": "Dragos OT/ICS Year in Review 2025 (mining sector coverage)",
+      "techniques": ["T1486", "T1490", "T1566.001", "T1078", "T1190", "T0883", "T0886"]
+    },
+    "aerospace & defense": {
+      "label": "Aerospace & Defense",
+      "sources": "Mandiant M-Trends defense-industrial-base espionage coverage; MITRE ATT&CK Groups pages (APT1/APT10 DIB targeting)",
+      "techniques": ["T1566.001", "T1566.002", "T1078", "T1071.001", "T1105", "T1027", "T1560.001"]
+    },
+    "construction & engineering": {
+      "label": "Construction & Engineering",
+      "sources": "Verizon DBIR 2025 Construction snapshot",
+      "techniques": ["T1566.001", "T1078", "T1486", "T1490", "T1071.001"]
+    },
+    "maritime & shipping": {
+      "label": "Maritime & Shipping",
+      "sources": "CISA maritime cybersecurity advisories; the 2017 NotPetya/Maersk incident (widely documented public case study); Dragos OT/ICS port/maritime coverage",
+      "techniques": ["T1486", "T1490", "T1078", "T1190", "T1021.001", "T0883", "T0886"]
     }
   },
   "industry_aliases": {
@@ -123,6 +178,88 @@
       "attack_id": null,
       "note": "RaaS affiliates per CISA AA23-325A; commodity intrusion to encryption/exfiltration.",
       "techniques": ["T1486", "T1490", "T1078", "T1021.001", "T1567.002", "T1133", "T1110.003"]
+    },
+    "APT1": {
+      "attack_id": "G0006",
+      "note": "PLA Unit 61398 / Comment Crew; large-scale IP theft espionage (Mandiant's 2013 APT1 report).",
+      "techniques": ["T1566.001", "T1059.003", "T1105", "T1071.001", "T1078", "T1027", "T1560.001"]
+    },
+    "APT10": {
+      "attack_id": "G0045",
+      "note": "PRC-attributed; Cloud Hopper MSP/supply-chain compromise for IP theft.",
+      "techniques": ["T1199", "T1078", "T1071.001", "T1560.001", "T1105", "T1021.002"]
+    },
+    "Kimsuky": {
+      "attack_id": "G0094",
+      "note": "DPRK-attributed; espionage against government/think-tank/nuclear-research targets via phishing.",
+      "techniques": ["T1566.001", "T1566.002", "T1204.002", "T1105", "T1071.001", "T1552.001", "T1113"]
+    },
+    "APT33": {
+      "attack_id": "G0064",
+      "note": "Iran-attributed; energy-sector espionage, spearphishing, destructive-capable tooling.",
+      "techniques": ["T1566.001", "T1566.002", "T1078", "T1105", "T1071.001", "T1053.005", "T1489"]
+    },
+    "APT34": {
+      "attack_id": "G0049",
+      "note": "OilRig; Iran-attributed Middle East government/energy espionage, notable for DNS-tunneled C2.",
+      "techniques": ["T1566.001", "T1059.001", "T1071.004", "T1053.005", "T1078", "T1105"]
+    },
+    "FIN8": {
+      "attack_id": "G0061",
+      "note": "Financially motivated; POS-malware campaigns against hospitality/retail.",
+      "techniques": ["T1566.001", "T1059.001", "T1105", "T1071.001", "T1078", "T1560.001"]
+    },
+    "Carbanak Group": {
+      "attack_id": "G0008",
+      "note": "Financially motivated; banking + POS malware against finance/hospitality, later ransomware overlap with FIN7.",
+      "techniques": ["T1566.001", "T1059.005", "T1105", "T1078", "T1071.001", "T1021.001", "T1486"]
+    },
+    "Turla": {
+      "attack_id": "G0010",
+      "note": "Russia-attributed; long-running government/diplomatic espionage, watering holes, satellite-based C2.",
+      "techniques": ["T1189", "T1566.001", "T1071.001", "T1105", "T1078", "T1027"]
+    },
+    "Mustang Panda": {
+      "attack_id": "G0129",
+      "note": "PRC-attributed; NGO/government espionage via malicious archives and removable-media propagation.",
+      "techniques": ["T1566.001", "T1204.002", "T1091", "T1105", "T1071.001", "T1027"]
+    },
+    "Indrik Spider": {
+      "attack_id": "G0119",
+      "note": "Evil Corp; Dridex/BitPaymer/WastedLocker operators, big-game ransomware against finance.",
+      "techniques": ["T1566.001", "T1059.001", "T1486", "T1490", "T1021.001", "T1078", "T1105"]
     }
-  }
+  },
+  "region_profiles": [
+    {
+      "keywords": ["north america", "united states", "usa", "us", "canada"],
+      "label": "North America",
+      "sources": "CISA advisories; FBI IC3; Mandiant M-Trends Americas regional coverage",
+      "actors": ["Scattered Spider", "LockBit affiliates", "Volt Typhoon", "FIN8", "Indrik Spider"]
+    },
+    {
+      "keywords": ["europe", "european union", "eu", "united kingdom", "uk", "germany", "france", "ukraine"],
+      "label": "Europe",
+      "sources": "ENISA Threat Landscape; UK NCSC advisories; CERT-EU",
+      "actors": ["Sandworm Team", "Turla", "APT28", "APT29"]
+    },
+    {
+      "keywords": ["asia-pacific", "asia pacific", "apac", "japan", "australia", "singapore", "south korea", "india"],
+      "label": "Asia-Pacific",
+      "sources": "Mandiant M-Trends APAC regional coverage; CISA/FBI joint advisories on DPRK/PRC-attributed actors",
+      "actors": ["APT41", "Lazarus Group", "Kimsuky", "Mustang Panda"]
+    },
+    {
+      "keywords": ["middle east", "mea", "emea", "saudi arabia", "uae", "israel", "africa", "south africa"],
+      "label": "Middle East & Africa",
+      "sources": "Mandiant M-Trends MEA regional coverage; CrowdStrike Global Threat Report regional sections",
+      "actors": ["APT34", "APT33"]
+    },
+    {
+      "keywords": ["latin america", "latam", "brazil", "mexico", "argentina"],
+      "label": "Latin America",
+      "sources": "IBM X-Force regional threat intelligence; Kaspersky/Group-IB LATAM banking-malware reporting",
+      "actors": ["FIN7", "Carbanak Group"]
+    }
+  ]
 }

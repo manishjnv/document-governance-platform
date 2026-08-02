@@ -250,7 +250,7 @@ def recompute_results(assessment, use_case_rows) -> None:
     env_lists = params.get("environment_lists") or {}
     intake = params.get("intake") or {}
     profile = ranking.build_threat_profile(
-        intake.get("industry"), intake.get("threat_actors") or []
+        intake.get("industry"), intake.get("threat_actors") or [], intake.get("region")
     )
     ranked = ranking.rank_gaps(
         coverage["techniques"],
@@ -713,10 +713,10 @@ async def _run_pipeline_body(
                     )
 
             # Stage 6 — deterministic gap ranking + roadmap bucketing,
-            # threat-weighted by the customer's industry/actor profile
-            # (Phase 11 — pure lookup, ordering only).
+            # threat-weighted by the customer's industry/actor/region profile
+            # (Phase 11 + A8 region — pure lookup, ordering only).
             profile = ranking.build_threat_profile(
-                intake.get("industry"), intake.get("threat_actors") or []
+                intake.get("industry"), intake.get("threat_actors") or [], intake.get("region")
             )
             ranked = ranking.rank_gaps(
                 coverage["techniques"],

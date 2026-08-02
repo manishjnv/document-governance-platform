@@ -290,20 +290,34 @@ def technique_feasibility(tech: dict, log_sources, tooling, log_source_health: d
     return _feasibility(tech, onboarded, ownable, log_source_health)
 
 
-def build_threat_profile(industry, actors, profiles=None) -> dict:
-    """Intake industry/actor selections -> {"techniques": {tid: [labels]},
-    "labels": [...]} for threat-informed weighting (Phase 11). Pure lookup
-    over the curated threat_profiles.json; an unknown industry or actor
+def _region_word_match(keyword: str, text: str) -> bool:
+    """Whole-word/phrase match — short codes like 'us'/'uk'/'eu' must not
+    fire inside unrelated words ('us' inside 'australia', 'eu' inside
+    'europe' itself is fine since 'europe' is matched as its own keyword,
+    not via 'eu' substring)."""
+    return bool(re.search(rf"(?<![a-z0-9]){re.escape(keyword)}(?![a-z0-9])", text))
+
+
+def build_threat_profile(industry, actors, region=None, profiles=None) -> dict:
+    """Intake industry/actor/region selections -> {"techniques": {tid:
+    [labels]}, "labels": [...]} for threat-informed weighting (Phase 11;
+    region added Phase A8). Pure lookup over the curated
+    threat_profiles.json; an unknown industry, actor, or region
     contributes nothing (deliberate no-op — profiles are curated, never
     guessed). Exact technique IDs only: a profile listing T1566.001 lifts
-    that sub-technique, not its parent.
+    that sub-technique, not its parent. `region` is free text (intake's
+    200-char field) — matched by whole-word/phrase keyword against a
+    coarse curated set (NA/Europe/APAC/MEA/LATAM); a match pulls in the
+    SAME actor profiles a customer could pick explicitly, so it's a third
+    input into the SAME within-tier lift — no new sort key, no % change.
     """
     if profiles is None:
         profiles = load_threat_profiles()
     relevant, labels = {}, []
 
     def _add(entry, label):
-        labels.append(label)
+        if label not in labels:
+            labels.append(label)
         for tid in entry.get("techniques", []):
             tid_labels = relevant.setdefault(tid, [])
             if label not in tid_labels:
@@ -319,6 +333,19 @@ def build_threat_profile(industry, actors, profiles=None) -> dict:
         entry = actor_map.get(str(actor).strip())
         if entry:
             _add(entry, str(actor).strip())
+
+    region_text = _norm(region)
+    if region_text:
+        for region_profile in profiles.get("region_profiles") or []:
+            if any(_region_word_match(kw, region_text) for kw in region_profile.get("keywords", [])):
+                region_label = region_profile.get("label")
+                if region_label and region_label not in labels:
+                    labels.append(region_label)
+                for actor_name in region_profile.get("actors", []):
+                    actor_entry = actor_map.get(actor_name)
+                    if actor_entry:
+                        _add(actor_entry, actor_name)
+                break  # first matching region wins — regions don't overlap
     return {"techniques": relevant, "labels": labels}
 
 

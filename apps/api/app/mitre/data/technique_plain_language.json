@@ -127,10 +127,45 @@
       "attacker_use": "keep cloud access even after the original password is reset.",
       "detection_hint": "new API keys, application secrets, or certificates added to accounts or service principals outside change windows"
     },
+    "T1059.005": {
+      "definition": "Running Visual Basic code — often VBA macros embedded in Office documents — to execute attacker instructions.",
+      "attacker_use": "get code running the moment a victim opens a malicious document.",
+      "detection_hint": "Office applications spawning child processes; documents with macros making network connections shortly after opening"
+    },
+    "T1071.004": {
+      "definition": "Hiding command-and-control traffic inside ordinary-looking DNS queries and responses.",
+      "attacker_use": "communicate with compromised machines through a channel that is rarely blocked or inspected.",
+      "detection_hint": "unusually long or high-volume DNS queries to a single domain; DNS requests with encoded-looking subdomains"
+    },
+    "T1091": {
+      "definition": "Spreading malware by copying it onto USB drives or other removable media that later gets plugged into another machine.",
+      "attacker_use": "cross into networks that have no direct internet or network connection.",
+      "detection_hint": "autorun-style execution immediately after a removable drive is connected; unexpected executables appearing on USB media"
+    },
     "T1105": {
       "definition": "Downloading additional attacker tools onto a machine that is already compromised.",
       "attacker_use": "bring in stronger tooling after the first foothold.",
       "detection_hint": "certutil, bitsadmin, or curl downloading executables; binaries fetched from rare external hosts by non-installer processes"
+    },
+    "T1113": {
+      "definition": "Taking screenshots of a victim's screen without their knowledge.",
+      "attacker_use": "see what the victim is doing, including sensitive data displayed on screen.",
+      "detection_hint": "processes calling screen-capture APIs on a schedule, especially from tools with no legitimate reason to do so"
+    },
+    "T1114.002": {
+      "definition": "Reading a victim's email directly from a cloud mailbox (e.g. Exchange Online, Gmail) using stolen credentials or tokens.",
+      "attacker_use": "search a mailbox for sensitive information or hijack ongoing email threads for fraud.",
+      "detection_hint": "mailbox access or mail-forwarding-rule changes from unusual locations or applications, especially via API/legacy-auth protocols"
+    },
+    "T1189": {
+      "definition": "Compromising a legitimate website so that simply visiting it infects the victim's browser.",
+      "attacker_use": "infect targeted visitors without sending them anything directly — a 'watering hole' attack.",
+      "detection_hint": "browser or plugin crashes/exploitation followed by new process creation; unexpected outbound connections right after visiting a specific site"
+    },
+    "T1199": {
+      "definition": "Abusing a trusted third party — an MSP, vendor, or contractor with legitimate access — to reach the real target.",
+      "attacker_use": "reach a well-defended target through a less-defended partner that already has access.",
+      "detection_hint": "third-party/vendor accounts or connections behaving outside their normal scope of access"
     },
     "T1110": {
       "definition": "Guessing account passwords by trying many candidates.",
@@ -207,10 +242,20 @@
       "attacker_use": "hold data and operations hostage for ransom.",
       "detection_hint": "rapid mass file modification and renames with new extensions; ransom-note files; shadow-copy deletion just before"
     },
+    "T1489": {
+      "definition": "Stopping a running service or process, including security tools and backup agents.",
+      "attacker_use": "disable defenses or disrupt operations before the main attack, or as the disruption itself.",
+      "detection_hint": "unexpected service-stop events for security/backup services; sc stop or net stop commands outside maintenance windows"
+    },
     "T1490": {
       "definition": "Deleting backups, shadow copies, and recovery features before doing damage.",
       "attacker_use": "make sure you cannot simply restore instead of paying.",
       "detection_hint": "vssadmin delete shadows, wbadmin delete catalog, or bcdedit recovery changes — near-certain ransomware precursors"
+    },
+    "T1499": {
+      "definition": "Overwhelming a system or service with traffic or requests so legitimate users cannot use it.",
+      "attacker_use": "disrupt operations directly, or as a distraction/extortion lever alongside another attack.",
+      "detection_hint": "sudden abnormal spikes in inbound traffic or request volume against a specific service; service unavailability without a deployment change"
     },
     "T1505.003": {
       "definition": "Planting a small script (web shell) on a web server that gives command execution through an ordinary browser.",

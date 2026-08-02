@@ -79,6 +79,92 @@ def test_profile_lifts_within_tier():
     assert by_id["T1046"]["threat_relevance"] is None
 
 
+# --- Phase A8: region weighting ---
+
+
+def test_region_profiles_actor_references_exist():
+    """Alias-integrity check for the new region_profiles section: every
+    actor name a region references must be a real curated actor."""
+    profiles = attack_data.load_threat_profiles()
+    actor_names = set(profiles["actors"])
+    bad = [
+        (region["label"], actor)
+        for region in profiles.get("region_profiles", [])
+        for actor in region["actors"]
+        if actor not in actor_names
+    ]
+    assert not bad, f"region_profiles references unknown actors: {bad}"
+
+
+def test_region_lookup_golden_real_file():
+    profile = build_threat_profile(None, [], region="We operate across North America")
+    assert "North America" in profile["labels"]
+    assert "Scattered Spider" in profile["labels"]
+    assert any("Scattered Spider" in labels for labels in profile["techniques"].values())
+
+
+def test_region_short_codes_use_word_boundaries_not_substrings():
+    # "us" must not fire inside "Australia"; "India" (APAC keyword) should
+    # match on its own.
+    australia = build_threat_profile(None, [], region="Australia")
+    assert "North America" not in australia["labels"]
+    assert "Asia-Pacific" in australia["labels"]
+
+
+def test_unknown_region_is_a_clean_noop():
+    empty = build_threat_profile(None, [], region="Antarctica Research Station")
+    assert empty == {"techniques": {}, "labels": []}
+    # blank region behaves identically to omitted
+    assert build_threat_profile(None, [], region="") == {"techniques": {}, "labels": []}
+    assert build_threat_profile(None, []) == {"techniques": {}, "labels": []}
+
+
+def test_region_and_industry_and_actor_combine_without_duplicate_labels():
+    profile = build_threat_profile("Banking", ["FIN7"], region="Europe (EU)")
+    assert profile["labels"].count("FIN7") == 1  # no accidental double-add
+    assert "Europe" in profile["labels"]
+    assert "Financial Services" in profile["labels"]
+    assert "Sandworm Team" in profile["labels"]  # from the Europe region profile
+
+
+def test_region_lift_within_tier_same_pattern_as_industry():
+    # Real region-derived profile (North America -> Scattered Spider et al,
+    # who share T1486) feeds the SAME within-tier lift as a synthetic
+    # profile -- proves region is a genuine third input, not just a label.
+    from app.mitre.attack_data import AttackIndex
+
+    na_index = AttackIndex({
+        "version": "19.1",
+        "domains": {"enterprise": {
+            "tactics": [{"id": "TA0002", "shortname": "execution", "name": "Execution"}],
+            "techniques": [
+                {"id": "T1486", "name": "Data Encrypted for Impact", "tactics": ["TA0002"],
+                 "platforms": ["Windows"], "data_sources": [], "is_subtechnique": False,
+                 "parent_id": None, "deprecated": False, "revoked": False,
+                 "superseded_by": None, "summary": ""},
+                {"id": "T1046", "name": "name-T1046", "tactics": ["TA0002"],
+                 "platforms": ["Windows"], "data_sources": [], "is_subtechnique": False,
+                 "parent_id": None, "deprecated": False, "revoked": False,
+                 "superseded_by": None, "summary": ""},
+            ],
+        }},
+    })
+    region_profile = build_threat_profile(None, [], region="North America")
+    ranked = rank_gaps(
+        [_result("T1486", "not_covered"), _result("T1046", "not_covered")],
+        [], [], index=na_index,
+        priorities={"techniques": [
+            {"technique_id": "T1486", "tier": 2}, {"technique_id": "T1046", "tier": 2},
+        ]},
+        profile=region_profile,
+    )
+    order = [g["technique_id"] for g in ranked["gaps"]]
+    assert order == ["T1486", "T1046"]  # region-linked technique lifted first
+    by_id = {g["technique_id"]: g for g in ranked["gaps"]}
+    assert by_id["T1486"]["threat_relevance"]  # tagged with an actor name
+    assert by_id["T1046"]["threat_relevance"] is None
+
+
 def test_profile_never_jumps_a_tier():
     # T1059.001 is tier 1 unprofiled; profiled tier-2 T1112 must stay below.
     ranked = rank_gaps(

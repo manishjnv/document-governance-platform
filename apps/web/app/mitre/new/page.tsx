@@ -20,11 +20,21 @@ const INDUSTRIES = [
   'Financial Services', 'Banking', 'Insurance', 'Healthcare', 'Manufacturing',
   'Energy & Utilities', 'Technology', 'Telecommunications', 'Retail & E-commerce',
   'Government & Public Sector', 'Education', 'Transportation & Logistics',
-  'Media & Entertainment', 'Professional Services', 'Other',
+  'Media & Entertainment', 'Professional Services',
+  // Plan phase A8 (2026-08-03): added alongside new curated threat profiles
+  // in data/threat_profiles.json so these are actually selectable.
+  'Hospitality & Food Service', 'Pharmaceuticals & Life Sciences',
+  'Agriculture & Food Production', 'Mining & Metals', 'Aerospace & Defense',
+  'Construction & Engineering', 'Maritime & Shipping',
+  'Other',
 ];
-const REGIONS = [
-  'North America', 'Europe (EU)', 'United Kingdom', 'Middle East', 'Africa',
-  'India', 'Asia-Pacific', 'Latin America', 'Global', 'Other',
+// Phase A8: free-text suggestions only (not a fixed enum) -- matches the
+// 5 curated region_profiles (ranking.build_threat_profile) plus a few
+// legacy options kept for continuity. Any text is accepted; an unmatched
+// region is a no-op, never an error.
+const REGION_SUGGESTIONS = [
+  'North America', 'Europe', 'Asia-Pacific', 'Middle East & Africa',
+  'Latin America', 'United Kingdom', 'India', 'Global',
 ];
 
 interface Exclusion {
@@ -557,17 +567,20 @@ export default function NewMitreAssessmentPage() {
                     <label htmlFor="mitre-region" className="mb-1.5 block text-sm font-medium">
                       Region
                     </label>
-                    <select
+                    <input
                       id="mitre-region"
+                      type="text"
+                      list="mitre-region-suggestions"
                       value={region}
-                      onChange={(e) => setRegion(e.target.value)}
+                      onChange={(e) => setRegion(e.target.value.slice(0, 200))}
+                      placeholder="e.g. North America"
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      <option value="">Select…</option>
-                      {REGIONS.map((r) => (
-                        <option key={r} value={r}>{r}</option>
+                    />
+                    <datalist id="mitre-region-suggestions">
+                      {REGION_SUGGESTIONS.map((r) => (
+                        <option key={r} value={r} />
                       ))}
-                    </select>
+                    </datalist>
                   </div>
                 </div>
 
