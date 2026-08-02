@@ -268,17 +268,20 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None) -> 
         for t in d.get("tactics", []):
             line = plain_language.TACTIC_LINES.get(t.get("shortname"))
             rows += (
-                "<tr><td style='width:22%'>"
+                "<tr><td style='width:46%'>"
                 f"<strong>{_esc(t.get('name'))}</strong>"
-                + (f"<br><span class='muted'>{_esc(line)}</span>" if line else "")
+                + (f" — <span class='muted'>{_esc(line)}</span>" if line else "")
                 + "</td>"
-                f"<td class='num'>{_esc(t.get('covered'))}/{_esc(t.get('applicable'))}"
-                f"<br><span class='muted'>{_esc(t.get('strict_pct'))}%</span></td>"
-                f"<td style='width:45%'>{_stacked_bar(t.get('covered'), t.get('partial'), t.get('not_covered'), t.get('applicable'))}</td></tr>"
+                f"<td class='num' style='width:88px'>{_esc(t.get('covered'))}/{_esc(t.get('applicable'))}"
+                f" · {_esc(t.get('strict_pct'))}%</td>"
+                f"<td>{_stacked_bar(t.get('covered'), t.get('partial'), t.get('not_covered'), t.get('applicable'))}</td></tr>"
             )
         tactic_sections += (
             f"<h3>{_esc(DOMAIN_LABELS.get(key, key))} — coverage by attack stage</h3>"
-            f"<table><tbody>{rows}</tbody></table>"
+            "<table><thead><tr><th>Attack stage — what it means</th>"
+            "<th style='text-align:right'>Covered</th><th>Coverage bar "
+            "(green covered · amber partial · red not covered)</th></tr></thead>"
+            f"<tbody>{rows}</tbody></table>"
         )
 
     # --- detailed: mini parent-level heatmap grids -----------------------
@@ -672,7 +675,7 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
     + plain-words 'Why' column, numerically sorted rule rows. Computed
     numbers are untouched — styling and wording only."""
     from openpyxl import Workbook
-    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
 
     from app.mitre import attack_data, plain_language
@@ -687,21 +690,27 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
     wb = Workbook()
     bold = Font(bold=True)
     wrap = Alignment(wrap_text=True, vertical="top")
+    thin = Side(style="thin", color="B8C4D4")
+    cell_border = Border(left=thin, right=thin, top=thin, bottom=thin)
 
     def fill(color):
         return PatternFill(start_color=color, end_color=color, fill_type="solid")
 
-    def sheet(title, headers, rows, widths, first=False, filters=True):
+    def sheet(title, headers, rows, widths, first=False, filters=True, borders=True):
         ws = wb.active if first else wb.create_sheet()
         ws.title = title
         ws.append([_guard(h) for h in headers])
         for cell in ws[1]:
             cell.font = bold
+            if borders:
+                cell.border = cell_border
         for row in rows:
             ws.append([_guard(v) for v in row])
         for row in ws.iter_rows(min_row=2):
             for cell in row:
                 cell.alignment = wrap
+                if borders:
+                    cell.border = cell_border
         ws.freeze_panes = "A2"
         if filters and rows:
             ws.auto_filter.ref = ws.dimensions
@@ -743,7 +752,8 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
         ["N/A", "Doesn't apply to your environment; excluded from the score."],
     ]
     ws_readme = sheet("Read Me", ["How to read this workbook", ""],
-                      readme_rows, [46, 100], first=True, filters=False)
+                      readme_rows, [46, 100], first=True, filters=False,
+                      borders=False)  # prose sheet — a full grid would be noise
     for label, color in (("Covered", "covered"), ("Partial", "partial"),
                          ("Not covered", "not_covered"), ("N/A", "not_applicable")):
         for row in ws_readme.iter_rows(min_row=2, max_col=1):
@@ -782,6 +792,8 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
         for c in range(1, 4):
             cell = ws_sum.cell(row=r, column=c)
             cell.alignment = wrap
+            if not merge:  # merged title/section/prose rows stay unruled
+                cell.border = cell_border
             if fills and fills.get(c):
                 cell.fill = fill(fills[c])
             if fonts and fonts.get(c):
@@ -971,6 +983,7 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
     ws_gaps.append(gap_headers)
     for cell in ws_gaps[1]:
         cell.font = bold
+        cell.border = cell_border
     gaps = summary.get("gaps", [])
     row_idx = 1
     for bucket in ("short", "mid", "long"):
@@ -1004,6 +1017,7 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
     for row in ws_gaps.iter_rows(min_row=2):
         for cell in row:
             cell.alignment = wrap
+            cell.border = cell_border
     ws_gaps.freeze_panes = "A2"
     for i, width in enumerate([7, 12, 34, 12, 12, 34, 70], start=1):
         ws_gaps.column_dimensions[get_column_letter(i)].width = width
