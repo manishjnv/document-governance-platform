@@ -922,6 +922,25 @@ passed / 7 skipped** (+6 over the 803/7 baseline); `tsc --noEmit` clean;
 `docs/planning/MITRE_MODULE_REFERENCE.md` updated (file map, API table,
 §11 reports, §13 tests, §15 history).
 
+**Web nav consolidation (2026-08-03):** side nav trimmed from 5 items to
+3 -- **SOW Review** (`/dashboard`, renamed from "Documents", route
+unchanged), **MITRE Assessment**, **Admin**. Upload and Search dropped as
+nav destinations: Upload is now a header button on SOW Review linking to
+the unchanged `/upload` flow (which gained a "Back to SOW Review" link);
+global full-text search moved onto SOW Review as a debounced search input
+that calls the same `GET /api/v1/search` endpoint the old `/search` page
+used. Search results render in their own dense table section that
+replaces the grouped document list while a query is active (chosen over
+reusing the same table because the result shape has no scores/versions/
+project grouping) -- the existing per-type filter dropdown is unrelated
+(a server-side facet filter, not a client-side text filter) and was left
+as-is. `/search` now just client-redirects to `/dashboard` so old
+bookmarks don't 404; `SearchFilter`/`SearchResults`/`AnalyticsChart`/
+`exportCsv` helpers are unused by any page now (SearchFilter is still
+exercised by `tests/accessibility.test.tsx`) but were left in place --
+not part of this task's scope. Frontend-only, no backend/API changes.
+`tsc --noEmit` clean.
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)
@@ -952,8 +971,10 @@ Backend: `apps/api/app/ai/agent.py` (6 agents + OpenRouter dev/test adapter),
 `apps/api/app/ai/orchestrator.py`, `apps/api/app/rules/` (engine + builtin +
 ambiguous_language), `apps/api/app/scoring/`, `apps/api/app/core/login_lockout.py`.
 
-Frontend: `apps/web/app/{dashboard,upload,search,results,login}/page.tsx`,
-`apps/web/components/AppShell.tsx`.
+Frontend: `apps/web/app/{dashboard,upload,search,results,login}/page.tsx`
+(dashboard = "SOW Review" page, now also hosts global search; `/search`
+is a redirect-only stub), `apps/web/components/AppShell.tsx` (3-item nav:
+SOW Review/MITRE Assessment/Admin).
 
 Docs: `docs/planning/4_AI_AGENT_SPECS.md` (agent specs), `docs/planning/5_LAUNCH_CRITERIA.md`
 (launch gate metrics + measured results), `docs/planning/PROMPT_ENGINEERING_GUIDE.md`
