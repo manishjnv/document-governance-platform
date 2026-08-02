@@ -621,6 +621,7 @@ export default function MitreResultsPage() {
                     techniques={techniques}
                     onDrill={openDrill}
                     onDrillRules={openRuleDrill}
+                    onSelectTechnique={setSelectedTechnique}
                   />
                 )}
                 {tab === 'compare' && (

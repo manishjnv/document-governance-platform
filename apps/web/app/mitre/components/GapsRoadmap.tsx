@@ -25,20 +25,36 @@ import {
 
 const INITIAL_ROWS = 50;
 
+/** Dot + text instead of filled pills — denser and less "generated"-looking
+ * (house UI taste: data-dense, no pill soup). Meaning stays on hover. */
+function Dot({ className }: { className: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn('inline-block h-2 w-2 shrink-0 rounded-full', className)}
+    />
+  );
+}
+
+const TIER_WORDS: Record<number, { word: string; dot: string }> = {
+  1: { word: 'Critical', dot: 'bg-rose-500' },
+  2: { word: 'High', dot: 'bg-amber-500' },
+  3: { word: 'Medium', dot: 'bg-sky-500' },
+};
+
 function TierBadge({ tier }: { tier: number }) {
+  const meta = TIER_WORDS[tier];
   return (
     <Tooltip delayDuration={150}>
       <TooltipTrigger asChild>
-        <span
-          className={cn(
-            'inline-flex cursor-default items-center rounded-full border px-2 py-0.5 text-[11px] font-medium',
-            tier === 1 && 'bg-rose-100 text-rose-800 border-rose-200',
-            tier === 2 && 'bg-amber-100 text-amber-800 border-amber-200',
-            tier === 3 && 'bg-sky-100 text-sky-800 border-sky-200',
-            tier >= 4 && 'bg-muted text-muted-foreground border-transparent'
+        <span className="inline-flex cursor-default items-center gap-1.5 whitespace-nowrap text-xs">
+          {meta ? (
+            <>
+              <Dot className={meta.dot} />P{tier} · {meta.word}
+            </>
+          ) : (
+            <span className="text-muted-foreground">Unranked</span>
           )}
-        >
-          {tier >= 4 ? '—' : `P${tier}`}
         </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs text-xs">{TIER_TIPS[tier] ?? TIER_TIPS[4]}</TooltipContent>
@@ -46,22 +62,37 @@ function TierBadge({ tier }: { tier: number }) {
   );
 }
 
+const FEAS_DOTS: Record<string, string> = {
+  short: 'bg-emerald-500',
+  mid: 'bg-sky-500',
+  long: 'bg-slate-400',
+};
+/** What the bucket means in action terms — "Short term" alone says little. */
+const FEAS_WORDS: Record<string, string> = {
+  short: 'Build now',
+  mid: 'Onboard logs first',
+  long: 'New capability',
+};
+
 function FeasibilityBadge({ gap }: { gap: Gap }) {
   const meta = FEASIBILITY_META[gap.feasibility];
   return (
     <Tooltip delayDuration={150}>
       <TooltipTrigger asChild>
-        <span
-          className={cn(
-            'inline-flex cursor-default items-center rounded-full border px-2 py-0.5 text-[11px] font-medium',
-            meta.chip
-          )}
-        >
-          {meta.label}
+        <span className="inline-flex cursor-default items-center gap-1.5 text-xs">
+          <Dot className={FEAS_DOTS[gap.feasibility]} />
+          <span>
+            {FEAS_WORDS[gap.feasibility]}
+            {gap.feasibility === 'short' && gap.via && (
+              <span className="block text-[10px] leading-tight text-muted-foreground">
+                via {gap.via}
+              </span>
+            )}
+          </span>
         </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs text-xs">
-        {meta.tip}
+        {meta.label} — {meta.tip}
         {gap.via && ` (${gap.via})`}
       </TooltipContent>
     </Tooltip>
@@ -126,10 +157,10 @@ export function GapsRoadmap({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-10">#</TableHead>
-              <TableHead>Technique</TableHead>
-              <TableHead className="hidden md:table-cell">Tactic</TableHead>
-              <TableHead>
+              <TableHead className="h-8 w-8 px-2 text-[11px]">#</TableHead>
+              <TableHead className="h-8 px-2 text-[11px]">Technique</TableHead>
+              <TableHead className="hidden h-8 px-2 text-[11px] md:table-cell">Tactic</TableHead>
+              <TableHead className="h-8 px-2 text-[11px]">
                 <Tooltip delayDuration={150}>
                   <TooltipTrigger asChild>
                     <span className="cursor-default underline decoration-dotted underline-offset-2">
@@ -139,13 +170,12 @@ export function GapsRoadmap({
                   <TooltipContent className="max-w-xs text-xs">
                     How commonly attackers use this technique in real intrusions,
                     from independent threat reports: P1 near-universal, P2 very
-                    common, P3 common, — unranked. A &quot;Threat match&quot; chip
-                    means it is also tied to your declared industry or threat
-                    actors.
+                    common, P3 common. A violet dot means it is also tied to your
+                    declared industry or threat actors.
                   </TooltipContent>
                 </Tooltip>
               </TableHead>
-              <TableHead className="hidden lg:table-cell">
+              <TableHead className="hidden h-8 px-2 text-[11px] lg:table-cell">
                 <Tooltip delayDuration={150}>
                   <TooltipTrigger asChild>
                     <span className="cursor-default underline decoration-dotted underline-offset-2">
@@ -155,7 +185,7 @@ export function GapsRoadmap({
                   <TooltipContent className="max-w-xs text-xs">{STRENGTH_TIP}</TooltipContent>
                 </Tooltip>
               </TableHead>
-              <TableHead>
+              <TableHead className="h-8 px-2 text-[11px]">
                 <Tooltip delayDuration={150}>
                   <TooltipTrigger asChild>
                     <span className="cursor-default underline decoration-dotted underline-offset-2">
@@ -163,41 +193,44 @@ export function GapsRoadmap({
                     </span>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs text-xs">
-                    How soon you could realistically build this detection: short
-                    term = the needed logs are already onboarded; mid term = your
-                    existing tooling can provide them; long term = needs a new
-                    telemetry capability.
+                    How soon you could realistically build this detection: build
+                    now = the needed logs are already onboarded; onboard first =
+                    your existing tooling can provide them; new capability =
+                    nothing you own produces this telemetry yet.
                   </TooltipContent>
                 </Tooltip>
               </TableHead>
-              <TableHead className="min-w-[280px]">Recommendation</TableHead>
+              <TableHead className="h-8 min-w-[280px] px-2 text-[11px]">Recommendation</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {gaps.map((gap) => (
               <TableRow key={gap.technique_id}>
-                <TableCell className="text-xs text-muted-foreground">{gap.rank}</TableCell>
-                <TableCell>
+                <TableCell className="px-2 py-1.5 text-[11px] text-muted-foreground">
+                  {gap.rank}
+                </TableCell>
+                <TableCell className="px-2 py-1.5">
                   <button
                     type="button"
                     onClick={() => onSelectTechnique(gap.technique_id)}
-                    className="text-left text-sm font-medium text-primary hover:underline"
+                    className="whitespace-nowrap text-left text-xs font-medium text-primary hover:underline"
                   >
                     {gap.technique_id}
-                  </button>
-                  <div className="text-xs text-muted-foreground">{gap.name}</div>
+                  </button>{' '}
+                  <span className="text-xs text-muted-foreground">{gap.name}</span>
                 </TableCell>
-                <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
+                <TableCell className="hidden px-2 py-1.5 text-xs text-muted-foreground md:table-cell">
                   {tacticName(gap)}
                 </TableCell>
-                <TableCell>
-                  <span className="inline-flex flex-wrap items-center gap-1">
+                <TableCell className="whitespace-nowrap px-2 py-1.5">
+                  <span className="inline-flex items-center gap-1.5">
                     <TierBadge tier={gap.tier} />
                     {gap.threat_relevance && gap.threat_relevance.length > 0 && (
                       <Tooltip delayDuration={150}>
                         <TooltipTrigger asChild>
-                          <span className="inline-flex cursor-default items-center rounded-full border border-violet-200 bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-800">
-                            Threat match
+                          <span className="inline-flex cursor-default items-center gap-1 text-[11px] text-violet-700">
+                            <Dot className="bg-violet-500" />
+                            Threat
                           </span>
                         </TooltipTrigger>
                         <TooltipContent className="max-w-xs text-xs">
@@ -210,25 +243,32 @@ export function GapsRoadmap({
                     )}
                   </span>
                 </TableCell>
-                <TableCell className="hidden lg:table-cell">
+                <TableCell className="hidden whitespace-nowrap px-2 py-1.5 lg:table-cell">
                   {strengthById.has(gap.technique_id) ? (
                     <span
-                      className={cn(
-                        'inline-flex cursor-default items-center rounded-full border px-2 py-0.5 text-[11px] font-medium',
-                        STRENGTH_META[strengthBucket(strengthById.get(gap.technique_id)!)].chip
-                      )}
+                      className="inline-flex cursor-default items-center gap-1.5 text-xs"
                       title={STRENGTH_TIP}
                     >
-                      {strengthById.get(gap.technique_id)}/100
+                      <Dot
+                        className={
+                          {
+                            strong: 'bg-emerald-500',
+                            moderate: 'bg-amber-500',
+                            weak: 'bg-rose-500',
+                          }[strengthBucket(strengthById.get(gap.technique_id)!)]
+                        }
+                      />
+                      {strengthById.get(gap.technique_id)} ·{' '}
+                      {STRENGTH_META[strengthBucket(strengthById.get(gap.technique_id)!)].label}
                     </span>
                   ) : (
                     <span className="text-xs text-muted-foreground">—</span>
                   )}
                 </TableCell>
-                <TableCell>
+                <TableCell className="px-2 py-1.5">
                   <FeasibilityBadge gap={gap} />
                 </TableCell>
-                <TableCell className="text-xs leading-snug">
+                <TableCell className="px-2 py-1.5 text-xs leading-snug">
                   {narrative.gap_recommendations[gap.technique_id] ?? gap.hint}
                 </TableCell>
               </TableRow>

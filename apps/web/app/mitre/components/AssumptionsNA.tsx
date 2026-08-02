@@ -1,14 +1,6 @@
 'use client';
 
 import { useMemo } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { DOMAIN_LABELS, NaEntry, Summary, TechniqueResult } from '../lib';
 import type { DrillHandler } from './ExecutiveBand';
 
@@ -59,11 +51,13 @@ export function AssumptionsNA({
   techniques,
   onDrill,
   onDrillRules,
+  onSelectTechnique,
 }: {
   summary: Summary;
   techniques: TechniqueResult[];
   onDrill: DrillHandler;
   onDrillRules: (status: string | null, title: string) => void;
+  onSelectTechnique: (techniqueId: string) => void;
 }) {
   const grouped = useMemo(() => {
     const buckets = new Map<string, NaEntry[]>();
@@ -75,6 +69,17 @@ export function AssumptionsNA({
     }
     return buckets;
   }, [summary.not_applicable]);
+
+  // One row per distinct REASON with its techniques as chips — 37 identical
+  // "deprecated in ATT&CK v19.1" table rows collapse into one line.
+  const byReason = (entries: NaEntry[]) => {
+    const map = new Map<string, NaEntry[]>();
+    for (const e of entries) {
+      const key = e.reason ?? '';
+      map.set(key, [...(map.get(key) ?? []), e]);
+    }
+    return [...map.entries()].sort((a, b) => b[1].length - a[1].length);
+  };
 
   const techniqueByKey = useMemo(
     () => new Map(techniques.map((t) => [`${t.domain}:${t.technique_id}`, t])),
@@ -149,16 +154,19 @@ export function AssumptionsNA({
             )}
           </div>
         )}
-        <ul className="space-y-1.5">
+        <div className="grid gap-1.5 lg:grid-cols-2">
           {summary.assumptions.map((assumption, i) => (
-            <li key={i} className="rounded-md bg-muted/40 px-3 py-2 text-sm leading-snug">
+            <div
+              key={i}
+              className="rounded-md border-l-2 border-primary/50 bg-muted/30 px-3 py-1.5 text-xs leading-snug"
+            >
               {assumption}
-            </li>
+            </div>
           ))}
           {summary.assumptions.length === 0 && (
-            <li className="text-sm text-muted-foreground">No assumptions were needed.</li>
+            <p className="text-sm text-muted-foreground">No assumptions were needed.</p>
           )}
-        </ul>
+        </div>
       </section>
 
       <section>
@@ -167,16 +175,16 @@ export function AssumptionsNA({
         </h3>
         <p className="mb-3 text-xs text-muted-foreground">
           These leave the coverage denominator — the headline percentage makes no claim
-          about them.
+          about them. Grouped by reason; click any technique for its details.
         </p>
-        <div className="space-y-4">
+        <div className="grid gap-3 lg:grid-cols-2">
           {GROUPS.map((group) => {
             const entries = grouped.get(group.key) ?? [];
             if (entries.length === 0) return null;
             return (
-              <div key={group.key}>
-                <h4 className="text-xs font-semibold">
-                  {group.title}{' '}
+              <div key={group.key} className="flex flex-col rounded-md border p-3">
+                <div className="mb-0.5 flex items-baseline justify-between gap-2">
+                  <h4 className="text-xs font-semibold">{group.title}</h4>
                   <button
                     type="button"
                     onClick={() =>
@@ -198,33 +206,36 @@ export function AssumptionsNA({
                         { subtitle: group.blurb }
                       )
                     }
-                    className="font-normal text-muted-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="shrink-0 text-[11px] font-medium text-muted-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    ({entries.length})
+                    {entries.length} techniques
                   </button>
-                </h4>
-                <p className="mb-1.5 text-xs text-muted-foreground">{group.blurb}</p>
-                <div className="max-h-72 overflow-y-auto rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-28">Technique</TableHead>
-                        <TableHead className="w-24 hidden sm:table-cell">Matrix</TableHead>
-                        <TableHead>Reason</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {entries.map((entry) => (
-                        <TableRow key={entry.technique_id}>
-                          <TableCell className="text-xs font-medium">{entry.technique_id}</TableCell>
-                          <TableCell className="hidden text-xs text-muted-foreground sm:table-cell">
-                            {DOMAIN_LABELS[entry.domain] ?? entry.domain}
-                          </TableCell>
-                          <TableCell className="text-xs">{entry.reason}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                </div>
+                <p className="mb-2 text-[11px] text-muted-foreground">{group.blurb}</p>
+                <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                  {byReason(entries).map(([reason, list]) => (
+                    <div key={reason}>
+                      <p className="text-[11px] leading-snug text-muted-foreground">
+                        {reason}{' '}
+                        {list.length > 1 && (
+                          <span className="text-muted-foreground/70">({list.length})</span>
+                        )}
+                      </p>
+                      <div className="mt-0.5 flex flex-wrap gap-1">
+                        {list.map((e) => (
+                          <button
+                            key={`${e.domain}:${e.technique_id}`}
+                            type="button"
+                            onClick={() => onSelectTechnique(e.technique_id)}
+                            title={`${DOMAIN_LABELS[e.domain] ?? e.domain} — click for details`}
+                            className="rounded border bg-muted/30 px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            {e.technique_id}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             );
