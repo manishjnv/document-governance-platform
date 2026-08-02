@@ -149,6 +149,8 @@ export interface ParsePreview {
   row_count: number;
   columns: Record<string, number>;
   sheet: string | null;
+  headers: string[];
+  sample_rows: string[][];
   tagged: number;
   untagged: number;
   invalid: number;

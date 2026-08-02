@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Download, FileSpreadsheet, Play, ShieldCheck, Trash2, UploadCloud, X } from 'lucide-react';
+import { Columns3, Download, FileSpreadsheet, Play, ShieldCheck, Trash2, UploadCloud, X } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -152,6 +152,10 @@ export default function NewMitreAssessmentPage() {
   const [submitting, setSubmitting] = useState(false);
   const [preview, setPreview] = useState<ParsePreview | null>(null);
   const [running, setRunning] = useState(false);
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  // field -> 0-based column index; '' = not mapped
+  const [colMap, setColMap] = useState<Record<string, string>>({});
+  const [applying, setApplying] = useState(false);
 
   useEffect(() => {
     if (!localStorage.getItem('access_token')) router.push('/login');
@@ -234,6 +238,41 @@ export default function NewMitreAssessmentPage() {
     description: 'Description',
     log_source: 'Log source',
     enabled: 'Status',
+  };
+
+  const openAdjust = () => {
+    if (!preview) return;
+    const initial: Record<string, string> = {};
+    for (const field of Object.keys(columnLabels)) {
+      initial[field] = field in preview.columns ? String(preview.columns[field]) : '';
+    }
+    setColMap(initial);
+    setAdjustOpen(true);
+  };
+
+  const handleApplyColumns = async () => {
+    if (!preview) return;
+    setApplying(true);
+    setError('');
+    try {
+      const token = localStorage.getItem('access_token');
+      const columns: Record<string, number> = {};
+      for (const [field, idx] of Object.entries(colMap)) {
+        if (idx !== '') columns[field] = Number(idx);
+      }
+      const res = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments/${preview.assessment_id}/remap`,
+        { columns },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setPreview(res.data);
+      setAdjustOpen(false);
+    } catch (err: any) {
+      if (err.response?.status === 401) router.push('/login');
+      else setError(err.response?.data?.detail || 'Could not apply the column mapping');
+    } finally {
+      setApplying(false);
+    }
   };
 
   return (
@@ -473,9 +512,15 @@ export default function NewMitreAssessmentPage() {
 
               {Object.keys(preview.columns).length > 0 && (
                 <div>
-                  <div className="mb-1 text-xs font-semibold text-muted-foreground">
-                    Detected columns{preview.sheet ? ` (sheet “${preview.sheet}”)` : ''} — if
-                    these look wrong, fix the headers and re-upload
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      Detected columns{preview.sheet ? ` (sheet “${preview.sheet}”)` : ''}
+                    </span>
+                    {preview.headers.length > 0 && !adjustOpen && (
+                      <Button type="button" variant="outline" size="sm" onClick={openAdjust}>
+                        <Columns3 size={13} className="mr-1" aria-hidden="true" /> Adjust columns
+                      </Button>
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {Object.entries(preview.columns).map(([field, idx]) => (
@@ -483,6 +528,80 @@ export default function NewMitreAssessmentPage() {
                         {columnLabels[field] ?? field}: column {Number(idx) + 1}
                       </span>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {adjustOpen && preview.headers.length > 0 && (
+                <div className="space-y-3 rounded-md border bg-muted/20 p-3">
+                  <p className="text-xs text-muted-foreground">
+                    Map each field to the right column of your file, then apply — we
+                    re-read the uploaded file with your mapping. Only the name column is
+                    required.
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {Object.entries(columnLabels).map(([field, label]) => (
+                      <div key={field}>
+                        <label htmlFor={`col-${field}`} className="mb-0.5 block text-[11px] font-medium">
+                          {label}
+                          {field === 'name' && <span className="text-destructive"> *</span>}
+                        </label>
+                        <select
+                          id={`col-${field}`}
+                          value={colMap[field] ?? ''}
+                          onChange={(e) =>
+                            setColMap((prev) => ({ ...prev, [field]: e.target.value }))
+                          }
+                          className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <option value="">— not mapped —</option>
+                          {preview.headers.map((h, i) => (
+                            <option key={i} value={String(i)}>
+                              {i + 1}: {h || '(blank header)'}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                  {preview.sample_rows.length > 0 && (
+                    <div className="overflow-x-auto rounded-md border bg-background">
+                      <table className="w-full text-[11px]">
+                        <thead>
+                          <tr>
+                            {preview.headers.map((h, i) => (
+                              <th key={i} className="whitespace-nowrap border-b bg-muted/40 px-2 py-1 text-left font-medium">
+                                {h || `col ${i + 1}`}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {preview.sample_rows.map((row, ri) => (
+                            <tr key={ri}>
+                              {row.map((cell, ci) => (
+                                <td key={ci} className="max-w-56 truncate whitespace-nowrap border-b px-2 py-1 text-muted-foreground">
+                                  {cell}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleApplyColumns}
+                      disabled={applying || (colMap.name ?? '') === ''}
+                    >
+                      {applying ? 'Re-parsing…' : 'Apply mapping'}
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={() => setAdjustOpen(false)}>
+                      Cancel
+                    </Button>
                   </div>
                 </div>
               )}

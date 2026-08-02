@@ -15,7 +15,7 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
@@ -111,6 +111,26 @@ def _parse_intake(raw: Optional[str]) -> dict:
     }
 
 
+def _build_use_case_rows(parsed_rows: list) -> tuple:
+    """Parsed ingest rows -> (models_data, tagged, unmapped, invalid, notes).
+    Shared by create and remap so tag validation stays identical."""
+    tagged = unmapped = invalid = 0
+    models_data, notes = [], []
+    for row in parsed_rows:
+        mappings, mapping_status, row_notes = service.build_mappings(row["tags"])
+        notes.extend(f"{row['row_ref']}: {note}" for note in row_notes)
+        if mapping_status == "customer_tagged":
+            tagged += 1
+        elif mapping_status == "invalid":
+            invalid += 1
+        else:
+            unmapped += 1
+        models_data.append(
+            {"row": row, "mappings": mappings, "mapping_status": mapping_status}
+        )
+    return models_data, tagged, unmapped, invalid, notes
+
+
 async def _get_assessment(
     db: AsyncSession, assessment_id: UUID, org_id
 ) -> MitreAssessment:
@@ -170,6 +190,8 @@ async def create_assessment(
             "rows": [],
             "columns": {},
             "sheet": None,
+            "headers": [],
+            "sample_rows": [],
             "row_count": 0,
             "warnings": [
                 "rules will be AI-extracted from this document when the "
@@ -222,24 +244,10 @@ async def create_assessment(
         }
     environment_dict["exclusions"] = intake_data.get("exclusions", [])
 
-    tagged = unmapped = invalid = 0
-    use_case_models = []
-    for row in parsed["rows"]:
-        mappings, mapping_status, notes = service.build_mappings(row["tags"])
-        parse_assumptions.extend(f"{row['row_ref']}: {note}" for note in notes)
-        if mapping_status == "customer_tagged":
-            tagged += 1
-        elif mapping_status == "invalid":
-            invalid += 1
-        else:
-            unmapped += 1
-        use_case_models.append(
-            {
-                "row": row,
-                "mappings": mappings,
-                "mapping_status": mapping_status,
-            }
-        )
+    use_case_models, tagged, unmapped, invalid, row_notes = _build_use_case_rows(
+        parsed["rows"]
+    )
+    parse_assumptions.extend(row_notes)
 
     file_rows = []
     for kind, raw_filename, file_type, content, row_count in files_to_store:
@@ -339,6 +347,8 @@ async def create_assessment(
         "row_count": parsed["row_count"],
         "columns": parsed["columns"],
         "sheet": parsed["sheet"],
+        "headers": parsed["headers"],
+        "sample_rows": parsed["sample_rows"],
         "tagged": tagged,
         "untagged": unmapped,
         "invalid": invalid,
@@ -374,6 +384,174 @@ async def run_assessment(
     task.add_done_callback(_RUNNING_TASKS.discard)
 
     return {"assessment_id": str(assessment_id), "status": "running"}
+
+
+@router.post("/assessments/{assessment_id}/remap", summary="Re-parse the dump with an explicit column mapping")
+async def remap_assessment_columns(
+    assessment_id: UUID,
+    payload: dict = Body(...),
+    current_user: TokenData = Depends(require_role("admin", "reviewer")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Phase 9 wizard: body = {"columns": {field: 0-based column index}}.
+    Re-parses the STORED use-case dump with the user's mapping (auto-
+    detection bypassed), replaces the parsed rows, and returns a fresh
+    parse preview. Only while status is 'pending' — a run freezes the rows."""
+    import re as _re
+
+    org_id = UUID(str(current_user.org_id))
+    assessment = await _get_assessment(db, assessment_id, org_id)
+    if assessment.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Columns can only be adjusted before the assessment runs.",
+        )
+
+    files = (
+        await db.execute(
+            select(MitreFile).where(
+                (MitreFile.assessment_id == assessment_id)
+                & (MitreFile.org_id == org_id)
+                & (MitreFile.deleted_at.is_(None))
+            )
+        )
+    ).scalars().all()
+    uc_file = next((f for f in files if f.kind == "use_cases"), None)
+    if uc_file is None or uc_file.file_type not in ("xlsx", "xls", "csv"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Column mapping applies to spreadsheet dumps only.",
+        )
+
+    storage = await get_storage_instance()
+    try:
+        content = await storage.download(uc_file.s3_path)
+    except Exception as exc:  # noqa: BLE001
+        logger.error(f"MITRE remap download failed: {exc}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not load the stored file",
+        )
+    try:
+        # CPU-bound parse off the event loop (house pattern: report/xlsx
+        # builders in this file do the same).
+        parsed = await run_in_threadpool(
+            ingest.parse_use_case_file,
+            content,
+            uc_file.file_type,
+            payload.get("columns"),
+        )
+    except ingest.IngestError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.detail
+        )
+
+    use_case_models, tagged, unmapped, invalid, row_notes = _build_use_case_rows(
+        parsed["rows"]
+    )
+
+    # TOCTOU guard: the pending-check above ran BEFORE the (slow) download
+    # + parse — a concurrent /run could have started the pipeline since.
+    # This conditional UPDATE re-asserts 'pending' atomically in the same
+    # transaction as the row replacement: 0 rows -> a run won the race.
+    guard = await db.execute(
+        update(MitreAssessment)
+        .where(
+            (MitreAssessment.assessment_id == assessment_id)
+            & (MitreAssessment.org_id == org_id)
+            & (MitreAssessment.status == "pending")
+        )
+        .values(updated_at=datetime.now(timezone.utc))
+    )
+    if guard.rowcount == 0:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Columns can only be adjusted before the assessment runs.",
+        )
+
+    # Replace the parse artifacts wholesale (assessment is pending — rows
+    # only exist as preview state until a run freezes them).
+    await db.execute(
+        delete(MitreUseCase).where(
+            (MitreUseCase.assessment_id == assessment_id)
+            & (MitreUseCase.org_id == org_id)
+        )
+    )
+    for item in use_case_models:
+        row = item["row"]
+        db.add(
+            MitreUseCase(
+                use_case_id=uuid4(),
+                assessment_id=assessment_id,
+                org_id=org_id,
+                file_id=uc_file.file_id,
+                row_ref=row["row_ref"],
+                name=row["name"],
+                description=row["description"],
+                logic=(row["logic"] or "")[:2000] or None,
+                log_source=row["log_source"],
+                enabled=row["enabled"],
+                mappings=item["mappings"],
+                mapping_status=item["mapping_status"],
+            )
+        )
+
+    params = dict(assessment.params or {})
+    # parse_assumptions mixes env-workbook notes with per-row tag notes;
+    # row notes are "<sheet>:<row>: ..." — drop the stale ones, keep env.
+    old_sheet = params.get("sheet")
+    kept = [
+        a
+        for a in params.get("parse_assumptions", [])
+        if not (old_sheet and _re.match(rf"^{_re.escape(old_sheet)}:\d+: ", a))
+    ]
+    params.update(
+        {
+            "columns": parsed["columns"],
+            "sheet": parsed["sheet"],
+            "parse_assumptions": kept + row_notes,
+            "warnings": parsed["warnings"],
+        }
+    )
+    assessment.params = params
+    assessment.updated_at = datetime.now(timezone.utc)
+    uc_file.parse_status = "parsed"
+    uc_file.row_count = parsed["row_count"]
+    await db.commit()
+
+    await log_action(
+        db,
+        org_id=org_id,
+        user_id=UUID(str(current_user.user_id)),
+        action="mitre.assessment_remapped",
+        resource_type="mitre_assessment",
+        resource_id=assessment_id,
+    )
+    await db.commit()
+    await invalidate_cache(f"cache:*:{org_id}:*")
+
+    environment_dict = params.get("environment") or {}
+    return {
+        "assessment_id": str(assessment_id),
+        "name": assessment.name,
+        "status": assessment.status,
+        "attack_version": assessment.attack_version,
+        "row_count": parsed["row_count"],
+        "columns": parsed["columns"],
+        "sheet": parsed["sheet"],
+        "headers": parsed["headers"],
+        "sample_rows": parsed["sample_rows"],
+        "tagged": tagged,
+        "untagged": unmapped,
+        "invalid": invalid,
+        "extraction_pending": False,
+        "environment_provided": any(f.kind == "environment" for f in files),
+        "environment": environment_dict,
+        "sheets_found": params.get("environment_lists", {}).get("sheets_found", {}),
+        "warnings": parsed["warnings"],
+        "assumptions": kept + row_notes,
+    }
 
 
 @router.get("/assessments", summary="List assessments")

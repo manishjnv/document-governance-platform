@@ -276,15 +276,72 @@ def _csv_grid(content: bytes) -> list[list]:
         dialect = csv.Sniffer().sniff(text[:4096], delimiters=",;\t")
     except csv.Error:
         dialect = csv.excel
-    return [row for row in csv.reader(io.StringIO(text), dialect)]
+    # Same workbook budgets the xlsx/xls readers enforce (2026-08-02
+    # review nit — csv previously buffered unbounded rows/cells).
+    rows = []
+    for row in csv.reader(io.StringIO(text), dialect):
+        if len(row) > MAX_ROW_CELLS:
+            raise IngestError(
+                f"The CSV has rows wider than {MAX_ROW_CELLS} columns — this "
+                "doesn't look like a rule export. Please use the template."
+            )
+        rows.append(row)
+        if len(rows) > MAX_TOTAL_ROWS:
+            raise IngestError(
+                f"The CSV exceeds the {MAX_TOTAL_ROWS:,}-row overall limit. "
+                "Split the export and run separate assessments."
+            )
+    return rows
 
 
-def parse_use_case_file(content: bytes, file_type: str) -> dict:
+_SAMPLE_ROWS = 5      # data rows echoed in the parse preview (Phase 9 wizard)
+_SAMPLE_CELL_CAP = 200
+
+
+def _preview_cells(row, width: int) -> list:
+    """Stringify + cap one grid row for the parse preview."""
+    cells = ["" if v is None else str(v)[:_SAMPLE_CELL_CAP] for v in row[:width]]
+    return cells + [""] * (width - len(cells))
+
+
+def validate_column_override(override, header_row) -> dict:
+    """Explicit {field: column_index} map from the wizard -> validated map.
+    Raises IngestError (-> 422) on unknown fields, non-integer or
+    out-of-range indexes, duplicate targets, or a missing name column."""
+    if not isinstance(override, dict) or not override:
+        raise IngestError("Column mapping must be a non-empty object of field: column index.")
+    width = len(header_row)
+    validated = {}
+    for field, idx in override.items():
+        if field not in COLUMN_SYNONYMS:
+            raise IngestError(
+                f"Unknown field '{field}'. Valid fields: {', '.join(sorted(COLUMN_SYNONYMS))}."
+            )
+        if isinstance(idx, bool) or not isinstance(idx, int) or not 0 <= idx < width:
+            raise IngestError(
+                f"Column index for '{field}' is out of range — this file has "
+                f"{width} columns."
+            )
+        validated[field] = idx
+    if "name" not in validated:
+        raise IngestError("A use-case name column is required.")
+    if len(set(validated.values())) != len(validated):
+        raise IngestError("Each column can only be mapped to one field.")
+    return validated
+
+
+def parse_use_case_file(content: bytes, file_type: str, column_override: dict | None = None) -> dict:
     """Parse a use-case dump into rows + detected column map.
+
+    column_override (Phase 9 wizard): an explicit {field: 0-based column
+    index} map that REPLACES the auto-detected mapping — the header row and
+    sheet are still located by detection, only the field→column assignment
+    is overridden (validated against the header width).
 
     Returns {"rows": [{row_ref, name, description, log_source, enabled,
     tags[], logic}], "columns": {field: 0-based index}, "sheet": str|None,
-    "warnings": [str], "row_count": int}. Raises IngestError (-> 422).
+    "headers": [str], "sample_rows": [[str]], "warnings": [str],
+    "row_count": int}. Raises IngestError (-> 422).
     """
     if file_type in ("pdf", "docx"):
         raise IngestError(PDF_DOCX_MESSAGE)
@@ -305,6 +362,8 @@ def parse_use_case_file(content: bytes, file_type: str) -> dict:
         header_idx, columns = _detect_columns(rows)
         if header_idx < 0:
             continue
+        if column_override is not None:
+            columns = validate_column_override(column_override, rows[header_idx])
         ignored = [name for name, _ in candidates if name != sheet_name]
         if ignored:
             warnings.append(
@@ -313,7 +372,7 @@ def parse_use_case_file(content: bytes, file_type: str) -> dict:
         if "tags" not in columns:
             warnings.append(
                 "No MITRE technique column detected — every rule will need AI "
-                "tagging (available in an upcoming release)."
+                "tagging. If your file has one, use “Adjust columns” to map it."
             )
         use_cases, skipped = _rows_to_use_cases(
             rows, header_idx, columns, sheet_name, lambda i: i + 1
@@ -324,10 +383,18 @@ def parse_use_case_file(content: bytes, file_type: str) -> dict:
             raise IngestError(
                 "No use-case rows found below the detected header row."
             )
+        headers = _preview_cells(rows[header_idx], len(rows[header_idx]))
+        sample_rows = [
+            _preview_cells(row, len(headers))
+            for row in rows[header_idx + 1 :]
+            if any(str(v).strip() for v in row if v is not None)
+        ][:_SAMPLE_ROWS]
         return {
             "rows": use_cases,
             "columns": columns,
             "sheet": sheet_name,
+            "headers": headers,
+            "sample_rows": sample_rows,
             "warnings": warnings,
             "row_count": len(use_cases),
         }

@@ -182,6 +182,49 @@ def test_workbook_row_width_cap():
         ingest._xlsx_grids(buf.getvalue())
 
 
+# --- Phase 9: column override + preview headers/samples ---
+
+def test_column_override_replaces_detection():
+    content = _xlsx([
+        ["Rule Name", "Ref Codes", "Query"],
+        ["Encoded PowerShell", "T1059.001", "proc = powershell"],
+    ])
+    auto = parse_use_case_file(content, "xlsx")
+    assert "tags" not in auto["columns"]  # 'Ref Codes' isn't a synonym
+    assert auto["headers"] == ["Rule Name", "Ref Codes", "Query"]
+    assert auto["sample_rows"] == [["Encoded PowerShell", "T1059.001", "proc = powershell"]]
+
+    overridden = parse_use_case_file(
+        content, "xlsx", column_override={"name": 0, "tags": 1, "logic": 2}
+    )
+    assert overridden["columns"] == {"name": 0, "tags": 1, "logic": 2}
+    assert overridden["rows"][0]["tags"] == ["T1059.001"]
+    assert overridden["rows"][0]["logic"] == "proc = powershell"
+
+
+def test_column_override_validation_errors():
+    content = _xlsx([["Rule Name", "Ref Codes"], ["r1", "T1110"]])
+    for bad, needle in [
+        ({"name": 5}, "out of range"),
+        ({"name": True}, "out of range"),          # bools are not indexes
+        ({"nope": 0, "name": 1}, "Unknown field"),
+        ({"tags": 1}, "name column is required"),
+        ({}, "non-empty object"),
+        ({"name": 0, "tags": 0}, "one field"),
+    ]:
+        with pytest.raises(IngestError, match=needle):
+            parse_use_case_file(content, "xlsx", column_override=bad)
+
+
+def test_csv_grid_enforces_row_and_width_caps():
+    wide = ("name," + ",".join(["x"] * ingest.MAX_ROW_CELLS)).encode()
+    with pytest.raises(IngestError, match="wider than"):
+        ingest._csv_grid(wide)
+    tall = ("name\n" + "r\n" * (ingest.MAX_TOTAL_ROWS + 1)).encode()
+    with pytest.raises(IngestError, match="overall limit"):
+        ingest._csv_grid(tall)
+
+
 # --- Phase 6: widened header/sheet/platform synonym sets ---
 
 def test_splunk_style_headers_detected():
