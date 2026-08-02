@@ -484,8 +484,12 @@ LLM key is read from `settings.openrouter_api_key` (app config / `.env`),
 never the shell env — verify the app's LLM budget there or in-container,
 not via a global env var.
 
-**Phase 6 COMPLETE — coding-over-AI (2026-08-02, built, NOT yet
-committed/deployed):** deterministic keyword/alias tagging pre-pass per
+**Phase 6 COMPLETE + DEPLOYED — coding-over-AI (2026-08-02, HEAD
+`68ade56`):** committed as 4 logical units + router logic-cap follow-up,
+migration 031 applied to scopewise_prod (CHECK verified), VPS rebuilt,
+live smoke green (`/mitre` 200, keyword pre-pass verified in-container:
+mimikatz→T1003.001 alias, schtasks→T1053.005 name). Deterministic
+keyword/alias tagging pre-pass per
 `docs/phases/prompts/MITRE_PHASE_6_CODING_OVER_AI_PROMPT.md`. (Task A)
 New pure `app/mitre/keyword_tag.py` + curated
 `app/mitre/data/keyword_aliases.json` (39 tool/command aliases with
@@ -522,10 +526,10 @@ regression tests; (V2) uncapped 32K logic cells → ~50 min worker-thread
 scan on a 5k-row dump → `_FIELD_CAP=2000` in the matcher + the router's
 logic-fallback capped at the root. Non-blocking: the logic column is
 dropped at create when BOTH description and logic exist (pre-existing
-Phase 2 behavior; documented, needs a schema column — deferred). Full
-suite **686 passed / 7 skipped** (+36), `tsc` clean. Deploy checklist:
-commit → push → VPS loop → **apply migration 031 to scopewise_prod** →
-smoke.
+Phase 2 behavior; documented, needs a schema column — deferred to Phase 7,
+`docs/phases/prompts/MITRE_PHASE_7_PERSIST_LOGIC_PROMPT.md`). Full
+suite **686 passed / 7 skipped** (+36), `tsc` clean. DEPLOYED to prod
+2026-08-02 (see header of this section).
 
 ---
 
