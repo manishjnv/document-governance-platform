@@ -204,3 +204,64 @@ def test_every_alias_target_resolves_in_pinned_dataset():
             f"({status}) in ATT&CK v{DEFAULT.version}"
         )
         assert canonical
+
+
+# --- Phase A5: new alias families (2026-08-03), one FP-regression pin each ---
+
+def test_a5_lolbas_binaries_match_and_avoid_bare_word_collision():
+    result = keyword_tag_rows([
+        _row("CMSTP abuse", logic="cmstp.exe /s malicious.inf", row_ref="s:1"),
+        _row("Odbcconf DLL load", logic="odbcconf /a {regsvr...}", row_ref="s:2"),
+        _row("Regasm proxy execution", logic="regasm.exe /u payload.dll", row_ref="s:3"),
+        _row("Forfiles indirect exec", logic="forfiles /p c:\\ /m *.exe /c cmd.exe", row_ref="s:5"),
+        _row("Compiled help abuse", logic="hh.exe malicious.chm", row_ref="s:6"),
+        _row("Verclsid proxy exec", logic="verclsid.exe /S /C {guid}", row_ref="s:7"),
+        _row("Mavinject process injection", logic="mavinject.exe 1234 /INJECTRUNNING dll", row_ref="s:8"),
+    ])
+    assert _ids(result, "s:1") == ["T1218.003"]
+    assert _ids(result, "s:2") == ["T1218.008"]
+    assert _ids(result, "s:3") == ["T1218.009"]
+    assert _ids(result, "s:5") == ["T1202"]
+    assert _ids(result, "s:6") == ["T1218.001"]
+    assert _ids(result, "s:7") == ["T1218.012"]
+    assert _ids(result, "s:8") == ["T1218.013"]
+    # "control.exe" alias must not fire on the common English word "control"
+    # alone (this is exactly why the ".exe" suffix was kept for this one).
+    assert keyword_tag_rows(
+        [_row("Access control policy change detected")]
+    ) == {}
+    assert _ids(keyword_tag_rows([_row("Control panel abuse", logic="control.exe /name Microsoft.Firewall")])) == ["T1218.002"]
+
+
+def test_a5_credential_dumping_tools():
+    result = keyword_tag_rows([
+        _row("LaZagne password store dump", logic="lazagne.exe all", row_ref="s:1"),
+    ])
+    assert _ids(result, "s:1") == ["T1555"]
+
+
+def test_a5_persistence_artifacts():
+    result = keyword_tag_rows([
+        _row("New Windows service persistence", logic="sc create evilsvc binPath= C:\\evil.exe", row_ref="s:1"),
+        _row("Scheduled task cmdlet persistence", logic="New-ScheduledTask -Action $action", row_ref="s:2"),
+    ])
+    assert _ids(result, "s:1") == ["T1543.003"]
+    assert _ids(result, "s:2") == ["T1053.005"]
+
+
+def test_a5_dns_tunneling_tools():
+    result = keyword_tag_rows([
+        _row("DNS C2 channel", logic="dnscat2 client connecting to c2 domain", row_ref="s:1"),
+        _row("Legacy DNS C2", logic="dnscat --dns beacon", row_ref="s:2"),
+    ])
+    assert _ids(result, "s:1") == ["T1071.004"]
+    assert _ids(result, "s:2") == ["T1071.004"]
+
+
+def test_a5_backup_destruction_markers():
+    result = keyword_tag_rows([
+        _row("Backup catalog deletion", logic="wbadmin delete catalog -quiet", row_ref="s:1"),
+        _row("Shadow storage shrink to force deletion", logic="vssadmin resize shadowstorage /for=c: /on=c: /maxsize=401MB", row_ref="s:2"),
+    ])
+    assert _ids(result, "s:1") == ["T1490"]
+    assert _ids(result, "s:2") == ["T1490"]

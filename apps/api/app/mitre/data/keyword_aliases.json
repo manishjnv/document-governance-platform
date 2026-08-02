@@ -7,7 +7,7 @@
       "LOLBAS project (living-off-the-land binary -> technique mappings): lolbas-project.github.io",
       "Red Canary Threat Detection Report (tool/technique prevalence): redcanary.com/threat-detection-report"
     ],
-    "notes": "Deviation from the Phase 6 seed list: bare 'net user' is ambiguous between account creation (T1136.001) and account discovery (T1087.001), so only the unambiguous 'net user /add' form is mapped. Every technique_id is re-validated through attack_data.resolve() at match time (revoked IDs remap, dead IDs drop)."
+    "notes": "Deviation from the Phase 6 seed list: bare 'net user' is ambiguous between account creation (T1136.001) and account discovery (T1087.001), so only the unambiguous 'net user /add' form is mapped. Every technique_id is re-validated through attack_data.resolve() at match time (revoked IDs remap, dead IDs drop). Plan phase A5 (2026-08-03) added 16 entries across LOLBAS binaries, a credential-dumping tool, persistence artifacts, DNS tunneling, and backup-destruction markers — all sourced from the MITRE ATT&CK v19 technique pages' own procedure examples (attack.mitre.org) or the LOLBAS project, same as the seed list. Validated with scripts/benchmark_tagging.py (keyword-only, 300 Sigma rules, seed 42) before/after: exact precision 0.365->0.366, recall 0.145->0.150 (both improved). Three ORIGINALLY-DRAFTED entries were cut after the benchmark showed them adding false positives with no offsetting true positives on this sample -- 'msiexec.exe' (fired inside a generic 'binaries susceptible to COM hijacking' enumeration rule, not actually about Msiexec proxy execution), 'secretsdump' (fired inside a broad 'Impacket tools' catch-all rule tagged for a different primary technique), 'iodine' (fired inside a multi-tool 'DNS exfiltration tools' catch-all alongside dnscat2). Three more candidate families were evaluated and REJECTED for ambiguity before ever being added: C2 frameworks (Cobalt Strike/Sliver/Brute Ratel — each maps to dozens of techniques, no single correct id); SharpHound/BloodHound (same multi-technique problem — enumerates trusts/groups/ACLs/sessions at once); cloud CLI abuse markers (legitimate admin activity is textually identical to abuse, e.g. 'aws sts assume-role' — no keyword can discriminate); kerbrute (genuinely ambiguous between Kerberos username enumeration T1087.002 and password spraying T1110.003, its two equally-common use cases)."
   },
   "aliases": [
     {"pattern": "mimikatz", "technique_id": "T1003.001"},
@@ -48,6 +48,27 @@
     {"pattern": "anydesk", "technique_id": "T1219"},
     {"pattern": "teamviewer", "technique_id": "T1219"},
     {"pattern": "rclone", "technique_id": "T1567.002"},
-    {"pattern": "ngrok", "technique_id": "T1572"}
+    {"pattern": "ngrok", "technique_id": "T1572"},
+
+    {"pattern": "cmstp.exe", "technique_id": "T1218.003"},
+    {"pattern": "odbcconf", "technique_id": "T1218.008"},
+    {"pattern": "regsvcs", "technique_id": "T1218.009"},
+    {"pattern": "regasm", "technique_id": "T1218.009"},
+    {"pattern": "control.exe", "technique_id": "T1218.002"},
+    {"pattern": "forfiles", "technique_id": "T1202"},
+    {"pattern": "hh.exe", "technique_id": "T1218.001"},
+    {"pattern": "verclsid", "technique_id": "T1218.012"},
+    {"pattern": "mavinject", "technique_id": "T1218.013"},
+
+    {"pattern": "lazagne", "technique_id": "T1555"},
+
+    {"pattern": "sc create", "technique_id": "T1543.003"},
+    {"pattern": "new-scheduledtask", "technique_id": "T1053.005"},
+
+    {"pattern": "dnscat", "technique_id": "T1071.004"},
+    {"pattern": "dnscat2", "technique_id": "T1071.004"},
+
+    {"pattern": "wbadmin delete", "technique_id": "T1490"},
+    {"pattern": "vssadmin resize shadowstorage", "technique_id": "T1490"}
   ]
 }
