@@ -228,6 +228,15 @@ async def test_xlsx_phase14c_structure(db_session):
     a_col = [c[0].value for c in gaps.iter_rows(min_col=1, max_col=1) if c[0].value]
     assert any(str(v).startswith("Short term") for v in a_col)  # section header
 
+    # Phase 14h: "Log fields needed" column (curated per data-source component)
+    gap_headers = [c.value for c in gaps[1]]
+    assert gap_headers == ["Rank", "Technique", "Name", "Priority", "State",
+                           "Log source to use", "Log fields needed", "Recommendation"]
+    gap_row = next(r for r in gaps.iter_rows(min_row=2) if r[1].value == "T1112")
+    telemetry_cell = gap_row[6].value
+    assert "your query needs:" in telemetry_cell
+    assert "Windows Registry Key Modification" in telemetry_cell
+
     summary_metrics = [r[0].value for r in wb["Summary"].iter_rows(min_row=2)]
     assert "Coverage %" in summary_metrics
     assert "Strict coverage %" not in summary_metrics

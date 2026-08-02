@@ -83,6 +83,82 @@ def test_curated_lookup_and_sketch():
     assert plain_language.detection_sketch("T1566", "Sysmon") is None  # uncurated
 
 
+# --------------------------------------------------- telemetry fields (14h)
+
+
+_TOP_35_TELEMETRY_COMPONENTS = {
+    "Process Creation", "Command Execution", "Network Traffic Content",
+    "File Creation", "Network Connection Creation", "Application Log Content",
+    "OS API Execution", "Network Traffic Flow", "File Modification",
+    "Module Load", "File Access", "Windows Registry Key Modification",
+    "Process Access", "File Metadata", "Logon Session Creation",
+    "Application Permission", "User Account Authentication",
+    "Process Metadata", "Script Execution", "Logon Session Metadata",
+    "Service Creation", "Application State", "Response Content",
+    "Host Status", "Process Modification", "User Account Metadata",
+    "User Account Modification", "Cloud Service Modification",
+    "System Settings", "Scheduled Job Creation",
+    "Active Directory Object Modification", "Device Alarm", "API Calls",
+    "File Deletion", "Driver Load",
+}
+
+
+def test_telemetry_fields_keys_are_real_components():
+    """Every telemetry_fields.json key must be a real ATT&CK data-component
+    name that appears in some technique's data_sources in the pinned
+    dataset (same validation pattern as the curated-ID tests above)."""
+    all_components = {
+        component
+        for tech in attack_data.DEFAULT.techniques()
+        for component in tech.get("data_sources") or []
+    }
+    curated = set(plain_language.load_telemetry_fields()["components"])
+    bad = curated - all_components
+    assert not bad, f"telemetry_fields.json has keys not in attack.json data_sources: {bad}"
+
+
+def test_telemetry_fields_entries_complete():
+    for component, entry in plain_language.load_telemetry_fields()["components"].items():
+        for field in ("fields", "where", "gotcha"):
+            assert entry.get(field), f"{component} missing {field}"
+        assert isinstance(entry["fields"], list) and entry["fields"]
+
+
+def test_telemetry_fields_covers_all_35_curated_components():
+    """Guards against a partial file: the plan's top-35-by-frequency list
+    must all be present."""
+    curated = set(plain_language.load_telemetry_fields()["components"])
+    missing = _TOP_35_TELEMETRY_COMPONENTS - curated
+    assert not missing, f"telemetry_fields.json missing required components: {missing}"
+    assert len(curated) == 35, f"expected exactly 35 curated components, got {len(curated)}"
+
+
+def test_telemetry_requirements_curated_for_t1059_001():
+    results = plain_language.telemetry_requirements("T1059.001")
+    by_component = {r["component"]: r for r in results}
+    assert set(by_component) == {
+        "Command Execution", "Module Load", "Process Creation", "Process Metadata",
+    }
+    for name in ("Process Creation", "Command Execution"):
+        entry = by_component[name]
+        assert entry["fields"] and entry["where"] and entry["gotcha"]
+
+
+def test_telemetry_requirements_degrades_for_uncurated_component():
+    """T1219.003's only ATT&CK data source ('Drive Creation') is long-tail
+    (not in the curated top 35) — degrades to the bare component name."""
+    results = plain_language.telemetry_requirements("T1219.003")
+    assert results == [
+        {"component": "Drive Creation", "fields": [], "where": None, "gotcha": None}
+    ]
+
+
+def test_telemetry_lines_skip_uncurated_and_format_curated():
+    assert plain_language.telemetry_lines("T1219.003") == []
+    lines = plain_language.telemetry_lines("T1059.001")
+    assert any(line.startswith("Process Creation — your query needs:") for line in lines)
+
+
 # ------------------------------------------------------------ why goldens
 
 
@@ -281,6 +357,11 @@ async def test_explain_partial_disabled(client, db_session):
         "technique_name": "SMB/Windows Admin Shares",
         "rule_name": "SMB admin share alert",
     }
+    # Phase 14h: per-data-source-component query field guidance
+    telemetry_by_component = {t["component"]: t for t in body["good"]["telemetry"]}
+    assert "Logon Session Creation" in telemetry_by_component
+    assert telemetry_by_component["Logon Session Creation"]["fields"]
+    assert telemetry_by_component["Logon Session Creation"]["gotcha"]
 
 
 async def test_explain_covered_proof(client, db_session):

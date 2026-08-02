@@ -358,6 +358,7 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
 
     # --- detailed: gap register grouped by feasibility -------------------
     gap_sections = ""
+    referenced_components: set = set()
     for bucket in ("short", "mid", "long"):
         bucket_gaps = [g for g in gaps if g.get("feasibility") == bucket]
         if not bucket_gaps:
@@ -375,6 +376,16 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
                 confidence_covered=confidence_covered,
             )
             sketch = plain_language.detection_sketch(tid, g.get("via"))
+            # Phase 14h: name the components here; the field guidance is
+            # printed ONCE in the reference table below (the same components
+            # recur across hundreds of gaps — repeating the full text per gap
+            # added ~1.2MB / ~680 pages on a real 842-gap assessment).
+            telemetry_components = [
+                e["component"] for e in plain_language.telemetry_requirements(tid, index)
+                if e["fields"]
+            ]
+            for _component in telemetry_components:
+                referenced_components.add(_component)
             via_line = (
                 f"Uses logs you already collect: {g.get('via')}" if bucket == "short" and g.get("via")
                 else f"Onboard telemetry from tooling you own: {g.get('via')}" if bucket == "mid" and g.get("via")
@@ -393,6 +404,9 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
                 + f"{_state_chip(g.get('state', ''))}</p>"
                 f"<p><em>Why it's a gap:</em> {_esc(why)}</p>"
                 + (f"<p><em>What good looks like:</em> {_esc(sketch)}</p>" if sketch else "")
+                + (f"<p class='muted'>Log fields needed: {_esc(', '.join(telemetry_components))}"
+                   " — see the log-fields reference after this register.</p>"
+                   if telemetry_components else "")
                 + f"<p class='muted'>{_esc(via_line)}</p>"
                 + (f"<p>{ai_badge} {_esc(gap_recs.get(tid))}</p>" if gap_recs.get(tid)
                    else f"<p class='muted'>{_esc(g.get('hint') or '')}</p>")
@@ -403,6 +417,28 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
             f"{len(bucket_gaps)} item{'' if len(bucket_gaps) == 1 else 's'}</h3>"
             f"<p class='muted'>{_esc(narrative.get('roadmap_prose', {}).get(bucket, ''))}</p>"
             + entries
+        )
+
+    # Phase 14h reference: one row per curated component referenced above.
+    telemetry_reference = ""
+    if referenced_components:
+        rows = "".join(
+            f"<tr><td>{_esc(component)}</td>"
+            f"<td>{_esc(', '.join(plain_language.TELEMETRY_FIELDS[component]['fields']))}</td>"
+            f"<td>{_esc(plain_language.TELEMETRY_FIELDS[component]['where'])}<br>"
+            f"<span class='muted'>{_esc(plain_language.TELEMETRY_FIELDS[component]['gotcha'])}</span></td></tr>"
+            for component in sorted(referenced_components)
+        )
+        telemetry_reference = (
+            "<h3>Log fields reference</h3>"
+            "<p class='muted'>What a detection query needs from each kind of "
+            "telemetry named above, and the most common reason a source you "
+            "already collect still cannot support it. Verify these fields are "
+            "present in your connector before building the rule.</p>"
+            "<table class='compact'><thead><tr><th>Telemetry</th>"
+            "<th>Your query needs</th><th>Where it comes from · what to check</th>"
+            "</tr></thead>"
+            f"<tbody>{rows}</tbody></table>"
         )
 
     # --- appendices ------------------------------------------------------
@@ -549,6 +585,7 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
         "heatmap_sections": heatmap_sections,
         "gaps_len": len(gaps),
         "gap_sections": gap_sections,
+        "telemetry_reference": telemetry_reference,
         "results_len": len(results),
         "register_rows": register_rows,
         "not_applicable_len": len(not_applicable),

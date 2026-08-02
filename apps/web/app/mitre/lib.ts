@@ -204,6 +204,13 @@ export interface TechniqueExplain {
       technique_name: string | null;
       rule_name: string;
     } | null;
+    /** Phase 14h: per-data-source-component query field guidance. */
+    telemetry: {
+      component: string;
+      fields: string[];
+      where: string | null;
+      gotcha: string | null;
+    }[];
   };
 }
 

@@ -1,12 +1,17 @@
 """Plain-language technique content + deterministic why-phrases (Phase 14a).
 
-Two curated, hand-written data files (never runtime-LLM):
+Three curated, hand-written data files (never runtime-LLM):
 - data/technique_plain_language.json — definition / attacker_use /
   detection_hint per curated technique (the technique_priorities.json ∪
   threat_profiles.json union — the IDs that realistically surface as top
   gaps). Long tail falls back to the first sentence of the ATT&CK
   description already in attack.json.
 - data/tactic_lines.json — one story line per tactic shortname, all domains.
+- data/telemetry_fields.json — Phase 14h "what logs do I need?": per
+  ATT&CK data-source component, the plain-English query fields, the usual
+  event source, and the single most common reason an already-onboarded
+  source still can't support the detection. Long tail falls back to the
+  bare component name.
 
 ``derive_why`` turns one technique's stored result + its mapped rules into
 the one-sentence "why is it a gap / why does it count" — pure, reused by the
@@ -28,8 +33,15 @@ def load_tactic_lines() -> dict:
     return json.loads((DATA_DIR / "tactic_lines.json").read_text(encoding="utf-8"))
 
 
+def load_telemetry_fields() -> dict:
+    return json.loads(
+        (DATA_DIR / "telemetry_fields.json").read_text(encoding="utf-8")
+    )
+
+
 PLAIN = load_plain_language()["techniques"]
 TACTIC_LINES = load_tactic_lines()["tactics"]
+TELEMETRY_FIELDS = load_telemetry_fields()["components"]
 
 
 def describe_technique(technique_id: str, index=None) -> dict:
@@ -71,6 +83,42 @@ def detection_sketch(technique_id: str, via) -> str:
     if via:
         return f"Using {via}, alert on: {hint}."
     return f"Alert on: {hint}."
+
+
+def telemetry_requirements(technique_id: str, index=None) -> list:
+    """Phase 14h 'what logs do I need?': per ATT&CK data-source component
+    this technique lists, the curated {component, fields, where, gotcha}
+    entry, or {"component": name, "fields": [], "where": None, "gotcha":
+    None} for the long tail (no invented guidance). Techniques with no
+    data_sources at all return []. Deterministic, no LLM, no network."""
+    index = index if index is not None else DEFAULT
+    tech = index.get(technique_id) or {}
+    results = []
+    for component in tech.get("data_sources") or []:
+        entry = TELEMETRY_FIELDS.get(component)
+        results.append({
+            "component": component,
+            "fields": (entry or {}).get("fields") or [],
+            "where": (entry or {}).get("where"),
+            "gotcha": (entry or {}).get("gotcha"),
+        })
+    return results
+
+
+def telemetry_lines(technique_id: str, index=None) -> list:
+    """One display line per curated telemetry component: 'Component — your
+    query needs: <fields>. <where> <gotcha>'. Uncurated components (empty
+    fields) are skipped — no invented guidance. Shared by the XLSX and PDF
+    report builders so the wording stays identical across surfaces."""
+    lines = []
+    for entry in telemetry_requirements(technique_id, index):
+        if not entry["fields"]:
+            continue
+        lines.append(
+            f"{entry['component']} — your query needs: "
+            f"{', '.join(entry['fields'])}. {entry['where']} {entry['gotcha']}"
+        )
+    return lines
 
 
 def sub_states_for(result: dict, mapped_rules: list, state_by_id: dict, index=None):

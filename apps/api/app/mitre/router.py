@@ -1538,6 +1538,8 @@ async def explain_technique(
             "closest_rule": _closest_covered_rule(
                 technique_id, result, results, use_cases, index
             ),
+            # Phase 14h: per-data-source-component query field guidance.
+            "telemetry": plain_language.telemetry_requirements(technique_id, index),
         },
     }
 

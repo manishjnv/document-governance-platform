@@ -881,6 +881,46 @@ scoring-code changes, no forbidden libs; a stray uncommitted
 was caught and reverted. Handoff:
 `docs/phases/summaries/SESSION_HANDOFF_2026_08_03_MITRE_KIT_P14_VERIFY.md`.
 
+**MITRE Phase 14i — "What logs do I need?" per gap (2026-08-03, plan
+§14h's second, distinctly-titled section in `MITRE_UX_CLARITY_PLAN.md`;
+relabeled 14i in the module reference to avoid colliding with the
+already-shipped report-branding Phase 14h):** closes the gap where a
+not-covered technique named a log-source *category* but never the
+**fields** a query needs or why an already-onboarded source might still
+lack them. New curated `app/mitre/data/telemetry_fields.json`: the top 35
+(of 113) ATT&CK data-source components by technique-reference frequency
+(83%/88% coverage at top 25/35, measured against the pinned v19.1
+dataset), each with hand-written `fields` (plain-English query
+parameters), `where` (vendor-neutral usual event sources), and `gotcha`
+(the single most common reason an already-onboarded source still can't
+support the detection — never generated at runtime, reviewed like code).
+Pure `plain_language.telemetry_requirements()` (curated entry or bare
+component-name fallback for the long tail) + `telemetry_lines()`
+(shared deterministic one-line-per-component rendering). Surfaced in
+exactly three read-only places, no new UI area: `explain` endpoint gains
+`good.telemetry`, rendered in the drawer's existing "What would good look
+like?" block (one compact line per component — fields, where, then the
+gotcha in muted text); XLSX Gaps & Recommendations gains a "Log fields
+needed" column (existing bordered/wrapped styling helpers reused, no new
+styling code); PDF/HTML gap register gains one "Log fields needed" line
+per gap under the existing detection sketch. Honesty boundary held
+throughout — every surface reads "your query needs X; your `<source>`
+should carry it," never "your source is missing X," since the product
+never ingests raw logs and cannot verify field-level coverage. No
+coverage/scoring/pipeline change, no migration, no new settings; the 62
+techniques with no ATT&CK data sources keep their unchanged "bespoke
+detection engineering" verdict. Tests: 6 new in
+`test_mitre_plain_language.py` (component-key validity against
+attack.json, entry completeness, all-35-present guard,
+curated-vs-uncurated-degrade goldens for T1059.001/T1219.003, explain
+endpoint wiring) + the XLSX structure golden in `test_mitre_report.py`
+extended for the new column. Verified end to end against the regenerated
+sample kit (T1059.001 gap shows fields+where+gotcha identically in the
+drawer data, the XLSX cell, and the PDF/HTML register). Suite **809
+passed / 7 skipped** (+6 over the 803/7 baseline); `tsc --noEmit` clean;
+`docs/planning/MITRE_MODULE_REFERENCE.md` updated (file map, API table,
+§11 reports, §13 tests, §15 history).
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)

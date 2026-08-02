@@ -274,6 +274,26 @@ export function TechniqueDrawer({
                         : ' — none of your onboarded log sources matches it yet.'}
                     </p>
                   )}
+                  {/* Phase 14h: what does my query actually need, per log source */}
+                  {explain.good.telemetry.length > 0 && (
+                    <div className="mt-2 space-y-1.5 border-t pt-2">
+                      {explain.good.telemetry.map((t) =>
+                        t.fields.length > 0 ? (
+                          <p key={t.component} className="text-xs">
+                            <span className="font-medium">{t.component}:</span>{' '}
+                            your query needs {t.fields.join(', ')}. {t.where}
+                            <span className="mt-0.5 block text-muted-foreground">
+                              {t.gotcha}
+                            </span>
+                          </p>
+                        ) : (
+                          <p key={t.component} className="text-xs text-muted-foreground">
+                            {t.component}: no curated field guidance for this log source yet.
+                          </p>
+                        )
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

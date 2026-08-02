@@ -54,7 +54,10 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
     'Read Me' guide sheet first, colored state/priority/feasibility cells,
     frozen headers + auto-filter + wrapped text everywhere, technique names
     + plain-words 'Why' column, numerically sorted rule rows. Computed
-    numbers are untouched — styling and wording only.
+    numbers are untouched — styling and wording only. Phase 14h adds a
+    'Log fields needed' column on Gaps & Recommendations (curated per
+    data-source component via plain_language.telemetry_lines; blank for
+    techniques with no curated component).
 
     branding: optional org overrides (display name/accent/watermark — plan
     §14h). Resolved here for a consistent shape across callers; workbook
@@ -425,7 +428,8 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
     # --------------------------------------------- Gaps grouped by feasibility
     ws_gaps = wb.create_sheet()
     ws_gaps.title = "Gaps & Recommendations"
-    gap_headers = ["Rank", "Technique", "Name", "Priority", "State", "Log source to use", "Recommendation"]
+    gap_headers = ["Rank", "Technique", "Name", "Priority", "State", "Log source to use",
+                   "Log fields needed", "Recommendation"]
     ws_gaps.append(gap_headers)
     for cell in ws_gaps[1]:
         cell.font = bold
@@ -446,6 +450,11 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
         for g in bucket_gaps:
             tier = g.get("tier")
             ranked = isinstance(tier, int) and tier <= 3
+            # Phase 14h: "what does my query actually need?" per data-source
+            # component — empty when the technique has no curated component.
+            telemetry_cell = "\n\n".join(
+                plain_language.telemetry_lines(g.get("technique_id"), index)
+            )
             ws_gaps.append([_guard(v) for v in [
                 g.get("rank"), g.get("technique_id"), g.get("name"),
                 tier if ranked else "Unranked",
@@ -453,6 +462,7 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
                 (f"Uses logs you already collect: {g.get('via')}" if bucket == "short"
                  else f"Onboard from tooling you own: {g.get('via')}" if bucket == "mid" and g.get("via")
                  else g.get("via") or "Needs a new log source"),
+                telemetry_cell,
                 gap_recs.get(g.get("technique_id")) or g.get("hint"),
             ]])
             row_idx += 1
@@ -474,7 +484,7 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
             cell.alignment = wrap_center if cell.column in (1, 4, 5) else wrap
             cell.border = cell_border
     ws_gaps.freeze_panes = "A2"
-    for i, width in enumerate([7, 12, 34, 12, 12, 34, 70], start=1):
+    for i, width in enumerate([7, 12, 34, 12, 12, 34, 55, 70], start=1):
         ws_gaps.column_dimensions[get_column_letter(i)].width = width
 
     # ------------------------------------------------------------------ Roadmap

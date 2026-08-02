@@ -1,0 +1,182 @@
+{
+  "description": "Hand-curated 'what does my query actually need' guidance for the ATT&CK data-source components a not-covered or partially-covered technique lists (MITRE Phase 14h — 'What logs do I need?'). Keyed by the exact ATT&CK data-component string as it appears in attack.json's per-technique 'data_sources' list. Each entry: 'fields' (the query parameters in plain English, no vendor field names, no KQL/SPL), 'where' (one vendor-neutral sentence naming the usual event sources), 'gotcha' (the single most common reason an already-onboarded source still can't support the detection — the highest-value field, deliberately never phrased as 'your source is missing X' since this product never ingests raw logs and cannot verify any customer's actual field-level coverage). Curated top 35 of 113 dataset components by technique-reference frequency (measured against the pinned v19.1 dataset: top 25 = 83% of all technique-to-component references, top 35 = 88%). Uncurated components fall back to the bare component name with no invented guidance. Written once, reviewed like code — never generated at runtime. Component-key validity against attack.json and completeness of all 35 are test-enforced (test_mitre_plain_language.py).",
+  "written": "2026-08-03",
+  "attack_version": "19.1",
+  "components": {
+    "Process Creation": {
+      "fields": ["process name and full path", "command line", "parent process", "user account", "host name", "process start time"],
+      "where": "Windows Event ID 4688, Sysmon Event ID 1, Linux auditd execve records, or EDR process-creation telemetry.",
+      "gotcha": "Windows Event ID 4688 does not include the command line unless \"Include command line in process creation events\" is turned on in Group Policy or the registry."
+    },
+    "Command Execution": {
+      "fields": ["full command line", "interpreter or shell used", "script or argument content", "parent process", "user account"],
+      "where": "Sysmon Event ID 1, Windows Event ID 4688 with command-line auditing enabled, PowerShell Script Block Logging (Event ID 4104), Linux auditd execve records, or EDR command-line telemetry.",
+      "gotcha": "PowerShell's encoded or obfuscated commands only decode into readable text in Script Block Logging (Event ID 4104) — the command line captured by 4688 or Sysmon Event ID 1 alone stays base64 or otherwise unreadable."
+    },
+    "Network Traffic Content": {
+      "fields": ["packet or payload contents", "protocol", "source and destination IP and port", "application-layer headers", "session identifier"],
+      "where": "Full-packet capture, a network IDS/IPS such as Suricata or Zeek, a TLS-inspecting proxy or firewall, or a network detection and response (NDR) sensor.",
+      "gotcha": "Most onboarded \"network\" log sources only forward flow or connection metadata, not payload content — content inspection needs a separate packet-capture or TLS-decrypting sensor actually sitting in the traffic path."
+    },
+    "File Creation": {
+      "fields": ["file path and name", "file hash", "process that created it", "user account", "host name", "creation time"],
+      "where": "Sysmon Event ID 11, Windows Object Access auditing (Event ID 4663) with a SACL, Linux auditd file-write records, or EDR file-creation telemetry.",
+      "gotcha": "Windows only emits Event ID 4663 for objects that have an explicit SACL configured — most folders and shares have none set by default, so the event never fires there regardless of whether object-access auditing is enabled globally."
+    },
+    "Network Connection Creation": {
+      "fields": ["source and destination IP and port", "protocol", "process that opened the connection", "user account", "host name"],
+      "where": "Sysmon Event ID 3, Windows Filtering Platform Event ID 5156, firewall or proxy connection logs, or EDR network-connection telemetry.",
+      "gotcha": "Sysmon Event ID 3 is disabled or heavily filtered in many deployed configs because of its volume — confirm network-connection logging is actually enabled in the config that was deployed, not just assumed from Sysmon being installed."
+    },
+    "Application Log Content": {
+      "fields": ["application name", "log message or event text", "timestamp", "user or session identifier", "source host"],
+      "where": "The application's own log file or its Windows Event Log/syslog channel, forwarded to the SIEM.",
+      "gotcha": "Most application-logging connectors ship only error/warning-level events by default — the informational or debug-level entries a specific detection needs are frequently filtered out at the source before they ever reach the SIEM."
+    },
+    "OS API Execution": {
+      "fields": ["API or function name called", "calling process", "arguments passed", "user account", "host name"],
+      "where": "EDR API-hooking or ETW-based kernel-callback telemetry; native Windows and Linux event logs do not record this.",
+      "gotcha": "Native OS logging (Windows Event Log, Linux auditd) does not capture raw API calls at all — this data only exists if the onboarded product specifically instruments API calls, which not every lightweight log-forwarding agent does."
+    },
+    "Network Traffic Flow": {
+      "fields": ["source and destination IP and port", "protocol", "bytes or packets transferred", "connection duration", "timestamp"],
+      "where": "NetFlow/IPFIX export, firewall or router flow logs, or a network detection and response (NDR) sensor.",
+      "gotcha": "Flow export is frequently sampled (for example 1-in-1000) on high-throughput routers to reduce load — sampled flow data can miss the exact short-lived connection a detection is looking for."
+    },
+    "File Modification": {
+      "fields": ["file path", "process that modified it", "type of change (write, rename, permission)", "user account", "timestamp"],
+      "where": "Sysmon Event ID 2 or 11, Windows Object Access auditing (Event ID 4663) with a SACL, Linux auditd write records, or EDR file-modification telemetry.",
+      "gotcha": "Same SACL requirement as file creation — Windows will not emit a file-modification event unless auditing is explicitly configured on that specific file or folder, which is rarely done outside a handful of sensitive paths."
+    },
+    "Module Load": {
+      "fields": ["module or DLL path and name", "process that loaded it", "module hash or signature status", "timestamp"],
+      "where": "Sysmon Event ID 7 or EDR module-load telemetry; native Windows auditing does not log this.",
+      "gotcha": "Sysmon Event ID 7 is extremely high-volume and is disabled or heavily filtered in most production configs to control ingestion cost — confirm it isn't excluded for the specific DLL paths a detection needs."
+    },
+    "File Access": {
+      "fields": ["file path", "accessing process", "access type (read or open)", "user account", "timestamp"],
+      "where": "Windows Object Access auditing (Event ID 4663) with a SACL, Linux auditd read records, or EDR file-access telemetry.",
+      "gotcha": "Read/open access auditing is rarely enabled even where write auditing is, because it multiplies event volume further — check that the SACL actually covers read access, not only write."
+    },
+    "Windows Registry Key Modification": {
+      "fields": ["registry key path", "value name and data", "process that made the change", "user account", "timestamp"],
+      "where": "Sysmon Event ID 12/13/14, or Windows Registry auditing (Event ID 4657) with a SACL on the key.",
+      "gotcha": "Native Windows registry auditing (Event ID 4657) needs a SACL configured on that exact key, which almost no environment sets outside security-hardened builds — most rely entirely on Sysmon's own registry events, which use their own separate include/exclude filter list."
+    },
+    "Process Access": {
+      "fields": ["source process", "target process", "access rights requested", "user account", "timestamp"],
+      "where": "Sysmon Event ID 10 (ProcessAccess) or EDR cross-process-access telemetry.",
+      "gotcha": "Sysmon Event ID 10 is commonly scoped down to only LSASS in default configs to control volume — if a detection needs process-access events against a different target process, the deployed config may be silently excluding it."
+    },
+    "File Metadata": {
+      "fields": ["file path", "file hash", "file size", "creation and modification timestamps", "digital-signature status"],
+      "where": "EDR file-inventory telemetry, Sysmon's hash enrichment on Event ID 1/11, or a file-integrity-monitoring (FIM) agent.",
+      "gotcha": "File hashing is an opt-in Sysmon configuration option (HashAlgorithms) — if it wasn't enabled when Sysmon was deployed, file events exist but carry no hash for a hash-based detection to match against."
+    },
+    "Logon Session Creation": {
+      "fields": ["account name", "logon type", "source host or IP", "authentication package", "timestamp"],
+      "where": "Windows Security Event ID 4624, Linux auditd/PAM session records, or EDR and identity-provider logon telemetry.",
+      "gotcha": "Windows Event ID 4624 is one of the highest-volume security events and is sometimes trimmed by log-forwarding agents to save ingestion cost — confirm the specific logon types (interactive, network, service) a detection needs aren't being dropped before they reach the SIEM."
+    },
+    "Application Permission": {
+      "fields": ["application or service name", "permission or scope granted", "account or principal", "timestamp"],
+      "where": "Cloud-provider audit logs (Azure AD/Entra audit log, AWS CloudTrail IAM events) or the SaaS application's own admin/audit log.",
+      "gotcha": "Many SaaS admin-audit logs retain only a short window or require a specific compliance/premium licensing tier before permission-grant events are exposed at all — confirm the connector's license tier actually includes audit-log access."
+    },
+    "User Account Authentication": {
+      "fields": ["account name", "authentication result", "authentication method", "source host or IP", "timestamp"],
+      "where": "Windows Security Event ID 4624/4625, an identity provider's (Entra ID, Okta) sign-in log, or Linux auditd/PAM authentication records.",
+      "gotcha": "Federated or single-sign-on logins authenticate at the identity provider and only leave a generic \"session established\" event on the local system — the actual authentication method and result live in the IdP's own sign-in log, a separate source that has to be onboarded on its own."
+    },
+    "Process Metadata": {
+      "fields": ["process name", "owner or account", "integrity level", "digital-signature status", "process ID"],
+      "where": "Sysmon Event ID 1 enrichment fields or EDR process-inventory telemetry.",
+      "gotcha": "Signature and integrity-level fields are only populated when the collecting agent actively queries them at process-start time — a bare Windows Event ID 4688 entry carries none of this, only Sysmon or EDR enrichment does."
+    },
+    "Script Execution": {
+      "fields": ["script content or block", "interpreter", "invoking process", "user account", "timestamp"],
+      "where": "PowerShell Script Block Logging (Event ID 4104), PowerShell Module Logging (Event ID 4103), AMSI telemetry, or EDR script-content capture.",
+      "gotcha": "PowerShell Script Block Logging is a separate Group Policy setting from PowerShell transcription or module logging — turning one on does not turn the others on, and 4104 specifically is what shows de-obfuscated script content."
+    },
+    "Logon Session Metadata": {
+      "fields": ["session ID", "account privileges or group memberships", "elevation status", "session type", "host name"],
+      "where": "Windows Security Event ID 4672/4634 and related logon-session events, or EDR session-tracking telemetry.",
+      "gotcha": "Privilege-assignment events (Event ID 4672) are logged separately from the logon event (4624) itself and are commonly left out of forwarding rules because they're treated as noisy, informational-only events."
+    },
+    "Service Creation": {
+      "fields": ["service name", "binary path", "start type", "account it runs as", "host name", "timestamp"],
+      "where": "Windows Security Event ID 4697 or System Event ID 7045, Sysmon Event ID 13 on the service registry key, or Linux systemd/init unit-creation records.",
+      "gotcha": "Event ID 4697 needs \"Audit Security System Extension\" enabled in the advanced audit policy — most environments only run the legacy basic audit policy, which doesn't generate it, leaving System log Event ID 7045 (no command-line detail) as the only fallback."
+    },
+    "Application State": {
+      "fields": ["application name", "current state or configuration value", "host name", "timestamp"],
+      "where": "EDR or endpoint-management agent inventory and state telemetry; native OS event logs rarely expose this.",
+      "gotcha": "This is inventory/snapshot data rather than an event stream — the source only reflects a state change at its next poll, so detections depending on it are limited by that polling interval, not by real-time logging."
+    },
+    "Response Content": {
+      "fields": ["response body or content", "status code", "requesting process or account", "timestamp"],
+      "where": "A reverse proxy, API gateway, web-application firewall, or full-packet-capture sensor configured to log response bodies.",
+      "gotcha": "Most proxy and web-server logs record the request line and status code but explicitly exclude response bodies by default for size and privacy reasons — capturing response content usually needs a distinct body-logging or WAF inspection mode turned on."
+    },
+    "Host Status": {
+      "fields": ["host name", "online/offline or health status", "last check-in time", "OS or patch version"],
+      "where": "An endpoint-management or vulnerability-management platform's asset inventory, or EDR heartbeat/check-in telemetry.",
+      "gotcha": "Host status is only as current as the agent's last check-in — a host that's offline or has a stale or uninstalled agent simply stops reporting rather than generating an explicit \"down\" event."
+    },
+    "Process Modification": {
+      "fields": ["target process", "modifying process", "type of modification", "timestamp"],
+      "where": "Sysmon Event ID 8 (CreateRemoteThread) combined with Event ID 10 (ProcessAccess), or EDR process-injection telemetry.",
+      "gotcha": "There is no single native Windows event for \"process modification\" — it has to be inferred from a combination of Sysmon events, and most default Sysmon configs don't enable Event ID 8 (CreateRemoteThread) because of its volume."
+    },
+    "User Account Metadata": {
+      "fields": ["account name", "group memberships", "account attributes or flags", "timestamp"],
+      "where": "Active Directory/Entra ID directory reads, or an identity provider's account-attribute data.",
+      "gotcha": "Reading account metadata, as opposed to changing it, is rarely logged as an event at all — most directories only audit modifications, so this is typically sourced from periodic directory snapshots rather than a real-time log."
+    },
+    "User Account Modification": {
+      "fields": ["account name", "attribute or group changed", "who made the change", "timestamp"],
+      "where": "Windows Security Event ID 4738/4728/4732, or an identity provider's (Entra ID, Okta) directory-audit log.",
+      "gotcha": "The basic Windows audit policy only logs a subset of these events by default — \"Audit User Account Management\" must be explicitly enabled in the advanced audit policy before password resets and attribute changes, not just group-membership changes, are captured."
+    },
+    "Cloud Service Modification": {
+      "fields": ["resource or service name", "change made", "principal (user or role) that made it", "timestamp", "cloud account or subscription"],
+      "where": "AWS CloudTrail, Azure Activity Log/Entra audit log, or GCP Cloud Audit Logs.",
+      "gotcha": "These platforms log management-plane API calls by default — data-plane operations, like reading or writing inside a storage bucket or database, usually need a separate, explicitly enabled logging feature (S3 data events, Azure diagnostic settings) that most onboarded connectors don't turn on."
+    },
+    "System Settings": {
+      "fields": ["setting or policy name", "old and new value", "process or account that changed it", "timestamp"],
+      "where": "Windows Policy Change auditing (Event ID 4719 and related), Sysmon registry events on the setting's backing key, or configuration-management agent telemetry.",
+      "gotcha": "Most settings changed through a GUI or PowerShell don't map to one dedicated event — they only show up if the underlying registry key happens to be covered by Sysmon's registry monitoring, and most deployed configs don't map every settings path."
+    },
+    "Scheduled Job Creation": {
+      "fields": ["task or job name", "command or action it runs", "account it runs as", "schedule or trigger", "host name"],
+      "where": "Windows Security Event ID 4698, Sysmon Event ID 1 for schtasks.exe invocations, or Linux cron/at file-creation auditing.",
+      "gotcha": "Event ID 4698 needs \"Audit Other Object Access Events\" enabled in the advanced audit policy, a setting most environments never turn on — without it, scheduled-task creation is only visible indirectly through the process that ran schtasks.exe, not the task-creation event itself."
+    },
+    "Active Directory Object Modification": {
+      "fields": ["object type and name (distinguished name)", "attribute changed", "old and new value", "actor account", "timestamp"],
+      "where": "Domain-controller Security Event ID 5136 with directory-service change auditing enabled, or a dedicated AD change-auditing tool.",
+      "gotcha": "Directory Service Changes auditing needed for Event ID 5136 is off by default even when basic domain-controller security auditing is on, and has to be enabled per object class in the AD schema's SACL — most environments only enable it for a narrow set of sensitive objects, not the whole directory."
+    },
+    "Device Alarm": {
+      "fields": ["device or sensor name", "alarm type", "severity", "affected asset", "timestamp"],
+      "where": "The originating security appliance's own alert log — an IDS/IPS, OT/ICS safety system, or physical-security controller — forwarded to the SIEM.",
+      "gotcha": "The SIEM only ever sees the alarm classes the device itself is configured to generate and forward — many IDS/IPS and OT devices ship with only a subset of signatures or alarm types enabled out of the box."
+    },
+    "API Calls": {
+      "fields": ["API endpoint or action called", "calling identity (user, service account, or key)", "source IP", "timestamp", "result"],
+      "where": "AWS CloudTrail, Azure Activity Log, GCP Cloud Audit Logs, or a SaaS platform's own API-audit log.",
+      "gotcha": "Read-only (get/list/describe) API calls are frequently excluded from default audit-log tiers or dropped by ingestion filters to cut volume — if a detection depends on read access to a resource, confirm read events aren't being filtered out before the SIEM."
+    },
+    "File Deletion": {
+      "fields": ["file path", "process that deleted it", "user account", "timestamp"],
+      "where": "Sysmon Event ID 23 or 26, Windows Object Access auditing (Event ID 4660) with a SACL, or EDR file-deletion telemetry.",
+      "gotcha": "Sysmon's file-delete events archive the deleted file to a hidden folder by default, which adds disk overhead — some configs disable file-delete events entirely or scope them down for that reason, so confirm the deployed config still emits the event, not just the archive-copy behavior."
+    },
+    "Driver Load": {
+      "fields": ["driver name and path", "digital-signature status", "hash", "load time", "host name"],
+      "where": "Sysmon Event ID 6 or EDR kernel-driver-load telemetry; native Windows auditing does not log this.",
+      "gotcha": "Sysmon Event ID 6 only reports what it can resolve after it starts running — a driver loaded during early boot, before Sysmon's own driver initializes, can be missed entirely, and some minimal configs omit DriverLoad to reduce startup overhead."
+    }
+  }
+}
