@@ -96,13 +96,35 @@ styled page instead of a flat metric list (numbers unchanged):
   line with 37 technique chips. Every chip is clickable and opens the
   14a drawer; the group count still opens the 14b drill-down panel.
 
-## Commits (all pushed, deployed at `4f93523`)
+### 6. Follow-up fixes from live testing (deployed `4d579c2`)
+
+- **"Page fluctuates on hover over TTPs"** (`9eabcd1`): the delegated
+  tooltip mounted as the *first child* of the heatmap's `space-y-6`
+  container, so every show/hide toggled the legend's sibling
+  `margin-top` and shifted the page 24px. Moved to the last child
+  (position:fixed — order is visually irrelevant).
+- **"Happens when moving from one TTP to another"** (`4d579c2`):
+  cell-to-cell movement unmounted and re-animated the tooltip on every
+  transition. Now hover-intent: the mounted tooltip glides to the next
+  cell instantly (`transition-[left,top]`), hide is delayed 120ms so
+  the gap between adjacent cells never unmounts it, and the entry
+  animation plays only on first appearance.
+- **Collapsible matrices + legend filter** (`4d579c2`): Enterprise /
+  ICS-OT / Mobile section headers collapse on click (chevron,
+  aria-expanded); the legend's Covered / Partial / Not covered / N/A
+  entries are now toggleable in-place filters (multi-select, dimmed
+  inactive states, "Show all" reset) that filter the heatmap cells
+  without leaving the page.
+
+## Commits (all pushed, deployed at `4d579c2`)
 
 | Commit | Contents |
 | --- | --- |
 | `6051af6` | Resizable panels (useSheetResize), heatmap ID+Name cells + delegated tooltip, drawer None/PRE + a/an fixes, mobile guards |
 | `bdde5f5` | XLSX Summary redesign + executive-summary section |
 | `4f93523` | Gaps-table density + dot badges; Assumptions & N/A card redesign |
+| `9eabcd1` | Fix: hover page-jump (tooltip out of the space-y margin flow) |
+| `4d579c2` | Smooth cell-to-cell tooltip; collapsible matrices; legend state filter |
 
 ## Verification
 
