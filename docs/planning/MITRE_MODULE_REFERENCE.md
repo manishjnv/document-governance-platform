@@ -1,8 +1,9 @@
 # MITRE ATT&CK Coverage Assessment — Module Reference
 
-**Status:** COMPLETE (Phases 0–7), launch-ready, live in production at
-`https://scopewise.assessiq.in/mitre`. No known quality gaps — everything
-remaining is plan-§14 optional feature work, built only on request.
+**Status:** COMPLETE (Phases 0–7 + optional Phases 8–9), launch-ready,
+live in production at `https://scopewise.assessiq.in/mitre`. No known
+quality gaps — remaining plan-§14 optional features (Phases 10–13 in the
+kickoff prompt) are built only on request.
 **Written:** 2026-08-02, after Phase 7. This is the end-to-end reference
 for what the module is and how every piece works; the original design
 rationale lives in `docs/planning/MITRE_ASSESSMENT_PLAN.md` (read that for
@@ -11,10 +12,12 @@ rationale lives in `docs/planning/MITRE_ASSESSMENT_PLAN.md` (read that for
 **Baselines:** backend **687 passed / 7 skipped**, certified at the
 Phase 7 gate (`b183f75`; the 7th skip = the PDF-render test on dev boxes
 without WeasyPrint's native libs — prod image has them, prod render smoke
-PASSED 2026-08-02); `npx tsc --noEmit` clean (re-verified 2026-08-02). Prod state: **deployed through
-Phase 7** — `/opt/scopewise` at `b183f75`, migrations 029–032 all applied
-to `scopewise_prod` (verified via SSH 2026-08-02: `logic` column present,
-`keyword_tagged` in the mapping_status CHECK).
+PASSED 2026-08-02); `npx tsc --noEmit` clean (re-verified 2026-08-02). Backend count after optional Phases 8–9:
+**702 passed / 7 skipped** (certified on an isolated test DB — see the
+`edgp-test-single-runner-rule` memory for why shared-`edgp_test` runs
+from two sessions at once deadlock). Prod state: **deployed through
+Phase 9** — `/opt/scopewise` at `ed9cec9`; migrations 029–032 all
+applied to `scopewise_prod` (Phases 8–9 add none).
 
 ---
 
@@ -346,6 +349,7 @@ stamping. Registered nowhere in `ReviewOrchestrator`.
 | `GET /assessments/{id}/report?format=html\|pdf` | any (viewers may read — plan §15 Q1) | 409 unless completed. `{"format","data"}`; PDF as base64-in-JSON (matches reviews.py so the frontend blob pattern is shared). PDF unavailable locally → graceful 500 with message. |
 | `GET /assessments/{id}/export.xlsx` | any | 409 unless completed. StreamingResponse, real xlsx content-type + attachment disposition (deliberately NOT base64 — plan §10). |
 | `GET /assessments/{id}/navigator` | any | 409 unless completed. ATT&CK Navigator layer export (Phase 8): 1 applicable domain → layer JSON attachment; >1 → zip of per-domain layers. Pure `navigator.py`, layer format 4.5, colors mirror the report palette, N/A → `enabled:false`. |
+| `POST /assessments/{id}/remap` | admin/reviewer | 409 unless `pending` (atomic status-conditional guard in the row-replacement transaction — run/remap race closed). Phase 9 wizard: `{"columns": {field: 0-based index}}` re-parses the stored dump with an explicit map (`validate_column_override` 422s bad fields/indexes), replaces rows, updates `params.columns`, audits `mitre.assessment_remapped`, returns a fresh parse preview (`headers` + `sample_rows` now on create too). 422 for pdf/docx extraction dumps. |
 | `GET /assessments/{id}/compare/{other_id}` | any | `{id}` = current, `{other_id}` = baseline. Both org-owned (404) + completed (409). |
 | `GET /settings` / `PATCH /settings` | admin | The 4 tunables; PATCH validates types/ranges + `partial_floor < covered`; audited. |
 | `DELETE /assessments/{id}` | admin, reviewer | Soft delete. |
@@ -532,6 +536,8 @@ you're alone on `edgp_test`.
 | smoke | `db98efb` | 08-02 | **AI-tagging quality: 6/6 on the real prod key** — last pending item closed |
 | 6 | `198b4c7`,`fb0b97a`,`93b825d`,`68ade56` | 08-02 | Keyword pre-pass (+migration 031), synonym widening, mobile/OT feasibility categories; REVISE→ACCEPT; prod deploy |
 | 7 | `999ee5d`,`b183f75` | 08-02 | Persist `logic` (migration 032), feed both taggers; keyword hits 1/12→10/12; ACCEPT; prod deploy verified 08-02 |
+| 8 (opt) | `cdf6cce` | 08-02 | ATT&CK Navigator layer export (pure `navigator.py`, format 4.5, json/zip endpoint, results-page button); no migration/AI; review waived per kickoff (read-only JSON) |
+| 9 (opt) | `ed9cec9` | 08-02 | Column-mapping wizard: preview `headers`+`sample_rows`, `POST .../remap` with validated override + atomic run-race guard, CSV reader caps, threadpool parse; REVISE→ACCEPT; prod deploy |
 | 8 | *(pending commit)* | 08-02 | Navigator layer export — implemented + tested (6 tests); fill in the hash when its session commits |
 
 ## 16. Optional feature work (plan §14 — not launch blockers)

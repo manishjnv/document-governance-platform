@@ -561,8 +561,9 @@ now has NO known quality gaps** — everything remaining is plan-§14
 optional feature work, built only on request. Deploy checklist: commit
 → push → VPS loop → **apply migration 032 to scopewise_prod** → smoke.
 
-**Phase 8 COMPLETE — ATT&CK Navigator layer export (2026-08-02, built,
-NOT yet committed/deployed):** first optional feature (plan §14) per
+**Phase 8 COMPLETE — ATT&CK Navigator layer export (2026-08-02, commit
+`cdf6cce`, DEPLOYED to prod in the `ed9cec9` deploy):** first optional
+feature (plan §14) per
 `docs/phases/prompts/MITRE_OPTIONAL_FEATURES_PROMPT.md`. New pure
 `app/mitre/navigator.py` builds one Navigator layer (format 4.5) per
 applicable domain from the stored `technique_results` — colors reuse the
@@ -574,9 +575,38 @@ completed) returns layer JSON for one domain or an in-memory zip of
 per-domain layers; results page gains a "Navigator" download button next
 to PDF/XLSX. No AI, no migration, no DB change; no adversarial review
 required (read-only JSON, per the kickoff). 6 new tests (3 pure golden
-plus endpoint json/zip/authz). Full suite [SUITE_RESULT]; `tsc` clean.
-`MITRE_MODULE_REFERENCE.md` API table updated. Deploy = standard VPS
-loop (no prod migration this phase) + smoke a Navigator download.
+plus endpoint json/zip/authz). Full suite **702 passed / 7 skipped** (Phases 8+9 certified together on an isolated test DB); `tsc` clean.
+`MITRE_MODULE_REFERENCE.md` API table updated. Deployed 2026-08-02 with
+Phase 9 (VPS at `ed9cec9`, no prod migration); live smoke: `/mitre` 200,
+navigator endpoint mounted + auth-gated (401 unauth), GIT_SHA confirmed
+in-container.
+
+**Phase 9 COMPLETE — interactive column-mapping wizard (2026-08-02,
+commit `ed9cec9`, DEPLOYED to prod):** second optional feature (plan
+§14). When auto-detection maps a dump wrong or misses a column (tags
+under a non-synonym header being the classic), the wizard now shows the
+raw header row + first 5 sample rows and lets the user map the six
+ScopeWise fields by hand; `POST /assessments/{id}/remap`
+(admin/reviewer, org-scoped, pending-only) re-downloads the stored file
+and re-parses it with the explicit map (`validate_column_override`:
+unknown fields / out-of-range / bool-as-int / duplicate targets /
+missing name all 422), replacing the parsed rows and updating
+`params.columns` — with an **atomic status-conditional guard** in the
+same transaction as the row replacement so a concurrent /run can't
+interleave (a real TOCTOU found in self-review AND independently
+flagged as the Sonnet reviewer's one blocking finding; fix is the
+reviewer's own prescribed pattern, re-verified ACCEPT). Review's two
+smaller items applied: remap parse offloaded via `run_in_threadpool`,
+and the pre-existing CSV reader cap gap closed (MAX_ROW_CELLS /
+MAX_TOTAL_ROWS now enforced like xlsx/xls). Create-time 422 for a
+wholly undetectable name column still stands (template escape hatch) —
+remap corrects wrong/missed columns on an otherwise-detected sheet.
+9 new tests (6 remap E2E incl. authz/TOCTOU-409/extraction-422 + 3
+ingest unit). Full suite **702 passed / 7 skipped** (Phases 8+9 certified together on an isolated test DB); `tsc` clean. Test-infra note:
+concurrent-session suite runs on shared `edgp_test` caused repeated
+deadlocks/phantom failures today — resolved via a session-private
+schema-cloned DB + `TEST_DATABASE_URL` (protocol in memory:
+`edgp-test-single-runner-rule`).
 
 ---
 
