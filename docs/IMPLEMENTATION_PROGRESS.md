@@ -982,6 +982,20 @@ gated on a Log Sources sheet actually being uploaded, rendered by the
 existing Assumptions UI/PDF/XLSX with zero renderer changes. Never
 touches coverage/state/ranking. 7 new goldens + 1 new E2E test.
 
+**MITRE accuracy plan, phase A4 (2026-08-03):** Crown Jewels wired into
+gap ranking (previously parsed + echoed but consumed by no engine). New
+`ranking.crown_jewel_hints()` deterministic keyword bridge (vcenter/esxi
+→ ESXi platform, database → application+cloud, payment → application,
+domain controller/AD → identity, plus kubernetes/cloud-storage/email/
+ERP/SCADA/windows-linux-server). `rank_gaps()` marks matching gaps
+`crown_jewel_relevant: true` and lifts them above equal-tier peers — a
+third sort key after tier and threat_relevance, never a tier jump or a
+%/state change — behind a new `crown_jewel_weighting_enabled` tunable
+(default true, no migration). Unmatched entries surface as one
+assumption line. UI/PDF gain a "Crown jewel" chip/badge beside the
+existing threat chip; XLSX notes it inline in the Recommendation cell
+(no new column). 8 new tests; `tsc --noEmit` clean.
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)

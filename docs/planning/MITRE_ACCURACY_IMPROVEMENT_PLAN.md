@@ -38,7 +38,7 @@ pasted into a fresh session. Check off phases here as they complete.
 | A1 | Fix the consultant review prompt doc | ☑ |
 | A2 | Sigma-based tagging accuracy benchmark | ☑ |
 | A3 | Rule-vs-inventory telemetry cross-check (shelfware detector) | ☑ |
-| A4 | Crown Jewels → gap-ranking lift (or drop) | ☐ |
+| A4 | Crown Jewels → gap-ranking lift (or drop) | ☑ |
 | A5 | Keyword alias expansion (vendor/appliance vocab) | ☐ |
 | A6 | Customer template upgrade + optional health columns | ☐ |
 | A7 | Sentinel data-connector auto-import | ☐ |
