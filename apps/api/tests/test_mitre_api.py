@@ -16,7 +16,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import create_access_token
 from app.mitre import agents
+from app.mitre.attack_data import DEFAULT
 from app.mitre.router import STALE_RUN_MESSAGE
+from app.mitre.service import build_mappings
 from app.models.mitre_assessment import MitreAssessment
 from app.models.organization import Organization
 from app.models.user import User
@@ -166,8 +168,8 @@ async def test_create_run_results_end_to_end(client, db_session):
     assert overall["covered"] == 2 and overall["partial"] == 2
     assert overall["strict_pct"] == round(100 * 2 / overall["applicable"], 1)
     assert summary["counts"] == {
-        "use_cases": 4, "customer_tagged": 3, "ai_tagged": 0,
-        "unmapped": 1, "invalid": 0,
+        "use_cases": 4, "customer_tagged": 3, "keyword_tagged": 0,
+        "ai_tagged": 0, "unmapped": 1, "invalid": 0,
     }
     assert any("remain unmapped" in a for a in summary["assumptions"])
 
@@ -302,3 +304,120 @@ async def test_invalid_intake_rejected(client, db_session):
     )
     assert response.status_code == 422
     assert "reason" in response.json()["detail"]
+
+
+def test_build_mappings_valid_revoked_invalid_in_one_row():
+    """Task D regression: the explicit-MITRE-ID path stays pure code —
+    valid tag kept, revoked tag remapped, invalid tag noted, all in one row."""
+    remapped_id, status = DEFAULT.resolve("T1562.001")
+    assert status == "remapped"  # pinned v19.1 revokes T1562.001
+
+    mappings, mapping_status, notes = build_mappings(
+        ["T1059.001", "T1562.001", "T4242", "T1059.001"]
+    )
+    assert mapping_status == "customer_tagged"
+    by_id = {m["technique_id"]: m for m in mappings}
+    assert set(by_id) == {"T1059.001", remapped_id}  # deduped, remapped
+    assert all(m["source"] == "customer" and m["confidence"] == 1.0 for m in mappings)
+    assert any("T4242" in n and "not a valid" in n for n in notes)
+    assert any("T1562.001" in n and "revoked" in n for n in notes)
+
+    # tags present but none usable -> invalid; no tags at all -> unmapped
+    assert build_mappings(["T4242"])[1] == "invalid"
+    assert build_mappings([])[1] == "unmapped"
+
+
+def _keyword_dump() -> bytes:
+    """Untagged mix: one row the keyword pre-pass maps (mimikatz), one it
+    must leave for the AI, one customer-tagged row."""
+    return _xlsx([
+        ["Use Case Name", "MITRE Technique(s)", "Detection Logic", "Status"],
+        ["Mimikatz credential theft", "", "process_name = mimikatz.exe", "Enabled"],
+        ["Volume anomaly", "", "stats by host", "Enabled"],
+        ["RDP brute force", "T1110", "logon failures > 20", "Enabled"],
+    ], sheet_name="Rules")
+
+
+@pytest.mark.asyncio
+async def test_keyword_prepass_tags_rows_and_ai_gets_only_residue(
+    client, db_session, monkeypatch
+):
+    captured = []
+
+    async def capture_tag(rows, **kwargs):
+        captured.append([r["row_ref"] for r in rows])
+        return {
+            "mappings_by_ref": {}, "assumptions": [], "models_used": [],
+            "batches_total": 1, "batches_failed": 0,
+        }
+
+    monkeypatch.setattr(agents, "tag_untagged_rows", capture_tag)
+
+    _, _, headers = await _make_user(db_session)
+    created = await client.post(
+        "/api/v1/mitre/assessments",
+        headers=headers,
+        files={"use_cases": ("rules.xlsx", _keyword_dump(), _XLSX_MIME)},
+    )
+    assert created.status_code == 201, created.text
+    aid = created.json()["assessment_id"]
+
+    body = await _run_and_wait(client, headers, aid)
+    assert body["status"] == "completed", body.get("error_message")
+
+    # AI saw ONLY the residue row — the keyword-matched one skipped the LLM.
+    assert captured == [[ "Rules:3" ]]
+
+    use_cases = await client.get(
+        f"/api/v1/mitre/assessments/{aid}/use-cases",
+        headers=headers,
+        params={"mapping_status": "keyword_tagged"},
+    )
+    items = use_cases.json()["items"]
+    assert [uc["name"] for uc in items] == ["Mimikatz credential theft"]
+    (mapping,) = items[0]["mappings"]
+    assert mapping["technique_id"] == "T1003.001"
+    assert mapping["source"] == "keyword"
+    assert mapping["confidence"] == 0.9
+    assert "mimikatz" in mapping["rationale"]
+
+    summary = body["summary"]
+    assert summary["counts"]["keyword_tagged"] == 1
+    assert summary["counts"]["customer_tagged"] == 1
+    assert summary["counts"]["unmapped"] == 1
+    assert any("matched deterministically" in a for a in summary["assumptions"])
+    # keyword mapping counts as coverage (0.9 >= the 0.7 default threshold)
+    assert _tech(body, "T1003.001")["state"] == "covered"
+
+
+@pytest.mark.asyncio
+async def test_keyword_matches_keep_assessment_alive_when_ai_is_down(
+    client, db_session, monkeypatch
+):
+    async def all_fail(rows, **kwargs):
+        return {
+            "mappings_by_ref": {}, "assumptions": ["AI tagging unavailable (stub)"],
+            "models_used": [], "batches_total": 1, "batches_failed": 1,
+        }
+
+    monkeypatch.setattr(agents, "tag_untagged_rows", all_fail)
+
+    _, _, headers = await _make_user(db_session)
+    dump = _xlsx([
+        ["Use Case Name", "MITRE Technique(s)", "Status"],
+        ["PsExec lateral movement", "", "Enabled"],   # keyword -> T1021.002
+        ["Volume anomaly", "", "Enabled"],            # residue; AI down
+    ], sheet_name="Rules")
+    created = await client.post(
+        "/api/v1/mitre/assessments",
+        headers=headers,
+        files={"use_cases": ("rules.xlsx", dump, _XLSX_MIME)},
+    )
+    assert created.status_code == 201, created.text
+
+    body = await _run_and_wait(client, headers, created.json()["assessment_id"])
+    # Zero customer tags + total AI failure used to fail the run; a keyword
+    # match now keeps it alive with a non-empty result.
+    assert body["status"] == "completed", body.get("error_message")
+    assert body["summary"]["counts"]["keyword_tagged"] == 1
+    assert _tech(body, "T1021.002")["state"] == "covered"

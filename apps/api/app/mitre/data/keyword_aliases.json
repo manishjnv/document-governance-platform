@@ -1,0 +1,53 @@
+{
+  "_meta": {
+    "description": "Curated tool/command -> ATT&CK technique aliases for the deterministic keyword-tagging pre-pass (app/mitre/keyword_tag.py). Small and high-confidence by design: an alias belongs here only when a detection rule mentioning it is near-unambiguously about the mapped technique. Precision beats coverage - anything uncertain is left for the AI tagger.",
+    "matching": "Patterns are matched literally (case-insensitive, whitespace-collapsed) against rule name/description/logic with non-alphanumeric boundaries on both sides; the left boundary also rejects '.', so 'at.exe' never fires inside 'look at exe files' and '-enc' never fires inside 'base64-encoded'.",
+    "sources": [
+      "MITRE ATT&CK v19 technique pages (procedure examples): attack.mitre.org",
+      "LOLBAS project (living-off-the-land binary -> technique mappings): lolbas-project.github.io",
+      "Red Canary Threat Detection Report (tool/technique prevalence): redcanary.com/threat-detection-report"
+    ],
+    "notes": "Deviation from the Phase 6 seed list: bare 'net user' is ambiguous between account creation (T1136.001) and account discovery (T1087.001), so only the unambiguous 'net user /add' form is mapped. Every technique_id is re-validated through attack_data.resolve() at match time (revoked IDs remap, dead IDs drop)."
+  },
+  "aliases": [
+    {"pattern": "mimikatz", "technique_id": "T1003.001"},
+    {"pattern": "sekurlsa", "technique_id": "T1003.001"},
+    {"pattern": "lsass", "technique_id": "T1003.001"},
+    {"pattern": "dcsync", "technique_id": "T1003.006"},
+    {"pattern": "ntdsutil", "technique_id": "T1003.003"},
+    {"pattern": "psexec", "technique_id": "T1021.002"},
+    {"pattern": "smbexec", "technique_id": "T1021.002"},
+    {"pattern": "wmiexec", "technique_id": "T1047"},
+    {"pattern": "wmic", "technique_id": "T1047"},
+    {"pattern": "rundll32", "technique_id": "T1218.011"},
+    {"pattern": "regsvr32", "technique_id": "T1218.010"},
+    {"pattern": "mshta", "technique_id": "T1218.005"},
+    {"pattern": "installutil", "technique_id": "T1218.004"},
+    {"pattern": "msbuild", "technique_id": "T1127.001"},
+    {"pattern": "certutil", "technique_id": "T1105"},
+    {"pattern": "bitsadmin", "technique_id": "T1197"},
+    {"pattern": "schtasks", "technique_id": "T1053.005"},
+    {"pattern": "at.exe", "technique_id": "T1053.002"},
+    {"pattern": "vssadmin delete", "technique_id": "T1490"},
+    {"pattern": "delete shadows", "technique_id": "T1490"},
+    {"pattern": "shadowcopy delete", "technique_id": "T1490"},
+    {"pattern": "bcdedit", "technique_id": "T1490"},
+    {"pattern": "wevtutil cl", "technique_id": "T1070.001"},
+    {"pattern": "clear-eventlog", "technique_id": "T1070.001"},
+    {"pattern": "-enc", "technique_id": "T1059.001"},
+    {"pattern": "encodedcommand", "technique_id": "T1059.001"},
+    {"pattern": "powershell", "technique_id": "T1059.001"},
+    {"pattern": "cmd.exe /c", "technique_id": "T1059.003"},
+    {"pattern": "net user /add", "technique_id": "T1136.001"},
+    {"pattern": "reg add", "technique_id": "T1112"},
+    {"pattern": "nltest", "technique_id": "T1482"},
+    {"pattern": "whoami", "technique_id": "T1033"},
+    {"pattern": "kerberoast", "technique_id": "T1558.003"},
+    {"pattern": "kerberoasting", "technique_id": "T1558.003"},
+    {"pattern": "rubeus", "technique_id": "T1558"},
+    {"pattern": "anydesk", "technique_id": "T1219"},
+    {"pattern": "teamviewer", "technique_id": "T1219"},
+    {"pattern": "rclone", "technique_id": "T1567.002"},
+    {"pattern": "ngrok", "technique_id": "T1572"}
+  ]
+}

@@ -1,12 +1,13 @@
 """MITRE assessment pipeline driver + org tunables (Phase 1, tagged-only).
 
-Pipeline stages at run time: applicability -> coverage -> persist. Tag
-validation happens at CREATE time (router) so the parse preview can report
-the tagged/untagged/invalid split; its assumption lines ride in
+Pipeline stages at run time: extraction (pdf/docx only) -> keyword pre-pass
+-> AI tagging -> applicability -> coverage -> ranking -> narrative ->
+persist. Tag validation happens at CREATE time (router) so the parse preview
+can report the tagged/untagged/invalid split; its assumption lines ride in
 params["parse_assumptions"] and are merged into the final summary here.
 
-AI tagging and narrative are Phase 2 — untagged rows stay 'unmapped' with an
-assumption line.
+Untagged rows hit the deterministic keyword/alias pre-pass first (Phase 6,
+keyword_tag.py) — only what it can't confidently map goes to the LLM.
 """
 
 import asyncio
@@ -20,7 +21,7 @@ from sqlalchemy import select, text
 from app.compliance.audit import log_action
 from app.core.cache import invalidate_cache
 from app.db.session import AsyncSessionLocal
-from app.mitre import agents, attack_data, ranking
+from app.mitre import agents, attack_data, keyword_tag, ranking
 from app.mitre.applicability import compute_applicability
 from app.mitre.coverage import compute_coverage
 from app.models.mitre_assessment import MitreAssessment
@@ -315,13 +316,55 @@ async def _run_pipeline_body(assessment_id: UUID, org_id: UUID) -> None:
                 if extraction["models_used"]:
                     models_used["extraction"] = extraction["models_used"]
 
-            # Stage 2 — AI-tag rows the customer left untagged (or tagged
-            # invalidly). Customer-tagged rows are NEVER re-tagged.
+            # Stage 1.5 — deterministic keyword/alias pre-pass (Phase 6):
+            # rows it confidently maps get mapping_status='keyword_tagged'
+            # and skip the LLM; only the residue goes to AI tagging.
+            # Customer-tagged rows are NEVER touched (customer truth wins).
             to_tag = [
                 uc
                 for uc in use_case_rows
                 if uc.mapping_status in ("unmapped", "invalid")
             ]
+            if to_tag:
+                # CPU-bound regex sweep — off the event loop.
+                # ponytail: logic arrives via description only (the model has
+                # no logic column; a dump with BOTH description and logic
+                # loses the logic text at create time — same for the AI
+                # stage below). Add a logic column if that recall matters.
+                keyword_maps = await asyncio.to_thread(
+                    keyword_tag.keyword_tag_rows,
+                    [
+                        {
+                            "row_ref": uc.row_ref,
+                            "name": uc.name,
+                            "description": uc.description or "",
+                            "logic": "",
+                        }
+                        for uc in to_tag
+                    ],
+                )
+                now = datetime.now(timezone.utc)
+                for uc in to_tag:
+                    mapped = keyword_maps.get(uc.row_ref)
+                    if mapped:
+                        uc.mappings = mapped
+                        uc.mapping_status = "keyword_tagged"
+                        uc.updated_at = now
+                await db.commit()  # release connection before the AI wait
+                still_to_tag = [
+                    uc
+                    for uc in to_tag
+                    if uc.mapping_status in ("unmapped", "invalid")
+                ]
+                pipeline_assumptions.append(
+                    f"{len(to_tag) - len(still_to_tag)} rules matched "
+                    "deterministically by ATT&CK technique or attacker-tool "
+                    f"name (no AI involved); {len(still_to_tag)} sent to AI "
+                    "tagging"
+                )
+                to_tag = still_to_tag
+
+            # Stage 2 — AI-tag the rows the pre-pass could not map.
             if to_tag:
                 tagging = await agents.tag_untagged_rows(
                     [
@@ -334,14 +377,14 @@ async def _run_pipeline_body(assessment_id: UUID, org_id: UUID) -> None:
                         for uc in to_tag
                     ]
                 )
-                customer_tagged = sum(
+                already_mapped = sum(
                     1
                     for uc in use_case_rows
-                    if uc.mapping_status == "customer_tagged"
+                    if uc.mapping_status in ("customer_tagged", "keyword_tagged")
                 )
                 if (
                     tagging["batches_failed"] == tagging["batches_total"]
-                    and customer_tagged == 0
+                    and already_mapped == 0
                 ):
                     raise MitreAssessmentError(
                         "AI tagging is temporarily unavailable and none of the "
@@ -486,6 +529,9 @@ async def _run_pipeline_body(assessment_id: UUID, org_id: UUID) -> None:
                     "use_cases": len(use_case_rows),
                     "customer_tagged": sum(
                         1 for uc in use_case_rows if uc.mapping_status == "customer_tagged"
+                    ),
+                    "keyword_tagged": sum(
+                        1 for uc in use_case_rows if uc.mapping_status == "keyword_tagged"
                     ),
                     "ai_tagged": sum(
                         1 for uc in use_case_rows if uc.mapping_status == "ai_tagged"

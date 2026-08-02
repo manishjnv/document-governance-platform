@@ -2,7 +2,8 @@
 
 import { useMemo } from 'react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
-import { Summary, TechniqueResult, UseCaseItem } from '../lib';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { SOURCE_META, Summary, TechniqueResult, UseCaseItem } from '../lib';
 import { StateBadge } from './StateBadge';
 
 /** Slide-over detail for one technique: state, tactics, N/A reason, and the
@@ -100,7 +101,16 @@ export function TechniqueDrawer({
                     <div className="font-medium leading-snug">{uc.name}</div>
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
                       <span>{uc.enabled === false ? 'Disabled rule' : uc.enabled === true ? 'Enabled' : 'Status unknown'}</span>
-                      <span>{mapping.source === 'customer' ? 'Tagged by you' : 'AI-mapped'}</span>
+                      <Tooltip delayDuration={150}>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-default underline decoration-dotted underline-offset-2">
+                            {(SOURCE_META[mapping.source] ?? SOURCE_META.ai).label}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs text-xs">
+                          {(SOURCE_META[mapping.source] ?? SOURCE_META.ai).tip}
+                        </TooltipContent>
+                      </Tooltip>
                       <span title="How sure the mapping is (1.0 = your own tag)">
                         confidence {mapping.confidence}
                       </span>

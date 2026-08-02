@@ -217,6 +217,22 @@ export const FEASIBILITY_META: Record<
   },
 };
 
+/** Plain-English display metadata per mapping source (technique drawer). */
+export const SOURCE_META: Record<string, { label: string; tip: string }> = {
+  customer: {
+    label: 'Tagged by you',
+    tip: 'This mapping comes from the MITRE technique tag in your uploaded file.',
+  },
+  keyword: {
+    label: 'Matched by rule',
+    tip: "The rule's name or logic contains an exact ATT&CK technique name or a well-known attacker tool/command, so it was mapped automatically — no AI involved.",
+  },
+  ai: {
+    label: 'AI-mapped',
+    tip: 'An AI model read the rule and suggested this technique — spot-check before relying on it.',
+  },
+};
+
 export const TIER_TIPS: Record<number, string> = {
   1: 'Priority 1: top-prevalence technique across independent threat reports — near-universal in real intrusions.',
   2: 'Priority 2: very common — a standard part of ransomware and intrusion playbooks.',
