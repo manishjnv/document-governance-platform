@@ -28,51 +28,98 @@ UNLISTED_TIER = 4  # techniques absent from the priorities file rank below tier 
 
 # Category detection over ATT&CK data-component names. Checked in order —
 # first hit wins; "endpoint" last because its keywords are broadest.
+# Phase 6 note: recon/threat-intel components (Response Content/Metadata,
+# Domain Registration, Social Media, Malware Content/Metadata) are LEFT
+# unmatched on purpose — "no standard telemetry -> long term" is the honest
+# verdict for those; a SIEM log source can't provide them.
 _COMPONENT_CATEGORY_RULES = [
     ("registry", ("registry",)),
-    ("cloud", ("cloud", "instance", "snapshot", "volume", "bucket", "container", "pod")),
+    ("cloud", ("cloud", "instance", "snapshot", "volume", "bucket", "container",
+               "pod", "image creation", "image metadata", "image modification")),
     ("network", ("network", "dns", "firewall", "traffic", "internet scan")),
     ("identity", ("logon", "account", "credential", "authentication",
                   "active directory", "group", "token", "certificate")),
     ("application", ("application log", "web", "email")),
+    # Mobile-domain components — providable by MDM/EMM telemetry.
+    ("mobile", ("application permission", "application state", "system settings",
+                "system notification", "protected configuration",
+                "permissions request", "api calls", "application assets")),
+    # ICS-domain components — providable by OT security monitoring.
+    ("ot", ("device alarm", "asset inventory", "software")),
     ("endpoint", ("process", "command", "module", "script", "image load", "os api",
                   "driver", "service", "scheduled", "wmi", "named pipe", "file",
-                  "kernel", "firmware", "drive", "sensor")),
+                  "kernel", "firmware", "drive", "sensor", "host status")),
 ]
 
 # Customer log-source names -> telemetry categories they provide.
+# NOTE: matched by SUBSTRING over the normalized entry — keep every keyword
+# long/specific enough not to hide inside an unrelated word (no bare "ot":
+# it's inside "remote"; no bare "ics": it's inside "analytics").
 _LOG_SOURCE_RULES = [
     (("sysmon",), {"endpoint", "registry", "network"}),
     (("edr", "crowdstrike", "falcon", "defender", "sentinelone", "sentinel one",
-      "carbon black", "cortex", "xdr"), {"endpoint", "registry"}),
+      "carbon black", "cortex", "xdr", "trellix", "mcafee", "symantec",
+      "tanium", "cybereason", "sophos", "trend micro", "bitdefender", "eset",
+      "huntress"), {"endpoint", "registry"}),
     (("windows event", "wineventlog", "winlog", "security log", "event log",
       "domain controller"), {"endpoint", "identity", "registry"}),
-    (("auditd", "linux audit", "osquery"), {"endpoint"}),
+    (("auditd", "linux audit", "osquery", "powershell"), {"endpoint"}),
     (("active directory", "okta", "entra", "azure ad", "idp", "sso", "auth",
-      "identity"), {"identity"}),
-    (("dns",), {"network"}),
+      "identity", "duo", "adfs", "ldap", "kerberos", "radius", "ping identity",
+      "ping federate", "mfa", "onelogin", "jumpcloud", "keycloak"), {"identity"}),
+    (("dns", "umbrella", "infoblox", "route 53", "route53"), {"network"}),
     (("zeek", "bro", "netflow", "ndr", "pcap", "packet", "firewall", "palo",
-      "fortigate", "fortinet", "network"), {"network"}),
+      "fortigate", "fortinet", "network", "suricata", "snort", "corelight",
+      "extrahop", "gigamon", "meraki", "sonicwall", "juniper", "cisco asa",
+      "checkpoint", "check point", "darktrace", "vectra"), {"network"}),
     (("proxy", "swg", "web gateway", "waf", "iis", "apache", "nginx",
-      "web server", "web"), {"application", "network"}),
+      "web server", "web", "zscaler", "netskope", "bluecoat", "blue coat",
+      "squid", "cloudflare", "akamai", "haproxy"), {"application", "network"}),
     (("cloudtrail", "cloud trail", "azure activity", "gcp audit", "cloud audit",
-      "aws config", "s3 access", "cloud"), {"cloud"}),
-    (("kubernetes", "k8s", "container", "docker", "eks"), {"cloud"}),
-    (("email", "message trace", "proofpoint", "mimecast", "exchange"), {"application"}),
+      "aws config", "s3 access", "cloud", "guardduty", "cloudwatch",
+      "azure monitor", "security hub", "stackdriver", "unified audit",
+      "m365 audit", "office 365 audit"), {"cloud"}),
+    (("vpc flow", "flow log"), {"network", "cloud"}),
+    (("kubernetes", "k8s", "container", "docker", "eks", "openshift",
+      "rancher", "containerd", "falco", "sysdig"), {"cloud"}),
+    (("email", "message trace", "proofpoint", "mimecast", "exchange",
+      "barracuda", "ironport", "abnormal security", "avanan"), {"application"}),
     (("fim", "file integrity", "tripwire"), {"endpoint"}),
+    (("dlp", "data loss prevention", "digital guardian"), {"endpoint"}),
+    # MDM/EMM telemetry provides the Mobile-matrix components.
+    (("mdm", "intune", "jamf", "workspace one", "airwatch", "mobileiron",
+      "kandji", "soti", "maas360", "emm"), {"mobile"}),
+    # OT security monitoring provides the ICS-matrix components.
+    (("claroty", "nozomi", "dragos", "scada", "industrial", "modbus",
+      "ot telemetry", "ot network", "operational technology"), {"ot"}),
 ]
 
 # Security-tooling names -> categories that tooling could be onboarded to provide.
 _TOOLING_RULES = [
     (("edr", "crowdstrike", "falcon", "defender", "sentinelone", "sentinel one",
-      "carbon black", "cortex", "xdr", "antivirus", "av"), {"endpoint", "registry"}),
+      "carbon black", "cortex", "xdr", "antivirus", "av", "trellix", "mcafee",
+      "symantec", "tanium", "cybereason", "sophos", "trend micro",
+      "bitdefender", "eset", "malwarebytes", "huntress",
+      "elastic defend"), {"endpoint", "registry"}),
     (("ndr", "network detection", "zeek", "corelight", "darktrace", "vectra",
-      "netflow", "firewall"), {"network"}),
-    (("email", "proofpoint", "mimecast", "email security"), {"application"}),
-    (("proxy", "swg", "waf", "web gateway"), {"application", "network"}),
-    (("casb", "cloud security", "wiz", "cspm"), {"cloud"}),
-    (("iam", "pam", "identity", "okta", "entra", "cyberark"), {"identity"}),
-    (("dlp",), {"endpoint"}),
+      "netflow", "firewall", "suricata", "snort", "extrahop",
+      "gigamon"), {"network"}),
+    (("email", "proofpoint", "mimecast", "email security", "barracuda",
+      "ironport", "abnormal security", "avanan"), {"application"}),
+    (("proxy", "swg", "waf", "web gateway", "zscaler", "netskope", "bluecoat",
+      "forcepoint", "squid"), {"application", "network"}),
+    (("casb", "cloud security", "wiz", "cspm", "prisma", "defender for cloud",
+      "orca", "lacework", "aqua", "sysdig", "guardduty"), {"cloud"}),
+    (("iam", "pam", "identity", "okta", "entra", "cyberark", "sailpoint",
+      "beyondtrust", "delinea", "thycotic", "duo", "jumpcloud", "adfs",
+      "keycloak", "onelogin", "ping identity"), {"identity"}),
+    (("dlp", "purview", "digital guardian"), {"endpoint"}),
+    # MDM/EMM could be onboarded to feed Mobile-matrix telemetry.
+    (("mdm", "intune", "jamf", "workspace one", "airwatch", "mobileiron",
+      "kandji", "soti", "maas360", "emm"), {"mobile"}),
+    # OT monitoring platforms could be onboarded to feed ICS telemetry.
+    (("claroty", "nozomi", "dragos", "scada", "operational technology",
+      "industrial"), {"ot"}),
 ]
 
 
