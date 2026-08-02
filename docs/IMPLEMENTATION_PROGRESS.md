@@ -996,6 +996,18 @@ assumption line. UI/PDF gain a "Crown jewel" chip/badge beside the
 existing threat chip; XLSX notes it inline in the Recommendation cell
 (no new column). 8 new tests; `tsc --noEmit` clean.
 
+**MITRE accuracy plan, phase A5 (2026-08-03):** keyword alias expansion,
+39→55 entries in `data/keyword_aliases.json` — LOLBAS binaries, a
+credential-dumping tool, persistence artifacts, DNS tunneling, backup-
+destruction markers, each cited to ATT&CK procedure examples or LOLBAS.
+Validated with the A2 benchmark script (300 Sigma rules, keyword-only,
+before/after): exact precision 0.365→0.366, recall 0.145→0.150;
+parent-credit precision 0.465→0.482, recall 0.184→0.196 — all four
+non-decreasing. Three drafted entries (msiexec.exe, secretsdump, iodine)
+were cut after the benchmark showed them firing inside broad multi-tool
+catch-all Sigma rules with no offsetting true positive. 5 new
+FP-regression pins added.
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)
