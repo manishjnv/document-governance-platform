@@ -59,6 +59,9 @@ def _norm(value) -> str:
 
 # Field detection order matters: 'tags' before 'name' so "mitre technique"
 # never lands on a name-ish synonym, 'logic' before 'description'.
+# Entries are POST-_norm forms: "ATT&CK ID" -> "att ck id",
+# "MITRE_TTP" -> "mitre ttp" (Phase 6 widened these over real SIEM exports:
+# Splunk ES, Sentinel, Elastic, QRadar header variants).
 COLUMN_SYNONYMS = {
     "tags": {
         "technique", "techniques", "technique id", "technique ids", "ttp",
@@ -67,23 +70,48 @@ COLUMN_SYNONYMS = {
         "mitre technique tags", "mitre tags", "attack id", "attack ids",
         "attack technique", "attack techniques", "mitre attack",
         "mitre attack technique", "mitre attack techniques", "mitre attack id",
+        "att ck", "att ck id", "att ck ids", "att ck technique",
+        "att ck techniques", "mitre att ck", "mitre att ck id",
+        "mitre att ck technique", "mitre att ck techniques", "mitre ttp",
+        "mitre ttps", "ttp id", "ttp ids", "technique tag", "technique tags",
+        "attack technique id", "attack technique ids", "mapped technique",
+        "mapped techniques", "mitre mapping", "mitre mappings",
     },
     "name": {
         "name", "use case", "use cases", "use case name", "usecase",
         "usecase name", "rule", "rule name", "title", "detection",
         "detection name", "detection rule", "alert name", "signature name",
+        "detection title", "rule title", "alert", "alert rule",
+        "search name", "analytic", "analytic name", "content name",
+        "detection rule name", "signature", "display name", "use case title",
+        "correlation search", "correlation search name",
     },
     "logic": {
         "logic", "detection logic", "rule logic", "query", "search",
         "search query", "condition", "detection condition", "spl", "kql",
         "correlation rule", "detection condition logic",
+        "detection query", "rule query", "query string", "search string",
+        "aql", "eql", "esql", "sigma", "sigma rule", "rule definition",
+        "detection rule logic", "alert query", "kql query", "spl query",
+        "detection criteria", "criteria", "rule expression", "expression",
     },
-    "description": {"description", "desc", "summary", "details", "notes"},
-    "enabled": {"status", "enabled", "state", "active", "rule status", "enabled disabled"},
+    "description": {
+        "description", "desc", "summary", "details", "notes",
+        "rule description", "detection description", "objective", "purpose",
+        "use case description", "comment", "comments",
+    },
+    "enabled": {
+        "status", "enabled", "state", "active", "rule status", "enabled disabled",
+        "is enabled", "enabled status", "rule state", "deployment status",
+        "deployed", "production status", "active status", "enable",
+    },
     "log_source": {
         "log source", "log sources", "logsource", "data source",
         "data sources", "datasource", "index", "source", "sourcetype",
         "log source index",
+        "log type", "data type", "event source", "source type",
+        "telemetry", "telemetry source", "source index", "device type",
+        "log source type", "siem index",
     },
 }
 
@@ -312,10 +340,29 @@ def parse_use_case_file(content: bytes, file_type: str) -> dict:
 # ---------------------------------------------------------------------------
 
 SHEET_SYNONYMS = {
-    "assets": {"assets", "asset", "platforms", "assets platforms", "asset platforms", "environment", "asset inventory"},
-    "log_sources": {"log sources", "log source", "logsources", "logs", "data sources", "telemetry", "onboarded log sources"},
-    "tooling": {"tooling", "security tooling", "tools", "security tools", "security stack"},
-    "crown_jewels": {"crown jewels", "crown jewel", "crownjewels", "critical assets", "critical services"},
+    "assets": {
+        "assets", "asset", "platforms", "assets platforms", "asset platforms",
+        "environment", "asset inventory",
+        "asset list", "infrastructure", "environment inventory", "systems",
+        "platforms in scope", "in scope assets", "inventory",
+    },
+    "log_sources": {
+        "log sources", "log source", "logsources", "logs", "data sources",
+        "telemetry", "onboarded log sources",
+        "log inventory", "onboarded sources", "siem sources", "sources",
+        "log source inventory", "data onboarding", "telemetry sources",
+    },
+    "tooling": {
+        "tooling", "security tooling", "tools", "security tools", "security stack",
+        "security products", "toolset", "defensive tooling",
+        "security controls", "controls", "tool inventory",
+    },
+    "crown_jewels": {
+        "crown jewels", "crown jewel", "crownjewels", "critical assets",
+        "critical services",
+        "key assets", "business critical assets", "high value assets", "hva",
+        "critical systems", "crown jewel assets",
+    },
 }
 
 # Ordered longest-synonym-first at module load so "cisco ios" wins over "ios"
@@ -326,36 +373,56 @@ _PLATFORM_RULES = sorted(
         ("windows", "Windows"), ("win server", "Windows"), ("win", "Windows"),
         ("linux", "Linux"), ("ubuntu", "Linux"), ("rhel", "Linux"),
         ("red hat", "Linux"), ("centos", "Linux"), ("debian", "Linux"),
+        ("suse", "Linux"), ("fedora", "Linux"),
         ("macos", "macOS"), ("mac os", "macOS"), ("os x", "macOS"),
         ("osx", "macOS"), ("mac", "macOS"),
         ("containers", "Containers"), ("container", "Containers"),
         ("kubernetes", "Containers"), ("k8s", "Containers"),
         ("docker", "Containers"), ("openshift", "Containers"),
+        ("aks", "Containers"), ("gke", "Containers"), ("eks", "Containers"),
+        ("ecs", "Containers"), ("rancher", "Containers"),
+        ("containerd", "Containers"), ("podman", "Containers"),
         ("esxi", "ESXi"), ("vmware", "ESXi"), ("vsphere", "ESXi"),
         ("vcenter", "ESXi"),
         ("iaas", "IaaS"), ("aws", "IaaS"), ("amazon web services", "IaaS"),
         ("ec2", "IaaS"), ("gcp", "IaaS"), ("google cloud", "IaaS"),
         ("azure", "IaaS"), ("oci", "IaaS"), ("oracle cloud", "IaaS"),
+        ("openstack", "IaaS"), ("digitalocean", "IaaS"),
+        ("digital ocean", "IaaS"), ("alibaba cloud", "IaaS"),
         ("saas", "SaaS"), ("salesforce", "SaaS"), ("servicenow", "SaaS"),
         ("slack", "SaaS"), ("github", "SaaS"), ("workday", "SaaS"),
+        ("zoom", "SaaS"), ("atlassian", "SaaS"), ("jira", "SaaS"),
+        ("confluence", "SaaS"), ("gitlab", "SaaS"),
         ("office 365", "Office Suite"), ("o365", "Office Suite"),
         ("m365", "Office Suite"), ("microsoft 365", "Office Suite"),
         ("office suite", "Office Suite"), ("google workspace", "Office Suite"),
         ("gsuite", "Office Suite"), ("g suite", "Office Suite"),
         ("exchange online", "Office Suite"), ("sharepoint", "Office Suite"),
+        ("microsoft teams", "Office Suite"), ("outlook", "Office Suite"),
+        ("onedrive", "Office Suite"),
         ("identity provider", "Identity Provider"), ("idp", "Identity Provider"),
         ("azure ad", "Identity Provider"), ("aad", "Identity Provider"),
         ("entra id", "Identity Provider"), ("entra", "Identity Provider"),
         ("okta", "Identity Provider"), ("ping identity", "Identity Provider"),
         ("active directory", "Identity Provider"),
+        ("adfs", "Identity Provider"), ("keycloak", "Identity Provider"),
+        ("jumpcloud", "Identity Provider"), ("duo", "Identity Provider"),
+        ("onelogin", "Identity Provider"), ("ping federate", "Identity Provider"),
         ("network devices", "Network Devices"), ("network device", "Network Devices"),
         ("network infrastructure", "Network Devices"), ("network", "Network Devices"),
         ("router", "Network Devices"), ("routers", "Network Devices"),
         ("switch", "Network Devices"), ("switches", "Network Devices"),
         ("firewall", "Network Devices"), ("firewalls", "Network Devices"),
         ("cisco ios", "Network Devices"), ("juniper", "Network Devices"),
+        ("vpn", "Network Devices"), ("load balancer", "Network Devices"),
+        ("f5", "Network Devices"), ("palo alto", "Network Devices"),
+        ("fortigate", "Network Devices"), ("fortinet", "Network Devices"),
+        ("check point", "Network Devices"), ("checkpoint", "Network Devices"),
+        ("meraki", "Network Devices"), ("aruba", "Network Devices"),
+        ("sonicwall", "Network Devices"), ("mikrotik", "Network Devices"),
         ("android", "Android"),
         ("ios", "iOS"), ("iphone", "iOS"), ("ipad", "iOS"),
+        ("ipados", "iOS"),
     ],
     key=lambda rule: len(rule[0]),
     reverse=True,
@@ -365,6 +432,7 @@ _ICS_MARKERS = {
     "ot", "ics", "scada", "plc", "plcs", "dcs", "hmi", "industrial",
     "industrial control", "industrial control systems",
     "operational technology", "ot ics", "ot assets", "ics assets",
+    "iiot", "modbus",
 }
 # NOTE: no "android"/"ios" here — those are platform rules (so "Cisco IOS"
 # resolves to Network Devices, not a mobile fleet); the platform branch sets
@@ -372,6 +440,7 @@ _ICS_MARKERS = {
 _MOBILE_MARKERS = {
     "mobile", "mobile fleet", "managed mobile", "mdm", "intune", "jamf",
     "workspace one", "mobileiron", "mobile devices",
+    "airwatch", "kandji", "soti", "maas360", "emm",
 }
 
 

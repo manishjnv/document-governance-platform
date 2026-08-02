@@ -180,3 +180,53 @@ def test_workbook_row_width_cap():
     wb.save(buf)
     with pytest.raises(IngestError, match="wider than"):
         ingest._xlsx_grids(buf.getvalue())
+
+
+# --- Phase 6: widened header/sheet/platform synonym sets ---
+
+def test_splunk_style_headers_detected():
+    content = _xlsx([
+        ["Correlation Search Name", "ATT&CK ID", "SPL Query", "Objective", "Deployment Status", "Source Type"],
+        ["Encoded PowerShell", "T1059.001", "| tstats ...", "catch encodedcommand", "Enabled", "wineventlog"],
+    ])
+    parsed = parse_use_case_file(content, "xlsx")
+    assert set(parsed["columns"]) == {"name", "tags", "logic", "description", "enabled", "log_source"}
+    row = parsed["rows"][0]
+    assert row["name"] == "Encoded PowerShell"
+    assert row["tags"] == ["T1059.001"]
+    assert row["enabled"] is True
+    assert row["log_source"] == "wineventlog"
+
+
+def test_sentinel_style_headers_detected():
+    content = _xlsx([
+        ["Analytic Name", "MITRE_TTP", "KQL Query", "Is_Enabled", "Log_Type"],
+        ["OAuth consent grant", "T1528", "AuditLogs | where ...", "true", "AuditLogs"],
+    ])
+    parsed = parse_use_case_file(content, "xlsx")
+    assert set(parsed["columns"]) == {"name", "tags", "logic", "enabled", "log_source"}
+    assert parsed["rows"][0]["tags"] == ["T1528"]
+    assert parsed["rows"][0]["enabled"] is True
+
+
+def test_widened_environment_sheet_and_platform_synonyms():
+    content = _xlsx(
+        [["Asset"], ["Palo Alto firewalls"], ["SUSE Linux estate"], ["AKS clusters"],
+         ["Duo MFA"], ["iPadOS tablets"], ["Modbus PLC network"]],
+        sheet_name="Asset List",
+        extra_sheets=[
+            ("SIEM Sources", [["Source"], ["Sysmon"]]),
+            ("Security Products", [["Tool"], ["CrowdStrike"]]),
+            ("High Value Assets", [["Item"], ["Payment gateway"]]),
+        ],
+    )
+    parsed = parse_environment_file(content, "xlsx")
+    assert set(parsed["sheets_found"]) == {"assets", "log_sources", "tooling", "crown_jewels"}
+    env = parsed["environment"]
+    assert set(env["platforms"]) == {
+        "Network Devices", "Linux", "Containers", "Identity Provider", "iOS",
+    }
+    assert env["has_managed_mobile"] is True   # iPadOS fleet
+    assert env["has_ics_assets"] is True       # Modbus marker
+    assert parsed["tooling"] == ["CrowdStrike"]
+    assert parsed["crown_jewels"] == ["Payment gateway"]
