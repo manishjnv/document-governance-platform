@@ -341,23 +341,69 @@ def _guard(value):
     return value
 
 
+# Phase 14c: fill colors (ARGB-less hex; light fills, dark text stays legible)
+_XLSX_STATE_FILLS = {
+    "covered": "C6EFCE",
+    "partial": "FFE699",
+    "not_covered": "FFC7CE",
+    "not_applicable": "D9D9D9",
+}
+_XLSX_TIER_FILLS = {1: "F8CBAD", 2: "FFE699", 3: "FFF2CC"}
+_XLSX_FEAS_FILLS = {"short": "C6EFCE", "mid": "FFE699", "long": "D9D9D9"}
+_STATE_PLAIN_XLSX = {
+    "covered": "A rule detects this",
+    "partial": "Half-covered",
+    "not_covered": "No rule detects this",
+    "not_applicable": "Doesn't apply to this environment",
+}
+_MAPPING_STATUS_PLAIN_XLSX = {
+    "customer_tagged": "You tagged this",
+    "keyword_tagged": "Matched by tool/technique keyword (no AI)",
+    "ai_tagged": "AI-suggested — verify",
+    "manual": "Edited by a reviewer",
+    "unmapped": "Could not be mapped",
+    "invalid": "Tags were invalid — treated as untagged",
+}
+
+
+def _row_ref_sort_key(uc: dict):
+    """Numeric-aware sort for row refs ('Rules:2' before 'Rules:10')."""
+    import re as _re
+
+    ref = str(uc.get("row_ref") or "")
+    return (
+        _re.sub(r"\d+", "#", ref),
+        [int(n) for n in _re.findall(r"\d+", ref)],
+    )
+
+
 def build_xlsx_export(assessment, use_cases: list) -> bytes:
-    """The detailed gap register as an 8-sheet workbook. Working document
-    styling only: bold headers, frozen top row, sane widths."""
+    """The detailed gap register as a 9-sheet workbook (Phase 14c polish):
+    'Read Me' guide sheet first, colored state/priority/feasibility cells,
+    frozen headers + auto-filter + wrapped text everywhere, technique names
+    + plain-words 'Why' column, numerically sorted rule rows. Computed
+    numbers are untouched — styling and wording only."""
     from openpyxl import Workbook
-    from openpyxl.styles import Font
+    from openpyxl.styles import Alignment, Font, PatternFill
     from openpyxl.utils import get_column_letter
+
+    from app.mitre import attack_data, plain_language
 
     summary = assessment.summary or {}
     params = assessment.params or {}
     overall = summary.get("overall", {})
     narrative = summary.get("narrative", {})
     gap_recs = narrative.get("gap_recommendations", {})
+    index = attack_data.DEFAULT
 
     wb = Workbook()
     bold = Font(bold=True)
+    wrap = Alignment(wrap_text=True, vertical="top")
 
-    def sheet(title, headers, rows, widths, first=False):
+    def fill(color):
+        return PatternFill(start_color=color, end_color=color, fill_type="solid")
+
+    def sheet(title, headers, rows, widths, first=False, filters=True):
         ws = wb.active if first else wb.create_sheet()
         ws.title = title
         ws.append([_guard(h) for h in headers])
@@ -365,40 +411,102 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
             cell.font = bold
         for row in rows:
             ws.append([_guard(v) for v in row])
+        for row in ws.iter_rows(min_row=2):
+            for cell in row:
+                cell.alignment = wrap
         ws.freeze_panes = "A2"
+        if filters and rows:
+            ws.auto_filter.ref = ws.dimensions
         for i, width in enumerate(widths, start=1):
             ws.column_dimensions[get_column_letter(i)].width = width
         return ws
 
-    thresholds = params.get("thresholds", {})
+    # ---------------------------------------------------------------- Read Me
+    strict_pct = overall.get("strict_pct")
+    readme_rows = [
+        ["This workbook is the full detail behind your MITRE ATT&CK coverage assessment."],
+        [],
+        ["The three key numbers"],
+        [f"Coverage: {strict_pct}%",
+         f"{overall.get('covered')} of {overall.get('applicable')} techniques that "
+         "apply to your environment have at least one detection rule."],
+        [f"Gaps to work on: {len(summary.get('gaps', []))}",
+         "Ranked by priority in the 'Gaps & Recommendations' sheet — start at the top."],
+        [f"Rules analyzed: {(summary.get('counts') or {}).get('use_cases', len(use_cases))}",
+         "Your uploaded detection rules — see 'Use-Case Mappings' for what each one maps to."],
+        [f"Is {strict_pct}% bad? Probably not: early SIEM detection programs typically "
+         "start under 10%, because ATT&CK counts every known attacker technique. "
+         "The roadmap matters more than the grade."],
+        [],
+        ["What each sheet contains"],
+        ["Summary", "The headline numbers with a plain-words explanation of each."],
+        ["Coverage by Tactic", "Coverage per attack stage (tactic), per matrix."],
+        ["Technique Register", "Every technique: its state, why, and the rules mapped to it."],
+        ["Use-Case Mappings", "Your rules, one per row, with how each was mapped."],
+        ["Gaps & Recommendations", "What's missing, grouped by how soon you could fix it."],
+        ["Roadmap", "The same gaps as a short/mid/long-term work plan."],
+        ["Not Applicable", "Techniques that don't count toward your score, with reasons."],
+        ["Assumptions", "What we had to assume — read before trusting the numbers."],
+        [],
+        ["Color legend"],
+        ["Covered", "A rule detects this technique."],
+        ["Partial", "Only a disabled rule, a low-confidence mapping, or a sub-technique reaches it."],
+        ["Not covered", "No rule detects it — this is a gap."],
+        ["N/A", "Doesn't apply to your environment; excluded from the score."],
+    ]
+    ws_readme = sheet("Read Me", ["How to read this workbook", ""],
+                      readme_rows, [46, 100], first=True, filters=False)
+    for label, color in (("Covered", "covered"), ("Partial", "partial"),
+                         ("Not covered", "not_covered"), ("N/A", "not_applicable")):
+        for row in ws_readme.iter_rows(min_row=2, max_col=1):
+            if row[0].value == label:
+                row[0].fill = fill(_XLSX_STATE_FILLS[color])
+    for row in ws_readme.iter_rows(min_row=2, max_col=1):
+        if row[0].value in ("The three key numbers", "What each sheet contains", "Color legend"):
+            row[0].font = bold
+
+    # ---------------------------------------------------------------- Summary
+    domain_rows = [
+        [f"{DOMAIN_LABELS.get(k, k)} coverage %", d.get("strict_pct"),
+         f"Coverage within the {DOMAIN_LABELS.get(k, k)} matrix only."]
+        for k, d in summary.get("domains", {}).items()
+    ]
     sheet(
         "Summary",
-        ["Metric", "Value"],
+        ["Metric", "Value", "What it means"],
         [
-            ["Assessment", assessment.name],
-            ["ATT&CK version", assessment.attack_version],
-            ["Completed", str(assessment.completed_at or "")],
-            ["Strict coverage %", overall.get("strict_pct")],
-            ["Weighted coverage %", overall.get("weighted_pct")],
-            ["Covered", overall.get("covered")],
-            ["Partial", overall.get("partial")],
-            ["Not covered", overall.get("not_covered")],
-            ["Not applicable", overall.get("not_applicable")],
-            ["Applicable techniques", overall.get("applicable")],
-            ["Narrative", narrative.get("generated_by", "")],
-            ["Thresholds", str(thresholds)],
+            ["Assessment", assessment.name, "The name this run was saved under."],
+            ["ATT&CK version", assessment.attack_version,
+             "The MITRE ATT&CK release the assessment is pinned to."],
+            ["Completed", str(assessment.completed_at or ""), ""],
+            ["Coverage %", overall.get("strict_pct"),
+             "Of the techniques that apply to your environment, the share with at "
+             "least one qualifying detection rule."],
+            ["Weighted coverage %", overall.get("weighted_pct"),
+             "Same, but half-covered techniques count as 0.5 instead of 0."],
+            ["Covered", overall.get("covered"), "Techniques at least one enabled rule detects."],
+            ["Partial", overall.get("partial"),
+             "Techniques reached only by a disabled rule, a low-confidence mapping, "
+             "or a covered sub-technique."],
+            ["Not covered", overall.get("not_covered"), "Techniques no rule detects — the gaps."],
+            ["Not applicable", overall.get("not_applicable"),
+             "Techniques excluded from the score (wrong platform, excluded by you, or deprecated)."],
+            ["Applicable techniques", overall.get("applicable"),
+             "The denominator: techniques that apply to your environment."],
+            ["Narrative", narrative.get("generated_by", ""),
+             "Whether recommendation wording was AI-written or standard template text "
+             "(numbers are computed either way)."],
+            ["Thresholds", str(params.get("thresholds", {})),
+             "The confidence cut-offs used to count a mapping as coverage."],
         ]
-        + [
-            [f"{DOMAIN_LABELS.get(k, k)} strict %", d.get("strict_pct")]
-            for k, d in summary.get("domains", {}).items()
-        ],
-        [28, 60],
-        first=True,
+        + domain_rows,
+        [26, 44, 78],
     )
 
+    # ------------------------------------------------------ Coverage by Tactic
     sheet(
         "Coverage by Tactic",
-        ["Matrix", "Tactic", "Covered", "Partial", "Not covered", "N/A", "Applicable", "Strict %", "Weighted %"],
+        ["Matrix", "Tactic", "Covered", "Partial", "Not covered", "N/A", "Applicable", "Coverage %", "Weighted %"],
         [
             [DOMAIN_LABELS.get(dk, dk), t.get("name"), t.get("covered"), t.get("partial"),
              t.get("not_covered"), t.get("not_applicable"), t.get("applicable"),
@@ -406,56 +514,126 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
             for dk, d in summary.get("domains", {}).items()
             for t in d.get("tactics", [])
         ],
-        [12, 26, 10, 10, 12, 8, 12, 10, 12],
+        [12, 26, 10, 10, 12, 8, 12, 12, 12],
     )
 
+    # ------------------------------------------------------- Technique Register
     rules_by_technique: dict = {}
+    mapped_by_technique: dict = {}
     for uc in use_cases:
         for m in uc.get("mappings") or []:
-            rules_by_technique.setdefault(m.get("technique_id"), []).append(uc.get("name", ""))
-    sheet(
-        "Technique Register",
-        ["Technique", "Matrix", "Tactics", "State", "N/A reason", "Mapped rules", "Rule names"],
-        [
-            [r.get("technique_id"), DOMAIN_LABELS.get(r.get("domain"), r.get("domain")),
-             ", ".join(r.get("tactics", [])), STATE_LABELS.get(r.get("state"), r.get("state")),
-             r.get("na_reason") or "", len(r.get("use_case_refs", [])),
-             "; ".join(rules_by_technique.get(r.get("technique_id"), []))]
-            for r in (assessment.technique_results or [])
-        ],
-        [12, 10, 22, 12, 50, 12, 60],
-    )
+            tid = m.get("technique_id")
+            rules_by_technique.setdefault(tid, []).append(uc.get("name", ""))
+            mapped_by_technique.setdefault(tid, []).append(
+                {"name": uc.get("name"), "enabled": uc.get("enabled"),
+                 "source": m.get("source"), "confidence": m.get("confidence")}
+            )
+    results = assessment.technique_results or []
+    state_by_id = {r.get("technique_id"): r.get("state") for r in results}
+    total_rules = (summary.get("counts") or {}).get("use_cases", len(use_cases))
+    tactic_names = {
+        (domain, t["id"]): t["name"]
+        for domain in index.domains
+        for t in index.tactics(domain)
+    }
+    confidence_covered = (params.get("thresholds") or {}).get("confidence_covered", 0.7)
 
+    def register_row(r):
+        tid = r.get("technique_id")
+        mapped = mapped_by_technique.get(tid, [])
+        why = plain_language.derive_why(
+            r, mapped,
+            total_rules=total_rules,
+            sub_states=plain_language.sub_states_for(r, mapped, state_by_id, index),
+            confidence_covered=confidence_covered,
+        )
+        return [
+            tid,
+            (index.get(tid) or {}).get("name", ""),
+            DOMAIN_LABELS.get(r.get("domain"), r.get("domain")),
+            ", ".join(tactic_names.get((r.get("domain"), t), t) for t in r.get("tactics", [])),
+            STATE_LABELS.get(r.get("state"), r.get("state")),
+            _STATE_PLAIN_XLSX.get(r.get("state"), ""),
+            why,
+            len(r.get("use_case_refs", [])),
+            "; ".join(rules_by_technique.get(tid, [])),
+        ]
+
+    ws_reg = sheet(
+        "Technique Register",
+        ["Technique", "Name", "Matrix", "Tactics", "State", "In plain words", "Why", "Mapped rules", "Rule names"],
+        [register_row(r) for r in results],
+        [12, 30, 10, 26, 12, 26, 70, 12, 50],
+    )
+    for i, r in enumerate(results, start=2):
+        color = _XLSX_STATE_FILLS.get(r.get("state"))
+        if color:
+            ws_reg.cell(row=i, column=5).fill = fill(color)
+
+    # -------------------------------------------------------- Use-Case Mappings
+    sorted_ucs = sorted(use_cases, key=_row_ref_sort_key)
     sheet(
         "Use-Case Mappings",
-        ["Row", "Rule name", "Enabled", "Mapping status", "Techniques", "Confidence", "Source", "Log source", "Description", "Logic"],
+        ["Row", "Rule name", "Enabled", "How it was mapped", "Techniques", "Confidence", "Source", "Log source", "Description", "Logic"],
         [
             [uc.get("row_ref"), uc.get("name"),
              {True: "yes", False: "no"}.get(uc.get("enabled"), "unknown"),
-             uc.get("mapping_status"),
+             _MAPPING_STATUS_PLAIN_XLSX.get(uc.get("mapping_status"), uc.get("mapping_status")),
              ", ".join(m.get("technique_id", "") for m in (uc.get("mappings") or [])),
              ", ".join(str(m.get("confidence", "")) for m in (uc.get("mappings") or [])),
              ", ".join(m.get("source", "") for m in (uc.get("mappings") or [])),
              uc.get("log_source") or "", uc.get("description") or "",
              uc.get("logic") or ""]  # Phase 7; query text is attacker-controlled — _guard applies
-            for uc in use_cases
+            for uc in sorted_ucs
         ],
-        [10, 42, 9, 16, 22, 12, 12, 16, 60, 60],
+        [10, 42, 9, 30, 22, 12, 12, 16, 60, 60],
     )
 
-    sheet(
-        "Gaps & Recommendations",
-        ["Rank", "Technique", "Name", "Priority tier", "State", "Feasibility", "Via", "Recommendation"],
-        [
-            [g.get("rank"), g.get("technique_id"), g.get("name"),
-             g.get("tier"), STATE_LABELS.get(g.get("state"), g.get("state")),
-             FEASIBILITY_LABELS.get(g.get("feasibility"), g.get("feasibility")), g.get("via") or "",
-             gap_recs.get(g.get("technique_id")) or g.get("hint")]
-            for g in summary.get("gaps", [])
-        ],
-        [7, 12, 34, 12, 12, 18, 22, 70],
-    )
+    # --------------------------------------------- Gaps grouped by feasibility
+    ws_gaps = wb.create_sheet()
+    ws_gaps.title = "Gaps & Recommendations"
+    gap_headers = ["Rank", "Technique", "Name", "Priority", "State", "Log source to use", "Recommendation"]
+    ws_gaps.append(gap_headers)
+    for cell in ws_gaps[1]:
+        cell.font = bold
+    gaps = summary.get("gaps", [])
+    row_idx = 1
+    for bucket in ("short", "mid", "long"):
+        bucket_gaps = [g for g in gaps if g.get("feasibility") == bucket]
+        if not bucket_gaps:
+            continue
+        ws_gaps.append([f"{FEASIBILITY_LABELS[bucket]} — {len(bucket_gaps)} item"
+                        f"{'' if len(bucket_gaps) == 1 else 's'}"])
+        row_idx += 1
+        header_cell = ws_gaps.cell(row=row_idx, column=1)
+        header_cell.font = bold
+        for col in range(1, len(gap_headers) + 1):
+            ws_gaps.cell(row=row_idx, column=col).fill = fill(_XLSX_FEAS_FILLS[bucket])
+        for g in bucket_gaps:
+            tier = g.get("tier")
+            ws_gaps.append([_guard(v) for v in [
+                g.get("rank"), g.get("technique_id"), g.get("name"),
+                f"P{tier}" if isinstance(tier, int) and tier <= 3 else "Unranked",
+                STATE_LABELS.get(g.get("state"), g.get("state")),
+                (f"Uses logs you already collect: {g.get('via')}" if bucket == "short"
+                 else f"Onboard from tooling you own: {g.get('via')}" if bucket == "mid" and g.get("via")
+                 else g.get("via") or "Needs a new log source"),
+                gap_recs.get(g.get("technique_id")) or g.get("hint"),
+            ]])
+            row_idx += 1
+            if isinstance(tier, int) and tier in _XLSX_TIER_FILLS:
+                ws_gaps.cell(row=row_idx, column=4).fill = fill(_XLSX_TIER_FILLS[tier])
+            state_color = _XLSX_STATE_FILLS.get(g.get("state"))
+            if state_color:
+                ws_gaps.cell(row=row_idx, column=5).fill = fill(state_color)
+    for row in ws_gaps.iter_rows(min_row=2):
+        for cell in row:
+            cell.alignment = wrap
+    ws_gaps.freeze_panes = "A2"
+    for i, width in enumerate([7, 12, 34, 12, 12, 34, 70], start=1):
+        ws_gaps.column_dimensions[get_column_letter(i)].width = width
 
+    # ------------------------------------------------------------------ Roadmap
     sheet(
         "Roadmap",
         ["Bucket", "Technique", "Name", "Action"],

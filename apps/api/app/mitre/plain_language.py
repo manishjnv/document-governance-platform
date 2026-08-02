@@ -73,6 +73,27 @@ def detection_sketch(technique_id: str, via) -> str:
     return f"Alert on: {hint}."
 
 
+def sub_states_for(result: dict, mapped_rules: list, state_by_id: dict, index=None):
+    """For a partial parent with no direct rules: the live sub-technique
+    states that explain the rollup (None otherwise). Shared by the drawer
+    explain endpoint and the XLSX 'Why' column."""
+    if result.get("state") != "partial" or mapped_rules:
+        return None
+    index = index if index is not None else DEFAULT
+    children = index.children.get(result.get("technique_id")) or []
+    if not children:
+        return None
+    return [
+        {
+            "technique_id": c["id"],
+            "name": c.get("name"),
+            "state": state_by_id.get(c["id"], "not_covered"),
+        }
+        for c in children
+        if not c.get("revoked") and not c.get("deprecated")
+    ]
+
+
 def _source_phrase(rule: dict) -> str:
     source = rule.get("source")
     if source == "customer":

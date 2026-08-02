@@ -164,14 +164,69 @@ async def test_xlsx_formula_injection_guard(db_session):
                   "mappings": [], "mapping_status": "customer_tagged"}]
     wb = load_workbook(io.BytesIO(build_xlsx_export(assessment, use_cases)))
     assert set(wb.sheetnames) == {
-        "Summary", "Coverage by Tactic", "Technique Register", "Use-Case Mappings",
-        "Gaps & Recommendations", "Roadmap", "Not Applicable", "Assumptions",
+        "Read Me", "Summary", "Coverage by Tactic", "Technique Register",
+        "Use-Case Mappings", "Gaps & Recommendations", "Roadmap",
+        "Not Applicable", "Assumptions",
     }
+    assert wb.sheetnames[0] == "Read Me"                # Phase 14c guide sheet
     ws = wb["Use-Case Mappings"]
     assert ws["B2"].value == "'" + FORMULA
     assert ws["I2"].value == "'=HYPERLINK(evil)"
     assert ws["J1"].value == "Logic"                    # Phase 7 column
     assert ws["J2"].value == "'=cmd|'/C calc'!A0"       # logic cell guarded
+
+
+@pytest.mark.asyncio
+async def test_xlsx_phase14c_structure(db_session):
+    """Phase 14c structure goldens (not pixel styling): Read Me content,
+    register Name/plain-words/Why columns with tactic names, plain-words
+    mapping status, numeric row sort, feasibility-grouped gaps, renamed
+    Summary metric."""
+    org, user, _ = await _make_user(db_session)
+    assessment = await _seed(db_session, org, user)
+    use_cases = [
+        {"row_ref": "s:10", "name": "Rule ten", "description": None, "logic": None,
+         "log_source": None, "enabled": True, "mappings": [],
+         "mapping_status": "unmapped"},
+        {"row_ref": "s:2", "name": "PS rule", "description": None, "logic": None,
+         "log_source": None, "enabled": True,
+         "mappings": [{"technique_id": "T1059.001", "source": "customer",
+                       "confidence": 1.0}],
+         "mapping_status": "customer_tagged"},
+    ]
+    wb = load_workbook(io.BytesIO(build_xlsx_export(assessment, use_cases)))
+
+    readme = wb["Read Me"]
+    texts = [str(c.value) for row in readme.iter_rows() for c in row if c.value]
+    assert any("Is 33.3% bad?" in t for t in texts)
+    assert any("What each sheet contains" in t for t in texts)
+
+    reg = wb["Technique Register"]
+    headers = [c.value for c in reg[1]]
+    assert headers[:7] == ["Technique", "Name", "Matrix", "Tactics", "State",
+                           "In plain words", "Why"]
+    rows = {r[0].value: r for r in reg.iter_rows(min_row=2)}
+    covered = rows["T1059.001"]
+    assert covered[1].value == "PowerShell"             # name from the pinned index
+    assert covered[3].value == "Execution"              # tactic name, not TA0002
+    assert "Covered by your rule 'PS rule'" in covered[6].value
+    not_covered = rows["T1112"]
+    assert not_covered[5].value == "No rule detects this"
+    assert "maps to this technique" in not_covered[6].value
+
+    ucs = wb["Use-Case Mappings"]
+    assert ucs["A2"].value == "s:2"                     # numeric sort: 2 before 10
+    assert ucs["A3"].value == "s:10"
+    assert ucs["D2"].value == "You tagged this"         # plain-words status
+    assert ucs["D3"].value == "Could not be mapped"
+
+    gaps = wb["Gaps & Recommendations"]
+    a_col = [c[0].value for c in gaps.iter_rows(min_col=1, max_col=1) if c[0].value]
+    assert any(str(v).startswith("Short term") for v in a_col)  # section header
+
+    summary_metrics = [r[0].value for r in wb["Summary"].iter_rows(min_row=2)]
+    assert "Coverage %" in summary_metrics
+    assert "Strict coverage %" not in summary_metrics
 
 
 def test_compare_golden():

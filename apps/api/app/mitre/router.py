@@ -1356,19 +1356,12 @@ async def explain_technique(
             )
 
     # Parent-rollup case: partial with no direct rules -> list sub states.
-    sub_states = None
-    children = index.children.get(technique_id) or []
-    if children and result.get("state") == "partial" and not mapped:
-        state_by_id = {r.get("technique_id"): r.get("state") for r in results}
-        sub_states = [
-            {
-                "technique_id": c["id"],
-                "name": c.get("name"),
-                "state": state_by_id.get(c["id"], "not_covered"),
-            }
-            for c in children
-            if not c.get("revoked") and not c.get("deprecated")
-        ]
+    sub_states = plain_language.sub_states_for(
+        result,
+        mapped,
+        {r.get("technique_id"): r.get("state") for r in results},
+        index,
+    )
 
     thresholds = params.get("thresholds") or {}
     why = plain_language.derive_why(
