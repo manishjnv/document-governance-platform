@@ -254,6 +254,9 @@ async def test_settings_roundtrip_and_validation(client, db_session):
         "count_disabled_as_coverage": False,
         "threat_weighting_enabled": True,  # Phase 11
         "quality_ai_enabled": False,  # Phase 12
+        "report_display_name": "ScopeWise",  # Phase 14h
+        "report_accent_color": "#0057B8",  # Phase 14h
+        "report_watermark_text": "",  # Phase 14h
     }
 
     patched = await client.patch(

@@ -19,6 +19,7 @@ from app.mitre.report_common import (
     _MAPPING_STATUS_PLAIN_XLSX,
     _ordered_domains,
     _row_ref_sort_key,
+    resolve_branding,
 )
 
 
@@ -48,12 +49,20 @@ _STATE_PLAIN_XLSX = {
 }
 
 
-def build_xlsx_export(assessment, use_cases: list, scope: str = "full") -> bytes:
+def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
+                       branding: dict | None = None) -> bytes:
     """The detailed gap register as a 9-sheet workbook (Phase 14c polish):
     'Read Me' guide sheet first, colored state/priority/feasibility cells,
     frozen headers + auto-filter + wrapped text everywhere, technique names
     + plain-words 'Why' column, numerically sorted rule rows. Computed
-    numbers are untouched — styling and wording only."""
+    numbers are untouched — styling and wording only.
+
+    branding: optional org overrides (display name/accent/watermark — plan
+    §14h). Resolved here for a consistent shape across callers; workbook
+    core properties (title/author/company) start consuming it in the
+    XLSX-polish follow-up.
+    """
+    branding = resolve_branding(branding)
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter

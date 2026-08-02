@@ -29,6 +29,7 @@ attacker-reachable surface is variable *values*, which _esc() already
 neutralizes before they reach render().
 """
 
+import base64
 import logging
 import os
 import re
@@ -43,6 +44,7 @@ from app.mitre.report_common import (
     _MAPPING_STATUS_PLAIN_XLSX,
     _ordered_domains,
     _row_ref_sort_key,
+    resolve_branding,
 )
 from app.mitre.report_xlsx import build_xlsx_export, _guard  # noqa: F401 (re-exported for callers/tests)
 from app.scoring.report import _esc  # house escaper, stored-XSS lesson baked in
@@ -63,6 +65,18 @@ _JINJA_ENV = jinja2.Environment(
     trim_blocks=True,
     lstrip_blocks=True,
 )
+
+# Phase 14h: cover + running-header logo, embedded as a data URI so the PDF
+# never fetches over the network (WeasyPrint would otherwise need base_url
+# plumbing for a relative path). Loaded once at import time; a missing/
+# unreadable asset degrades to no logo rather than failing report generation.
+_LOGO_PATH = os.path.join(os.path.dirname(__file__), "assets", "scopewise-logo.png")
+try:
+    with open(_LOGO_PATH, "rb") as _f:
+        LOGO_DATA_URI = "data:image/png;base64," + base64.b64encode(_f.read()).decode("ascii")
+except OSError:
+    logger.warning("MITRE report logo asset missing at %s — rendering without it", _LOGO_PATH)
+    LOGO_DATA_URI = None
 
 # PDF appendix cap — a 5,000-row use-case appendix belongs in the XLSX, not
 # a PDF. The cap is stated in the report when it bites.
@@ -132,7 +146,7 @@ def _stacked_bar(covered, partial, not_covered, applicable) -> str:
 
 
 def build_html_report(assessment, use_cases: list, compare=None, files=None,
-                      scope="full") -> str:
+                      scope="full", branding: dict | None = None) -> str:
     """Executive + detailed report as one self-contained HTML document
     (rebuilt in Phase 14e: cover → executive ≤2 pages → detailed →
     appendices, TOC with real page numbers, running header, deterministic
@@ -146,9 +160,12 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
     scope: "full" (default) | "executive" (cover + executive section only —
     the 1-3 page leadership PDF) | "coverage" / "gaps" / "assumptions"
     (title + just that tab's section, for per-tab downloads).
+    branding: optional org overrides (display name/accent color/watermark
+    text — plan §14h), merged over the platform defaults.
     """
     from app.mitre import attack_data, plain_language
 
+    branding = resolve_branding(branding)
     summary = assessment.summary or {}
     params = assessment.params or {}
     overall = summary.get("overall", {})
@@ -504,6 +521,10 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
 
     context = {
         "page_title": f"MITRE ATT&amp;CK Coverage Assessment — {_esc(assessment.name)}",
+        "logo_data_uri": LOGO_DATA_URI,
+        "brand_name_esc": _esc(branding["report_display_name"]),
+        "brand_color": branding["report_accent_color"],  # hex-validated by resolve_branding, not HTML content
+        "brand_watermark_esc": _esc(branding["report_watermark_text"]),
         "doc_title_esc": _esc(doc_title),
         "doc_title_suffix": '' if doc_title == assessment.name else f" — {_esc(assessment.name)}",
         "meta_rows": meta_rows,

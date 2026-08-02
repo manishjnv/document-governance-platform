@@ -13,6 +13,7 @@ keyword_tag.py) — only what it can't confidently map goes to the LLM.
 import asyncio
 import json
 import logging
+import re
 from collections import Counter
 from datetime import datetime, timezone
 from uuid import UUID
@@ -55,6 +56,12 @@ SETTING_DEFAULTS = {
     # Phase 12: OPTIONAL AI re-rating of heuristic-inconclusive detection
     # strengths. OFF by default; quality never depends on AI.
     "quality_ai_enabled": False,
+    # Phase 14h: report branding — org display name/accent/watermark for the
+    # PDF/XLSX exports. Backend keys only (no admin UI, no logo upload); the
+    # generic /mitre/settings GET/PATCH already exposes them.
+    "report_display_name": "ScopeWise",
+    "report_accent_color": "#0057B8",
+    "report_watermark_text": "",
 }
 
 _BOOL_SETTINGS = {
@@ -62,6 +69,14 @@ _BOOL_SETTINGS = {
     "threat_weighting_enabled",
     "quality_ai_enabled",
 }
+
+_STRING_SETTINGS = {
+    "report_display_name",
+    "report_accent_color",
+    "report_watermark_text",
+}
+
+_HEX_COLOR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
 
 def validate_setting(key: str, value):
@@ -71,6 +86,23 @@ def validate_setting(key: str, value):
     if key in _BOOL_SETTINGS:
         if not isinstance(value, bool):
             raise ValueError(f"{key} must be true/false")
+        return value
+    if key in _STRING_SETTINGS:
+        if not isinstance(value, str):
+            raise ValueError(f"{key} must be a string")
+        value = value.strip()
+        if key == "report_accent_color":
+            if not _HEX_COLOR_RE.match(value):
+                raise ValueError(f"{key} must be a hex color like #0057B8")
+            return value
+        if key == "report_display_name":
+            if not value:
+                raise ValueError(f"{key} must not be empty")
+            if len(value) > 120:
+                raise ValueError(f"{key} must be at most 120 characters")
+            return value
+        if len(value) > 60:  # report_watermark_text; empty string means "no watermark"
+            raise ValueError(f"{key} must be at most 60 characters")
         return value
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{key} must be a number between 0 and 1")

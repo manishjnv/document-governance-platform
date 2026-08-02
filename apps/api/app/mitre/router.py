@@ -1772,12 +1772,20 @@ async def assessment_report(
             )
         except Exception:  # noqa: BLE001 — trend is optional decoration
             compare = None
+    # Phase 14h: per-org report branding (display name/accent/watermark) —
+    # backend keys only, no admin UI, merged over platform defaults.
+    settings = await service.get_mitre_settings(db, org_id)
+    branding = {
+        "report_display_name": settings["report_display_name"],
+        "report_accent_color": settings["report_accent_color"],
+        "report_watermark_text": settings["report_watermark_text"],
+    }
     # Report/xlsx generation is CPU-bound and unbounded on large assessments;
     # offload so it can't stall the single-worker event loop (2026-08-02
     # adversarial review, non-blocking finding #2).
     html = await run_in_threadpool(
         mitre_report.build_html_report, assessment, use_cases, compare,
-        report_files, scope,
+        report_files, scope, branding,
     )
 
     if format.lower() == "pdf":
@@ -1810,8 +1818,14 @@ async def assessment_export_xlsx(
     org_id = UUID(str(current_user.org_id))
     assessment = await _completed_assessment(db, assessment_id, org_id)
     use_cases = await _load_use_case_dicts(db, assessment_id, org_id)
+    settings = await service.get_mitre_settings(db, org_id)
+    branding = {
+        "report_display_name": settings["report_display_name"],
+        "report_accent_color": settings["report_accent_color"],
+        "report_watermark_text": settings["report_watermark_text"],
+    }
     content = await run_in_threadpool(
-        mitre_report.build_xlsx_export, assessment, use_cases, scope
+        mitre_report.build_xlsx_export, assessment, use_cases, scope, branding
     )
     filename = _sanitize_filename(assessment.name)[:80] or "assessment"
     suffix = "attack-coverage" if scope == "full" else scope

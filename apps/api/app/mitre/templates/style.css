@@ -1,13 +1,31 @@
 @page {
   size: A4; margin: 1.6cm 1.4cm 1.8cm;
+  @top-left { content: element(pageHeaderBrand); }
   @top-center { content: string(doctitle); font-size: 9px; color: #374151; }
   @bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 9px; color: #374151; }
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: Arial, 'Liberation Sans', Helvetica, sans-serif; color: #1f2937; line-height: 1.5; font-size: 12px; }
+body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Liberation Sans', Helvetica, sans-serif; color: #1f2937; line-height: 1.5; font-size: 12px; }
 .container { max-width: 900px; margin: 0 auto; padding: 8px; }
-h1 { font-size: 22px; color: #0057B8; margin-bottom: 2px; string-set: doctitle content(); }
-h2 { font-size: 15px; color: #003D82; margin: 18px 0 6px; border-bottom: 2px solid #0057B8; padding-bottom: 3px; }
+/* Phase 14h: running page header — position: running() takes this element
+   out of normal flow; @top-left above renders it on every page. */
+.page-header-brand { position: running(pageHeaderBrand); font-size: 9px; color: #374151; }
+.page-header-brand .header-logo { height: 12px; vertical-align: middle; margin-right: 4px; }
+.page-header-brand .header-brand-name { vertical-align: middle; font-weight: 600; color: {{ brand_color }}; }
+/* Phase 14h: optional diagonal watermark — position: fixed repeats the
+   element on every page in WeasyPrint (same technique as fixed headers/
+   footers), independent of normal document flow. */
+.watermark {
+  position: fixed; top: 45%; left: 8%; width: 140%;
+  font-size: 64px; font-weight: 700; color: rgba(0, 0, 0, 0.06);
+  transform: rotate(-30deg); transform-origin: left center;
+  white-space: nowrap; z-index: -1;
+}
+.cover-logo { margin-bottom: 10px; }
+.cover-logo .cover-logo-img { height: 36px; vertical-align: middle; margin-right: 8px; }
+.cover-logo .cover-logo-name { font-size: 15px; font-weight: 600; color: {{ brand_color }}; vertical-align: middle; }
+h1 { font-size: 22px; color: {{ brand_color }}; margin-bottom: 2px; string-set: doctitle content(); }
+h2 { font-size: 15px; color: #003D82; margin: 18px 0 6px; border-bottom: 2px solid {{ brand_color }}; padding-bottom: 3px; }
 h3 { font-size: 13px; margin: 12px 0 4px; }
 h3.bucket { padding: 3px 6px; border-radius: 4px; }
 h3.short { background: #d1fae5; }
@@ -15,7 +33,7 @@ h3.mid { background: #fef3c7; }
 h3.long { background: #e5e7eb; }
 p { margin: 3px 0; }
 .muted { color: #4b5563; font-size: 11px; }
-.headline { font-size: 40px; font-weight: bold; color: #0057B8; }
+.headline { font-size: 40px; font-weight: bold; color: {{ brand_color }}; }
 .tiles { display: flex; gap: 8px; margin: 8px 0; }
 .tile { flex: 1; background: #f3f4f6; border-radius: 6px; padding: 8px; text-align: center; }
 .tile b { display: block; font-size: 18px; }
@@ -31,7 +49,7 @@ p { margin: 3px 0; }
 .heatmap .cell { display: inline-block; color: #fff; font-size: 7px; padding: 1px 3px; margin: 1px; border-radius: 2px; }
 /* Professional table grid: bordered cells, branded header, zebra rows. */
 table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 11px; border: 1px solid #b6c6d8; }
-th { text-align: left; background: #0057B8; color: #fff; font-weight: 600; padding: 5px 7px; border: 1px solid #0057B8; }
+th { text-align: left; background: {{ brand_color }}; color: #fff; font-weight: 600; padding: 5px 7px; border: 1px solid {{ brand_color }}; }
 th + th { border-left: 1px solid rgba(255,255,255,0.35); }
 td { padding: 4px 7px; border: 1px solid #dde5ee; vertical-align: top; }
 tbody tr:nth-child(even) td { background: #f4f7fb; }
@@ -52,7 +70,7 @@ table.cover-meta, .cover-meta th, .cover-meta td { border: none; }
 .toc a { text-decoration: none; color: #333; }
 .toc li { margin: 2px 0; }
 .toc a::after { content: " — p. " target-counter(attr(href), page); color: #4b5563; }
-a.xref { text-decoration: none; color: #0057B8; font-size: 10px; }
+a.xref { text-decoration: none; color: {{ brand_color }}; font-size: 10px; }
 a.xref::after { content: "details p. " target-counter(attr(href), page); }
 .page-break { page-break-before: always; }
 .footer { margin-top: 20px; padding-top: 8px; border-top: 1px solid #d1d5db; font-size: 10px; color: #374151; }

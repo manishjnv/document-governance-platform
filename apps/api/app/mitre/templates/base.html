@@ -7,6 +7,10 @@
 {% include "style.css" %}
 </style>
 </head>
-<body><div class="container">
+<body>
+{% if brand_watermark_esc %}<div class="watermark">{{ brand_watermark_esc }}</div>{% endif %}
+<div class="page-header-brand">{% if logo_data_uri %}<img src="{{ logo_data_uri }}" alt="" class="header-logo">{% endif %}<span class="header-brand-name">{{ brand_name_esc }}</span></div>
+<div class="container">
 {% block content %}{% endblock %}
-</div></body></html>
+</div>
+</body></html>

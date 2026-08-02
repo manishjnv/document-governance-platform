@@ -3,6 +3,8 @@
 (report.py re-exports these names so existing imports/tests are unaffected).
 """
 
+import re
+
 STATE_LABELS = {
     "covered": "Covered",
     "partial": "Partial",
@@ -42,3 +44,32 @@ def _row_ref_sort_key(uc: dict):
         _re.sub(r"\d+", "#", ref),
         [int(n) for n in _re.findall(r"\d+", ref)],
     )
+
+
+# --- Phase 14h: report branding -------------------------------------------
+# Keys mirror app.mitre.service.SETTING_DEFAULTS's report_* tunables, kept
+# as literal defaults here (not imported from service.py) so this leaf
+# module doesn't pull in the settings/pipeline import graph.
+DEFAULT_BRANDING = {
+    "report_display_name": "ScopeWise",
+    "report_accent_color": "#0057B8",
+    "report_watermark_text": "",
+}
+
+_HEX_COLOR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
+
+
+def resolve_branding(branding: dict | None) -> dict:
+    """Merge caller-supplied branding overrides over the platform defaults.
+
+    The accent color is re-validated here (not just at settings-write time
+    in service.validate_setting) because report.py interpolates it directly
+    into a <style> block as a CSS color token — HTML-escaping (_esc) is the
+    wrong defense for a CSS context, so a strict hex-color allowlist regex
+    is used instead, falling back to the platform default on any mismatch.
+    """
+    merged = {**DEFAULT_BRANDING, **(branding or {})}
+    color = merged.get("report_accent_color")
+    if not isinstance(color, str) or not _HEX_COLOR_RE.match(color):
+        merged["report_accent_color"] = DEFAULT_BRANDING["report_accent_color"]
+    return merged
