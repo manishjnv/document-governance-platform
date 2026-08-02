@@ -74,15 +74,6 @@ export function CoverageHeatmap({
       onMouseOver={(e) => showTip(e.target as Element)}
       onMouseOut={hideTip}
     >
-      {tip && (
-        <div
-          role="tooltip"
-          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-full whitespace-pre-line rounded-md border bg-popover px-2.5 py-1.5 text-[11px] leading-snug text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 duration-150"
-          style={{ left: tip.x, top: tip.y - 6, maxWidth: 260 }}
-        >
-          {tip.text}
-        </div>
-      )}
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-3 text-xs">
         {Object.entries(STATE_META).map(([state, meta]) => (
@@ -189,6 +180,19 @@ export function CoverageHeatmap({
           </div>
         </section>
       ))}
+
+      {/* Rendered LAST: position:fixed takes it out of flow, and being the
+          final child means mounting it never shifts the space-y-6 sibling
+          margins (as the first child it made the page jump on every hover). */}
+      {tip && (
+        <div
+          role="tooltip"
+          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-full whitespace-pre-line rounded-md border bg-popover px-2.5 py-1.5 text-[11px] leading-snug text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 duration-150"
+          style={{ left: tip.x, top: tip.y - 6, maxWidth: 260 }}
+        >
+          {tip.text}
+        </div>
+      )}
     </div>
   );
 }
