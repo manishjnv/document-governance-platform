@@ -68,6 +68,7 @@ in-app results with a Navigator-style heatmap, executive+detailed PDF, an
 | `service.py` | Pipeline driver (`run_assessment_pipeline`, fire-and-forget task under a process-wide `Semaphore(3)`), `build_mappings` (customer-tag validation), `compare_assessments` (trend diff), org tunables get/set (`mitre_settings`). |
 | `router.py` | All endpoints under `/api/v1/mitre` (§9). Org-scoped, soft-delete-aware, upload trust boundary. |
 | `report.py` | HTML report builder + lazy-WeasyPrint `generate_pdf` + 8-sheet XLSX writer with formula-injection guard. All three builders are synchronous and are called via `run_in_threadpool` from the router. See §11. |
+| `navigator.py` | Pure, Phase 8: builds one ATT&CK Navigator layer (format 4.5) per applicable domain from STORED technique_results — colors mirror the report palette, N/A → `enabled:false` with the reason as the comment, deterministic (no timestamps, byte-stable). |
 | `data/attack.json` | Pinned ATT&CK **v19.1** compact dataset (0.7 MB, checked in — the app NEVER fetches from the internet). Enterprise 858 techniques/15 tactics, ICS 118/12, Mobile 190/14 (counts include revoked/deprecated, which carry flags). |
 | `data/technique_priorities.json` | Curated 40-technique priority tier list (tiers 1–3) for gap ranking. Sources cited in-file (Red Canary TDR, CISA #StopRansomware, Picus, DBIR, M-Trends). **User-approved 2026-08-01** (stamped in-file). Enterprise-only in v1. |
 | `data/keyword_aliases.json` | Curated tool/command → technique alias map (39 aliases, cited sources) for the Phase 6 pre-pass, e.g. `mimikatz`→T1003.001, `-enc`→T1059.001. |
@@ -442,8 +443,9 @@ overflow on every page (real-browser checked).
   appendix, verbatim customer reasons), **Compare** (baseline selector →
   delta chips with improvement-is-green semantics incl. inverted metrics,
   tactics-that-moved chips, three-column newly/regressed/N-A-changed);
-  PDF + XLSX download buttons (blob patterns, disabled+tooltip until
-  completed).
+  PDF + XLSX + Navigator download buttons (blob patterns,
+  disabled+tooltip until completed; Navigator saves layer JSON or a zip
+  depending on the response content-type).
 
 ---
 
@@ -462,6 +464,7 @@ absent; prod render verified live). Frontend: `tsc --noEmit` clean.
 | `test_mitre_agents.py` | Tagging batch success/failure-degrade, garbage-JSON chain advance, invalid/revoked AI IDs, confidence floor, extraction mode, narrative AI+template paths, all-batches-fail+zero-tags → failed, keyword-tag FP regression pins. |
 | `test_mitre_ranking.py` | Feasibility buckets (onboarded/ownable/new/no-telemetry), tier ordering, state tie-break, covered/N-A exclusion, deterministic-layer-imports-no-AI guard. |
 | `test_mitre_report.py` | HTML escapes planted `<script>`, XLSX guard incl. real-workbook readback + Logic column, 409s, StreamingResponse content-type, compare golden + cross-org 404, `domains_brief`. |
+| `test_mitre_navigator.py` | Golden single-domain layer (colors/comments/enabled/versions/legend), multi-domain stable order, gated-domain exclusion; endpoint json vs zip, viewer-readable, cross-org 404 + pending 409. |
 
 Reminder: migrations 029/031/032 (and 030) must be applied to `edgp_test`
 before running the suite.
@@ -529,18 +532,21 @@ you're alone on `edgp_test`.
 | smoke | `db98efb` | 08-02 | **AI-tagging quality: 6/6 on the real prod key** — last pending item closed |
 | 6 | `198b4c7`,`fb0b97a`,`93b825d`,`68ade56` | 08-02 | Keyword pre-pass (+migration 031), synonym widening, mobile/OT feasibility categories; REVISE→ACCEPT; prod deploy |
 | 7 | `999ee5d`,`b183f75` | 08-02 | Persist `logic` (migration 032), feed both taggers; keyword hits 1/12→10/12; ACCEPT; prod deploy verified 08-02 |
+| 8 | *(pending commit)* | 08-02 | Navigator layer export — implemented + tested (6 tests); fill in the hash when its session commits |
 
 ## 16. Optional feature work (plan §14 — not launch blockers)
 
 Originally deferred by design; now queued as optional **Phases 8–13**
-(one feature per session, kickoff prompt committed as `cf6e9e4`):
-ATT&CK Navigator layer export (**Phase 8 — in progress in a separate
-session at the time of this writing**: `app/mitre/navigator.py` +
-`/assessments/{id}/navigator` endpoint + frontend button), interactive
-column-mapping wizard, per-mapping AI-override UI, threat-informed
-actor/industry weighting, scheduled/continuous re-assessment + SIEM API
-pulls, per-rule detection *quality* scoring (v1 scores presence — stated
-in the methodology footnote and assumptions), ICS/Mobile entries in the
-priorities file, per-org priority-tier overrides (the `mitre_settings`
-pattern already supports it). When one of these lands, extend §15's
-history table and the relevant section here.
+(one feature per session, kickoff prompt committed as `cf6e9e4`).
+**Phase 8 (ATT&CK Navigator layer export) is implemented** (2026-08-02;
+the `navigator.py` / API-table / frontend / test entries above describe
+it) and **Phase 9 (interactive column-mapping wizard) is in progress** —
+both land via their own build sessions; add their §15 rows with commit
+hashes when they do. Still open, build only on request: interactive column-mapping wizard, per-mapping
+AI-override UI, threat-informed actor/industry weighting,
+scheduled/continuous re-assessment + SIEM API pulls, per-rule detection
+*quality* scoring (v1 scores presence — stated in the methodology
+footnote and assumptions), ICS/Mobile entries in the priorities file,
+per-org priority-tier overrides (the `mitre_settings` pattern already
+supports it). When one of these lands, extend §15's history table and
+the relevant sections here.
