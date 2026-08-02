@@ -1,6 +1,8 @@
 # MITRE Phase 13 — SIEM Integration Plan (design locked 2026-08-02)
 
-**Status: DESIGN — awaiting user approval. No code exists yet.**
+**Status: SHIPPED — all four sub-phases (13a–13d) implemented, each with
+its own adversarial sign-off; see §15 of `MITRE_MODULE_REFERENCE.md` for
+commits.** This document remains the design contract of record.
 Design session ran `superpowers:brainstorming` per the kickoff
 (`docs/phases/prompts/MITRE_PHASE_13_SIEM_INTEGRATION_PROMPT.md`).
 User decisions taken this session: **first connector = Microsoft

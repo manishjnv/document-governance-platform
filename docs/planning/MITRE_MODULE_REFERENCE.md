@@ -1,9 +1,10 @@
 # MITRE ATT&CK Coverage Assessment — Module Reference
 
-**Status:** COMPLETE (Phases 0–7 + optional Phases 8–12), launch-ready,
-live in production at `https://scopewise.assessiq.in/mitre`. No known
-quality gaps — the remaining plan-§14 optional feature (Phase 13, SIEM
-pull, design-first) is built only on request.
+**Status:** COMPLETE (Phases 0–7 + optional Phases 8–12 + Phase 13
+SIEM integration 13a–13d), launch-ready, live in production at
+`https://scopewise.assessiq.in/mitre`. Phase 13's own contract/deep
+reference is `docs/planning/MITRE_SIEM_INTEGRATION_PLAN.md` — read BOTH
+docs before touching `app/mitre/connectors/*` or `app/mitre/tasks.py`.
 **Written:** 2026-08-02, after Phase 7. This is the end-to-end reference
 for what the module is and how every piece works; the original design
 rationale lives in `docs/planning/MITRE_ASSESSMENT_PLAN.md` (read that for
@@ -67,6 +68,8 @@ in-app results with a Navigator-style heatmap, executive+detailed PDF, an
 | `keyword_tag.py` | Pure, Phase 6: deterministic keyword/alias tagging pre-pass that runs BEFORE the LLM. See §7. |
 | `ranking.py` | Pure: coverage results + customer log-sources/tooling → priority-ranked gap list + short/mid/long roadmap buckets. See §6. |
 | `quality.py` | Pure, Phase 12: deterministic 0-100 "detection strength" per covered/partial technique (provenance + enabled + logic-present + telemetry-match signals) + rationale + rollup. An EFFICACY signal, deliberately separate from coverage %. See §6. |
+| `connectors/` | Phase 13: SIEM pull package — `egress.py` (resolve-then-pin SSRF guard, the ONLY outbound-HTTP door; https/443, hardcoded host allowlists, redirects rejected, caps), `sentinel.py` (Entra client-credentials → alertRules → canonical template CSV; fixed Microsoft hosts, regex-validated IDs), `vault.py` (AES-256-GCM, AAD-bound to connection_id, `SIEM_CRED_KEY` env master key, key_version), `base.py` (dispatch + error taxonomy). Contract: `MITRE_SIEM_INTEGRATION_PLAN.md`. |
+| `tasks.py` | Phase 13c/13d: Celery beat sweep (15 min) + per-connection pull-and-run task (fresh-engine-per-call — the app engine binds to the first loop), stale-running self-heal, `connection_health` (streak math shared with the notifier), admin email after exactly 2 consecutive scheduled failures (one notice per streak, reset on success). Runs in the `scopewise-worker` container. |
 | `agents.py` | `MitreTaggingAgent` (tagging + extraction prompt modes) and `MitreNarrativeAgent` — `ReviewAgent` subclasses (ConflictDetector pattern: inherit the OpenRouter client + GLM-5.2→DeepSeek→MiniMax→Qwen chain + unparseable-JSON-advances-chain). Batch drivers with 60s/120s retry and degrade discipline. See §8. |
 | `ingest.py` | Structured file readers: xlsx (openpyxl direct cell access — deliberately NOT `parse_document()`, whose ExcelParser flattens columns), xls (xlrd), csv (stdlib). Header/sheet/platform synonym detection (~90 real-world variants), trust-boundary guards. See §5. |
 | `service.py` | Pipeline driver (`run_assessment_pipeline`, fire-and-forget task under a process-wide `Semaphore(3)`), `build_mappings` (customer-tag validation), `compare_assessments` (trend diff), org tunables get/set (`mitre_settings`). |
@@ -395,6 +398,9 @@ stamping. Registered nowhere in `ReviewOrchestrator`.
 | `GET /assessments/{id}/export.xlsx` | any | 409 unless completed. StreamingResponse, real xlsx content-type + attachment disposition (deliberately NOT base64 — plan §10). |
 | `GET /assessments/{id}/navigator` | any | 409 unless completed. ATT&CK Navigator layer export (Phase 8): 1 applicable domain → layer JSON attachment; >1 → zip of per-domain layers. Pure `navigator.py`, layer format 4.5, colors mirror the report palette, N/A → `enabled:false`. |
 | `POST /assessments/{id}/remap` | admin/reviewer | 409 unless `pending` (atomic status-conditional guard in the row-replacement transaction — run/remap race closed). Phase 9 wizard: `{"columns": {field: 0-based index}}` re-parses the stored dump with an explicit map (`validate_column_override` 422s bad fields/indexes), replaces rows, updates `params.columns`, audits `mitre.assessment_remapped`, returns a fresh parse preview (`headers` + `sample_rows` now on create too). 422 for pdf/docx extraction dumps. |
+| `POST /assessments/from-siem` | admin, reviewer | Phase 13a token-at-trigger Sentinel pull: `{platform, config, secret, name?, intake?}` — secret used once, NEVER persisted/logged/echoed; connector emits a template CSV through the exact upload create path; provenance in `params.siem`. Config 422; upstream failures 502 with actionable, secret-free messages. |
+| `GET/POST/PATCH/DELETE /connections`, `POST /connections/{id}/test` | admin | Phase 13b/13d saved connections: secret AES-256-GCM at rest (write-only — no response ever carries it), config revalidated on change, schedule trio validated as a unit (13c), GET includes per-connection `health` (last pull/error + scheduled-failure streak). `/test` = dry-run rule count. Vault unconfigured → 503. |
+| `POST /assessments/from-connection/{id}` | admin, reviewer | Phase 13b: same pipeline as from-siem, secret decrypted in-process from the vault for the pull only; provenance gains connection_id/name. |
 | `PATCH /assessments/{id}/use-cases/{use_case_id}/mappings` | admin, reviewer | 409 unless `completed`. Phase 10 override: body `{"technique_ids": [...]}` = the FULL new list for that rule (empty = maps to nothing, max 20). Every ID validated via `resolve()` (revoked→successor with a note; deprecated/unknown/malformed → 422). Row becomes `mapping_status='manual'`, mappings `source='manual'` @ 1.0; coverage/gaps/roadmap recomputed inline (pure code, `service.recompute_results`, narrative kept + assumption note appended, counts gain a `manual` key). `SELECT … FOR UPDATE` on the assessment serializes concurrent edits; audits `mitre.mappings_edited`. |
 | `GET /assessments/{id}/compare/{other_id}` | any | `{id}` = current, `{other_id}` = baseline. Both org-owned (404) + completed (409). |
 | `GET /threat-catalog` | any | Phase 11: curated actor list (name + ATT&CK G-code + note) and profiled-industry labels from `threat_profiles.json` — feeds the wizard's actor chips. Static, org-agnostic. |
@@ -524,6 +530,10 @@ absent; prod render verified live). Frontend: `tsc --noEmit` clean.
 | `test_mitre_mapping_edit.py` | Phase 10 PATCH: manual provenance + inline recompute (states flip, counts.manual, assumption note, audit row), empty-list unmap, invalid/malformed/over-cap 422s, non-completed 409, cross-org 404 (both IDs) + viewer 403. |
 | `test_mitre_threat_profile.py` | Phase 11: every curated ID resolves `ok` + alias integrity, real-file lookup (Banking alias, unknown = no-op), within-tier lift golden, no-tier-jump golden, toggle-off keeps order but keeps annotation, intake threat_actors 422s (unknown/non-list/over-10). |
 | `test_mitre_quality.py` | Phase 12: heuristic goldens (full-signal 100, disabled capped 70, telemetry match +30, low-conf AI weak, redundancy cap, no-telemetry note, only direct-rule covered/partial scored), inconclusive selection, rollup, AI pass clamped/filtered/merged + garbage-degrades-to-heuristic. |
+| `test_mitre_siem.py` | 13a: egress deny-set table (+mixed-answer rebinding), pin assertion, allowlist-before-resolve, redirect/size caps, hostile Retry-After, nextLink suffix-spoof, Sentinel config regexes (+dot-edge resource groups), normalization goldens round-tripped through real ingest, endpoint E2E + secret-absence scan + RBAC. No test touches the network. |
+| `test_mitre_connections.py` | 13b: crypto round-trip/AAD-transplant/key-version/corrupt/missing-key, CRUD secret-write-only (+DB ciphertext scan), all-admin-routes RBAC, org-isolation 404s, 503 mapping, secret length cap, dry-run test endpoint, from-connection provenance, DEBUG-level log-scrub. |
+| `test_mitre_schedule.py` | 13c: due-instant goldens (daily/weekly/wrap), schedule PATCH validation, sweep advance-on-enqueue + dedup-no-advance, stale-running self-heal (+enqueue same pass), pending-preview non-blocking, worker pull completed/failed/deleted-connection paths. |
+| `test_mitre_siem_health.py` | 13d: list `siem` brief + report-footer provenance (secret-free), health/streak math, notification at exactly 2 / once per streak / reset on success / no secrets or rule content in the email, threshold pin. |
 
 Reminder: migrations 029/031/032 (and 030) must be applied to `edgp_test`
 before running the suite.
@@ -546,7 +556,8 @@ you're alone on `edgp_test`.
   `.sql` to `edgp_dev`, `edgp_test`, and on deploy `scopewise_prod` via
   `docker exec -i … psql`. Module migrations: 029 (tables), 030 (audit
   CHECK), 031 (mapping_status CHECK), 032 (logic column), 033
-  (mapping_status + 'manual'). **5th sync
+  (mapping_status + 'manual'), 034 (mitre_connections vault), 035
+  (schedule columns). **5th sync
   point:** CHECK changes mirrored in ORM models must update both in
   lockstep (see §4 warning).
 - **Deploy**: standard VPS loop (git push → `docker compose -f
@@ -569,6 +580,14 @@ you're alone on `edgp_test`.
   keyword-tagged + customer-tagged coverage, unmapped residue with
   assumptions, template narrative. No operator action needed beyond the
   key limit itself.
+- **SIEM worker ops (Phase 13c/13d)**: the `scopewise-worker` container
+  (compose service `worker`: Celery worker + in-process beat, no ports,
+  512m/0.5cpu) runs the 15-min schedule sweep + scheduled pulls. Its env
+  needs `SIEM_CRED_KEY` (32-byte base64, generated into the VPS `.env`,
+  never committed — absent = saved connections 503) and `SMTP_*` (13d
+  admin notifications). Deploy = normal compose loop (the worker builds
+  from the same API image). Health/streak visible at `/mitre/connections`
+  (admin). Full ops detail: `MITRE_SIEM_INTEGRATION_PLAN.md`.
 - **Local dev quirks**: WeasyPrint native libs absent → PDF endpoint
   returns the graceful message (HTML format works); running the web UI
   against a local API needs `CORS_ORIGINS` to include the dev port; the
@@ -597,6 +616,9 @@ you're alone on `edgp_test`.
 | 10 (opt) | `6ce8e48` | 08-02 | Per-mapping reviewer override: `PATCH .../use-cases/{id}/mappings` (resolve()-validated full-list edit, `manual` provenance @ 1.0, migration 033 + ORM lockstep, FOR UPDATE serialization, audit) + inline pure recompute + drawer edit UI; ACCEPT; prod deploy |
 | 11 (opt) | `62f1df2` | 08-02 | Threat-informed gap weighting: curated `threat_profiles.json` (143 validated IDs, cited sources), `build_threat_profile` + within-tier sort lift, `threat_weighting_enabled` tunable, intake `threat_actors` + `GET /threat-catalog`, wizard actor chips + "Threat match" gap chip; no migration/AI; ACCEPT; prod deploy |
 | 12 (opt) | `436612a` | 08-02 | Detection-strength scoring: pure `quality.py` heuristic (0-100 + rationale on technique_results, `summary.quality` rollup), optional `MitreQualityAgent` behind `quality_ai_enabled` (off, degrade-to-heuristic), drawer chip + gaps Strength column labeled distinct from coverage %; no migration; ACCEPT; prod deploy |
+| 13a | `09b545e` | 08-02 | SIEM design (`598c2dc`) + Sentinel connector, token-at-trigger: `connectors/` package (resolve-then-pin egress guard, fixed Microsoft hosts), `POST /assessments/from-siem`, template-CSV reuse of the create path, wizard source toggle; REVISE→fixed→ACCEPT |
+| 13b | `a94aabb` | 08-02 | Credential vault: migration 034 `mitre_connections`, AES-256-GCM AAD-bound secrets (`SIEM_CRED_KEY`), admin CRUD secret-write-only + `/test` + `from-connection`; heaviest review, ACCEPT (7/7 verified + crypto probes) |
+| 13c+13d | `496b2bb` | 08-02 | Scheduler/worker (`scopewise-worker`, migration 035, 15-min sweep, self-healing dedup, per-call engines) + provenance surfacing (list chip/results line/report footer), connection health + streak, admin email at 2 consecutive scheduled failures; both REVISE→fixed→ACCEPT; prod deploy |
 
 ## 16. Optional feature work (plan §14 — not launch blockers)
 
@@ -605,12 +627,13 @@ feature per session, kickoff prompt committed as `cf6e9e4`). **Shipped:
 Phase 8 (ATT&CK Navigator layer export), Phase 9 (interactive
 column-mapping wizard), Phase 10 (per-mapping reviewer override +
 inline recompute), Phase 11 (threat-informed actor/industry gap
-weighting), and Phase 12 (per-rule detection-strength scoring — the
-methodology footnote's "presence, not efficacy" caveat now has a
-separate, clearly-labeled efficacy signal beside it)** — see §15 for
-commits. Still open, build only on request: Phase 13
-scheduled/continuous re-assessment + SIEM API pulls (design-first,
-START WITH brainstorming per the kickoff), plus ICS/Mobile entries in
-the priorities file and per-org priority-tier overrides (the
-`mitre_settings` pattern already supports it). When one of these lands,
-extend §15's history table and the relevant sections here.
+weighting), Phase 12 (per-rule detection-strength scoring), and
+Phase 13 (SIEM integration 13a–13d: Sentinel pull, credential vault,
+scheduler/worker, provenance + failure observability — contract:
+`MITRE_SIEM_INTEGRATION_PLAN.md`)** — see §15 for commits. Still open,
+build only on request: additional SIEM connectors (Splunk ES / Elastic —
+the first customer-supplied-hostname connectors, exercising the egress
+guard's full deny set), ICS/Mobile entries in the priorities file, and
+per-org priority-tier overrides (the `mitre_settings` pattern already
+supports it). When one of these lands, extend §15's history table and
+the relevant sections here.

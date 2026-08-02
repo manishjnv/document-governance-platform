@@ -728,7 +728,26 @@ secret WRITE-ONLY (popped/del'd, never returned/logged/echoed) +
 503. 10 new tests (crypto round-trip, AAD-transplant/key-version/corrupt
 refusal, secret-absence scans, log-scrubbing); **full suite 765/7**;
 `tsc` clean. Heaviest Sonnet sign-off ACCEPT (empirical crypto probes).
-**Next: 13c (scheduler/worker container).**
+**13c+13d done (`496b2bb`, DEPLOYED — Phase 13 COMPLETE):**
+scheduler/worker — `scopewise-worker` compose service (Celery worker +
+in-process beat, no ports, 512m/0.5cpu, least-privilege env: no
+JWT/OAuth), migration 035 schedule columns (+3 ORM CHECKs in lockstep),
+admin PATCH schedule validation, 15-min sweep with advance-on-enqueue
+dedup, **stale-running self-heal** (a crashed run can't block the
+schedule; review fix) and pending previews non-blocking, per-call-engine
+discipline everywhere + `run_assessment_pipeline(session_factory=…)`;
+scheduled failures land as visible `failed` assessments. Provenance +
+observability — `params.siem` on the list (chip), results header, and
+report audit footer; `GET /connections` health (last pull/error +
+consecutive scheduled-failure streak); **admin email at exactly 2
+consecutive scheduled failures** (one notice per streak, reset on
+success, stale-flips notify too — review fix; never secrets/rule
+content, CRLF-collapsed names harden the Subject header);
+`/mitre/connections` admin health page. Also closed the 13b prod gap
+(`SIEM_CRED_KEY` was missing from the compose env). Both sub-phase
+reviews REVISE→fixed→ACCEPT. 18 new tests; **full suite 781 passed /
+7 skipped**; `tsc` clean. Ops: worker env needs `SIEM_CRED_KEY` +
+`SMTP_*`; migrations 034–035 in all 3 DBs.
 
 ---
 
