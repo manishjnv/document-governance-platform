@@ -2,6 +2,7 @@
 
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { MAPPING_STATUS_PLAIN, SOURCE_META, UseCaseItem } from '../lib';
+import { useSheetResize } from './useSheetResize';
 
 /** Phase 14b: rule-centric drill-down — behind the parse-preview tiles and
  * the rules-by-mapping-status counts. Technique chips click through to the
@@ -23,9 +24,15 @@ export function RuleListPanel({
   onSelectTechnique?: (techniqueId: string) => void;
   onClose: () => void;
 }) {
+  const resize = useSheetResize();
   return (
     <Sheet open={title !== null} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="right" className="w-full overflow-y-auto p-5 sm:max-w-md">
+      <SheetContent
+        side="right"
+        style={resize.style}
+        className="w-full overflow-y-auto p-5 sm:max-w-md"
+      >
+        {resize.handle}
         <SheetTitle className="text-base">{title}</SheetTitle>
         {subtitle && <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>}
         <div className="mt-4 space-y-2">

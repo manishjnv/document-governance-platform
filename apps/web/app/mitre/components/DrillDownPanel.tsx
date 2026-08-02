@@ -10,6 +10,7 @@ import {
   UseCaseItem,
   partialWhyBrief,
 } from '../lib';
+import { useSheetResize } from './useSheetResize';
 
 const STATE_ORDER = ['covered', 'partial', 'not_covered', 'not_applicable'];
 
@@ -36,6 +37,7 @@ export function DrillDownPanel({
   onSelectTechnique: (techniqueId: string) => void;
   onClose: () => void;
 }) {
+  const resize = useSheetResize();
   const groups = useMemo(() => {
     if (!grouped) return [[null, items] as [string | null, TechniqueResult[]]];
     return STATE_ORDER.map(
@@ -49,7 +51,12 @@ export function DrillDownPanel({
 
   return (
     <Sheet open={title !== null} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="right" className="w-full overflow-y-auto p-5 sm:max-w-md">
+      <SheetContent
+        side="right"
+        style={resize.style}
+        className="w-full overflow-y-auto p-5 sm:max-w-md"
+      >
+        {resize.handle}
         <SheetTitle className="text-base">{title}</SheetTitle>
         {subtitle && <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>}
         <div className="mt-4 space-y-4">

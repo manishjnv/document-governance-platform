@@ -16,6 +16,7 @@ import {
   strengthBucket,
 } from '../lib';
 import { StateBadge } from './StateBadge';
+import { useSheetResize } from './useSheetResize';
 
 /** Slide-over detail for one technique: state, tactics, N/A reason, and the
  * detection rules mapped to it (with confidence + customer/AI source).
@@ -47,6 +48,7 @@ export function TechniqueDrawer({
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState('');
   const [addRuleId, setAddRuleId] = useState('');
+  const resize = useSheetResize();
 
   const technique = techniques.find((t) => t.technique_id === techniqueId) ?? null;
 
@@ -115,7 +117,12 @@ export function TechniqueDrawer({
 
   return (
     <Sheet open={techniqueId !== null} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="right" className="w-full overflow-y-auto p-5 sm:max-w-md">
+      <SheetContent
+        side="right"
+        style={resize.style}
+        className="w-full overflow-y-auto p-5 sm:max-w-md"
+      >
+        {resize.handle}
         {technique && (
           <>
             <SheetTitle className="flex flex-wrap items-center gap-2 text-base">
@@ -180,7 +187,8 @@ export function TechniqueDrawer({
                     (t) =>
                       t.line && (
                         <p key={t.id} className="leading-snug">
-                          This is a <span className="font-medium">{t.name}</span>{' '}
+                          This is {/^[aeiou]/i.test(t.name) ? 'an' : 'a'}{' '}
+                          <span className="font-medium">{t.name}</span>{' '}
                           technique — {t.line}.
                         </p>
                       )
@@ -198,9 +206,16 @@ export function TechniqueDrawer({
                       </p>
                     )
                   )}
-                  {explain.where.platforms.length > 0 && (
+                  {/* ICS techniques carry a literal "None" platform and PRE is
+                      an environment-independent marker — neither is a real
+                      platform, so hide them from the display. */}
+                  {explain.where.platforms.filter((p) => p !== 'None' && p !== 'PRE')
+                    .length > 0 && (
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Applies to: {explain.where.platforms.join(', ')}
+                      Applies to:{' '}
+                      {explain.where.platforms
+                        .filter((p) => p !== 'None' && p !== 'PRE')
+                        .join(', ')}
                     </p>
                   )}
                   {/* Phase 14g: why this technique is in scope for YOU */}

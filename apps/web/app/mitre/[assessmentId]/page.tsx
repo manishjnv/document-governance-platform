@@ -374,7 +374,7 @@ export default function MitreResultsPage() {
                   {status.label}
                 </span>
               )}
-              <div className="ml-auto flex items-center gap-1.5">
+              <div className="ml-auto flex flex-wrap items-center gap-1.5">
                 {/* Phase 14f: jump to any past run without going back to the list */}
                 {completed && pastRuns !== null && pastRuns.length > 1 && (
                   <div className="relative">
@@ -392,7 +392,7 @@ export default function MitreResultsPage() {
                       <div
                         role="listbox"
                         aria-label="Past assessment runs"
-                        className="absolute right-0 z-50 mt-1 max-h-80 w-80 overflow-y-auto rounded-md border bg-background p-1 shadow-md"
+                        className="absolute right-0 z-50 mt-1 max-h-80 w-80 max-w-[calc(100vw-1.5rem)] overflow-y-auto rounded-md border bg-background p-1 shadow-md"
                       >
                         {pastRuns.map((run) => {
                           const isCurrent = run.assessment_id === assessmentId;

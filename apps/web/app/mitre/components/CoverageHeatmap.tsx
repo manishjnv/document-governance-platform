@@ -1,15 +1,17 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { DOMAIN_LABELS, STATE_META, Summary, TechniqueResult } from '../lib';
+import { DOMAIN_LABELS, STATE_META, STATE_PLAIN, Summary, TechniqueResult } from '../lib';
 import type { DrillHandler } from './ExecutiveBand';
 
 /** Navigator-style tactic-column heatmap, plain CSS grid — no charting
- * dependency. Cells use click -> drawer for full detail plus a native
- * `title` hover hint (a Radix tooltip per ~700 cells would be wasteful);
- * shadcn tooltips cover the legend and column headers. */
+ * dependency. Cells show "ID Name" (truncated — no extra area per TTP) and
+ * click -> drawer for full detail. Hover context comes from ONE delegated
+ * custom tooltip for all ~900 cells (a Radix tooltip per cell would be
+ * wasteful): solid background, smooth fade, driven by data-tip attributes.
+ * Shadcn tooltips still cover the legend and column headers. */
 export function CoverageHeatmap({
   summary,
   techniques,
@@ -21,6 +23,33 @@ export function CoverageHeatmap({
   onSelectTechnique: (techniqueId: string) => void;
   onDrill: DrillHandler;
 }) {
+  // One tooltip for every cell (event delegation on the grid container).
+  const [tip, setTip] = useState<{ x: number; y: number; text: string } | null>(null);
+  const tipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showTip = (target: Element) => {
+    const el = target.closest('[data-tip]') as HTMLElement | null;
+    if (!el) {
+      setTip(null);
+      return;
+    }
+    const rect = el.getBoundingClientRect();
+    if (tipTimer.current) clearTimeout(tipTimer.current);
+    tipTimer.current = setTimeout(
+      () =>
+        setTip({
+          x: Math.min(Math.max(rect.left + rect.width / 2, 130), window.innerWidth - 130),
+          y: rect.top,
+          text: el.dataset.tip ?? '',
+        }),
+      120
+    );
+  };
+  const hideTip = () => {
+    if (tipTimer.current) clearTimeout(tipTimer.current);
+    setTip(null);
+  };
+
   const byDomainTactic = useMemo(() => {
     const map = new Map<string, TechniqueResult[]>();
     for (const t of techniques) {
@@ -40,7 +69,20 @@ export function CoverageHeatmap({
   const activeDomains = Object.entries(summary.domains).filter(([, d]) => d.applicable > 0);
 
   return (
-    <div className="space-y-6">
+    <div
+      className="space-y-6"
+      onMouseOver={(e) => showTip(e.target as Element)}
+      onMouseOut={hideTip}
+    >
+      {tip && (
+        <div
+          role="tooltip"
+          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-full whitespace-pre-line rounded-md border bg-popover px-2.5 py-1.5 text-[11px] leading-snug text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 duration-150"
+          style={{ left: tip.x, top: tip.y - 6, maxWidth: 260 }}
+        >
+          {tip.text}
+        </div>
+      )}
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-3 text-xs">
         {Object.entries(STATE_META).map(([state, meta]) => (
@@ -113,22 +155,29 @@ export function CoverageHeatmap({
                         (strict {tactic.strict_pct}%). Click for the list.
                       </TooltipContent>
                     </Tooltip>
-                    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1">
                       {cells.map((t) => {
                         const meta = STATE_META[t.state] ?? STATE_META.not_applicable;
+                        const detail =
+                          t.state === 'not_applicable' && t.na_reason
+                            ? t.na_reason
+                            : STATE_PLAIN[t.state] ?? meta.label;
                         return (
                           <button
                             key={t.technique_id}
                             type="button"
                             onClick={() => onSelectTechnique(t.technique_id)}
-                            title={`${t.technique_id} — ${meta.label}${t.na_reason ? `: ${t.na_reason}` : ''}`}
+                            data-tip={`${t.technique_id}${t.name ? ` — ${t.name}` : ''}\n${meta.label}: ${detail}. Click for details.`}
+                            onFocus={(e) => showTip(e.target as Element)}
+                            onBlur={hideTip}
                             className={cn(
                               'w-full truncate rounded px-1.5 py-1 text-left text-[11px] leading-tight transition-colors',
                               meta.cell,
                               t.technique_id.includes('.') && 'ml-2 w-[calc(100%-0.5rem)]'
                             )}
                           >
-                            {t.technique_id}
+                            <span className="font-medium">{t.technique_id}</span>
+                            {t.name && <span className="opacity-85"> {t.name}</span>}
                           </button>
                         );
                       })}
