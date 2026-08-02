@@ -321,6 +321,91 @@ already persisted; the only backend additions are the per-entry
 environment interpretation map and (if absent) persisting it with
 results.
 
+## 14h — Report branding & polish (post-14e review additions)
+
+Outcome of the 2026-08-02 external-advice review: keep the WeasyPrint +
+openpyxl + inline-SVG stack (rejected: Playwright/Chromium on the
+shared VPS, pandas/XlsxWriter migration, S3 storage, report
+microservices, JS chart libs — all cost with no visible gain). Four
+accepted improvements:
+
+1. **Jinja2 templating refactor (enabling).** `report.py` is ~1,150
+   lines of f-string HTML. Move the PDF HTML into
+   `apps/api/app/mitre/templates/` (Jinja2 is already installed as a
+   FastAPI dependency): base layout + cover / executive / detail /
+   appendix partials + one stylesheet, and split the XLSX builder into
+   its own module. Pure refactor — existing report tests pass
+   unmodified.
+2. **Branding.** ScopeWise logo (reuse the existing web asset) on the
+   PDF cover and running header; professional font stack; optional
+   watermark text ("CONFIDENTIAL — `<org>`"). Per-org overrides (display
+   name, accent color, watermark text) via the existing
+   `admin/customization.py` get/set-with-org-override pattern —
+   backend keys only (no admin UI yet, consistent with that pattern).
+   Per-org **logo upload** is deferred (needs file storage).
+3. **Excel formatting upgrades** (openpyxl native): data bars on
+   coverage-% columns, 3-color scale on priority tiers, a real Excel
+   bar chart on Coverage by Tactic, sheet protection on the Read Me /
+   legend sheet, workbook core properties (title/author/company).
+4. **PDF document metadata:** title / author / subject / keywords via
+   WeasyPrint so file properties identify the report and org.
+
+Constraints: computed numbers unchanged; no new dependencies (no
+playwright, no pandas usage, no xlsxwriter usage even though it's
+installed); no migration (customization keys ride existing plumbing —
+verify); no font/asset fetched from the internet at runtime.
+
+Acceptance: renders against the sample kit show logo, watermark, and
+metadata; org-override keys change name/color/watermark; XLSX opens
+with working data bars + chart in Excel/LibreOffice; suite green with
+report tests unmodified by the refactor commit.
+
+## 14h — "What logs do I need?" per gap (telemetry field guidance)
+
+Customer question this answers: *"You say this technique isn't covered and
+that my Windows Event Logs could see it — but what does my query actually
+need, and is my connector even sending it?"* Today we name the log source
+category; we never name the **fields**.
+
+**One new curated file: `app/mitre/data/telemetry_fields.json`**, keyed by
+ATT&CK data-component name (the strings already in
+`attack.json`'s `data_sources`). Same curate/validate/fallback pattern as
+`technique_priorities.json` / `threat_profiles.json` /
+`technique_plain_language.json`. Each entry:
+
+- `fields` — the parameters a detection query needs, in plain English
+  ("process name and full path", "full command line", "parent process",
+  "user account", "host name", "event time").
+- `where` — where that telemetry normally comes from, vendor-neutral
+  ("Windows Event ID 4688, Sysmon Event ID 1, Linux auditd execve, or EDR
+  process telemetry").
+- `gotcha` — the single most common reason an *already-onboarded* source
+  still can't support the detection. This is the highest-value field:
+  e.g. "Windows 4688 does not include the command line unless 'Include
+  command line in process creation events' is enabled."
+
+**Scale check (measured against the pinned v19.1 dataset):** 113 distinct
+components exist, but the top 25 cover **83%** of all technique→component
+references and the top 35 cover **88%**. Curate the top ~35; everything
+else falls back to showing the raw component name with no invented
+guidance. 62 techniques list no telemetry at all — they already get
+"bespoke detection engineering" and must stay unchanged.
+
+**Surfaces (no new UI area):** one extra line in the drawer's *What would
+good look like?* block; a "Log fields needed" column on the XLSX Gaps
+sheet; one line per entry in the PDF gap register.
+
+**Honesty boundary (non-negotiable):** we never ingest raw logs — the
+wizard promises exactly that. So the wording is *"your query needs X;
+your <source> should carry it — verify the connector"*, never "your source
+is missing X". Field-level verification is not something this product can
+perform, and claiming it would be false.
+
+Acceptance: every curated key is a real component name in `attack.json`
+(test-enforced); a not-covered technique with a curated component shows
+fields + where + gotcha; an uncurated component degrades to the plain
+component name; no coverage number changes anywhere.
+
 ---
 
 ## Explicitly deferred (recorded, not in 14)
