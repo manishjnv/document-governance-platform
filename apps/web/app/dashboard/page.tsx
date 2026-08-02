@@ -9,7 +9,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Link from 'next/link';
-import { ArrowDown, ArrowUp, ChevronRight, FolderOpen } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronRight, FolderOpen, Loader2, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -55,6 +55,25 @@ interface LinkSuggestion {
   suggested_filename: string;
   suggested_version: number;
   similarity_score: number;
+}
+
+// Shape returned by the global full-text search endpoint (GET /api/v1/search) --
+// distinct from Document, so results render in their own section (see T-703 rename).
+interface SearchResult {
+  doc_id: string;
+  filename: string;
+  document_type: string | null;
+  rank: number;
+  snippet: string;
+  created_at: string;
+}
+
+interface SearchResponse {
+  query: string;
+  total: number;
+  skip: number;
+  limit: number;
+  results: SearchResult[];
 }
 
 function ScoreCell({ value }: { value: number | null }) {
@@ -369,6 +388,11 @@ export default function DashboardPage() {
   const [reviewingDocId, setReviewingDocId] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<LinkSuggestion[]>([]);
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchTotal, setSearchTotal] = useState(0);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState('');
   const router = useRouter();
 
   const toggleProject = (id: string) => {
@@ -395,6 +419,43 @@ export default function DashboardPage() {
     fetchDocuments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterType]);
+
+  // Global server-backed full-text search (same endpoint as the retired /search
+  // page). Debounced; an empty query just restores the normal grouped list below.
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) {
+      setSearchResults([]);
+      setSearchTotal(0);
+      setSearchError('');
+      setSearchLoading(false);
+      return;
+    }
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    const handle = setTimeout(async () => {
+      try {
+        setSearchLoading(true);
+        setSearchError('');
+        const params = new URLSearchParams({ q: trimmed, skip: '0', limit: '20' });
+        const response = await axios.get<SearchResponse>(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/search?${params.toString()}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setSearchResults(response.data.results);
+        setSearchTotal(response.data.total);
+      } catch (err: any) {
+        setSearchError(err.response?.data?.detail || 'Search failed. Please try again.');
+        setSearchResults([]);
+        setSearchTotal(0);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(handle);
+  }, [searchQuery]);
 
   const fetchDocuments = async () => {
     try {
@@ -584,15 +645,109 @@ export default function DashboardPage() {
     return { projectGroups, ungrouped };
   }, [documents, projects]);
 
+  const isSearching = searchQuery.trim().length > 0;
+
   return (
     <AppShell>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-medium">Documents</h1>
-        <Button asChild>
-          <Link href="/upload">Upload Document</Link>
-        </Button>
+      <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
+        <h1 className="text-2xl font-medium">SOW Review</h1>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search
+              size={14}
+              strokeWidth={2}
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search all documents..."
+              aria-label="Search all documents"
+              className="w-64 pl-8 pr-8 py-1.5 text-sm border border-input rounded-md bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors duration-150 ease-out"
+            />
+            {isSearching && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X size={14} strokeWidth={2} aria-hidden="true" />
+              </button>
+            )}
+          </div>
+          <Button asChild>
+            <Link href="/upload">Upload Document</Link>
+          </Button>
+        </div>
       </div>
 
+      {isSearching ? (
+        <div className="rounded-lg border overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/50">
+            <span className="text-sm font-medium">
+              Search results{!searchLoading && ` (${searchTotal})`} for &quot;{searchQuery.trim()}&quot;
+            </span>
+            {searchLoading && (
+              <Loader2 size={14} className="animate-spin text-muted-foreground" aria-hidden="true" />
+            )}
+          </div>
+          {searchError && (
+            <div role="alert" className="px-3 py-2 text-sm text-destructive bg-destructive/10 border-b">
+              {searchError}
+            </div>
+          )}
+          {!searchLoading && !searchError && searchResults.length === 0 ? (
+            <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+              No documents match &quot;{searchQuery.trim()}&quot;
+            </p>
+          ) : (
+            <Table className="text-xs [&_th]:h-8 [&_th]:py-1.5 [&_th]:px-3 [&_td]:py-1.5 [&_td]:px-3">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Filename</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Relevance</TableHead>
+                  <TableHead>Snippet</TableHead>
+                  <TableHead>Uploaded</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {searchResults.map((r) => (
+                  <TableRow key={r.doc_id}>
+                    <TableCell className="font-medium">{r.filename}</TableCell>
+                    <TableCell>{r.document_type || 'Unknown'}</TableCell>
+                    <TableCell>{(r.rank * 100).toFixed(0)}%</TableCell>
+                    <TableCell className="max-w-xs truncate text-muted-foreground" title={r.snippet}>
+                      {r.snippet}
+                    </TableCell>
+                    <TableCell>{new Date(r.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="text-primary hover:underline disabled:opacity-50"
+                          disabled={reviewingDocId === r.doc_id}
+                          onClick={() => handleReview(r.doc_id)}
+                        >
+                          {reviewingDocId === r.doc_id ? 'Reviewing... (~20s)' : 'Review'}
+                        </button>
+                        <span className="text-muted-foreground">•</span>
+                        <button className="text-primary hover:underline" onClick={() => handleView(r.doc_id)}>
+                          View
+                        </button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </div>
+      ) : (
+        <>
       {/* Version-link suggestions: dismissible, persist until acted on */}
       {suggestions.length > 0 && (
         <div className="space-y-2 mb-6">
@@ -781,6 +936,8 @@ export default function DashboardPage() {
             </TableBody>
           </Table>
         </div>
+      )}
+        </>
       )}
     </AppShell>
   );

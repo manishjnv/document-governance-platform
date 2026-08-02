@@ -3,15 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { FileText, LayoutDashboard, Search, Target, Upload, Menu, LogOut, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
+import { FileText, LayoutDashboard, Target, Menu, LogOut, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Documents', icon: LayoutDashboard },
-  { href: '/upload', label: 'Upload', icon: Upload },
-  { href: '/search', label: 'Search', icon: Search },
+  { href: '/dashboard', label: 'SOW Review', icon: LayoutDashboard },
   { href: '/mitre', label: 'MITRE Assessment', icon: Target },
 ];
 

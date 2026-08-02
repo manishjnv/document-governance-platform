@@ -8,7 +8,8 @@
 import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import { UploadCloud } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowLeft, UploadCloud } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -193,6 +194,13 @@ export default function UploadPage() {
   return (
     <AppShell>
       <div className="max-w-2xl mx-auto">
+        <Link
+          href="/dashboard"
+          className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft size={14} strokeWidth={2} aria-hidden="true" />
+          Back to SOW Review
+        </Link>
         <Card>
           <CardHeader>
             <CardTitle>{versionOfDocId ? 'Upload New Version' : 'Upload Document'}</CardTitle>
