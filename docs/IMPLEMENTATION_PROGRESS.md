@@ -531,8 +531,9 @@ Phase 2 behavior; documented, needs a schema column — deferred to Phase 7,
 suite **686 passed / 7 skipped** (+36), `tsc` clean. DEPLOYED to prod
 2026-08-02 (see header of this section).
 
-**Phase 7 COMPLETE — persist detection logic (2026-08-02, built, NOT yet
-committed/deployed):** closes the one carried-over quality gap per
+**Phase 7 COMPLETE — persist detection logic (2026-08-02, committed +
+pushed as `999ee5d`/`b183f75`, DEPLOYED: prod verified at `b183f75` with
+migration 032 applied to `scopewise_prod`):** closes the one carried-over quality gap per
 `docs/phases/prompts/MITRE_PHASE_7_PERSIST_LOGIC_PROMPT.md` — a dump
 with BOTH a description and a logic column used to silently drop the
 logic text at create time, so neither tagger ever saw the actual rule
@@ -559,6 +560,23 @@ clean; narrative agent confirmed to never receive raw logic). Full suite
 now has NO known quality gaps** — everything remaining is plan-§14
 optional feature work, built only on request. Deploy checklist: commit
 → push → VPS loop → **apply migration 032 to scopewise_prod** → smoke.
+
+**Phase 8 COMPLETE — ATT&CK Navigator layer export (2026-08-02, built,
+NOT yet committed/deployed):** first optional feature (plan §14) per
+`docs/phases/prompts/MITRE_OPTIONAL_FEATURES_PROMPT.md`. New pure
+`app/mitre/navigator.py` builds one Navigator layer (format 4.5) per
+applicable domain from the stored `technique_results` — colors reuse the
+report palette, N/A techniques are `enabled:false` with the reason as
+the comment, `versions.attack` pinned from the assessment, no
+timestamps (byte-stable golden tests). `GET
+/assessments/{id}/navigator` (viewer-readable, org-scoped, 409 unless
+completed) returns layer JSON for one domain or an in-memory zip of
+per-domain layers; results page gains a "Navigator" download button next
+to PDF/XLSX. No AI, no migration, no DB change; no adversarial review
+required (read-only JSON, per the kickoff). 6 new tests (3 pure golden
+plus endpoint json/zip/authz). Full suite [SUITE_RESULT]; `tsc` clean.
+`MITRE_MODULE_REFERENCE.md` API table updated. Deploy = standard VPS
+loop (no prod migration this phase) + smoke a Navigator download.
 
 ---
 

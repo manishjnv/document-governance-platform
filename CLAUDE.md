@@ -174,3 +174,9 @@ last incident.
   tunable constant added to scoring/rules should follow this same
   get/set-with-org-override pattern rather than being a hardcoded
   constant, so it stays consistent with what's already there.
+- **MITRE ATT&CK coverage-assessment module** (`apps/api/app/mitre/`,
+  `apps/web/app/mitre/`, live at `/mitre`): full end-to-end reference in
+  `docs/planning/MITRE_MODULE_REFERENCE.md` — **read that before touching
+  anything under either mitre folder** (pipeline semantics, JSONB shapes,
+  ORM-constraint sync points, tagging-ladder provenance, ops runbook).
+  Design rationale: `docs/planning/MITRE_ASSESSMENT_PLAN.md`.
