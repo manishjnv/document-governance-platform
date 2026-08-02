@@ -127,6 +127,7 @@ styled page instead of a flat metric list (numbers unchanged):
 | `4d579c2` | Smooth cell-to-cell tooltip; collapsible matrices; legend state filter |
 | `35f5d40` | Report tables professional grid: bordered cells, brand-blue header rows, zebra striping; gap/top-5 entries as bordered cards; cover metadata stays borderless (CSS only, prod PDF render re-verified) |
 | `a9534b5` | Report readability + space pass: no light-grey fonts (body #1f2937, muted/footer/TOC darkened to slate); tags visually distinct — filled state pills (green/amber/red/grey), P1/P2/P3 badges filled rose/amber/sky, stronger violet AI/threat badges; N/A appendix aggregated one-row-per-reason with technique lists; assumptions in two CSS columns; register + rule-mappings appendix tables compact (10px); gap/fix cards tightened. Prod render re-verified (aggregation + badges asserted in-container) |
+| `9256ab1` | PDF attack-stage tables: header rows + rebalanced columns (46% name+one-liner inline, one-line "0/12 · 0.0%" counts, bar fills the rest); XLSX thin borders on every content cell (Read Me prose sheet stays unruled). Prod render verified |
 
 ## Verification
 
