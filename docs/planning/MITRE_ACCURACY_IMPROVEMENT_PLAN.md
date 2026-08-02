@@ -41,7 +41,7 @@ pasted into a fresh session. Check off phases here as they complete.
 | A4 | Crown Jewels → gap-ranking lift (or drop) | ☑ |
 | A5 | Keyword alias expansion (vendor/appliance vocab) | ☑ |
 | A6 | Customer template upgrade + optional health columns | ☑ |
-| A7 | Sentinel data-connector auto-import | ☐ |
+| A7 | Sentinel data-connector auto-import | ☑ |
 | A8 | Threat-profile expansion + region weighting | ☐ |
 
 Deliberately dropped: "covered"→"has detection" relabel (pure

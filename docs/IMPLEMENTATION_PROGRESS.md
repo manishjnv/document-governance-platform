@@ -1026,6 +1026,23 @@ source isn't normalized or looks stale (>30 days), reason in the hint —
 never a state/coverage change. 34 new tests; suite green; `tsc --noEmit`
 clean; both templates verified to round-trip through real ingest.
 
+**MITRE accuracy plan, phase A7 (2026-08-03, security-adjacent):**
+Sentinel data-connector auto-import. `sentinel.pull()` gains a
+best-effort read of `Microsoft.SecurityInsights/dataConnectors` (same
+host/token as the existing alertRules pull — chosen over the Log
+Analytics tables API specifically because that needs a permission the
+documented Sentinel Reader role doesn't grant; dataConnectors needs
+zero new customer permission). Curated kind→source-name mapping reuses
+the existing log-source keyword bridge; auto-populates
+`environment_lists.log_sources` only when something was actually
+derived; unmapped kinds surface as an assumption; any read failure
+degrades to a no-op, never failing the assessment — applies uniformly
+across all 3 trigger paths (manual/vault/scheduled). Adversarial
+self-review caught and fixed one blocking finding (a malformed response
+entry could have crashed past the narrow exception handler, violating
+the never-fails contract) before commit — **verdict: ACCEPT**. 8 new
+tests; suite green (269 MITRE tests); `tsc --noEmit` clean.
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)

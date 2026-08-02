@@ -76,6 +76,49 @@ Chosen by the user (most-requested; cleanest fit for no-secret-at-rest):
   (stop + warn, not error); pagination capped (50 pages); per-page and
   total response-size caps.
 
+### 2.2a Data-connector auto-import (plan phase A7, 2026-08-03)
+
+Extends the pull with ONE additional read so Sentinel customers can skip
+the manual Log Sources sheet — accuracy-plan phase A7, tracked in
+`MITRE_ACCURACY_IMPROVEMENT_PLAN.md`.
+
+- **API chosen: `Microsoft.SecurityInsights/dataConnectors` (ARM list),
+  NOT the Log Analytics workspace "tables" API.** Both live under
+  `management.azure.com` (already allowlisted) and both are reachable
+  with the bearer token already obtained for the alertRules pull, but
+  they require DIFFERENT Azure RBAC permissions: the tables API needs
+  `Microsoft.OperationalInsights/workspaces/tables/read`, which the
+  documented `Microsoft Sentinel Reader` role (§2.1) does **not**
+  grant; `dataConnectors` is under `Microsoft.SecurityInsights/*`, the
+  SAME resource provider as `alertRules`, so it IS covered by the role
+  customers are already asked to grant. **This feature requires no new
+  customer-side permission and no change to onboarding guidance.**
+- No new host, no new egress capability, no new token scope — same
+  `ALLOWED_HOSTS`, same bearer token, same `fetch_json` guard.
+- Mapping: a curated in-code table (`sentinel._DATA_CONNECTOR_KIND_TO_SOURCE`)
+  maps Microsoft's built-in data-connector `kind` values (e.g.
+  `AzureActiveDirectory`, `MicrosoftDefenderAdvancedThreatProtection`,
+  `Office365`, `AmazonWebServicesCloudTrail`) to source NAME STRINGS the
+  module's EXISTING log-source keyword bridge (`ranking._LOG_SOURCE_RULES`)
+  already recognizes (e.g. "Azure AD", "Microsoft Defender") — no new
+  taxonomy invented. A `kind` absent from the table is reported in an
+  assumption line, never silently dropped.
+- Failure isolation: the data-connector read is wrapped so ANY failure
+  (auth, network, unexpected shape) degrades to `[]` + one warning —
+  it NEVER fails the rule pull or the assessment.
+- Merge semantics: when the read yields ≥1 mapped source, the
+  assessment's `environment_lists.log_sources` is auto-populated
+  (`sheets_found.log_sources` marked "auto-imported") and `params.siem`
+  notes the count; `environment.inventory_provided` (the Assets/platform
+  flag) stays `False` — no platforms are derived, so the "coverage is a
+  lower bound" assumption stays honest. There is currently no
+  environment-workbook upload path on `/assessments/from-siem` or
+  `/assessments/from-connection/{id}` (JSON-body endpoints only), so
+  "explicit beats derived" has nothing to merge under today; the
+  precedence rule is documented for when/if that changes.
+- Adversarial sign-off: ACCEPT (see `docs/phases/summaries/` for the
+  session handoff recording the review).
+
 ### 2.3 Scheduler/worker — Celery worker+beat container (13c)
 
 - One new container `scopewise-worker` in `docker-compose.vps.yml`:
