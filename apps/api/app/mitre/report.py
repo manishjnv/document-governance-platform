@@ -56,9 +56,16 @@ def _pct_bar(pct: float, color: str = "#0057B8") -> str:
     )
 
 
+# Filled state pills: amber needs dark text, the rest carry white.
+_STATE_CHIP_TEXT = {"partial": "#713f12"}
+
+
 def _state_chip(state: str) -> str:
+    background = STATE_COLORS.get(state, "#6b7280")
+    color = _STATE_CHIP_TEXT.get(state, "#ffffff")
     return (
-        f'<span style="color:{STATE_COLORS.get(state, "#333")};font-weight:600;">'
+        f'<span style="background:{background};color:{color};padding:1px 7px;'
+        'border-radius:8px;font-size:10px;font-weight:600;white-space:nowrap;">'
         f"{_esc(STATE_LABELS.get(state, state))}</span>"
     )
 
@@ -320,7 +327,8 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None) -> 
                 f"<div class='gap' id='g-{_esc(tid)}'>"
                 f"<p><span class='num muted'>#{_esc(g.get('rank'))}</span> "
                 f"<strong>{_esc(tid)} {_esc(g.get('name'))}</strong> "
-                f"<span class='badge'>{'P' + str(tier) if tier < 4 else 'Unranked'}</span> "
+                + (f"<span class='badge p{tier}'>P{tier}</span> " if tier < 4
+                   else "<span class='badge'>Unranked</span> ")
                 + ("<span class='badge threat'>Threat match: " + _esc(", ".join(relevance)) + "</span> "
                    if relevance else "")
                 + f"{_state_chip(g.get('state', ''))}</p>"
@@ -348,6 +356,8 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None) -> 
         for r in results
     )
     assumptions_html = "".join(f"<li>{_esc(a)}</li>" for a in assumptions)
+    # Space optimization: one row per distinct REASON with its techniques
+    # listed — 37 identical "deprecated" rows collapse into one.
     na_sections = ""
     remaining = list(not_applicable)
     for title, match in _NA_GROUPS:
@@ -355,15 +365,23 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None) -> 
         remaining = [n for n in remaining if n not in grouped]
         if not grouped:
             continue
+        by_reason: dict = {}
+        for n in grouped:
+            by_reason.setdefault(n.get("reason") or "", []).append(
+                n.get("technique_id")
+            )
         rows = "".join(
-            f"<tr><td>{_esc(n.get('technique_id'))}</td>"
-            f"<td>{_esc(DOMAIN_LABELS.get(n.get('domain'), n.get('domain')))}</td>"
-            f"<td>{_esc(n.get('reason'))}</td></tr>"
-            for n in grouped
+            f"<tr><td style='width:45%'>{_esc(reason)}</td>"
+            f"<td class='num'>{len(tids)}</td>"
+            f"<td>{_esc(', '.join(tids))}</td></tr>"
+            for reason, tids in sorted(
+                by_reason.items(), key=lambda kv: -len(kv[1])
+            )
         )
         na_sections += (
             f"<h3>{_esc(title)} ({len(grouped)})</h3>"
-            "<table><thead><tr><th>Technique</th><th>Matrix</th><th>Reason</th></tr></thead>"
+            "<table class='compact'><thead><tr><th>Reason</th><th>#</th>"
+            "<th>Techniques</th></tr></thead>"
             f"<tbody>{rows}</tbody></table>"
         )
 
@@ -450,11 +468,11 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None) -> 
 <style>
 @page {{
   size: A4; margin: 1.6cm 1.4cm 1.8cm;
-  @top-center {{ content: string(doctitle); font-size: 9px; color: #6b7280; }}
-  @bottom-right {{ content: "Page " counter(page) " of " counter(pages); font-size: 9px; color: #6b7280; }}
+  @top-center {{ content: string(doctitle); font-size: 9px; color: #374151; }}
+  @bottom-right {{ content: "Page " counter(page) " of " counter(pages); font-size: 9px; color: #374151; }}
 }}
 * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-body {{ font-family: Arial, 'Liberation Sans', Helvetica, sans-serif; color: #333; line-height: 1.5; font-size: 12px; }}
+body {{ font-family: Arial, 'Liberation Sans', Helvetica, sans-serif; color: #1f2937; line-height: 1.5; font-size: 12px; }}
 .container {{ max-width: 900px; margin: 0 auto; padding: 8px; }}
 h1 {{ font-size: 22px; color: #0057B8; margin-bottom: 2px; string-set: doctitle content(); }}
 h2 {{ font-size: 15px; color: #003D82; margin: 18px 0 6px; border-bottom: 2px solid #0057B8; padding-bottom: 3px; }}
@@ -463,17 +481,20 @@ h3.bucket {{ padding: 3px 6px; border-radius: 4px; }}
 h3.short {{ background: #d1fae5; }}
 h3.mid {{ background: #fef3c7; }}
 h3.long {{ background: #e5e7eb; }}
-p {{ margin: 4px 0; }}
-.muted {{ color: #6b7280; font-size: 11px; }}
+p {{ margin: 3px 0; }}
+.muted {{ color: #4b5563; font-size: 11px; }}
 .headline {{ font-size: 40px; font-weight: bold; color: #0057B8; }}
 .tiles {{ display: flex; gap: 8px; margin: 8px 0; }}
 .tile {{ flex: 1; background: #f3f4f6; border-radius: 6px; padding: 8px; text-align: center; }}
 .tile b {{ display: block; font-size: 18px; }}
-.badge {{ display: inline-block; border: 1px solid #d1d5db; border-radius: 9px; padding: 0 6px; font-size: 9px; color: #6b7280; vertical-align: middle; }}
-.badge.ai {{ background: #ede9fe; border-color: #ddd6fe; color: #6d28d9; }}
-.badge.threat {{ background: #ede9fe; border-color: #ddd6fe; color: #6d28d9; }}
-.fix {{ border: 1px solid #dbe4f0; border-radius: 6px; padding: 6px 8px; margin: 6px 0; background: #fbfdff; page-break-inside: avoid; }}
-.gap {{ border: 1px solid #e5e7eb; border-radius: 6px; padding: 7px 9px; margin: 6px 0; background: #fdfdfd; page-break-inside: avoid; }}
+.badge {{ display: inline-block; background: #e5e7eb; border: 1px solid #cbd5e1; border-radius: 9px; padding: 0 7px; font-size: 9px; font-weight: 600; color: #374151; vertical-align: middle; }}
+.badge.ai {{ background: #ede9fe; border-color: #c4b5fd; color: #5b21b6; }}
+.badge.threat {{ background: #ede9fe; border-color: #c4b5fd; color: #5b21b6; }}
+.badge.p1 {{ background: #f43f5e; border-color: #f43f5e; color: #fff; }}
+.badge.p2 {{ background: #f59e0b; border-color: #f59e0b; color: #4a2c03; }}
+.badge.p3 {{ background: #38bdf8; border-color: #38bdf8; color: #082f49; }}
+.fix {{ border: 1px solid #dbe4f0; border-radius: 6px; padding: 5px 8px; margin: 5px 0; background: #fbfdff; page-break-inside: avoid; }}
+.gap {{ border: 1px solid #e5e7eb; border-radius: 6px; padding: 5px 8px; margin: 5px 0; background: #fdfdfd; page-break-inside: avoid; }}
 .heatmap {{ line-height: 1.15; }}
 .heatmap .cell {{ display: inline-block; color: #fff; font-size: 7px; padding: 1px 3px; margin: 1px; border-radius: 2px; }}
 /* Professional table grid: bordered cells, branded header, zebra rows. */
@@ -483,19 +504,26 @@ th + th {{ border-left: 1px solid rgba(255,255,255,0.35); }}
 td {{ padding: 4px 7px; border: 1px solid #dde5ee; vertical-align: top; }}
 tbody tr:nth-child(even) td {{ background: #f4f7fb; }}
 td.num {{ text-align: right; white-space: nowrap; }}
+/* Space optimization: appendix tables run tighter and smaller. */
+table.compact {{ font-size: 10px; }}
+table.compact td {{ padding: 2px 5px; }}
+table.compact th {{ padding: 3px 5px; }}
 ul {{ margin: 4px 0 4px 18px; }}
+/* Space optimization: assumptions flow in two columns. */
+ul.two-col {{ columns: 2; column-gap: 16px; }}
+ul.two-col li {{ break-inside: avoid; margin-bottom: 3px; }}
 /* The cover metadata block stays a quiet, borderless key/value list. */
 table.cover-meta, .cover-meta th, .cover-meta td {{ border: none; }}
-.cover-meta th {{ background: none; width: 30%; color: #6b7280; font-weight: normal; }}
+.cover-meta th {{ background: none; width: 30%; color: #4b5563; font-weight: normal; }}
 .cover-meta tr:nth-child(even) td {{ background: none; }}
 .toc {{ margin: 10px 0 0 0; }}
 .toc a {{ text-decoration: none; color: #333; }}
 .toc li {{ margin: 2px 0; }}
-.toc a::after {{ content: " — p. " target-counter(attr(href), page); color: #6b7280; }}
+.toc a::after {{ content: " — p. " target-counter(attr(href), page); color: #4b5563; }}
 a.xref {{ text-decoration: none; color: #0057B8; font-size: 10px; }}
 a.xref::after {{ content: "details p. " target-counter(attr(href), page); }}
 .page-break {{ page-break-before: always; }}
-.footer {{ margin-top: 20px; padding-top: 8px; border-top: 1px solid #d1d5db; font-size: 10px; color: #6b7280; }}
+.footer {{ margin-top: 20px; padding-top: 8px; border-top: 1px solid #d1d5db; font-size: 10px; color: #374151; }}
 </style>
 </head>
 <body><div class="container">
@@ -557,7 +585,7 @@ Each entry explains why it is a gap and what a good detection would watch for.</
 
 <!-- ========================== APPENDICES =========================== -->
 <h2 id="register" class="page-break">Appendix: technique register ({len(results)})</h2>
-<table><thead><tr><th>Technique</th><th>Name</th><th>Matrix</th><th>State</th><th>Rules</th></tr></thead>
+<table class="compact"><thead><tr><th>Technique</th><th>Name</th><th>Matrix</th><th>State</th><th>Rules</th></tr></thead>
 <tbody>{register_rows}</tbody></table>
 
 <h2 id="na">Appendix: not-applicable techniques ({len(not_applicable)})</h2>
@@ -566,13 +594,13 @@ makes no claim about them.</p>
 {na_sections}
 
 <h2 id="assumptions">Appendix: assumptions</h2>
-<ul>{assumptions_html or '<li>None.</li>'}</ul>
+<ul class="two-col">{assumptions_html or '<li>None.</li>'}</ul>
 
 {how_read_html}
 
 <h2 id="mappings">Appendix: rule mappings ({len(use_cases)})</h2>
 {appendix_note}
-<table><thead><tr><th>Row</th><th>Rule</th><th>Status</th><th>Techniques</th><th>How it was mapped</th><th>Log source</th></tr></thead>
+<table class="compact"><thead><tr><th>Row</th><th>Rule</th><th>Status</th><th>Techniques</th><th>How it was mapped</th><th>Log source</th></tr></thead>
 <tbody>{uc_rows}</tbody></table>
 
 <div class="footer">{' · '.join(footer_bits)}</div>
