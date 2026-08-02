@@ -719,58 +719,130 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
         if row[0].value in ("The three key numbers", "What each sheet contains", "Color legend"):
             row[0].font = bold
 
-    # ---------------------------------------------------------------- Summary
-    domain_rows = [
-        [f"{DOMAIN_LABELS.get(k, k)} coverage %", d.get("strict_pct"),
-         f"Coverage within the {DOMAIN_LABELS.get(k, k)} matrix only."]
-        for k, d in summary.get("domains", {}).items()
-    ]
-    # Phase 14d: optional project metadata rows (only when provided).
+    # ------------------------- Summary (redesigned post-14: sectioned, ----
+    # ------------------------- colored, with an executive summary) --------
+    from openpyxl.styles import Font as _Font
+
+    BRAND = "0057B8"
+    white_bold = _Font(bold=True, color="FFFFFF")
+    title_font = _Font(bold=True, size=14, color="FFFFFF")
+
+    def _pct_fill_color(pct):
+        value = float(pct or 0)
+        if value >= 50:
+            return _XLSX_STATE_FILLS["covered"]
+        if value >= 15:
+            return _XLSX_STATE_FILLS["partial"]
+        return _XLSX_STATE_FILLS["not_covered"]
+
+    ws_sum = wb.create_sheet()
+    ws_sum.title = "Summary"
+    for i, w in enumerate((28, 46, 78), start=1):
+        ws_sum.column_dimensions[get_column_letter(i)].width = w
+
+    def sum_row(values, *, fills=None, fonts=None, merge=False, height=None):
+        ws_sum.append([_guard(v) for v in values])
+        r = ws_sum.max_row
+        if merge:
+            ws_sum.merge_cells(start_row=r, start_column=1, end_row=r, end_column=3)
+        for c in range(1, 4):
+            cell = ws_sum.cell(row=r, column=c)
+            cell.alignment = wrap
+            if fills and fills.get(c):
+                cell.fill = fill(fills[c])
+            if fonts and fonts.get(c):
+                cell.font = fonts[c]
+        if height:
+            ws_sum.row_dimensions[r].height = height
+        return r
+
+    def section(title):
+        sum_row([""])
+        sum_row([title, "", ""], merge=True,
+                fills={1: BRAND, 2: BRAND, 3: BRAND}, fonts={1: white_bold})
+
     intake = params.get("intake") or {}
-    metadata_rows = [
-        [label, intake[key], meaning]
-        for key, label, meaning in (
-            ("project_name", "Organization / project", "Who this assessment is for."),
-            ("scope_label", "Scope", "The department or scope this run covers."),
-            ("prepared_by", "Prepared by", "Who prepared this assessment."),
-            ("purpose_note", "Purpose", "Why this assessment was run."),
-        )
-        if intake.get(key)
-    ]
-    sheet(
-        "Summary",
-        ["Metric", "Value", "What it means"],
-        [
-            ["Assessment", assessment.name, "The name this run was saved under."],
-        ]
-        + metadata_rows
-        + [
-            ["ATT&CK version", assessment.attack_version,
-             "The MITRE ATT&CK release the assessment is pinned to."],
-            ["Completed", str(assessment.completed_at or ""), ""],
-            ["Coverage %", overall.get("strict_pct"),
-             "Of the techniques that apply to your environment, the share with at "
-             "least one qualifying detection rule."],
-            ["Weighted coverage %", overall.get("weighted_pct"),
-             "Same, but half-covered techniques count as 0.5 instead of 0."],
-            ["Covered", overall.get("covered"), "Techniques at least one enabled rule detects."],
-            ["Partial", overall.get("partial"),
-             "Techniques reached only by a disabled rule, a low-confidence mapping, "
-             "or a covered sub-technique."],
-            ["Not covered", overall.get("not_covered"), "Techniques no rule detects — the gaps."],
-            ["Not applicable", overall.get("not_applicable"),
-             "Techniques excluded from the score (wrong platform, excluded by you, or deprecated)."],
-            ["Applicable techniques", overall.get("applicable"),
-             "The denominator: techniques that apply to your environment."],
-            ["Narrative", narrative.get("generated_by", ""),
-             "Whether recommendation wording was AI-written or standard template text "
-             "(numbers are computed either way)."],
-            ["Thresholds", str(params.get("thresholds", {})),
-             "The confidence cut-offs used to count a mapping as coverage."],
-        ]
-        + domain_rows,
-        [26, 44, 78],
-    )
+    sum_row(["MITRE ATT&CK Coverage Assessment", "", ""], merge=True,
+            fills={1: BRAND, 2: BRAND, 3: BRAND}, fonts={1: title_font}, height=26)
+    subtitle = assessment.name
+    if intake.get("project_name"):
+        subtitle = f"{intake['project_name']} — {assessment.name}"
+    sum_row([subtitle, "", ""], merge=True, fonts={1: bold})
+    sum_row([f"ATT&CK v{assessment.attack_version} · run completed "
+             f"{str(assessment.completed_at or '')[:16]}", "", ""], merge=True)
+
+    section("EXECUTIVE SUMMARY")
+    exec_text = narrative.get("executive_summary") or ""
+    if exec_text:
+        sum_row([exec_text, "", ""], merge=True,
+                height=max(30, 14 * (len(exec_text) // 140 + 1)))
+    sum_row([
+        f"Of the {overall.get('applicable')} attacker techniques that apply to "
+        f"your environment, your rules can detect {overall.get('covered')} "
+        f"(plus {overall.get('partial')} partially). Is "
+        f"{overall.get('strict_pct')}% bad? Probably not: early SIEM programs "
+        "typically start under 10% — the roadmap matters more than the grade.",
+        "", ""], merge=True, height=40)
+
+    section("KEY NUMBERS")
+    sum_row(["Metric", "Value", "What it means"], fonts={1: bold, 2: bold, 3: bold})
+    r = sum_row(["Coverage %", overall.get("strict_pct"),
+                 "Of the techniques that apply to your environment, the share "
+                 "with at least one qualifying detection rule."])
+    ws_sum.cell(row=r, column=2).fill = fill(_pct_fill_color(overall.get("strict_pct")))
+    ws_sum.cell(row=r, column=2).font = bold
+    sum_row(["Weighted coverage %", overall.get("weighted_pct"),
+             "Same, but half-covered techniques count as 0.5 instead of 0."])
+    for label, key, meaning in (
+        ("Covered", "covered", "Techniques at least one enabled rule detects."),
+        ("Partial", "partial", "Techniques reached only by a disabled rule, a "
+         "low-confidence mapping, or a covered sub-technique."),
+        ("Not covered", "not_covered", "Techniques no rule detects — the gaps."),
+        ("Not applicable", "not_applicable", "Techniques excluded from the score "
+         "(wrong platform, excluded by you, or deprecated)."),
+    ):
+        r = sum_row([label, overall.get(key), meaning])
+        ws_sum.cell(row=r, column=2).fill = fill(_XLSX_STATE_FILLS[key])
+    sum_row(["Applicable techniques", overall.get("applicable"),
+             "The denominator: techniques that apply to your environment."])
+    for k, d in summary.get("domains", {}).items():
+        r = sum_row([f"{DOMAIN_LABELS.get(k, k)} coverage %", d.get("strict_pct"),
+                     f"Coverage within the {DOMAIN_LABELS.get(k, k)} matrix only."])
+        if d.get("applicable"):
+            ws_sum.cell(row=r, column=2).fill = fill(_pct_fill_color(d.get("strict_pct")))
+
+    top_gaps = summary.get("gaps", [])[:5]
+    if top_gaps:
+        section("TOP 5 THINGS TO FIX FIRST")
+        sum_row(["Gap", "Effort", "Recommendation"], fonts={1: bold, 2: bold, 3: bold})
+        for g in top_gaps:
+            r = sum_row([
+                f"#{g.get('rank')} {g.get('technique_id')} {g.get('name')}",
+                FEASIBILITY_LABELS.get(g.get("feasibility"), ""),
+                gap_recs.get(g.get("technique_id")) or g.get("hint") or "",
+            ])
+            bucket_color = _XLSX_FEAS_FILLS.get(g.get("feasibility"))
+            if bucket_color:
+                ws_sum.cell(row=r, column=2).fill = fill(bucket_color)
+
+    section("ABOUT THIS ASSESSMENT")
+    sum_row(["Assessment", assessment.name, "The name this run was saved under."])
+    for key, label, meaning in (
+        ("project_name", "Organization / project", "Who this assessment is for."),
+        ("scope_label", "Scope", "The department or scope this run covers."),
+        ("prepared_by", "Prepared by", "Who prepared this assessment."),
+        ("purpose_note", "Purpose", "Why this assessment was run."),
+    ):
+        if intake.get(key):
+            sum_row([label, intake[key], meaning])
+    sum_row(["ATT&CK version", assessment.attack_version,
+             "The MITRE ATT&CK release the assessment is pinned to."])
+    sum_row(["Narrative", narrative.get("generated_by", ""),
+             "Whether recommendation wording was AI-written or standard template "
+             "text (numbers are computed either way)."])
+    sum_row(["Thresholds", str(params.get("thresholds", {})),
+             "The confidence cut-offs used to count a mapping as coverage."])
+    ws_sum.freeze_panes = "A2"
 
     # ------------------------------------------------------ Coverage by Tactic
     sheet(
