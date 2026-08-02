@@ -60,6 +60,15 @@ xlrd==2.0.1
 # Cairo/gdk-pixbuf) -- see Dockerfile.prod's runtime apt-get for the exact
 # packages; confirmed no build-time headers needed, prebuilt wheels cover it.
 weasyprint==69.0
+# app/mitre/report.py builds the HTML that WeasyPrint renders via Jinja2
+# templates (app/mitre/templates/*.html, split out in Phase 14h) instead of
+# hand-built f-string HTML. Not pulled in transitively by fastapi==0.104.1
+# (that only happens with the `fastapi[all]` extra, not installed here) --
+# was present in local dev environments already, but missing here meant a
+# clean prod image build crash-looped on startup (`ModuleNotFoundError:
+# jinja2` at import time via app.mitre.router -> report.py). Pinned to the
+# exact version already verified locally.
+Jinja2==3.1.6
 
 # HTTP Client
 httpx==0.25.2
