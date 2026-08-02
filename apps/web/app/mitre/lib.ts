@@ -100,6 +100,14 @@ export interface Summary {
   narrative: Narrative;
   not_applicable: NaEntry[];
   applicable_domains: string[];
+  /** Phase 12 detection-strength rollup — separate from coverage %. */
+  quality?: {
+    scored: number;
+    avg_strength: number | null;
+    strong: number;
+    moderate: number;
+    weak: number;
+  };
   counts: Record<string, number>;
 }
 
@@ -110,6 +118,9 @@ export interface TechniqueResult {
   state: string;
   na_reason: string | null;
   use_case_refs: string[];
+  /** Phase 12: 0-100 detection strength (covered/partial with direct rules only). */
+  strength?: number | null;
+  strength_rationale?: string | null;
 }
 
 export interface Assessment {
@@ -240,6 +251,23 @@ export const SOURCE_META: Record<string, { label: string; tip: string }> = {
     tip: 'A reviewer manually set this mapping — it overrides the original tag, and coverage was recomputed from it.',
   },
 };
+
+/** Phase 12 detection-strength buckets. Distinct from coverage: coverage
+ * says a rule EXISTS; strength estimates how well it would actually detect. */
+export function strengthBucket(score: number): 'strong' | 'moderate' | 'weak' {
+  if (score >= 75) return 'strong';
+  if (score >= 45) return 'moderate';
+  return 'weak';
+}
+
+export const STRENGTH_META: Record<string, { label: string; chip: string }> = {
+  strong: { label: 'Strong', chip: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  moderate: { label: 'Moderate', chip: 'bg-amber-100 text-amber-800 border-amber-200' },
+  weak: { label: 'Weak', chip: 'bg-rose-100 text-rose-800 border-rose-200' },
+};
+
+export const STRENGTH_TIP =
+  'Detection strength estimates how well the mapped rules would actually catch this technique (rule provenance, enabled state, and whether the logic references the telemetry the technique expects). It is separate from the coverage % — coverage only says whether a rule exists.';
 
 export const TIER_TIPS: Record<number, string> = {
   1: 'Priority 1: top-prevalence technique across independent threat reports — near-universal in real intrusions.',

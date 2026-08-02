@@ -252,6 +252,7 @@ async def test_settings_roundtrip_and_validation(client, db_session):
         "partial_credit": 0.5,
         "count_disabled_as_coverage": False,
         "threat_weighting_enabled": True,  # Phase 11
+        "quality_ai_enabled": False,  # Phase 12
     }
 
     patched = await client.patch(

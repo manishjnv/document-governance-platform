@@ -22,7 +22,7 @@ from sqlalchemy import select, text
 from app.compliance.audit import log_action
 from app.core.cache import invalidate_cache
 from app.db.session import AsyncSessionLocal
-from app.mitre import agents, attack_data, keyword_tag, ranking
+from app.mitre import agents, attack_data, keyword_tag, quality, ranking
 from app.mitre.applicability import compute_applicability
 from app.mitre.coverage import compute_coverage
 from app.models.mitre_assessment import MitreAssessment
@@ -52,9 +52,16 @@ SETTING_DEFAULTS = {
     # above equal-tier peers in the ranked gap list. Ordering only — never
     # changes coverage %.
     "threat_weighting_enabled": True,
+    # Phase 12: OPTIONAL AI re-rating of heuristic-inconclusive detection
+    # strengths. OFF by default; quality never depends on AI.
+    "quality_ai_enabled": False,
 }
 
-_BOOL_SETTINGS = {"count_disabled_as_coverage", "threat_weighting_enabled"}
+_BOOL_SETTINGS = {
+    "count_disabled_as_coverage",
+    "threat_weighting_enabled",
+    "quality_ai_enabled",
+}
 
 
 def validate_setting(key: str, value):
@@ -161,6 +168,9 @@ def recompute_results(assessment, use_case_rows) -> None:
             "name": uc.name,
             "enabled": uc.enabled,
             "mappings": uc.mappings or [],
+            # Phase 12 quality signals (coverage ignores extras)
+            "logic": uc.logic,
+            "log_source": uc.log_source,
         }
         for uc in use_case_rows
     ]
@@ -183,6 +193,20 @@ def recompute_results(assessment, use_case_rows) -> None:
             "partial_credit", SETTING_DEFAULTS["partial_credit"]
         ),
     )
+    # Phase 12: re-annotate detection strength (heuristic only — a manual
+    # edit recompute stays deterministic; any prior AI ratings are replaced,
+    # which is the honest choice now that the mappings changed).
+    quality.compute_quality(
+        coverage["techniques"],
+        use_cases,
+        covered_confidence=thresholds.get(
+            "confidence_covered", SETTING_DEFAULTS["confidence_covered"]
+        ),
+        partial_confidence=thresholds.get(
+            "confidence_partial_floor", SETTING_DEFAULTS["confidence_partial_floor"]
+        ),
+    )
+
     env_lists = params.get("environment_lists") or {}
     intake = params.get("intake") or {}
     profile = ranking.build_threat_profile(
@@ -227,6 +251,7 @@ def recompute_results(assessment, use_case_rows) -> None:
                 if r["state"] == "not_applicable"
             ],
             "applicable_domains": applicability["applicable_domains"],
+            "quality": quality.quality_rollup(coverage["techniques"]),
             "counts": {
                 "use_cases": len(use_case_rows),
                 "customer_tagged": by_status["customer_tagged"],
@@ -519,6 +544,9 @@ async def _run_pipeline_body(assessment_id: UUID, org_id: UUID) -> None:
                     "name": uc.name,
                     "enabled": uc.enabled,
                     "mappings": uc.mappings or [],
+                    # Phase 12 quality signals (coverage ignores extras)
+                    "logic": uc.logic,
+                    "log_source": uc.log_source,
                 }
                 for uc in use_case_rows
             ]
@@ -568,6 +596,29 @@ async def _run_pipeline_body(assessment_id: UUID, org_id: UUID) -> None:
                 partial_confidence=settings["confidence_partial_floor"],
                 partial_weight=settings["partial_credit"],
             )
+
+            # Stage 5.5 — deterministic detection-strength scoring
+            # (Phase 12). Annotates covered/partial technique_results with
+            # strength + rationale; NEVER feeds back into coverage numbers.
+            inconclusive = quality.compute_quality(
+                coverage["techniques"],
+                use_cases,
+                covered_confidence=settings["confidence_covered"],
+                partial_confidence=settings["confidence_partial_floor"],
+            )
+            if settings["quality_ai_enabled"] and inconclusive:
+                rated = await agents.rate_detection_quality(inconclusive)
+                applied = quality.apply_ai_ratings(
+                    coverage["techniques"], rated["ratings"]
+                )
+                if rated["models_used"]:
+                    models_used["quality"] = rated["models_used"]
+                if applied:
+                    coverage["assumptions"].append(
+                        f"{applied} detection-strength scores were AI-assessed "
+                        "(optional quality pass) — all others use the "
+                        "deterministic heuristic"
+                    )
 
             # Stage 6 — deterministic gap ranking + roadmap bucketing,
             # threat-weighted by the customer's industry/actor profile
@@ -646,6 +697,7 @@ async def _run_pipeline_body(assessment_id: UUID, org_id: UUID) -> None:
                     if r["state"] == "not_applicable"
                 ],
                 "applicable_domains": applicability["applicable_domains"],
+                "quality": quality.quality_rollup(coverage["techniques"]),
                 "counts": {
                     "use_cases": len(use_case_rows),
                     "customer_tagged": sum(

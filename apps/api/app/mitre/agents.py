@@ -92,6 +92,37 @@ Provide your response as a JSON object with this structure — every input row_r
         return {"type": "object", "required": ["mappings", "overall_confidence"]}
 
 
+class MitreQualityAgent(MitreTaggingAgent):
+    """Phase 12 OPTIONAL detection-quality rater (org setting
+    quality_ai_enabled, OFF by default). Subclasses MitreTaggingAgent only
+    for the inherited client/chain plumbing; its own prompt. Only ever sees
+    heuristic-inconclusive rows; every output is clamped in code and any
+    failure silently keeps the deterministic heuristic score."""
+
+    def __init__(self):
+        ReviewAgent.__init__(self, "MitreQualityAgent")
+
+    def get_system_prompt(self, document_type: str = "quality") -> str:
+        return """You are a senior detection engineer assessing how WELL a detection rule covers a MITRE ATT&CK technique. The user message contains a JSON array: [{"technique_id", "name", "logic"}] — each item is one rule's detection logic mapped to one technique.
+
+For each item, rate detection strength 0-100:
+- High (75-100): the logic observes the technique's core behavior specifically and would be hard to trivially bypass.
+- Medium (45-74): detects common cases but is narrow, easily evaded, or relies on brittle indicators (exact paths, single tool names).
+- Low (0-44): wrong signal for this technique, cosmetic match, or trivially bypassed.
+Rate ONLY from the given logic — never assume capabilities that are not visible in it.
+
+Provide your response as a JSON object with this structure — every input technique_id appears exactly once:
+{
+    "ratings": [
+        {"technique_id": "string (verbatim from input)", "strength": 0-100, "rationale": "one short plain-English sentence"}
+    ],
+    "overall_confidence": 0.0-1.0
+}"""
+
+    def get_output_schema(self) -> dict:
+        return {"type": "object", "required": ["ratings"]}
+
+
 class MitreNarrativeAgent(ReviewAgent):
     """Writes the report narrative from COMPUTED results. It may rephrase
     but never introduces numbers — templates print figures exclusively from
@@ -253,6 +284,59 @@ async def tag_untagged_rows(rows, *, index=None, agent=None) -> dict:
         "batches_total": len(batches),
         "batches_failed": batches_failed,
     }
+
+
+MAX_QUALITY_ITEMS = 40  # bound the optional pass like extraction chunks
+
+
+async def rate_detection_quality(items, *, agent=None) -> dict:
+    """Optional Phase 12 AI pass over quality.compute_quality()'s
+    inconclusive items: [{"technique_id", "row_ref", "name", "logic"}].
+
+    Returns {"ratings": {technique_id: {"strength": int, "rationale": str}},
+    "models_used": [...]}. Never raises — a failed batch simply leaves those
+    techniques on their deterministic heuristic score (degrade rule)."""
+    agent = agent if agent is not None else MitreQualityAgent()
+    items = items[:MAX_QUALITY_ITEMS]
+    ratings, models_used = {}, set()
+
+    for batch in [items[i : i + BATCH_SIZE] for i in range(0, len(items), BATCH_SIZE)]:
+        payload = json.dumps(
+            [
+                {
+                    "technique_id": it["technique_id"],
+                    "name": str(it.get("name") or "")[:EXCERPT_CAP],
+                    "logic": str(it.get("logic") or "")[:EXCERPT_CAP],
+                }
+                for it in batch
+            ],
+            ensure_ascii=False,
+        )
+        try:
+            result = await _call_with_retry(agent, payload, "quality")
+        except Exception:  # noqa: BLE001 — degrade to heuristic
+            result = None
+        raw = (result or {}).get("ratings")
+        if not isinstance(raw, list):
+            continue
+        if result.get("_model_used"):
+            models_used.add(result["_model_used"])
+        asked = {it["technique_id"] for it in batch}
+        for entry in raw:
+            if not isinstance(entry, dict):
+                continue
+            tid = str(entry.get("technique_id") or "").strip().upper()
+            if tid not in asked:  # never rate techniques we didn't ask about
+                continue
+            try:
+                strength = int(round(float(entry.get("strength"))))
+            except (TypeError, ValueError):
+                continue
+            ratings[tid] = {
+                "strength": max(0, min(100, strength)),
+                "rationale": str(entry.get("rationale") or "")[:300],
+            }
+    return {"ratings": ratings, "models_used": sorted(models_used)}
 
 
 def _chunk_text(text: str, size: int = CHUNK_CHARS) -> list:

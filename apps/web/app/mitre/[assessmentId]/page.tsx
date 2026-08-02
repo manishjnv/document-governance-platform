@@ -412,7 +412,11 @@ export default function MitreResultsPage() {
                   />
                 )}
                 {tab === 'gaps' && (
-                  <GapsRoadmap summary={summary} onSelectTechnique={setSelectedTechnique} />
+                  <GapsRoadmap
+                    summary={summary}
+                    techniques={techniques}
+                    onSelectTechnique={setSelectedTechnique}
+                  />
                 )}
                 {tab === 'assumptions' && <AssumptionsNA summary={summary} />}
                 {tab === 'compare' && (

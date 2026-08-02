@@ -12,7 +12,16 @@ import {
 } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { FEASIBILITY_META, Gap, Summary, TIER_TIPS } from '../lib';
+import {
+  FEASIBILITY_META,
+  Gap,
+  STRENGTH_META,
+  STRENGTH_TIP,
+  Summary,
+  TIER_TIPS,
+  TechniqueResult,
+  strengthBucket,
+} from '../lib';
 
 const INITIAL_ROWS = 50;
 
@@ -63,14 +72,23 @@ function FeasibilityBadge({ gap }: { gap: Gap }) {
  * AI-vs-template provenance surfaced. */
 export function GapsRoadmap({
   summary,
+  techniques,
   onSelectTechnique,
 }: {
   summary: Summary;
+  techniques: TechniqueResult[];
   onSelectTechnique: (techniqueId: string) => void;
 }) {
   const [showAll, setShowAll] = useState(false);
   const narrative = summary.narrative;
   const gaps = showAll ? summary.gaps : summary.gaps.slice(0, INITIAL_ROWS);
+  // Phase 12: partial gaps carry a detection-strength score (from
+  // technique_results) — not covered gaps have nothing to score.
+  const strengthById = new Map(
+    techniques
+      .filter((t) => typeof t.strength === 'number')
+      .map((t) => [t.technique_id, t.strength as number])
+  );
 
   const tacticName = (gap: Gap) => {
     const domain = summary.domains[gap.domain];
@@ -112,6 +130,16 @@ export function GapsRoadmap({
               <TableHead>Technique</TableHead>
               <TableHead className="hidden md:table-cell">Tactic</TableHead>
               <TableHead>Priority</TableHead>
+              <TableHead className="hidden lg:table-cell">
+                <Tooltip delayDuration={150}>
+                  <TooltipTrigger asChild>
+                    <span className="cursor-default underline decoration-dotted underline-offset-2">
+                      Strength
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs text-xs">{STRENGTH_TIP}</TooltipContent>
+                </Tooltip>
+              </TableHead>
               <TableHead>Feasibility</TableHead>
               <TableHead className="min-w-[280px]">Recommendation</TableHead>
             </TableRow>
@@ -152,6 +180,21 @@ export function GapsRoadmap({
                       </Tooltip>
                     )}
                   </span>
+                </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  {strengthById.has(gap.technique_id) ? (
+                    <span
+                      className={cn(
+                        'inline-flex cursor-default items-center rounded-full border px-2 py-0.5 text-[11px] font-medium',
+                        STRENGTH_META[strengthBucket(strengthById.get(gap.technique_id)!)].chip
+                      )}
+                      title={STRENGTH_TIP}
+                    >
+                      {strengthById.get(gap.technique_id)}/100
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <FeasibilityBadge gap={gap} />

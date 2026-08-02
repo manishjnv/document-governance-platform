@@ -237,14 +237,33 @@ only the 6 review agents; this section is their documentation of record).
    positive/negative example pair (the §9 UI-language requirement).
    Degrades to deterministic template text on failure/timeout
    (ConflictDetector-style), flagged in Assumptions.
+3. **`MitreQualityAgent`** (2026-08-02, Phase 12) — OPTIONAL
+   detection-strength rater, gated behind the org setting
+   `quality_ai_enabled` (OFF by default). Subclasses `MitreTaggingAgent`
+   purely for the inherited client/chain plumbing; its own prompt. Input:
+   only heuristic-inconclusive items (rule logic present, expected
+   telemetry known, no keyword match) — `{technique_id, name, logic}` with
+   the same 500-char excerpt caps as tagging; max 40 items per run.
+   Design choices: explicit 0-100 rubric bands in-prompt (75+/45-74/0-44)
+   so scores land in the same buckets the deterministic heuristic uses;
+   "rate ONLY from the given logic — never assume capabilities not
+   visible in it" (prevents charitable hallucination); every output
+   clamped to 0-100 in code, unknown technique_ids discarded, rationale
+   capped at 300 chars; any failure keeps the deterministic heuristic
+   score (quality NEVER depends on AI — kickoff hard rule). Merged scores
+   are visibly prefixed "AI-assessed:" in the rationale.
 
-Failure discipline for both: `asyncio.wait_for` 60s + one retry at 120s
-(house pattern); failed tagging batches degrade to unmapped + assumption;
-only the all-batches-failed + zero-customer-tags combination fails the
-assessment (an all-unmapped "result" would be misleading).
+Failure discipline for all three: `asyncio.wait_for` 60s + one retry at
+120s (house pattern); failed tagging batches degrade to unmapped +
+assumption; failed quality batches keep the heuristic score; only the
+all-batches-failed + zero-customer-tags combination fails the assessment
+(an all-unmapped "result" would be misleading).
 
 ## Changelog
 
+- **2026-08-02**: `MitreQualityAgent` added (MITRE Phase 12 optional
+  detection-strength rater, off by default, degrade-to-heuristic) — see
+  item 3 in the MITRE section above.
 - **2026-08-01**: MITRE module prompts added (`MitreTaggingAgent` two-mode
   tagging/extraction + `MitreNarrativeAgent` with the
   never-introduce-numbers rule) — see the dated section above.

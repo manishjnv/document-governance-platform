@@ -5,7 +5,15 @@ import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { SOURCE_META, Summary, TechniqueResult, UseCaseItem } from '../lib';
+import {
+  SOURCE_META,
+  STRENGTH_META,
+  STRENGTH_TIP,
+  Summary,
+  TechniqueResult,
+  UseCaseItem,
+  strengthBucket,
+} from '../lib';
 import { StateBadge } from './StateBadge';
 
 /** Slide-over detail for one technique: state, tactics, N/A reason, and the
@@ -109,10 +117,27 @@ export function TechniqueDrawer({
             <SheetTitle className="flex flex-wrap items-center gap-2 text-base">
               {technique.technique_id}
               <StateBadge state={technique.state} />
+              {typeof technique.strength === 'number' && (
+                <Tooltip delayDuration={150}>
+                  <TooltipTrigger asChild>
+                    <span
+                      className={`inline-flex cursor-default items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${STRENGTH_META[strengthBucket(technique.strength)].chip}`}
+                    >
+                      {STRENGTH_META[strengthBucket(technique.strength)].label} · {technique.strength}/100
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs text-xs">{STRENGTH_TIP}</TooltipContent>
+                </Tooltip>
+              )}
             </SheetTitle>
             <div className="mt-1 text-xs text-muted-foreground">
               {tacticNames.join(' · ')}
             </div>
+            {technique.strength_rationale && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Detection strength: {technique.strength_rationale}
+              </p>
+            )}
 
             {technique.na_reason && (
               <div className="mt-4 rounded-md bg-muted/60 p-3 text-sm">
