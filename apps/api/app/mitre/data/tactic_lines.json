@@ -1,0 +1,27 @@
+{
+  "description": "One plain-English story line per ATT&CK tactic shortname, all three domains (Phase 14a). Keyed by tactic shortname because shortnames are shared across domains while TA-ids are not. Hand-written once — never generated at runtime. Completeness against attack.json is test-enforced (test_mitre_plain_language.py).",
+  "written": "2026-08-02",
+  "tactics": {
+    "reconnaissance": "researching the target before the attack — gathering names, systems, and weaknesses",
+    "resource-development": "setting up attack infrastructure — buying domains, building malware, and staging accounts for later use",
+    "initial-access": "how attackers first get in — phishing, exposed services, or stolen logins",
+    "execution": "how attackers run their code on your systems",
+    "persistence": "how attackers make sure they survive reboots and stay in",
+    "privilege-escalation": "how attackers turn a normal foothold into admin-level control",
+    "stealth": "how attackers hide — disguising files, wiping traces, and blending into normal activity",
+    "defense-impairment": "how attackers switch off your defenses — disabling antivirus, EDR, and logging",
+    "defense-evasion": "how attackers avoid being noticed on the device — hiding, disguising, and dodging analysis",
+    "credential-access": "how attackers steal passwords, hashes, and tokens",
+    "discovery": "how attackers look around — mapping accounts, systems, and networks once inside",
+    "lateral-movement": "how attackers spread between systems once inside",
+    "collection": "how attackers gather the data they are after",
+    "command-and-control": "how the attacker's foothold phones home for instructions",
+    "exfiltration": "how stolen data actually leaves your network",
+    "impact": "the damage phase — encrypting, destroying, or disrupting systems and data",
+    "evasion": "how attackers avoid detection inside industrial control systems",
+    "inhibit-response-function": "stopping safety and protection systems from responding when the industrial process goes wrong",
+    "impair-process-control": "manipulating the industrial process itself — changing what the plant actually does",
+    "network-effects": "intercepting or manipulating a mobile device's network traffic",
+    "remote-service-effects": "abusing cloud services connected to a mobile device (locate, wipe, backup) against its owner"
+  }
+}

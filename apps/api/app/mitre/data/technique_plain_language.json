@@ -1,0 +1,291 @@
+{
+  "description": "Hand-curated plain-language content for the techniques that realistically surface as top gaps: the union of technique_priorities.json (all tiers) and threat_profiles.json (industry + actor profiles). Each entry: 'definition' (one sentence a non-technical reader understands), 'attacker_use' (completes the sentence 'Attackers use this to …'), 'detection_hint' (vendor-neutral sketch of what a good detection watches for — feeds the 'what would good look like' block and the Phase 14c XLSX). Written once, reviewed like code — never generated at runtime. ID validity and coverage of the curated rule are test-enforced (test_mitre_plain_language.py). Long-tail techniques fall back to the first sentence of the ATT&CK description in attack.json.",
+  "written": "2026-08-02",
+  "techniques": {
+    "T0831": {
+      "definition": "Interfering with an industrial control process so it no longer behaves the way operators intend.",
+      "attacker_use": "disrupt or damage physical operations such as production lines, power delivery, or safety systems.",
+      "detection_hint": "unexpected setpoint or control-command changes on OT controllers outside maintenance windows"
+    },
+    "T0883": {
+      "definition": "An industrial device (PLC, HMI, controller) that is reachable directly from the internet.",
+      "attacker_use": "reach the OT network directly without first breaching the corporate IT network.",
+      "detection_hint": "inbound connections to OT devices from public internet addresses; OT protocol traffic crossing the IT/OT boundary"
+    },
+    "T0886": {
+      "definition": "Using legitimate remote-access services (VNC, RDP, SSH) to reach systems inside the industrial network.",
+      "attacker_use": "move around OT networks with trusted admin tools instead of malware.",
+      "detection_hint": "new or unusual remote sessions to engineering workstations or HMIs, especially from outside the OT subnet"
+    },
+    "T1003.001": {
+      "definition": "Reading the memory of the Windows LSASS process, where the passwords and hashes of recently logged-on users live.",
+      "attacker_use": "steal the credentials of everyone who recently signed in to a machine and reuse them elsewhere.",
+      "detection_hint": "non-system processes opening a handle to lsass.exe; credential-dumping tools such as mimikatz or procdump targeting LSASS"
+    },
+    "T1003.003": {
+      "definition": "Copying the Active Directory database file (NTDS.dit), which holds password hashes for every account in the domain.",
+      "attacker_use": "obtain every domain credential at once — a common step right before ransomware deployment.",
+      "detection_hint": "volume shadow copy creation on domain controllers followed by access to NTDS.dit; ntdsutil or vssadmin runs on domain controllers"
+    },
+    "T1021.001": {
+      "definition": "Logging in to another computer's desktop over Remote Desktop Protocol (RDP).",
+      "attacker_use": "move from machine to machine hands-on-keyboard using stolen credentials.",
+      "detection_hint": "RDP logons from unusual source machines or at odd hours, and by accounts that do not normally use RDP"
+    },
+    "T1021.002": {
+      "definition": "Connecting to hidden Windows administrative shares (C$, ADMIN$) to copy files or run programs on other machines.",
+      "attacker_use": "push tools and ransomware to many machines quickly.",
+      "detection_hint": "admin-share connections from ordinary workstations rather than admin hosts; remote service creation right after an SMB logon"
+    },
+    "T1021.004": {
+      "definition": "Logging in to other systems over SSH with valid or stolen credentials and keys.",
+      "attacker_use": "move between Linux servers and network devices while looking like an administrator.",
+      "detection_hint": "SSH logins from new source hosts, or accounts connecting to servers outside their normal set"
+    },
+    "T1027": {
+      "definition": "Disguising malicious files, scripts, or commands — encoding, encrypting, or packing them so scanners and humans cannot read them.",
+      "attacker_use": "slip payloads past antivirus and reviewers.",
+      "detection_hint": "command lines containing base64 or other encoded payloads; scripts with unusually high entropy or nested encoding"
+    },
+    "T1036": {
+      "definition": "Making a malicious file or process look legitimate — for example a fake 'svchost.exe' running from the wrong folder.",
+      "attacker_use": "hide in plain sight among normal system activity.",
+      "detection_hint": "well-known system process names running from non-standard paths; files whose extension does not match their content"
+    },
+    "T1041": {
+      "definition": "Sending stolen data out through the same channel the malware already uses for remote control.",
+      "attacker_use": "steal data without opening any new, more visible connection.",
+      "detection_hint": "unusually large or sustained outbound transfers on existing beaconing connections"
+    },
+    "T1046": {
+      "definition": "Scanning the network to find which systems and services are reachable.",
+      "attacker_use": "map out targets to spread to next.",
+      "detection_hint": "one host connecting to many hosts or ports in a short window; scan patterns from machines that are not vulnerability scanners"
+    },
+    "T1047": {
+      "definition": "Using Windows Management Instrumentation (WMI) — a built-in administration framework — to run commands, often on remote machines.",
+      "attacker_use": "execute payloads remotely without dropping obvious tools.",
+      "detection_hint": "wmic or WmiPrvSE spawning unexpected child processes; WMI process creation on remote hosts"
+    },
+    "T1053.005": {
+      "definition": "Creating a Windows scheduled task that runs a payload automatically.",
+      "attacker_use": "persist across reboots and run code at times of their choosing.",
+      "detection_hint": "scheduled-task creation by unusual processes; new tasks pointing at user-writable or temporary paths"
+    },
+    "T1055": {
+      "definition": "Injecting code into another running process so the payload executes inside a trusted program.",
+      "attacker_use": "hide malware inside legitimate processes and inherit their permissions.",
+      "detection_hint": "processes writing into other processes' memory (remote-thread and similar API sequences); unexpected modules loaded into system processes"
+    },
+    "T1059.001": {
+      "definition": "Running commands or scripts through PowerShell, the scripting engine built into every Windows machine.",
+      "attacker_use": "download and execute payloads with a tool that is always present and often trusted.",
+      "detection_hint": "encoded (-enc) or download-cradle PowerShell command lines; PowerShell launched by Office applications or other unusual parents"
+    },
+    "T1059.003": {
+      "definition": "Running commands through the Windows command shell (cmd.exe).",
+      "attacker_use": "chain built-in Windows commands for execution and reconnaissance.",
+      "detection_hint": "cmd.exe with long, chained, or obfuscated one-liner command lines, especially when spawned by documents or server processes"
+    },
+    "T1059.007": {
+      "definition": "Running malicious JavaScript outside the browser, typically via the Windows script hosts (wscript/cscript).",
+      "attacker_use": "execute droppers delivered as .js email attachments or downloads.",
+      "detection_hint": "wscript or cscript executing .js files from mail, download, or temp folders"
+    },
+    "T1071.001": {
+      "definition": "Hiding command-and-control traffic inside normal-looking web (HTTP/HTTPS) traffic.",
+      "attacker_use": "blend their remote-control channel in with everyday web browsing.",
+      "detection_hint": "regular fixed-interval beacons to rare domains; web traffic with abnormal header patterns or payload sizes"
+    },
+    "T1078": {
+      "definition": "Logging in with real, stolen credentials instead of using malware.",
+      "attacker_use": "look exactly like a legitimate user while gaining and keeping access.",
+      "detection_hint": "logons at unusual times or from unusual locations and hosts; dormant accounts suddenly becoming active"
+    },
+    "T1078.004": {
+      "definition": "Signing in to cloud services (Microsoft 365, AWS, Google) with stolen cloud credentials.",
+      "attacker_use": "reach email and cloud data directly — no malware on any machine.",
+      "detection_hint": "cloud sign-ins showing impossible travel, anonymizing proxies, or unfamiliar devices"
+    },
+    "T1082": {
+      "definition": "Collecting basic details about a machine — operating system, hostname, hardware, and patch level.",
+      "attacker_use": "size up each machine before choosing their next step.",
+      "detection_hint": "bursts of recon commands such as systeminfo and hostname, especially run by scripts or service accounts"
+    },
+    "T1087.002": {
+      "definition": "Listing the user accounts that exist in the Windows domain.",
+      "attacker_use": "find admin and service accounts worth stealing.",
+      "detection_hint": "net user /domain, nltest, or LDAP enumeration bursts from ordinary workstations"
+    },
+    "T1098": {
+      "definition": "Changing an existing account — resetting its password, or adding permissions or group memberships.",
+      "attacker_use": "expand or preserve access using accounts defenders already trust.",
+      "detection_hint": "unexpected password resets, group-membership additions, or permission grants, especially on privileged accounts"
+    },
+    "T1098.001": {
+      "definition": "Adding extra credentials — API keys, certificates, or app secrets — to a compromised cloud account or application.",
+      "attacker_use": "keep cloud access even after the original password is reset.",
+      "detection_hint": "new API keys, application secrets, or certificates added to accounts or service principals outside change windows"
+    },
+    "T1105": {
+      "definition": "Downloading additional attacker tools onto a machine that is already compromised.",
+      "attacker_use": "bring in stronger tooling after the first foothold.",
+      "detection_hint": "certutil, bitsadmin, or curl downloading executables; binaries fetched from rare external hosts by non-installer processes"
+    },
+    "T1110": {
+      "definition": "Guessing account passwords by trying many candidates.",
+      "attacker_use": "break into accounts without any prior credential theft.",
+      "detection_hint": "many failed logons in a short window against one or more accounts, followed by a success"
+    },
+    "T1110.003": {
+      "definition": "Trying one common password (like 'Summer2026!') against many accounts, staying under lockout limits.",
+      "attacker_use": "find the one account using a weak seasonal password without triggering account lockouts.",
+      "detection_hint": "the same source failing logons across many different accounts within a short period"
+    },
+    "T1110.004": {
+      "definition": "Trying username/password pairs leaked from breaches of other websites.",
+      "attacker_use": "exploit people reusing the same password for personal and work accounts.",
+      "detection_hint": "logon attempts across many accounts with one failure each, often from cloud or anonymized IP pools"
+    },
+    "T1112": {
+      "definition": "Changing Windows registry keys to alter system behavior or hide configuration.",
+      "attacker_use": "persist, weaken defenses, or stash payload data inside the registry.",
+      "detection_hint": "registry changes to run keys, security settings, or service configuration made by unusual processes"
+    },
+    "T1133": {
+      "definition": "Logging in from the internet through the organization's own remote-access services — VPN, Citrix, or exposed RDP.",
+      "attacker_use": "walk in through the front door with stolen credentials.",
+      "detection_hint": "VPN or remote-gateway logons from unusual countries, without the expected MFA, or from new devices"
+    },
+    "T1136.001": {
+      "definition": "Creating a new local user account on a compromised machine.",
+      "attacker_use": "keep a way back in that survives password resets of the stolen account.",
+      "detection_hint": "account-creation events outside normal provisioning, especially on servers"
+    },
+    "T1190": {
+      "definition": "Exploiting a vulnerability in an internet-facing application or appliance — a web app, VPN gateway, or mail server.",
+      "attacker_use": "gain a first foothold without phishing anyone.",
+      "detection_hint": "exploit-pattern requests and error spikes on public applications; web-server processes spawning shells or unexpected children"
+    },
+    "T1195.002": {
+      "definition": "Tampering with software you legitimately install — a poisoned update or compromised vendor package.",
+      "attacker_use": "ride trusted software straight into many organizations at once.",
+      "detection_hint": "software updates connecting to unexpected hosts or spawning unusual processes right after installation"
+    },
+    "T1203": {
+      "definition": "Exploiting a vulnerability in a client application — browser, Office, or PDF reader — when a user opens content.",
+      "attacker_use": "turn opening a document or web page into code execution.",
+      "detection_hint": "office, reader, or browser processes crashing and then spawning shells or script engines"
+    },
+    "T1204.002": {
+      "definition": "Tricking a user into opening a malicious file attachment or download.",
+      "attacker_use": "have the victim run the payload themselves.",
+      "detection_hint": "documents spawning script engines or shells (for example winword starting powershell); executables launched from mail or temp folders"
+    },
+    "T1218.011": {
+      "definition": "Abusing rundll32.exe — a signed Windows utility — to execute malicious code under a trusted name.",
+      "attacker_use": "run payloads under a Microsoft-signed binary that security tools often ignore.",
+      "detection_hint": "rundll32 running with no arguments, odd DLL paths or exports, or making network connections"
+    },
+    "T1219": {
+      "definition": "Installing legitimate remote-administration software — AnyDesk, TeamViewer, ScreenConnect — as a backdoor.",
+      "attacker_use": "keep remote control through commercial software many companies allow.",
+      "detection_hint": "remote-access tools installed on machines with no business need; connections to unapproved remote-tool services"
+    },
+    "T1482": {
+      "definition": "Mapping the trust relationships between Windows domains.",
+      "attacker_use": "find paths from a small foothold domain into the main corporate domain.",
+      "detection_hint": "nltest /domain_trusts or trust-enumeration LDAP queries from non-admin hosts"
+    },
+    "T1485": {
+      "definition": "Deleting or overwriting data to make it unrecoverable.",
+      "attacker_use": "destroy evidence or cause damage — sometimes destruction is the whole goal.",
+      "detection_hint": "mass file deletions or overwrites in a short window; wiper-style tools; bulk deletions in cloud storage"
+    },
+    "T1486": {
+      "definition": "Encrypting files across your systems and demanding payment — the final act of a ransomware attack.",
+      "attacker_use": "hold data and operations hostage for ransom.",
+      "detection_hint": "rapid mass file modification and renames with new extensions; ransom-note files; shadow-copy deletion just before"
+    },
+    "T1490": {
+      "definition": "Deleting backups, shadow copies, and recovery features before doing damage.",
+      "attacker_use": "make sure you cannot simply restore instead of paying.",
+      "detection_hint": "vssadmin delete shadows, wbadmin delete catalog, or bcdedit recovery changes — near-certain ransomware precursors"
+    },
+    "T1505.003": {
+      "definition": "Planting a small script (web shell) on a web server that gives command execution through an ordinary browser.",
+      "attacker_use": "keep durable access to a compromised server hidden behind normal web traffic.",
+      "detection_hint": "web-server processes spawning shells; new or modified script files appearing in web directories"
+    },
+    "T1528": {
+      "definition": "Stealing OAuth access tokens that grant applications access to cloud accounts, including via consent phishing.",
+      "attacker_use": "read cloud mail and files without ever touching the password — MFA does not stop an already-granted token.",
+      "detection_hint": "unusual OAuth application consents, especially requesting mail or file permissions; token use from new infrastructure"
+    },
+    "T1543.003": {
+      "definition": "Installing or modifying a Windows service to run attacker code.",
+      "attacker_use": "persist with SYSTEM-level privileges across reboots.",
+      "detection_hint": "new service installations pointing at unusual or user-writable paths"
+    },
+    "T1547.001": {
+      "definition": "Adding a program to the registry Run keys or the Startup folder so it launches at every logon.",
+      "attacker_use": "survive reboots with a decades-old trick that still works.",
+      "detection_hint": "new run-key values or startup-folder files pointing at temp or user-writable paths"
+    },
+    "T1552.001": {
+      "definition": "Finding passwords stored in files — scripts, configuration files, spreadsheets, or a 'passwords.txt'.",
+      "attacker_use": "harvest credentials nobody realized were written down.",
+      "detection_hint": "searches for 'password' across file shares; bulk reads of configuration files by user accounts"
+    },
+    "T1557": {
+      "definition": "Getting between two systems on the network to capture or alter their traffic (adversary-in-the-middle).",
+      "attacker_use": "capture credentials and relay authentication on the local network.",
+      "detection_hint": "LLMNR/NBT-NS poisoning responses, rogue ARP announcements, or unexpected NTLM relay patterns"
+    },
+    "T1560.001": {
+      "definition": "Compressing collected data with archive tools (7-Zip, WinRAR, tar) before stealing it.",
+      "attacker_use": "package loot into fewer, smaller, often password-protected transfers.",
+      "detection_hint": "archive utilities run on servers or unusual hosts; password-protected archives written to staging or temp folders"
+    },
+    "T1566.001": {
+      "definition": "A targeted email carrying a malicious attachment.",
+      "attacker_use": "get an initial foothold by having one person open one file.",
+      "detection_hint": "mail with executable or macro attachments from new senders; attachment opens followed by script-engine launches"
+    },
+    "T1566.002": {
+      "definition": "A targeted email with a link to a credential-phishing page or malware download.",
+      "attacker_use": "steal logins or drop malware with a single click.",
+      "detection_hint": "clicks on newly registered or lookalike domains arriving via mail; credentials posted to non-corporate login pages"
+    },
+    "T1566.004": {
+      "definition": "Phone-call phishing (vishing) — talking victims into granting access, often while posing as the IT helpdesk.",
+      "attacker_use": "bypass technical controls entirely by exploiting people.",
+      "detection_hint": "helpdesk-driven password or MFA resets followed by logons from new devices or locations (telemetry is limited — pair with helpdesk verification procedures)"
+    },
+    "T1567.002": {
+      "definition": "Uploading stolen data to cloud storage the attacker controls (Mega, S3 buckets, file-sharing sites).",
+      "attacker_use": "hide the theft inside ordinary-looking cloud traffic.",
+      "detection_hint": "large uploads to personal or rare cloud-storage domains; rclone or similar sync tools appearing on servers"
+    },
+    "T1573": {
+      "definition": "Encrypting the command-and-control channel so its content cannot be inspected.",
+      "attacker_use": "keep their remote-control traffic unreadable to network monitoring.",
+      "detection_hint": "encrypted traffic to rare destinations with odd or self-signed certificates; fixed-interval encrypted beacons"
+    },
+    "T1621": {
+      "definition": "Bombarding a user with MFA push prompts until they tap Approve — 'MFA fatigue'.",
+      "attacker_use": "turn a stolen password into a full login by exhausting the victim's patience.",
+      "detection_hint": "bursts of MFA denials or timeouts for one account followed by an approval, especially from a new location"
+    },
+    "T1685": {
+      "definition": "Turning off or reconfiguring your security tools — antivirus, EDR, or logging.",
+      "attacker_use": "blind the defenses before the real attack starts.",
+      "detection_hint": "security services stopped or exclusions added; security processes terminated; audit policy changes"
+    },
+    "T1685.005": {
+      "definition": "Wiping the Windows event logs to erase evidence of what was done.",
+      "attacker_use": "cover their tracks after the fact.",
+      "detection_hint": "wevtutil cl executions; Windows 'audit log was cleared' events (1102)"
+    }
+  }
+}

@@ -10,6 +10,7 @@ import {
   STRENGTH_META,
   STRENGTH_TIP,
   Summary,
+  TechniqueExplain,
   TechniqueResult,
   UseCaseItem,
   strengthBucket,
@@ -23,6 +24,7 @@ import { StateBadge } from './StateBadge';
  * page performs the PATCH and refreshes the results. */
 export function TechniqueDrawer({
   techniqueId,
+  explain,
   onClose,
   techniques,
   summary,
@@ -32,6 +34,8 @@ export function TechniqueDrawer({
   onEditMappings,
 }: {
   techniqueId: string | null;
+  /** Phase 14a four-block explanation (null while loading / on fetch failure). */
+  explain: TechniqueExplain | null;
   onClose: () => void;
   techniques: TechniqueResult[];
   summary: Summary;
@@ -139,12 +143,104 @@ export function TechniqueDrawer({
               </p>
             )}
 
-            {technique.na_reason && (
+            {technique.na_reason && !explain && (
               <div className="mt-4 rounded-md bg-muted/60 p-3 text-sm">
                 <div className="mb-1 text-xs font-semibold text-muted-foreground">
                   Why this doesn&apos;t count toward coverage
                 </div>
                 {technique.na_reason}
+              </div>
+            )}
+
+            {/* Phase 14a: the four plain-language blocks (any state). */}
+            {explain && (
+              <div className="mt-4 space-y-3">
+                <div className="rounded-md border p-3 text-sm">
+                  <div className="mb-1 text-xs font-semibold text-muted-foreground">
+                    What is this?
+                  </div>
+                  <div className="font-medium leading-snug">{explain.name}</div>
+                  {explain.what.definition && (
+                    <p className="mt-1">{explain.what.definition}</p>
+                  )}
+                  {explain.what.attacker_use && (
+                    <p className="mt-1 text-muted-foreground">
+                      Attackers use this to {explain.what.attacker_use}
+                    </p>
+                  )}
+                </div>
+
+                <div className="rounded-md border p-3 text-sm">
+                  <div className="mb-1 text-xs font-semibold text-muted-foreground">
+                    {explain.state === 'partial' || explain.state === 'not_covered'
+                      ? 'Where is the gap?'
+                      : 'Where this fits'}
+                  </div>
+                  {explain.where.tactics.map(
+                    (t) =>
+                      t.line && (
+                        <p key={t.id} className="leading-snug">
+                          This is a <span className="font-medium">{t.name}</span>{' '}
+                          technique — {t.line}.
+                        </p>
+                      )
+                  )}
+                  {explain.where.via ? (
+                    <p className="mt-1 text-muted-foreground">
+                      A log source you already collect —{' '}
+                      <span className="font-medium">{explain.where.via}</span> —
+                      could see this activity.
+                    </p>
+                  ) : (
+                    explain.where.feasibility_hint && (
+                      <p className="mt-1 text-muted-foreground">
+                        Telemetry: {explain.where.feasibility_hint}.
+                      </p>
+                    )
+                  )}
+                  {explain.where.platforms.length > 0 && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Applies to: {explain.where.platforms.join(', ')}
+                    </p>
+                  )}
+                </div>
+
+                <div className="rounded-md bg-muted/60 p-3 text-sm">
+                  <div className="mb-1 text-xs font-semibold text-muted-foreground">
+                    {explain.state === 'covered'
+                      ? 'Why this counts as covered'
+                      : explain.state === 'not_applicable'
+                        ? "Why this doesn't count toward coverage"
+                        : 'Why is it a gap?'}
+                  </div>
+                  {explain.why}
+                </div>
+
+                <div className="rounded-md border p-3 text-sm">
+                  <div className="mb-1 text-xs font-semibold text-muted-foreground">
+                    What would good look like?
+                  </div>
+                  {explain.good.sketch ? (
+                    <p>{explain.good.sketch}</p>
+                  ) : (
+                    <p className="text-muted-foreground">
+                      No curated detection sketch for this technique
+                      {explain.where.feasibility_hint
+                        ? ` — ${explain.where.feasibility_hint}.`
+                        : '.'}
+                    </p>
+                  )}
+                  {explain.good.closest_rule && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Starting point: copy your rule{' '}
+                      <span className="font-medium">
+                        &apos;{explain.good.closest_rule.rule_name}&apos;
+                      </span>{' '}
+                      ({explain.good.closest_rule.technique_id}{' '}
+                      {explain.good.closest_rule.technique_name}).
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 

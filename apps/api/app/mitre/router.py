@@ -23,7 +23,7 @@ from app.compliance.audit import log_action
 from app.core.cache import invalidate_cache
 from app.db.session import get_db
 from app.dependencies import get_current_user, require_role
-from app.mitre import attack_data, ingest, navigator, service
+from app.mitre import attack_data, ingest, navigator, plain_language, ranking, service
 from app.mitre.connectors import base as connectors
 from app.mitre.connectors import vault
 from app.mitre.connectors.base import ConnectorConfigError, ConnectorError
@@ -1253,6 +1253,168 @@ async def list_use_cases(
             }
             for uc in result.scalars().all()
         ],
+    }
+
+
+def _closest_covered_rule(technique_id, result, results, use_cases, index):
+    """A starting-point rule the SIEM team can copy (Phase 14a): the first
+    covered sibling sub-technique / parent / same-tactic technique that has
+    mapped rules. Deterministic; None when nothing qualifies."""
+    if result.get("state") == "covered":
+        return None
+    by_id = {r.get("technique_id"): r for r in results}
+    name_by_ref = {uc["row_ref"]: uc["name"] for uc in use_cases}
+    tech = index.get(technique_id) or {}
+    candidates = []
+    parent = tech.get("parent_id")
+    if parent:
+        candidates.extend(
+            c["id"] for c in index.children.get(parent, []) if c["id"] != technique_id
+        )
+        candidates.append(parent)
+    else:
+        candidates.extend(c["id"] for c in index.children.get(technique_id, []))
+    tactics = set(result.get("tactics") or [])
+    candidates.extend(
+        r["technique_id"]
+        for r in results
+        if r.get("domain") == result.get("domain")
+        and r.get("state") == "covered"
+        and tactics & set(r.get("tactics") or [])
+    )
+    for candidate_id in candidates:
+        candidate = by_id.get(candidate_id)
+        if not candidate or candidate.get("state") != "covered":
+            continue
+        for ref in candidate.get("use_case_refs") or []:
+            rule_name = name_by_ref.get(ref)
+            if rule_name:
+                return {
+                    "technique_id": candidate_id,
+                    "technique_name": (index.get(candidate_id) or {}).get("name"),
+                    "rule_name": rule_name,
+                }
+    return None
+
+
+@router.get(
+    "/assessments/{assessment_id}/techniques/{technique_id}/explain",
+    summary="Plain-language four-block explanation for one technique (Phase 14a)",
+)
+async def explain_technique(
+    assessment_id: UUID,
+    technique_id: str,
+    current_user: TokenData = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """What is this / where is the gap / why / what would good look like —
+    all deterministic: curated data files + stored result data. No LLM."""
+    org_id = UUID(str(current_user.org_id))
+    assessment = await _completed_assessment(db, assessment_id, org_id)
+    results = assessment.technique_results or []
+    result = next(
+        (r for r in results if r.get("technique_id") == technique_id), None
+    )
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Technique not found in this assessment",
+        )
+    index = attack_data.DEFAULT
+    tech = index.get(technique_id) or {}
+    summary = assessment.summary or {}
+    params = assessment.params or {}
+
+    use_cases = await _load_use_case_dicts(db, assessment_id, org_id)
+    mapped = []
+    for uc in use_cases:
+        mapping = next(
+            (m for m in uc["mappings"] if m.get("technique_id") == technique_id),
+            None,
+        )
+        if mapping:
+            mapped.append(
+                {
+                    "name": uc["name"],
+                    "enabled": uc["enabled"],
+                    "source": mapping.get("source"),
+                    "confidence": mapping.get("confidence"),
+                }
+            )
+
+    # Parent-rollup case: partial with no direct rules -> list sub states.
+    sub_states = None
+    children = index.children.get(technique_id) or []
+    if children and result.get("state") == "partial" and not mapped:
+        state_by_id = {r.get("technique_id"): r.get("state") for r in results}
+        sub_states = [
+            {
+                "technique_id": c["id"],
+                "name": c.get("name"),
+                "state": state_by_id.get(c["id"], "not_covered"),
+            }
+            for c in children
+            if not c.get("revoked") and not c.get("deprecated")
+        ]
+
+    thresholds = params.get("thresholds") or {}
+    why = plain_language.derive_why(
+        result,
+        mapped,
+        total_rules=(summary.get("counts") or {}).get("use_cases"),
+        sub_states=sub_states,
+        confidence_covered=thresholds.get("confidence_covered", 0.7),
+    )
+
+    gap = next(
+        (g for g in summary.get("gaps") or [] if g.get("technique_id") == technique_id),
+        None,
+    )
+    if gap:
+        feasibility, via, hint = gap.get("feasibility"), gap.get("via"), gap.get("hint")
+    else:
+        env_lists = params.get("environment_lists") or {}
+        feasibility, via, _category, hint = ranking.technique_feasibility(
+            tech, env_lists.get("log_sources") or [], env_lists.get("tooling") or []
+        )
+
+    described = plain_language.describe_technique(technique_id, index)
+    tactic_by_id = {t["id"]: t for t in index.tactics(result.get("domain"))}
+    tactic_lines = [
+        {
+            "id": tid,
+            "name": tactic_by_id[tid]["name"],
+            "line": plain_language.TACTIC_LINES.get(tactic_by_id[tid]["shortname"]),
+        }
+        for tid in result.get("tactics") or []
+        if tid in tactic_by_id
+    ]
+
+    return {
+        "technique_id": technique_id,
+        "name": tech.get("name"),
+        "state": result.get("state"),
+        "what": {
+            "definition": described["definition"],
+            "attacker_use": described["attacker_use"],
+            "curated": described["curated"],
+        },
+        "where": {
+            "domain": result.get("domain"),
+            "tactics": tactic_lines,
+            "platforms": tech.get("platforms") or [],
+            "via": via,
+            "feasibility": feasibility,
+            "feasibility_hint": hint,
+        },
+        "why": why,
+        "good": {
+            "sketch": plain_language.detection_sketch(technique_id, via),
+            "detection_hint": described["detection_hint"],
+            "closest_rule": _closest_covered_rule(
+                technique_id, result, results, use_cases, index
+            ),
+        },
     }
 
 

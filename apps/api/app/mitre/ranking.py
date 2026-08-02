@@ -181,6 +181,15 @@ def _feasibility(tech: dict, onboarded: dict, ownable: dict):
     )
 
 
+def technique_feasibility(tech: dict, log_sources, tooling):
+    """(bucket, via, category, hint) for one technique outside the gap list —
+    Phase 14a drawer explain for covered/N-A techniques (gaps already carry
+    the same fields from rank_gaps)."""
+    onboarded = _categories_provided(log_sources, _LOG_SOURCE_RULES)
+    ownable = _categories_provided(tooling, _TOOLING_RULES)
+    return _feasibility(tech, onboarded, ownable)
+
+
 def build_threat_profile(industry, actors, profiles=None) -> dict:
     """Intake industry/actor selections -> {"techniques": {tid: [labels]},
     "labels": [...]} for threat-informed weighting (Phase 11). Pure lookup

@@ -13,6 +13,7 @@ import {
   AssessmentListItem,
   CompareResult,
   STATUS_META,
+  TechniqueExplain,
   UseCaseItem,
   fmtDate,
 } from '../lib';
@@ -39,6 +40,7 @@ export default function MitreResultsPage() {
   const [error, setError] = useState('');
   const [tab, setTab] = useState<Tab>('coverage');
   const [selectedTechnique, setSelectedTechnique] = useState<string | null>(null);
+  const [explain, setExplain] = useState<TechniqueExplain | null>(null);
   const [runError, setRunError] = useState('');
   const [downloadError, setDownloadError] = useState('');
   const [compareOptions, setCompareOptions] = useState<AssessmentListItem[] | null>(null);
@@ -111,6 +113,28 @@ export default function MitreResultsPage() {
     loadUseCases();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assessment?.status, assessmentId]);
+
+  // Phase 14a: fetch the plain-language four-block explanation when a
+  // technique is opened. Non-fatal — the drawer falls back to its existing
+  // content if the fetch fails.
+  useEffect(() => {
+    setExplain(null);
+    if (!selectedTechnique || statusRef.current !== 'completed') return;
+    let cancelled = false;
+    axios
+      .get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments/${assessmentId}/techniques/${selectedTechnique}/explain`,
+        { headers: authHeaders() }
+      )
+      .then((res) => {
+        if (!cancelled) setExplain(res.data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTechnique, assessmentId]);
 
   // Role gates the mapping-edit controls (server enforces regardless).
   useEffect(() => {
@@ -449,6 +473,7 @@ export default function MitreResultsPage() {
 
                 <TechniqueDrawer
                   techniqueId={selectedTechnique}
+                  explain={explain}
                   onClose={() => setSelectedTechnique(null)}
                   techniques={techniques}
                   summary={summary}

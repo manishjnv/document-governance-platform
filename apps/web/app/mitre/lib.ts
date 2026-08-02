@@ -160,6 +160,32 @@ export interface Assessment {
   completed_at: string | null;
 }
 
+/** Phase 14a: plain-language four-block explanation for one technique. */
+export interface TechniqueExplain {
+  technique_id: string;
+  name: string | null;
+  state: string;
+  what: { definition: string | null; attacker_use: string | null; curated: boolean };
+  where: {
+    domain: string;
+    tactics: { id: string; name: string; line: string | null }[];
+    platforms: string[];
+    via: string | null;
+    feasibility: string | null;
+    feasibility_hint: string | null;
+  };
+  why: string;
+  good: {
+    sketch: string | null;
+    detection_hint: string | null;
+    closest_rule: {
+      technique_id: string;
+      technique_name: string | null;
+      rule_name: string;
+    } | null;
+  };
+}
+
 export interface UseCaseMapping {
   technique_id: string;
   source: string;
