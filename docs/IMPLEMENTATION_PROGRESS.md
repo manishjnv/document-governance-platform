@@ -1058,6 +1058,22 @@ dropdown too. 9 new technique IDs required matching
 test-enforced). 8 new tests; suite green (275 MITRE tests); `tsc
 --noEmit` clean.
 
+**MITRE accuracy & template improvement plan — A1-A8 COMPLETE
+(2026-08-03).** All 8 phases of `docs/planning/MITRE_ACCURACY_IMPROVEMENT_PLAN.md`
+shipped in one session, one commit per logical unit (see that doc's
+history table for every commit SHA). Full backend suite run solo on
+`edgp_test` after A8: **858 passed / 7 skipped** (+49 over the 809/7
+pre-plan baseline; `CLAUDE.md`'s baseline line updated); `npx tsc
+--noEmit` clean. Migration 036 (`mitre_use_cases.severity`/
+`last_triggered`) applied to `edgp_dev`+`edgp_test`; prod application
+tracked with the deploy below. A7 (Sentinel data-connector auto-import)
+carried a mandatory adversarial security self-review before commit —
+one blocking finding (a malformed API response entry could crash past
+the narrow exception handler) was found and fixed; verdict ACCEPT.
+Session handoff: `docs/phases/summaries/` (see the dated MITRE accuracy
+plan handoff for the full per-phase table, A2/A5 metrics, and deploy
+smoke results).
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)
