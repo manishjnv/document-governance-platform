@@ -48,14 +48,20 @@ SETTING_DEFAULTS = {
     "confidence_partial_floor": 0.4,
     "partial_credit": 0.5,
     "count_disabled_as_coverage": False,
+    # Phase 11: lift gaps on the customer's industry/actor threat profile
+    # above equal-tier peers in the ranked gap list. Ordering only — never
+    # changes coverage %.
+    "threat_weighting_enabled": True,
 }
+
+_BOOL_SETTINGS = {"count_disabled_as_coverage", "threat_weighting_enabled"}
 
 
 def validate_setting(key: str, value):
     """Normalize/validate one tunable. Raises ValueError on bad key/value."""
     if key not in SETTING_DEFAULTS:
         raise ValueError(f"Unknown setting: {key!r}. Valid: {sorted(SETTING_DEFAULTS)}")
-    if key == "count_disabled_as_coverage":
+    if key in _BOOL_SETTINGS:
         if not isinstance(value, bool):
             raise ValueError(f"{key} must be true/false")
         return value
@@ -178,10 +184,21 @@ def recompute_results(assessment, use_case_rows) -> None:
         ),
     )
     env_lists = params.get("environment_lists") or {}
+    intake = params.get("intake") or {}
+    profile = ranking.build_threat_profile(
+        intake.get("industry"), intake.get("threat_actors") or []
+    )
     ranked = ranking.rank_gaps(
         coverage["techniques"],
         env_lists.get("log_sources") or [],
         env_lists.get("tooling") or [],
+        profile=profile,
+        threat_weighting=bool(
+            thresholds.get(
+                "threat_weighting_enabled",
+                SETTING_DEFAULTS["threat_weighting_enabled"],
+            )
+        ),
     )
 
     summary = dict(assessment.summary or {})
@@ -552,13 +569,25 @@ async def _run_pipeline_body(assessment_id: UUID, org_id: UUID) -> None:
                 partial_weight=settings["partial_credit"],
             )
 
-            # Stage 6 — deterministic gap ranking + roadmap bucketing.
+            # Stage 6 — deterministic gap ranking + roadmap bucketing,
+            # threat-weighted by the customer's industry/actor profile
+            # (Phase 11 — pure lookup, ordering only).
             env_lists = params.get("environment_lists") or {}
+            profile = ranking.build_threat_profile(
+                intake.get("industry"), intake.get("threat_actors") or []
+            )
             ranked = ranking.rank_gaps(
                 coverage["techniques"],
                 env_lists.get("log_sources") or [],
                 env_lists.get("tooling") or [],
+                profile=profile,
+                threat_weighting=bool(settings["threat_weighting_enabled"]),
             )
+            if profile["labels"]:
+                coverage["assumptions"].append(
+                    "gap ranking prioritizes techniques associated with your "
+                    "declared threat profile: " + ", ".join(profile["labels"])
+                )
 
             # Stage 7 — narrative over COMPUTED data only; degrades to
             # template text so the assessment still completes.
@@ -576,7 +605,7 @@ async def _run_pipeline_body(assessment_id: UUID, org_id: UUID) -> None:
                         k: g[k]
                         for k in (
                             "technique_id", "name", "state", "tier",
-                            "feasibility", "via", "hint",
+                            "feasibility", "via", "hint", "threat_relevance",
                         )
                     }
                     for g in ranked["gaps"][:15]

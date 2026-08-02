@@ -72,6 +72,8 @@ export interface Gap {
   via: string | null;
   category: string | null;
   hint: string;
+  /** Phase 11: industry/actor labels this gap is relevant to (or absent). */
+  threat_relevance?: string[] | null;
   rank: number;
 }
 

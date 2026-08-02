@@ -94,6 +94,14 @@ def load_technique_priorities() -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def load_threat_profiles() -> dict:
+    """Curated industry/actor -> technique profiles for threat-informed gap
+    weighting (Phase 11). IDs validated against attack.json by the test
+    suite; unknown industries/actors simply match nothing."""
+    path = DATA_DIR / "threat_profiles.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 DEFAULT = AttackIndex(
     json.loads((DATA_DIR / "attack.json").read_text(encoding="utf-8"))
 )

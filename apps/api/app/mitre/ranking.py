@@ -20,7 +20,7 @@ if real customer dumps defeat them.
 
 import re
 
-from .attack_data import DEFAULT, load_technique_priorities
+from .attack_data import DEFAULT, load_technique_priorities, load_threat_profiles
 
 _FEASIBILITY_RANK = {"short": 0, "mid": 1, "long": 2}
 _STATE_RANK = {"not_covered": 0, "partial": 1}
@@ -181,14 +181,53 @@ def _feasibility(tech: dict, onboarded: dict, ownable: dict):
     )
 
 
-def rank_gaps(techniques, log_sources, tooling, *, index=None, priorities=None) -> dict:
+def build_threat_profile(industry, actors, profiles=None) -> dict:
+    """Intake industry/actor selections -> {"techniques": {tid: [labels]},
+    "labels": [...]} for threat-informed weighting (Phase 11). Pure lookup
+    over the curated threat_profiles.json; an unknown industry or actor
+    contributes nothing (deliberate no-op — profiles are curated, never
+    guessed). Exact technique IDs only: a profile listing T1566.001 lifts
+    that sub-technique, not its parent.
+    """
+    if profiles is None:
+        profiles = load_threat_profiles()
+    relevant, labels = {}, []
+
+    def _add(entry, label):
+        labels.append(label)
+        for tid in entry.get("techniques", []):
+            tid_labels = relevant.setdefault(tid, [])
+            if label not in tid_labels:
+                tid_labels.append(label)
+
+    aliases = profiles.get("industry_aliases", {})
+    key = str(industry or "").strip().lower()
+    entry = profiles.get("industries", {}).get(aliases.get(key, key))
+    if entry:
+        _add(entry, entry.get("label") or str(industry))
+    actor_map = profiles.get("actors", {})
+    for actor in actors or []:
+        entry = actor_map.get(str(actor).strip())
+        if entry:
+            _add(entry, str(actor).strip())
+    return {"techniques": relevant, "labels": labels}
+
+
+def rank_gaps(
+    techniques, log_sources, tooling, *,
+    index=None, priorities=None, profile=None, threat_weighting=True,
+) -> dict:
     """Coverage per-technique results -> ranked gap list + roadmap buckets.
 
     techniques: coverage.compute_coverage()["techniques"].
     log_sources/tooling: raw customer rows from the environment workbook.
+    profile: build_threat_profile() output (or None) — matching gaps carry
+    threat_relevance labels and, when threat_weighting is on (org tunable
+    `threat_weighting_enabled`, default on), rank above EQUAL-TIER peers.
+    Never changes coverage %, states, or tier — ordering/emphasis only.
     Returns {"gaps": [gap...], "roadmap": {"short": [...], "mid": [...],
     "long": [...]}} — gap dicts carry technique_id, name, domain, state,
-    tier, tactics, feasibility, via, category, hint, rank.
+    tier, tactics, feasibility, via, category, hint, threat_relevance, rank.
     """
     index = index if index is not None else DEFAULT
     if priorities is None:
@@ -214,6 +253,7 @@ def rank_gaps(techniques, log_sources, tooling, *, index=None, priorities=None) 
         positions = [
             tactic_position.get((result["domain"], t), 99) for t in result["tactics"]
         ] or [99]
+        relevance = (profile or {}).get("techniques", {}).get(result["technique_id"])
         gaps.append(
             {
                 "technique_id": result["technique_id"],
@@ -226,6 +266,7 @@ def rank_gaps(techniques, log_sources, tooling, *, index=None, priorities=None) 
                 "via": via,
                 "category": category,
                 "hint": hint,
+                "threat_relevance": relevance or None,
                 "_tactic_pos": min(positions),
             }
         )
@@ -233,6 +274,10 @@ def rank_gaps(techniques, log_sources, tooling, *, index=None, priorities=None) 
     gaps.sort(
         key=lambda g: (
             g["tier"],
+            # Phase 11: threat-informed lift WITHIN a tier — a gap on the
+            # customer's industry/actor profile beats equal-tier peers but
+            # never jumps a tier (and never touches coverage numbers).
+            0 if (threat_weighting and g["threat_relevance"]) else 1,
             _FEASIBILITY_RANK[g["feasibility"]],
             _STATE_RANK[g["state"]],
             g["_tactic_pos"],

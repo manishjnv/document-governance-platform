@@ -134,7 +134,24 @@ export function GapsRoadmap({
                   {tacticName(gap)}
                 </TableCell>
                 <TableCell>
-                  <TierBadge tier={gap.tier} />
+                  <span className="inline-flex flex-wrap items-center gap-1">
+                    <TierBadge tier={gap.tier} />
+                    {gap.threat_relevance && gap.threat_relevance.length > 0 && (
+                      <Tooltip delayDuration={150}>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex cursor-default items-center rounded-full border border-violet-200 bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-800">
+                            Threat match
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs text-xs">
+                          Prioritized for your declared threat profile (
+                          {gap.threat_relevance.join(', ')}): these threats are
+                          publicly reported to use this technique. Affects ordering
+                          only — never the coverage score.
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </span>
                 </TableCell>
                 <TableCell>
                   <FeasibilityBadge gap={gap} />

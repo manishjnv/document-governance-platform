@@ -156,11 +156,30 @@ export default function NewMitreAssessmentPage() {
   // field -> 0-based column index; '' = not mapped
   const [colMap, setColMap] = useState<Record<string, string>>({});
   const [applying, setApplying] = useState(false);
+  // Phase 11: curated threat-actor catalog + selection (optional intake)
+  const [actorCatalog, setActorCatalog] = useState<
+    { name: string; attack_id: string | null; note: string | null }[]
+  >([]);
+  const [threatActors, setThreatActors] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!localStorage.getItem('access_token')) router.push('/login');
+    if (!localStorage.getItem('access_token')) {
+      router.push('/login');
+      return;
+    }
+    axios
+      .get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/threat-catalog`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+      })
+      .then((res) => setActorCatalog(res.data.actors ?? []))
+      .catch(() => {}); // optional intake — the wizard works without it
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const toggleActor = (actor: string) =>
+    setThreatActors((prev) =>
+      prev.includes(actor) ? prev.filter((a) => a !== actor) : [...prev, actor]
+    );
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -187,6 +206,7 @@ export default function NewMitreAssessmentPage() {
         JSON.stringify({
           industry: industry || null,
           region: region || null,
+          threat_actors: threatActors,
           count_disabled_as_coverage: countDisabled,
           exclusions: cleanExclusions.map((x) => ({
             target: x.target.trim(),
@@ -391,6 +411,39 @@ export default function NewMitreAssessmentPage() {
                     </select>
                   </div>
                 </div>
+
+                {actorCatalog.length > 0 && (
+                  <div>
+                    <div className="mb-1.5 block text-sm font-medium">
+                      Threat actors of concern{' '}
+                      <span className="font-normal text-muted-foreground">(optional)</span>
+                    </div>
+                    <p className="mb-2 text-xs text-muted-foreground">
+                      Pick any groups you track or worry about — gaps in techniques
+                      they use will be prioritized in your roadmap. This never
+                      changes your coverage score, only the ordering.
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {actorCatalog.map((actor) => (
+                        <button
+                          key={actor.name}
+                          type="button"
+                          onClick={() => toggleActor(actor.name)}
+                          title={actor.note ?? undefined}
+                          aria-pressed={threatActors.includes(actor.name)}
+                          className={
+                            threatActors.includes(actor.name)
+                              ? 'rounded-full border border-primary bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary'
+                              : 'rounded-full border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground'
+                          }
+                        >
+                          {actor.name}
+                          {actor.attack_id ? ` · ${actor.attack_id}` : ''}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <label className="flex items-start gap-2 text-sm">
                   <input

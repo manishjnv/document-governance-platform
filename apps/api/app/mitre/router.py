@@ -101,6 +101,33 @@ def _parse_intake(raw: Optional[str]) -> dict:
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="count_disabled_as_coverage must be true/false",
         )
+    # Phase 11: optional threat actors of concern — validated against the
+    # curated catalog (the wizard only offers curated names; anything else
+    # is a client bug or tampering, so reject rather than silently drop).
+    actors = intake.get("threat_actors") or []
+    if not isinstance(actors, list) or not all(isinstance(a, str) for a in actors):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="threat_actors must be a list of actor names",
+        )
+    if len(actors) > 10:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="at most 10 threat actors can be selected",
+        )
+    # order-preserving dedupe: the UI can't send duplicates, a raw API call can
+    actors = list(dict.fromkeys(a.strip() for a in actors if a.strip()))
+    known_actors = attack_data.load_threat_profiles()["actors"]
+    unknown = sorted(set(actors) - set(known_actors))
+    if unknown:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                "Unknown threat actors: "
+                + ", ".join(a[:50] for a in unknown[:5])
+                + ". Use names from GET /api/v1/mitre/threat-catalog."
+            ),
+        )
     return {
         # length-capped: these flow into the narrative LLM prompt
         # (2026-08-01 adversarial review, non-blocking finding #5)
@@ -108,6 +135,7 @@ def _parse_intake(raw: Optional[str]) -> dict:
         "region": str(intake.get("region") or "").strip()[:200] or None,
         "count_disabled_as_coverage": disabled,
         "exclusions": exclusions,
+        "threat_actors": actors,
     }
 
 
@@ -961,6 +989,25 @@ async def compare_assessments_endpoint(
     current = await _completed_assessment(db, assessment_id, org_id)
     baseline = await _completed_assessment(db, other_id, org_id)
     return service.compare_assessments(current, baseline)
+
+
+@router.get("/threat-catalog", summary="Curated threat actors + profiled industries (Phase 11)")
+async def threat_catalog(
+    current_user: TokenData = Depends(get_current_user),
+):
+    """The curated threat_profiles.json surface the wizard needs: selectable
+    actor names (with ATT&CK group IDs for reference) and which industries
+    carry a profile. Static curated data — no per-org content."""
+    profiles = attack_data.load_threat_profiles()
+    return {
+        "actors": [
+            {"name": name, "attack_id": entry.get("attack_id"), "note": entry.get("note")}
+            for name, entry in profiles["actors"].items()
+        ],
+        "industries": sorted(
+            entry["label"] for entry in profiles["industries"].values()
+        ),
+    }
 
 
 @router.get("/settings", summary="Get org MITRE tunables")

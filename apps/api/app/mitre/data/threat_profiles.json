@@ -1,0 +1,128 @@
+{
+  "_comment": [
+    "Curated industry/actor -> high-relevance ATT&CK technique profiles for",
+    "threat-informed gap weighting (MITRE Phase 11). DETERMINISTIC input to",
+    "ranking.build_threat_profile — never touches coverage %, only lifts",
+    "profile-relevant gaps above equal-tier peers in the ranked gap list.",
+    "Every technique ID must resolve 'ok' against the pinned attack.json",
+    "(enforced by test_mitre_threat_profile.py). Industry keys are the",
+    "LOWERCASE of the /mitre/new wizard's INDUSTRIES values; aliases fold",
+    "related wizard options onto one profile. Actor keys are display names",
+    "offered by GET /api/v1/mitre/threat-catalog.",
+    "Sources: MITRE ATT&CK Groups pages (G-codes cited per actor), Verizon",
+    "DBIR 2025 industry snapshots, CISA #StopRansomware advisories (incl.",
+    "AA23-325A LockBit, AA23-320A Scattered Spider, AA24-038A Volt Typhoon),",
+    "Mandiant M-Trends 2025, HHS HC3 healthcare sector reports, FS-ISAC",
+    "annual report, Dragos OT/ICS Year in Review 2025.",
+    "Curation rule: 8-12 techniques per entry, only behaviors repeatedly",
+    "attributed in public reporting — high-confidence over exhaustive."
+  ],
+  "industries": {
+    "financial services": {
+      "label": "Financial Services",
+      "sources": "FS-ISAC annual report; Verizon DBIR 2025 (finance: phishing, stolen creds, web-app attacks); CISA #StopRansomware",
+      "techniques": ["T1566.001", "T1566.002", "T1078", "T1110.003", "T1110.004", "T1059.001", "T1105", "T1021.001", "T1041", "T1486"]
+    },
+    "healthcare": {
+      "label": "Healthcare",
+      "sources": "HHS HC3 sector alerts (ransomware-dominant); CISA #StopRansomware; DBIR 2025 healthcare snapshot",
+      "techniques": ["T1486", "T1490", "T1566.001", "T1133", "T1078", "T1021.001", "T1003.001", "T1053.005", "T1567.002"]
+    },
+    "manufacturing": {
+      "label": "Manufacturing",
+      "sources": "Dragos OT/ICS Year in Review 2025 (manufacturing most-targeted); IBM X-Force 2025; CISA #StopRansomware",
+      "techniques": ["T1486", "T1490", "T1566.001", "T1133", "T1078", "T1021.001", "T1105", "T0886", "T0883"]
+    },
+    "energy & utilities": {
+      "label": "Energy & Utilities",
+      "sources": "CISA AA24-038A (Volt Typhoon pre-positioning); Dragos 2025; E-ISAC reporting",
+      "techniques": ["T1190", "T1133", "T1078", "T1003.003", "T1059.001", "T1021.001", "T0883", "T0886", "T0831"]
+    },
+    "technology": {
+      "label": "Technology",
+      "sources": "Mandiant M-Trends 2025 (identity/cloud + supply chain against tech/SaaS); CISA AA23-320A",
+      "techniques": ["T1195.002", "T1078.004", "T1528", "T1621", "T1566.002", "T1552.001", "T1098.001", "T1059.001"]
+    },
+    "telecommunications": {
+      "label": "Telecommunications",
+      "sources": "M-Trends 2025 (telecom espionage: edge-device exploitation, web shells); CISA Salt-Typhoon-related advisories",
+      "techniques": ["T1190", "T1133", "T1078", "T1505.003", "T1003.001", "T1071.001", "T1021.004"]
+    },
+    "retail & e-commerce": {
+      "label": "Retail & E-commerce",
+      "sources": "DBIR 2025 retail snapshot (web-app attacks, stolen creds, Magecart-style skimming)",
+      "techniques": ["T1190", "T1505.003", "T1110.004", "T1566.001", "T1078", "T1059.007", "T1486"]
+    },
+    "government & public sector": {
+      "label": "Government & Public Sector",
+      "sources": "MITRE ATT&CK Groups (APT28/29 targeting of government); CISA nation-state advisories; DBIR 2025 public-sector snapshot",
+      "techniques": ["T1566.001", "T1566.002", "T1203", "T1078", "T1003.001", "T1071.001", "T1547.001", "T1105", "T1486"]
+    },
+    "education": {
+      "label": "Education",
+      "sources": "CISA #StopRansomware (education advisories); DBIR 2025 education snapshot (phishing, password spraying)",
+      "techniques": ["T1566.001", "T1110.003", "T1078", "T1486", "T1490", "T1133"]
+    },
+    "transportation & logistics": {
+      "label": "Transportation & Logistics",
+      "sources": "CISA #StopRansomware; IBM X-Force 2025 transportation snapshot",
+      "techniques": ["T1566.001", "T1078", "T1133", "T1190", "T1486", "T1490"]
+    }
+  },
+  "industry_aliases": {
+    "banking": "financial services",
+    "insurance": "financial services"
+  },
+  "actors": {
+    "FIN7": {
+      "attack_id": "G0046",
+      "note": "Financially motivated; phishing-to-backdoor intrusions, later ransomware affiliations.",
+      "techniques": ["T1566.001", "T1059.001", "T1105", "T1547.001", "T1071.001", "T1486"]
+    },
+    "Wizard Spider": {
+      "attack_id": "G0102",
+      "note": "TrickBot/Conti operators; big-game ransomware.",
+      "techniques": ["T1566.001", "T1059.001", "T1486", "T1490", "T1021.001", "T1053.005"]
+    },
+    "Lazarus Group": {
+      "attack_id": "G0032",
+      "note": "DPRK-attributed; financial theft + espionage, trojanized installers.",
+      "techniques": ["T1566.001", "T1059.001", "T1105", "T1027", "T1547.001", "T1071.001"]
+    },
+    "APT29": {
+      "attack_id": "G0016",
+      "note": "SVR-attributed; cloud/identity tradecraft, supply chain (SolarWinds).",
+      "techniques": ["T1566.002", "T1078.004", "T1528", "T1621", "T1059.001", "T1027", "T1195.002"]
+    },
+    "APT28": {
+      "attack_id": "G0007",
+      "note": "GRU-attributed; credential harvesting, password spraying, phishing.",
+      "techniques": ["T1566.001", "T1110.003", "T1078", "T1059.001", "T1071.001", "T1003.001"]
+    },
+    "APT41": {
+      "attack_id": "G0096",
+      "note": "Dual espionage + financially motivated; web-facing app exploitation, web shells.",
+      "techniques": ["T1190", "T1505.003", "T1059.001", "T1027", "T1071.001", "T1078"]
+    },
+    "Sandworm Team": {
+      "attack_id": "G0034",
+      "note": "GRU-attributed; destructive operations against energy/critical infrastructure.",
+      "techniques": ["T1059.001", "T1078", "T1133", "T1485", "T1490", "T0883", "T0831"]
+    },
+    "Volt Typhoon": {
+      "attack_id": "G1017",
+      "note": "PRC-attributed; living-off-the-land pre-positioning in critical infrastructure (CISA AA24-038A).",
+      "techniques": ["T1190", "T1078", "T1003.003", "T1059.001", "T1021.001", "T1133"]
+    },
+    "Scattered Spider": {
+      "attack_id": "G1015",
+      "note": "Help-desk social engineering, MFA fatigue, RMM abuse, data-theft extortion (CISA AA23-320A).",
+      "techniques": ["T1621", "T1078.004", "T1219", "T1567.002", "T1486", "T1566.004"]
+    },
+    "LockBit affiliates": {
+      "attack_id": null,
+      "note": "RaaS affiliates per CISA AA23-325A; commodity intrusion to encryption/exfiltration.",
+      "techniques": ["T1486", "T1490", "T1078", "T1021.001", "T1567.002", "T1133", "T1110.003"]
+    }
+  }
+}
