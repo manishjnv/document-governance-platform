@@ -307,7 +307,10 @@ async def create_assessment(
                 file_id=uc_file_id,
                 row_ref=row["row_ref"],
                 name=row["name"],
-                description=row["description"] or row["logic"],
+                # logic-fallback capped like ingest's description cap — an
+                # XLSX cell may legally hold 32K chars (2026-08-02
+                # adversarial review, blocking finding V2).
+                description=row["description"] or (row["logic"] or "")[:2000] or None,
                 log_source=row["log_source"],
                 enabled=row["enabled"],
                 mappings=item["mappings"],
