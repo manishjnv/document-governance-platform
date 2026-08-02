@@ -1,8 +1,8 @@
 # MITRE ATT&CK Coverage Assessment — Module Reference
 
-**Status:** COMPLETE (Phases 0–7 + optional Phases 8–9), launch-ready,
+**Status:** COMPLETE (Phases 0–7 + optional Phases 8–10), launch-ready,
 live in production at `https://scopewise.assessiq.in/mitre`. No known
-quality gaps — remaining plan-§14 optional features (Phases 10–13 in the
+quality gaps — remaining plan-§14 optional features (Phases 11–13 in the
 kickoff prompt) are built only on request.
 **Written:** 2026-08-02, after Phase 7. This is the end-to-end reference
 for what the module is and how every piece works; the original design
@@ -12,12 +12,12 @@ rationale lives in `docs/planning/MITRE_ASSESSMENT_PLAN.md` (read that for
 **Baselines:** backend **687 passed / 7 skipped**, certified at the
 Phase 7 gate (`b183f75`; the 7th skip = the PDF-render test on dev boxes
 without WeasyPrint's native libs — prod image has them, prod render smoke
-PASSED 2026-08-02); `npx tsc --noEmit` clean (re-verified 2026-08-02). Backend count after optional Phases 8–9:
-**702 passed / 7 skipped** (certified on an isolated test DB — see the
-`edgp-test-single-runner-rule` memory for why shared-`edgp_test` runs
+PASSED 2026-08-02); `npx tsc --noEmit` clean (re-verified 2026-08-02). Backend count after optional Phases 8–10:
+**707 passed / 7 skipped** (Phase 10 certified solo on shared
+`edgp_test` — see the `edgp-test-single-runner-rule` memory for why runs
 from two sessions at once deadlock). Prod state: **deployed through
-Phase 9** — `/opt/scopewise` at `ed9cec9`; migrations 029–032 all
-applied to `scopewise_prod` (Phases 8–9 add none).
+Phase 10** — `/opt/scopewise` at `6ce8e48`; migrations 029–033 all
+applied to `scopewise_prod`.
 
 ---
 
@@ -160,7 +160,8 @@ All UUID v4 PKs, `org_id` FK → organizations CASCADE, tz-aware timestamps
   treated as enabled + assumption), `mappings` JSONB
   `[{technique_id, source: customer|keyword|ai, confidence, rationale}]`,
   `mapping_status` CHECK
-  `customer_tagged|keyword_tagged|ai_tagged|unmapped|invalid`.
+  `customer_tagged|keyword_tagged|ai_tagged|manual|unmapped|invalid`
+  (`manual` added by migration 033, Phase 10).
 - **`mitre_settings`** — org-keyed tunables `(org_id, setting_key) → JSONB`
   (customization.py pattern; absent row = code default). Keys/defaults:
   `confidence_covered=0.7`, `confidence_partial_floor=0.4`,
@@ -279,6 +280,11 @@ Tolerates JSONB schema drift via `.get()` throughout.
 
 Priority order, each level never overridden by a lower one:
 
+0. **Manual reviewer override** (`source=manual`, confidence 1.0, `manual`,
+   Phase 10) — an admin/reviewer edits one rule's technique list post-run
+   via `PATCH .../use-cases/{id}/mappings`; replaces the row's mappings
+   wholesale (empty list = "maps to nothing") and triggers an inline
+   deterministic recompute of coverage/gaps/roadmap. Outranks everything.
 1. **Customer tags** (`source=customer`, confidence 1.0,
    `customer_tagged`) — validated at CREATE time via `resolve()`: revoked
    IDs remap to successors (noted), deprecated/unknown/malformed IDs are
@@ -350,6 +356,7 @@ stamping. Registered nowhere in `ReviewOrchestrator`.
 | `GET /assessments/{id}/export.xlsx` | any | 409 unless completed. StreamingResponse, real xlsx content-type + attachment disposition (deliberately NOT base64 — plan §10). |
 | `GET /assessments/{id}/navigator` | any | 409 unless completed. ATT&CK Navigator layer export (Phase 8): 1 applicable domain → layer JSON attachment; >1 → zip of per-domain layers. Pure `navigator.py`, layer format 4.5, colors mirror the report palette, N/A → `enabled:false`. |
 | `POST /assessments/{id}/remap` | admin/reviewer | 409 unless `pending` (atomic status-conditional guard in the row-replacement transaction — run/remap race closed). Phase 9 wizard: `{"columns": {field: 0-based index}}` re-parses the stored dump with an explicit map (`validate_column_override` 422s bad fields/indexes), replaces rows, updates `params.columns`, audits `mitre.assessment_remapped`, returns a fresh parse preview (`headers` + `sample_rows` now on create too). 422 for pdf/docx extraction dumps. |
+| `PATCH /assessments/{id}/use-cases/{use_case_id}/mappings` | admin, reviewer | 409 unless `completed`. Phase 10 override: body `{"technique_ids": [...]}` = the FULL new list for that rule (empty = maps to nothing, max 20). Every ID validated via `resolve()` (revoked→successor with a note; deprecated/unknown/malformed → 422). Row becomes `mapping_status='manual'`, mappings `source='manual'` @ 1.0; coverage/gaps/roadmap recomputed inline (pure code, `service.recompute_results`, narrative kept + assumption note appended, counts gain a `manual` key). `SELECT … FOR UPDATE` on the assessment serializes concurrent edits; audits `mitre.mappings_edited`. |
 | `GET /assessments/{id}/compare/{other_id}` | any | `{id}` = current, `{other_id}` = baseline. Both org-owned (404) + completed (409). |
 | `GET /settings` / `PATCH /settings` | admin | The 4 tunables; PATCH validates types/ranges + `partial_floor < covered`; audited. |
 | `DELETE /assessments/{id}` | admin, reviewer | Soft delete. |
@@ -469,6 +476,7 @@ absent; prod render verified live). Frontend: `tsc --noEmit` clean.
 | `test_mitre_ranking.py` | Feasibility buckets (onboarded/ownable/new/no-telemetry), tier ordering, state tie-break, covered/N-A exclusion, deterministic-layer-imports-no-AI guard. |
 | `test_mitre_report.py` | HTML escapes planted `<script>`, XLSX guard incl. real-workbook readback + Logic column, 409s, StreamingResponse content-type, compare golden + cross-org 404, `domains_brief`. |
 | `test_mitre_navigator.py` | Golden single-domain layer (colors/comments/enabled/versions/legend), multi-domain stable order, gated-domain exclusion; endpoint json vs zip, viewer-readable, cross-org 404 + pending 409. |
+| `test_mitre_mapping_edit.py` | Phase 10 PATCH: manual provenance + inline recompute (states flip, counts.manual, assumption note, audit row), empty-list unmap, invalid/malformed/over-cap 422s, non-completed 409, cross-org 404 (both IDs) + viewer 403. |
 
 Reminder: migrations 029/031/032 (and 030) must be applied to `edgp_test`
 before running the suite.
@@ -490,7 +498,8 @@ you're alone on `edgp_test`.
 - **Migrations** (no runner exists — RCA #3/#11/#12/#13): apply each
   `.sql` to `edgp_dev`, `edgp_test`, and on deploy `scopewise_prod` via
   `docker exec -i … psql`. Module migrations: 029 (tables), 030 (audit
-  CHECK), 031 (mapping_status CHECK), 032 (logic column). **5th sync
+  CHECK), 031 (mapping_status CHECK), 032 (logic column), 033
+  (mapping_status + 'manual'). **5th sync
   point:** CHECK changes mirrored in ORM models must update both in
   lockstep (see §4 warning).
 - **Deploy**: standard VPS loop (git push → `docker compose -f
@@ -538,21 +547,19 @@ you're alone on `edgp_test`.
 | 7 | `999ee5d`,`b183f75` | 08-02 | Persist `logic` (migration 032), feed both taggers; keyword hits 1/12→10/12; ACCEPT; prod deploy verified 08-02 |
 | 8 (opt) | `cdf6cce` | 08-02 | ATT&CK Navigator layer export (pure `navigator.py`, format 4.5, json/zip endpoint, results-page button); no migration/AI; review waived per kickoff (read-only JSON) |
 | 9 (opt) | `ed9cec9` | 08-02 | Column-mapping wizard: preview `headers`+`sample_rows`, `POST .../remap` with validated override + atomic run-race guard, CSV reader caps, threadpool parse; REVISE→ACCEPT; prod deploy |
-| 8 | *(pending commit)* | 08-02 | Navigator layer export — implemented + tested (6 tests); fill in the hash when its session commits |
+| 10 (opt) | `6ce8e48` | 08-02 | Per-mapping reviewer override: `PATCH .../use-cases/{id}/mappings` (resolve()-validated full-list edit, `manual` provenance @ 1.0, migration 033 + ORM lockstep, FOR UPDATE serialization, audit) + inline pure recompute + drawer edit UI; ACCEPT; prod deploy |
 
 ## 16. Optional feature work (plan §14 — not launch blockers)
 
-Originally deferred by design; now queued as optional **Phases 8–13**
-(one feature per session, kickoff prompt committed as `cf6e9e4`).
-**Phase 8 (ATT&CK Navigator layer export) is implemented** (2026-08-02;
-the `navigator.py` / API-table / frontend / test entries above describe
-it) and **Phase 9 (interactive column-mapping wizard) is in progress** —
-both land via their own build sessions; add their §15 rows with commit
-hashes when they do. Still open, build only on request: interactive column-mapping wizard, per-mapping
-AI-override UI, threat-informed actor/industry weighting,
-scheduled/continuous re-assessment + SIEM API pulls, per-rule detection
-*quality* scoring (v1 scores presence — stated in the methodology
-footnote and assumptions), ICS/Mobile entries in the priorities file,
-per-org priority-tier overrides (the `mitre_settings` pattern already
-supports it). When one of these lands, extend §15's history table and
-the relevant sections here.
+Originally deferred by design; queued as optional **Phases 8–13** (one
+feature per session, kickoff prompt committed as `cf6e9e4`). **Shipped:
+Phase 8 (ATT&CK Navigator layer export), Phase 9 (interactive
+column-mapping wizard), and Phase 10 (per-mapping reviewer override +
+inline recompute)** — see §15 for commits. Still open, build only on
+request: Phase 11 threat-informed actor/industry weighting, Phase 12
+per-rule detection *quality* scoring (v1 scores presence — stated in the
+methodology footnote and assumptions), Phase 13 scheduled/continuous
+re-assessment + SIEM API pulls (design-first), plus ICS/Mobile entries in
+the priorities file and per-org priority-tier overrides (the
+`mitre_settings` pattern already supports it). When one of these lands,
+extend §15's history table and the relevant sections here.

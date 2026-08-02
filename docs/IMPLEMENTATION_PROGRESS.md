@@ -608,6 +608,33 @@ deadlocks/phantom failures today — resolved via a session-private
 schema-cloned DB + `TEST_DATABASE_URL` (protocol in memory:
 `edgp-test-single-runner-rule`).
 
+**Phase 10 COMPLETE — per-mapping reviewer override + inline recompute
+(2026-08-02, commit `6ce8e48`, DEPLOYED to prod):** third optional
+feature (plan §14). An admin/reviewer can now correct one rule's
+technique mappings post-run (remove a wrong AI/keyword tag, add a missing
+one, or unmap entirely) via
+`PATCH /assessments/{id}/use-cases/{use_case_id}/mappings` — body is the
+FULL new technique-ID list (max 20), every ID validated through
+`attack_data.resolve()` (revoked→successor with a note;
+deprecated/unknown/malformed → 422), row becomes
+`mapping_status='manual'` with `source='manual'` @ confidence 1.0
+(migration 033 extends the CHECK + the ORM CheckConstraint in lockstep —
+the 5th sync point honored). Coverage/gaps/roadmap/N-A/counts are then
+**recomputed inline by the pure engines** (`service.recompute_results`,
+no LLM) using the thresholds stamped at run time; narrative prose is
+kept with an assumption note that it may predate the edit.
+`SELECT … FOR UPDATE` on the assessment serializes concurrent edits;
+completed-only (409 otherwise); audited as `mitre.mappings_edited`.
+Drawer UI: role-gated remove-X per mapped rule + "map another rule to
+this technique" select, provenance badge "Edited by reviewer". 5 new
+tests (recompute state-flip + counts + audit row, empty-list unmap,
+invalid/over-cap 422s, non-completed 409, cross-org 404 both ways +
+viewer 403). Full suite **707 passed / 7 skipped** (solo on shared
+`edgp_test`); `tsc` clean; Sonnet adversarial review **ACCEPT** (no
+blocking findings; verified cross-org scoping, resolve() coverage,
+recompute parity with the pipeline's persist block, FOR UPDATE race
+handling, audit correctness).
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)
