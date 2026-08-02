@@ -39,7 +39,6 @@ _XLSX_STATE_FILLS = {
     "not_covered": "FFC7CE",
     "not_applicable": "D9D9D9",
 }
-_XLSX_TIER_FILLS = {1: "F8CBAD", 2: "FFE699", 3: "FFF2CC"}
 _XLSX_FEAS_FILLS = {"short": "C6EFCE", "mid": "FFE699", "long": "D9D9D9"}
 _STATE_PLAIN_XLSX = {
     "covered": "A rule detects this",
@@ -64,6 +63,8 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
     """
     branding = resolve_branding(branding)
     from openpyxl import Workbook
+    from openpyxl.chart import BarChart, Reference
+    from openpyxl.formatting.rule import ColorScaleRule, DataBarRule
     from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
 
@@ -157,6 +158,7 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
     for row in ws_readme.iter_rows(min_row=2, max_col=1):
         if row[0].value in ("The three key numbers", "What each sheet contains", "Color legend"):
             row[0].font = bold
+    ws_readme.protection.sheet = True  # guide sheet is read-only; no password (accidental-edit guard only)
 
     # ------------------------- Summary (redesigned post-14: sectioned, ----
     # ------------------------- colored, with an executive summary) --------
@@ -310,19 +312,41 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
     ws_sum.freeze_panes = "A2"
 
     # ------------------------------------------------------ Coverage by Tactic
-    sheet(
+    tactic_rows = [
+        [DOMAIN_LABELS.get(dk, dk), t.get("name"), t.get("covered"), t.get("partial"),
+         t.get("not_covered"), t.get("not_applicable"), t.get("applicable"),
+         t.get("strict_pct"), t.get("weighted_pct")]
+        for dk, d in _ordered_domains(summary.get("domains"))
+        for t in d.get("tactics", [])
+    ]
+    ws_tactic = sheet(
         "Coverage by Tactic",
         ["Matrix", "Tactic", "Covered", "Partial", "Not covered", "N/A", "Applicable", "Coverage %", "Weighted %"],
-        [
-            [DOMAIN_LABELS.get(dk, dk), t.get("name"), t.get("covered"), t.get("partial"),
-             t.get("not_covered"), t.get("not_applicable"), t.get("applicable"),
-             t.get("strict_pct"), t.get("weighted_pct")]
-            for dk, d in _ordered_domains(summary.get("domains"))
-            for t in d.get("tactics", [])
-        ],
+        tactic_rows,
         [12, 26, 10, 10, 12, 8, 12, 12, 12],
         center_cols=(3, 4, 5, 6, 7, 8, 9),
     )
+    if tactic_rows:
+        last_tactic_row = 1 + len(tactic_rows)
+        ws_tactic.conditional_formatting.add(
+            f"H2:H{last_tactic_row}",
+            DataBarRule(start_type="num", start_value=0, end_type="num", end_value=100, color="638EC6"),
+        )
+        ws_tactic.conditional_formatting.add(
+            f"I2:I{last_tactic_row}",
+            DataBarRule(start_type="num", start_value=0, end_type="num", end_value=100, color="A9C4EB"),
+        )
+        chart = BarChart()
+        chart.type = "col"
+        chart.title = "Coverage % by tactic"
+        chart.y_axis.title = "Coverage %"
+        chart.x_axis.title = "Tactic"
+        chart.height, chart.width = 10, 24
+        data = Reference(ws_tactic, min_col=8, min_row=1, max_row=last_tactic_row)
+        cats = Reference(ws_tactic, min_col=2, min_row=2, max_row=last_tactic_row)
+        chart.add_data(data, titles_from_data=True)
+        chart.set_categories(cats)
+        ws_tactic.add_chart(chart, "K2")
 
     # ------------------------------------------------------- Technique Register
     rules_by_technique: dict = {}
@@ -421,9 +445,10 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
             ws_gaps.cell(row=row_idx, column=col).fill = fill(_XLSX_FEAS_FILLS[bucket])
         for g in bucket_gaps:
             tier = g.get("tier")
+            ranked = isinstance(tier, int) and tier <= 3
             ws_gaps.append([_guard(v) for v in [
                 g.get("rank"), g.get("technique_id"), g.get("name"),
-                f"P{tier}" if isinstance(tier, int) and tier <= 3 else "Unranked",
+                tier if ranked else "Unranked",
                 STATE_LABELS.get(g.get("state"), g.get("state")),
                 (f"Uses logs you already collect: {g.get('via')}" if bucket == "short"
                  else f"Onboard from tooling you own: {g.get('via')}" if bucket == "mid" and g.get("via")
@@ -431,11 +456,19 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
                 gap_recs.get(g.get("technique_id")) or g.get("hint"),
             ]])
             row_idx += 1
-            if isinstance(tier, int) and tier in _XLSX_TIER_FILLS:
-                ws_gaps.cell(row=row_idx, column=4).fill = fill(_XLSX_TIER_FILLS[tier])
+            if ranked:
+                # numeric so the 3-color scale below can rank it; displays as "P1"/"P2"/"P3"
+                ws_gaps.cell(row=row_idx, column=4).number_format = '"P"0'
             state_color = _XLSX_STATE_FILLS.get(g.get("state"))
             if state_color:
                 ws_gaps.cell(row=row_idx, column=5).fill = fill(state_color)
+    if row_idx > 1:
+        ws_gaps.conditional_formatting.add(
+            f"D2:D{row_idx}",
+            ColorScaleRule(start_type="min", start_color="F8696B",
+                          mid_type="percentile", mid_value=50, mid_color="FFEB84",
+                          end_type="max", end_color="63BE7B"),
+        )
     for row in ws_gaps.iter_rows(min_row=2):
         for cell in row:
             cell.alignment = wrap_center if cell.column in (1, 4, 5) else wrap
@@ -499,6 +532,13 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
         for name in list(wb.sheetnames):
             if name not in _SCOPE_SHEETS[scope]:
                 del wb[name]
+
+    # openpyxl has no wired-up "Company" extended property (docProps/app.xml) —
+    # only docProps/core.xml fields are settable, so the org name goes in
+    # description instead.
+    wb.properties.title = f"MITRE ATT&CK Coverage Assessment — {assessment.name}"
+    wb.properties.creator = "ScopeWise"
+    wb.properties.description = f"Prepared for {branding['report_display_name']}"
 
     buf = io.BytesIO()
     wb.save(buf)

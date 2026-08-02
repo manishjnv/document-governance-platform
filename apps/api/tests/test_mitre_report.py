@@ -233,6 +233,35 @@ async def test_xlsx_phase14c_structure(db_session):
     assert "Strict coverage %" not in summary_metrics
 
 
+@pytest.mark.asyncio
+async def test_xlsx_phase14h_polish(db_session):
+    """Phase 14h: data bars + native bar chart on Coverage by Tactic, a
+    3-color scale on the Priority column (replacing the old static per-cell
+    fill), Read Me sheet protection, and workbook core properties that
+    finally consume the branding override."""
+    org, user, _ = await _make_user(db_session)
+    assessment = await _seed(db_session, org, user)
+    wb = load_workbook(io.BytesIO(build_xlsx_export(
+        assessment, [], branding={"report_display_name": "Acme Corp"},
+    )))
+
+    ws_tactic = wb["Coverage by Tactic"]
+    assert len(ws_tactic.conditional_formatting._cf_rules) == 2  # Coverage % + Weighted %
+    assert len(ws_tactic._charts) == 1
+
+    ws_gaps = wb["Gaps & Recommendations"]
+    assert len(ws_gaps.conditional_formatting._cf_rules) == 1
+    priority_cells = [c[3] for c in ws_gaps.iter_rows(min_row=2, max_col=4) if c[1].value]
+    assert any(isinstance(c.value, int) for c in priority_cells)  # numeric, not "P2" string
+    assert all(c.number_format == '"P"0' for c in priority_cells if isinstance(c.value, int))
+
+    assert wb["Read Me"].protection.sheet is True
+
+    assert assessment.name in wb.properties.title
+    assert wb.properties.creator == "ScopeWise"
+    assert "Acme Corp" in wb.properties.description
+
+
 def test_compare_golden():
     class A:  # minimal stand-in with the attributes compare reads
         pass
