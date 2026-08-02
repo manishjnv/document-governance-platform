@@ -696,6 +696,27 @@ Full suite **723 passed / 7 skipped**; `tsc` clean; Sonnet review
 **ACCEPT** (7/7 checks, zero findings). Prompt documented in
 `PROMPT_ENGINEERING_GUIDE.md`.
 
+**Phase 13 SIEM integration — DESIGN APPROVED + 13a COMPLETE (2026-08-02):**
+multi-session sub-project (design → 13a connector → 13b vault → 13c
+scheduler → 13d observability). Design locked in
+`docs/planning/MITRE_SIEM_INTEGRATION_PLAN.md` (Sentinel first,
+token-at-trigger before an encrypted vault, CSV-artifact reuse of the
+create path, resolve-then-pin egress, worker+beat single container,
+honest env-key compromise); per-sub-phase kickoff prompts in
+`docs/phases/prompts/MITRE_SIEM_SUBPHASE_PROMPTS.md`.
+**13a done (committed, NOT deployed):** `app/mitre/connectors/`
+(`egress.py` stdlib SSRF guard — allowlist-before-resolve, resolve-then-pin
+global-unicast-only, TLS-SNI-on-hostname closes rebinding, redirects
+errored, caps, NaN-safe Retry-After; `sentinel.py` Entra→alertRules pull
+normalized to the template CSV; `base.py` dispatch) + `POST
+/assessments/from-siem` (secret in-request only, popped/used-once/never
+stored; feeds the existing create path via extracted
+`_persist_new_assessment`) + a "Pull from Sentinel" wizard tab. No
+migration. Adversarial sign-off REVISE→ACCEPT (hostile Retry-After crash
++ dot-only resource-group regex, both fixed). 32 new tests; **full suite
+755 passed / 7 skipped**; `tsc` clean. Commits `598c2dc` (design docs) +
+`09b545e` (13a code). **Next: 13b (credential vault) — heaviest review.**
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)
