@@ -715,7 +715,20 @@ stored; feeds the existing create path via extracted
 migration. Adversarial sign-off REVISE→ACCEPT (hostile Retry-After crash
 + dot-only resource-group regex, both fixed). 32 new tests; **full suite
 755 passed / 7 skipped**; `tsc` clean. Commits `598c2dc` (design docs) +
-`09b545e` (13a code). **Next: 13b (credential vault) — heaviest review.**
+`09b545e` (13a code).
+**13b done (credential vault):** migration 034 `mitre_connections`
+(org-scoped, soft-delete, `secret_ciphertext` BYTEA, `key_version`,
+platform CHECK + ORM lockstep); `connectors/vault.py` AES-256-GCM
+(fresh nonce/encryption, ciphertext AAD-bound to connection_id, fail-
+closed key_version, master key from `SIEM_CRED_KEY` env — documented
+no-KMS shared-VPS compromise); admin-only connections CRUD with the
+secret WRITE-ONLY (popped/del'd, never returned/logged/echoed) +
+`POST /connections/{id}/test` + `POST /assessments/from-connection/{id}`
+(decrypt in-process only, `del` in finally); vault-unconfigured → clean
+503. 10 new tests (crypto round-trip, AAD-transplant/key-version/corrupt
+refusal, secret-absence scans, log-scrubbing); **full suite 765/7**;
+`tsc` clean. Heaviest Sonnet sign-off ACCEPT (empirical crypto probes).
+**Next: 13c (scheduler/worker container).**
 
 ---
 
