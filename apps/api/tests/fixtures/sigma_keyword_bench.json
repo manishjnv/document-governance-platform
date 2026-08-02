@@ -1,0 +1,265 @@
+{
+  "rows": [
+    {
+      "row_ref": "rules/cloud/aws/cloudtrail/aws_cloudtrail_new_acl_entries.yml",
+      "name": "New Network ACL Entry Added",
+      "description": "Detects that network ACL entries have been added to a route table which could indicate that new attack vectors have been opened up in the AWS account.\n",
+      "logic": "condition: selection\nselection:\n  eventName: CreateNetworkAclEntry\n  eventSource: ec2.amazonaws.com\n",
+      "log_source": "product: aws, service: cloudtrail",
+      "gt_technique_ids": [
+        "T1686.001"
+      ]
+    },
+    {
+      "row_ref": "rules/cloud/aws/cloudtrail/aws_cloudtrail_ssm_malicious_usage.yml",
+      "name": "Potential Malicious Usage of CloudTrail System Manager",
+      "description": "Detect when System Manager successfully executes commands against an instance.\n",
+      "logic": "condition: selection_event and 1 of selection_status_*\nselection_event:\n  eventName: SendCommand\n  eventSource: ssm.amazonaws.com\nselection_status_null:\n  errorCode: null\nselection_status_success:\n  errorCode: Success\n",
+      "log_source": "product: aws, service: cloudtrail",
+      "gt_technique_ids": [
+        "T1566",
+        "T1566.002"
+      ]
+    },
+    {
+      "row_ref": "rules/cloud/aws/cloudtrail/aws_elasticache_security_group_modified_or_deleted.yml",
+      "name": "AWS ElastiCache Security Group Modified or Deleted",
+      "description": "Identifies when an ElastiCache security group has been modified or deleted.",
+      "logic": "condition: selection\nselection:\n  eventName:\n  - DeleteCacheSecurityGroup\n  - AuthorizeCacheSecurityGroupIngress\n  - RevokeCacheSecurityGroupIngress\n  - AuthorizeCacheSecurityGroupEgress\n  - RevokeCacheSecurityGroupEgress\n  eventSource: elasticache.amazonaws.com\n",
+      "log_source": "product: aws, service: cloudtrail",
+      "gt_technique_ids": [
+        "T1531"
+      ]
+    },
+    {
+      "row_ref": "rules/cloud/aws/cloudtrail/aws_rds_change_master_password.yml",
+      "name": "AWS RDS Master Password Change",
+      "description": "Detects the change of database master password. It may be a part of data exfiltration.",
+      "logic": "condition: selection_source\nselection_source:\n  eventName: ModifyDBInstance\n  eventSource: rds.amazonaws.com\n  responseElements.pendingModifiedValues.masterUserPassword|contains: '*'\n",
+      "log_source": "product: aws, service: cloudtrail",
+      "gt_technique_ids": [
+        "T1020"
+      ]
+    },
+    {
+      "row_ref": "rules/linux/builtin/lnx_susp_jexboss.yml",
+      "name": "JexBoss Command Sequence",
+      "description": "Detects suspicious command sequence that JexBoss",
+      "logic": "condition: keywords\nkeywords:\n  '|all':\n  - bash -c /bin/bash\n  - '&/dev/tcp/'\n",
+      "log_source": "product: linux",
+      "gt_technique_ids": [
+        "T1059.004"
+      ]
+    },
+    {
+      "row_ref": "rules/linux/process_creation/proc_creation_lnx_cap_setuid.yml",
+      "name": "Linux Setuid Capability Set on a Binary via Setcap Utility",
+      "description": "Detects the use of the 'setcap' utility to set the 'setuid' capability (cap_setuid) on a binary file.\nThis capability allows a non privileged process to make arbitrary manipulations of user IDs (UIDs), including setting its current UID to a value that would otherwise be restricted (i.e. UID 0, the root user).\nThis behavior can be used by adversaries to backdoor a binary in order to escalate privileges again in the future if needed.\n",
+      "logic": "condition: selection\nselection:\n  CommandLine|contains: cap_setuid\n  Image|endswith: /setcap\n",
+      "log_source": "product: linux, category: process_creation",
+      "gt_technique_ids": [
+        "T1548",
+        "T1554"
+      ]
+    },
+    {
+      "row_ref": "rules/linux/process_creation/proc_creation_lnx_install_root_certificate.yml",
+      "name": "Install Root Certificate",
+      "description": "Detects installation of new certificate on the system which attackers may use to avoid warnings when connecting to controlled web servers or C2s",
+      "logic": "condition: selection\nselection:\n  Image|endswith:\n  - /update-ca-certificates\n  - /update-ca-trust\n",
+      "log_source": "product: linux, category: process_creation",
+      "gt_technique_ids": [
+        "T1553.004"
+      ]
+    },
+    {
+      "row_ref": "rules/linux/process_creation/proc_creation_lnx_susp_find_execution.yml",
+      "name": "Potential Discovery Activity Using Find - Linux",
+      "description": "Detects usage of \"find\" binary in a suspicious manner to perform discovery",
+      "logic": "condition: selection\nselection:\n  CommandLine|contains:\n  - -perm -4000\n  - -perm -2000\n  - -perm 0777\n  - -perm -222\n  - -perm -o w\n  - -perm -o x\n  - -perm -u=s\n  - -perm -g=s\n  Image|endswith: /find\n",
+      "log_source": "category: process_creation, product: linux",
+      "gt_technique_ids": [
+        "T1083"
+      ]
+    },
+    {
+      "row_ref": "rules/network/fortinet/fortigate/fortinet_fortigate_vpn_ssl_settings_modified.yml",
+      "name": "FortiGate - VPN SSL Settings Modified",
+      "description": "Detects the modification of VPN SSL Settings (for example, the modification of authentication rules).\nThis behavior was observed in pair with the addition of a VPN SSL Web Portal.\n",
+      "logic": "condition: selection\nselection:\n  action: Edit\n  cfgpath: vpn.ssl.settings\n",
+      "log_source": "product: fortigate, service: event",
+      "gt_technique_ids": [
+        "T1133"
+      ]
+    },
+    {
+      "row_ref": "rules/windows/builtin/system/service_control_manager/win_system_susp_service_installation_folder.yml",
+      "name": "Service Installation in Suspicious Folder",
+      "description": "Detects service installation in suspicious folder appdata",
+      "logic": "condition: selection and not 1 of filter_optional_*\nfilter_optional_zoom:\n  ImagePath|contains: :\\Program Files\\Common Files\\Zoom\\Support\\CptService.exe\n  ServiceName: Zoom Sharing Service\nselection:\n  EventID: 7045\n  ImagePath|contains:\n  - \\AppData\\\n  - \\\\\\\\127.0.0.1\n  - \\\\\\\\localhost\n  Provider_Name: Service Control Manager\n",
+      "log_source": "product: windows, service: system",
+      "gt_technique_ids": [
+        "T1543.003"
+      ]
+    },
+    {
+      "row_ref": "rules/windows/builtin/win_alert_mimikatz_keywords.yml",
+      "name": "Mimikatz Use",
+      "description": "This method detects mimikatz keywords in different Eventlogs (some of them only appear in older Mimikatz version that are however still used by different threat groups)",
+      "logic": "condition: keywords and not filter\nfilter:\n  EventID: 15\nkeywords:\n- dpapi::masterkey\n- eo.oe.kiwi\n- event::clear\n- event::drop\n- gentilkiwi.com\n- kerberos::golden\n- kerberos::ptc\n- kerberos::ptt\n- kerberos::tgt\n- Kiwi Legit Printer\n- 'lsadump::'\n- mimidrv.sys\n- \\mimilib.dll\n- misc::printnightmare\n- misc::shadowcopies\n- misc::skeleton\n- privilege::backup\n- privilege::debug\n- privilege::driver\n- 'sekurlsa::'\n",
+      "log_source": "product: windows",
+      "gt_technique_ids": [
+        "T1003.002",
+        "T1003.004",
+        "T1003.001",
+        "T1003.006"
+      ]
+    },
+    {
+      "row_ref": "rules/windows/builtin/windefend/win_defender_suspicious_features_tampering.yml",
+      "name": "Windows Defender Configuration Changes",
+      "description": "Detects suspicious changes to the Windows Defender configuration",
+      "logic": "condition: selection\nselection:\n  EventID: 5007\n  NewValue|contains:\n  - '\\Windows Defender\\DisableAntiSpyware '\n  - '\\Windows Defender\\Scan\\DisableRemovableDriveScanning '\n  - '\\Windows Defender\\Scan\\DisableScanningMappedNetworkDrivesForFullScan '\n  - '\\Windows Defender\\SpyNet\\DisableBlockAtFirstSeen '\n  - '\\Real-Time Protection\\SpyNetReporting '\n",
+      "log_source": "product: windows, service: windefend",
+      "gt_technique_ids": [
+        "T1685"
+      ]
+    },
+    {
+      "row_ref": "rules/windows/dns_query/dns_query_win_remote_access_software_domains_non_browsers.yml",
+      "name": "DNS Query To Remote Access Software Domain From Non-Browser App",
+      "description": "An adversary may use legitimate desktop support and remote access software, such as Team Viewer, Go2Assist, LogMein, AmmyyAdmin, etc, to establish an interactive command and control channel to target systems within networks.\nThese services are commonly used as legitimate technical support software, and may be allowed by application control within a target environment.\nRemote access tools like VNC, Ammyy, and Teamviewer are used frequently when compared with other legitimate software commonly used by adversaries. (Citation: Symantec Living off the Land)\n",
+      "logic": "condition: 1 of selection_* and not 1 of filter_optional_*\nfilter_optional_avant:\n  Image|endswith: \\avant.exe\n  Image|startswith:\n  - C:\\Program Files (x86)\\Avant Browser\\\n  - C:\\Program Files\\Avant Browser\\\nfilter_optional_brave:\n  Image|endswith: \\brave.exe\n  Image|startswith: C:\\Program Files\\BraveSoftware\\\nfilter_optional_chrome:\n  Image:\n  - C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\n  - C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe\nfilter_optional_defender:\n  Image|endswith:\n  - \\MsMpEng.exe\n  - \\MsSense.exe\nfilter_optional_edge_1:\n- Image|startswith: C:\\Program Files (x86)\\Microsoft\\EdgeWebView\\Application\\\n- Image|endswith: \\WindowsApps\\MicrosoftEdge.exe\n- Image:\n  - C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\n  - C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe\nfilter_optional_edge_2:\n  Image|endswith:\n  - \\msedge.exe\n  - \\msedgewebview2.exe\n  Image|startswith:\n  - C:\\Program Files (x86)\\Microsoft\\EdgeCore\\\n  - C:\\Program Files\\Microsoft\\EdgeCore\\\nfilter_optional_falkon:\n  Image|endswith: \\falkon.exe\n  Image|startswith:\n  - C:\\Program Files\\Falkon\\\n  - C:\\Program Files (x86)\\Falkon\\\nfilter_optional_firefox:\n  Image:\n  - C:\\Program Files\\Mozilla Firefox\\firefox.exe\n  - C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe\nfilter_optional_flock:\n  Image|contains: \\AppData\\Local\\Flock\\\n  Image|endswith: \\Flock.exe\nfilter_optional_ie:\n  Image:\n  - C:\\Program Files (x86)\\Internet Explorer\\iexplore.exe\n  - C:\\Program Files\\Internet Explorer\\iexplore.exe\nfilter_optional_maxthon:\n  Image|contains: \\AppData\\Local\\Maxthon\\\n  Image|endswith: \\maxthon.exe\nfilter_optional_midori:\n  Image|contains: \\AppData\\Local\\Programs\\midori-ng\\\n  Image|endswith: \\Midori Next Generation.exe\nfilter_optional_opera:\n  Image|contains: \\AppData\\Local\\Programs\\Opera\\\n  Image|endswith: \\opera.exe\nfilter_optional_phoebe:\n  Image|contains: \\AppData\\Local\\Phoebe\\\n  Image|endswith: \\Phoebe.exe\nfilter_optional_safari:\n  Image|endswith: \\safari.exe\nfilter_optional_seamonkey:\n  Image|endswith: \\seamonkey.exe\n  Image|startswith:\n  - C:\\Program Files\\SeaMonkey\\\n  - C:\\Program Files (x86)\\SeaMonkey\\\nfilter_optional_slimbrowser:\n  Image|endswith: \\slimbrowser.exe\n  Image|startswith:\n  - C:\\Program Files\\SlimBrowser\\\n  - C:\\Program Files (x86)\\SlimBrowser\\\nfilter_optional_tor:\n  Image|contains: \\Tor Browser\\\nfilter_optional_vivaldi:\n  Image|contains: \\AppData\\Local\\Vivaldi\\\n  Image|endswith: \\vivaldi.exe\nfilter_optional_whale:\n  Image|endswith: \\whale.exe\n  Image|startswith:\n  - C:\\Program Files\\Naver\\Naver Whale\\\n  - C:\\Program Files (x86)\\Naver\\Naver Whale\\\nfilter_optional_whaterfox:\n  Image|endswith: \\Waterfox.exe\n  Image|startswith:\n  - C:\\Program Files\\Waterfox\\\n  - C:\\Program Files (x86)\\Waterfox\\\nselection_generic:\n  QueryName|endswith:\n  - agent.jumpcloud.com\n  - agentreporting.atera.com\n  - ammyy.com\n  - api.parsec.app\n  - api.playanext.com\n  - api.splashtop.com\n  - app.atera.com\n  - assist.zoho.com\n  - authentication.logmeininc.com\n  - beyondtrustcloud.com\n  - cdn.kaseya.net\n  - client.teamviewer.com\n  - comserver.corporate.beanywhere.com\n  - control.connectwise.com\n  - downloads.zohocdn.com\n  - dwservice.net\n  - express.gotoassist.com\n  - getgo.com\n  - getscreen.me\n  - integratedchat.teamviewer.com\n  - join.zoho.com\n  - kickstart.jumpcloud.com\n  - license.bomgar.com\n  - logmein-gateway.com\n  - logmein.com\n  - logmeincdn.http.internapcdn.net\n  - n-able.com\n  - net.anydesk.com\n  - netsupportsoftware.com\n  - parsecusercontent.com\n  - pubsub.atera.com\n  - relay.kaseya.net\n  - relay.screenconnect.com\n  - relay.splashtop.com\n  - remoteassistance.support.services.microsoft.com\n  - remotedesktop-pa.googleapis.com\n  - remoteutilities.com\n  - secure.logmeinrescue.com\n  - services.vnc.com\n  - static.remotepc.com\n  - swi-rc.com\n  - swi-tc.com\n  - tailscale.com\n  - telemetry.servers.qetqo.com\n  - tmate.io\n  - twingate.com\n  - zohoassist.com\nselection_rustdesk:\n  QueryName|endswith: .rustdesk.com\n  QueryName|startswith: rs-\n",
+      "log_source": "product: windows, category: dns_query",
+      "gt_technique_ids": [
+        "T1219.002"
+      ]
+    },
+    {
+      "row_ref": "rules/windows/file/file_event/file_event_win_cscript_wscript_dropper.yml",
+      "name": "WScript or CScript Dropper - File",
+      "description": "Detects a file ending in jse, vbe, js, vba, vbs, wsf, wsh written by cscript.exe or wscript.exe",
+      "logic": "condition: selection\nselection:\n  Image|endswith:\n  - \\wscript.exe\n  - \\cscript.exe\n  TargetFilename|contains:\n  - :\\Perflogs\\\n  - :\\ProgramData\\\n  - :\\Temp\\\n  - :\\Tmp\\\n  - :\\Users\\\n  - :\\Windows\\Temp\\\n  - \\AppData\\Local\\Temp\n  - \\AppData\\Roaming\\Temp\n  - \\Start Menu\\Programs\\Startup\\\n  - \\Temporary Internet\n  TargetFilename|endswith:\n  - .js\n  - .jse\n  - .vba\n  - .vbe\n  - .vbs\n  - .wsf\n  - .wsh\n",
+      "log_source": "category: file_event, product: windows",
+      "gt_technique_ids": [
+        "T1059.005",
+        "T1059.007"
+      ]
+    },
+    {
+      "row_ref": "rules/windows/image_load/image_load_dll_comsvcs_load_renamed_version_by_rundll32.yml",
+      "name": "Suspicious Renamed Comsvcs DLL Loaded By Rundll32",
+      "description": "Detects rundll32 loading a renamed comsvcs.dll to dump process memory",
+      "logic": "condition: selection and not filter\nfilter:\n  ImageLoaded|endswith: \\comsvcs.dll\nselection:\n  Hashes|contains:\n  - IMPHASH=eed93054cb555f3de70eaa9787f32ebb\n  - IMPHASH=5e0dbdec1fce52daae251a110b4f309d\n  - IMPHASH=eadbccbb324829acb5f2bbe87e5549a8\n  - IMPHASH=407ca0f7b523319d758a40d7c0193699\n  - IMPHASH=281d618f4e6271e527e6386ea6f748de\n  Image|endswith: \\rundll32.exe\n",
+      "log_source": "product: windows, category: image_load",
+      "gt_technique_ids": [
+        "T1003.001"
+      ]
+    },
+    {
+      "row_ref": "rules/windows/process_creation/proc_creation_win_hktl_empire_powershell_launch.yml",
+      "name": "HackTool - Empire PowerShell Launch Parameters",
+      "description": "Detects suspicious powershell command line parameters used in Empire",
+      "logic": "condition: selection\nselection:\n  CommandLine|contains:\n  - ' -NoP -sta -NonI -W Hidden -Enc '\n  - ' -noP -sta -w 1 -enc '\n  - ' -NoP -NonI -W Hidden -enc '\n  - ' -noP -sta -w 1 -enc'\n  - ' -enc  SQB'\n  - ' -nop -exec bypass -EncodedCommand '\n",
+      "log_source": "category: process_creation, product: windows",
+      "gt_technique_ids": [
+        "T1059.001"
+      ]
+    },
+    {
+      "row_ref": "rules/windows/process_creation/proc_creation_win_hktl_impacket_lateral_movement.yml",
+      "name": "HackTool - Potential Impacket Lateral Movement Activity",
+      "description": "Detects wmiexec/dcomexec/atexec/smbexec from Impacket framework",
+      "logic": "condition: 1 of selection_*\nselection_atexec:\n  CommandLine|contains|all:\n  - cmd.exe\n  - /C\n  - Windows\\Temp\\\n  - '&1'\n  ParentCommandLine|contains:\n  - svchost.exe -k netsvcs\n  - taskeng.exe\nselection_other:\n  CommandLine|contains|all:\n  - cmd.exe\n  - /Q\n  - /c\n  - \\\\\\\\127.0.0.1\\\\\n  - '&1'\n  ParentImage|endswith:\n  - \\wmiprvse.exe\n  - \\mmc.exe\n  - \\explorer.exe\n  - \\services.exe\n",
+      "log_source": "category: process_creation, product: windows",
+      "gt_technique_ids": [
+        "T1047",
+        "T1021.003"
+      ]
+    },
+    {
+      "row_ref": "rules/windows/process_creation/proc_creation_win_pua_csexec.yml",
+      "name": "PUA - CsExec Execution",
+      "description": "Detects the use of the lesser known remote execution tool named CsExec a PsExec alternative",
+      "logic": "condition: 1 of selection*\nselection:\n  Image|endswith: \\csexec.exe\nselection_pe:\n  Description: csexec\n",
+      "log_source": "category: process_creation, product: windows",
+      "gt_technique_ids": [
+        "T1587.001",
+        "T1569.002"
+      ]
+    },
+    {
+      "row_ref": "rules/windows/process_creation/proc_creation_win_rundll32_registered_com_objects.yml",
+      "name": "Rundll32 Registered COM Objects",
+      "description": "load malicious registered COM objects",
+      "logic": "condition: all of selection_*\nselection_cli:\n  CommandLine|contains:\n  - '-sta '\n  - '-localserver '\n  CommandLine|contains|all:\n  - '{'\n  - '}'\nselection_img:\n- Image|endswith: \\rundll32.exe\n- OriginalFileName: RUNDLL32.EXE\n",
+      "log_source": "category: process_creation, product: windows",
+      "gt_technique_ids": [
+        "T1546.015"
+      ]
+    },
+    {
+      "row_ref": "rules/windows/process_creation/proc_creation_win_rundll32_run_locations.yml",
+      "name": "Suspicious Process Start Locations",
+      "description": "Detects suspicious process run from unusual locations",
+      "logic": "condition: selection\nselection:\n- Image|contains:\n  - :\\RECYCLER\\\n  - :\\SystemVolumeInformation\\\n- Image|startswith:\n  - C:\\Windows\\Tasks\\\n  - C:\\Windows\\debug\\\n  - C:\\Windows\\fonts\\\n  - C:\\Windows\\help\\\n  - C:\\Windows\\drivers\\\n  - C:\\Windows\\addins\\\n  - C:\\Windows\\cursors\\\n  - C:\\Windows\\system32\\tasks\\\n",
+      "log_source": "category: process_creation, product: windows",
+      "gt_technique_ids": [
+        "T1036"
+      ]
+    },
+    {
+      "row_ref": "rules/windows/process_creation/proc_creation_win_sysinternals_adexplorer_susp_execution.yml",
+      "name": "Suspicious Active Directory Database Snapshot Via ADExplorer",
+      "description": "Detects the execution of Sysinternals ADExplorer with the \"-snapshot\" flag in order to save a local copy of the active directory database to a suspicious directory. This can be used by attackers to extract data for Bloodhound, usernames for password spraying or use the meta data for social engineering. The snapshot doesn't contain password hashes but there have been cases, where administrators put passwords in the comment field.",
+      "logic": "condition: all of selection_*\nselection_flag:\n  CommandLine|contains: snapshot\nselection_img:\n- Image|endswith:\n  - \\ADExp.exe\n  - \\ADExplorer.exe\n  - \\ADExplorer64.exe\n  - \\ADExplorer64a.exe\n- OriginalFileName: AdExp\n- Description: Active Directory Editor\n- Product: Sysinternals ADExplorer\nselection_paths:\n  CommandLine|contains:\n  - \\Downloads\\\n  - \\Users\\Public\\\n  - \\AppData\\\n  - \\Windows\\Temp\\\n",
+      "log_source": "category: process_creation, product: windows",
+      "gt_technique_ids": [
+        "T1087.002",
+        "T1069.002",
+        "T1482"
+      ]
+    },
+    {
+      "row_ref": "rules/windows/process_creation/proc_creation_win_sysinternals_psexec_execution.yml",
+      "name": "Psexec Execution",
+      "description": "Detects user accept agreement execution in psexec commandline",
+      "logic": "condition: selection\nselection:\n- Image|endswith: \\psexec.exe\n- OriginalFileName: psexec.c\n",
+      "log_source": "category: process_creation, product: windows",
+      "gt_technique_ids": [
+        "T1569",
+        "T1021"
+      ]
+    },
+    {
+      "row_ref": "rules/windows/process_creation/proc_creation_win_ultravnc.yml",
+      "name": "Use of UltraVNC Remote Access Software",
+      "description": "An adversary may use legitimate desktop support and remote access software,to establish an interactive command and control channel to target systems within networks",
+      "logic": "condition: selection\nselection:\n- Description: VNCViewer\n- Product: UltraVNC VNCViewer\n- Company: UltraVNC\n- OriginalFileName: VNCViewer.exe\n",
+      "log_source": "category: process_creation, product: windows",
+      "gt_technique_ids": [
+        "T1219.002"
+      ]
+    },
+    {
+      "row_ref": "rules/windows/registry/registry_set/registry_set_asep_reg_keys_modification_currentcontrolset.yml",
+      "name": "CurrentControlSet Autorun Keys Modification",
+      "description": "Detects modification of autostart extensibility point (ASEP) in registry.",
+      "logic": "condition: all of system_control_* and not 1 of filter_*\nfilter_cutepdf:\n  Details:\n  - cpwmon64_v40.dll\n  - CutePDF Writer\n  Image: C:\\Windows\\System32\\spoolsv.exe\n  TargetObject|contains: \\Print\\Monitors\\CutePDF Writer Monitor\nfilter_empty:\n  Details: (Empty)\nfilter_onenote:\n  Image: C:\\Windows\\System32\\spoolsv.exe\n  TargetObject|contains: Print\\Monitors\\Appmon\\Ports\\Microsoft.Office.OneNote_\n  User|contains:\n  - AUTHORI\n  - AUTORI\nfilter_poqexec:\n  Image: C:\\Windows\\System32\\poqexec.exe\n  TargetObject|endswith: \\NetworkProvider\\Order\\ProviderOrder\nfilter_realvnc:\n  Details: VNCpm.dll\n  Image: C:\\Windows\\System32\\spoolsv.exe\n  TargetObject|endswith: \\Print\\Monitors\\MONVNC\\Driver\nsystem_control_base:\n  TargetObject|contains: \\SYSTEM\\CurrentControlSet\\Control\nsystem_control_keys:\n  TargetObject|contains:\n  - \\Terminal Server\\WinStations\\RDP-Tcp\\InitialProgram\n  - \\Terminal Server\\Wds\\rdpwd\\StartupPrograms\n  - \\SecurityProviders\\SecurityProviders\n  - \\SafeBoot\\AlternateShell\n  - \\Print\\Providers\n  - \\Print\\Monitors\n  - \\NetworkProvider\\Order\n  - \\Lsa\\Notification Packages\n  - \\Lsa\\Authentication Packages\n  - \\BootVerificationProgram\\ImagePath\n",
+      "log_source": "category: registry_set, product: windows",
+      "gt_technique_ids": [
+        "T1547.001"
+      ]
+    },
+    {
+      "row_ref": "rules/windows/registry/registry_set/registry_set_treatas_persistence.yml",
+      "name": "COM Hijacking via TreatAs",
+      "description": "Detect modification of TreatAs key to enable \"rundll32.exe -sta\" command",
+      "logic": "condition: selection and not 1 of filter_*\nfilter_misexec:\n  Image:\n  - C:\\Windows\\system32\\msiexec.exe\n  - C:\\Windows\\SysWOW64\\msiexec.exe\nfilter_office:\n  Image|endswith: \\OfficeClickToRun.exe\n  Image|startswith: C:\\Program Files\\Common Files\\Microsoft Shared\\ClickToRun\\\nfilter_office2:\n  Image:\n  - C:\\Program Files\\Microsoft Office\\root\\integration\\integrator.exe\n  - C:\\Program Files (x86)\\Microsoft Office\\root\\integration\\integrator.exe\nfilter_svchost:\n  Image: C:\\Windows\\system32\\svchost.exe\nselection:\n  TargetObject|endswith: TreatAs\\(Default)\n",
+      "log_source": "category: registry_set, product: windows",
+      "gt_technique_ids": [
+        "T1546.015"
+      ]
+    }
+  ]
+}
