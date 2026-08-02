@@ -186,6 +186,85 @@ def compute_quality(results, use_cases, *,
     return inconclusive
 
 
+def telemetry_shelfware_check(results, use_cases, log_sources, tooling, *,
+                               covered_confidence: float = None,
+                               partial_confidence: float = None,
+                               index=None) -> list:
+    """Plan phase A3 — deterministic shelfware detector.
+
+    For every covered/partial technique whose qualifying rules ALL declare
+    a log source that maps (via ranking.py's category bridge, reused here
+    with no duplication) to a telemetry category absent from the
+    customer's OWN Log Sources/Tooling sheets, return one flagged entry.
+    A rule with no category-recognizable log_source/logic says nothing
+    either way and is ignored; a technique is only flagged when every one
+    of its qualifying rules' categories miss the customer's declared
+    inventory (one matching rule is enough to clear it).
+
+    Caller decides whether to surface this at all (an environment workbook
+    with a Log Sources sheet must have been provided — this function is
+    workbook-shape-agnostic; empty log_sources/tooling just means nothing
+    is "provided" for the purposes of the cross-check, never an error).
+
+    Returns [{"technique_id", "rules": [{"name", "log_source"}],
+    "missing_categories": [str]}], one entry per affected technique.
+    Never mutates `results` or changes state/coverage/ranking.
+    """
+    covered_confidence = (
+        COVERED_CONFIDENCE if covered_confidence is None else covered_confidence
+    )
+    partial_confidence = (
+        PARTIAL_CONFIDENCE if partial_confidence is None else partial_confidence
+    )
+    index = index if index is not None else DEFAULT
+
+    provided = set(
+        _categories_provided(list(log_sources or []) + list(tooling or []), _LOG_SOURCE_RULES)
+    )
+
+    # canonical technique id -> [use_case, ...] with a qualifying mapping
+    # (same floor compute_quality uses: >= partial_confidence).
+    hits = {}
+    for uc in use_cases or []:
+        for mapping in uc.get("mappings") or []:
+            canonical, status = index.resolve(
+                str(mapping.get("technique_id", "")).strip().upper()
+            )
+            if status in ("malformed", "unknown", "deprecated"):
+                continue
+            confidence = mapping.get("confidence")
+            if confidence is None:
+                confidence = 1.0 if mapping.get("source") == "customer" else 0.0
+            if float(confidence) < partial_confidence:
+                continue
+            hits.setdefault(canonical, []).append(uc)
+
+    flagged = []
+    for entry in results or []:
+        if entry.get("state") not in ("covered", "partial"):
+            continue
+        tech_hits = hits.get(entry["technique_id"])
+        if not tech_hits:
+            continue
+        rule_info = []
+        for uc in tech_hits:
+            categories = _rule_categories(uc)
+            if not categories:
+                continue  # nothing category-recognizable -- not this rule's call
+            rule_info.append((uc.get("name") or uc.get("row_ref") or "rule",
+                               uc.get("log_source"), categories))
+        if not rule_info:
+            continue
+        if all(not (cats & provided) for _, _, cats in rule_info):
+            missing = sorted({c for _, _, cats in rule_info for c in cats})
+            flagged.append({
+                "technique_id": entry["technique_id"],
+                "rules": [{"name": name, "log_source": src} for name, src, _ in rule_info],
+                "missing_categories": missing,
+            })
+    return flagged
+
+
 def apply_ai_ratings(results, ratings: dict) -> int:
     """Merge validated AI strength ratings (technique_id -> {strength,
     rationale}) over the heuristic annotations. Returns how many were

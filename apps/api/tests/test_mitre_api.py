@@ -207,6 +207,45 @@ async def test_create_run_results_end_to_end(client, db_session):
 
 
 @pytest.mark.asyncio
+async def test_telemetry_shelfware_assumption_surfaces_end_to_end(client, db_session):
+    """Plan phase A3: a rule's declared log source ("Okta" -> identity
+    category) that doesn't match anything in the uploaded Log Sources sheet
+    (only "Sysmon" -> endpoint/registry/network) should surface the
+    shelfware assumption once the assessment completes."""
+    _, _, headers = await _make_user(db_session, email="shelfware@example.com")
+    dump = _xlsx([
+        ["Use Case Name", "MITRE Technique(s)", "Detection Logic", "Description", "Log Source", "Status"],
+        ["Okta Impossible Travel", "T1078", "geo-velocity anomaly", "", "Okta", "Enabled"],
+    ], sheet_name="Rules")
+    workbook = _xlsx(
+        [["Platform"], ["Windows"]],
+        sheet_name="Assets",
+        extra_sheets=[("Log Sources", [["Source"], ["Sysmon"]])],
+    )
+    response = await client.post(
+        "/api/v1/mitre/assessments",
+        headers=headers,
+        files={
+            "use_cases": ("rules.xlsx", dump, _XLSX_MIME),
+            "environment": ("environment.xlsx", workbook, _XLSX_MIME),
+        },
+        data={"name": "Shelfware check"},
+    )
+    assert response.status_code == 201, response.text
+    preview = response.json()
+
+    body = await _run_and_wait(client, headers, preview["assessment_id"])
+    assert body["status"] == "completed", body.get("error_message")
+    assert _tech(body, "T1078")["state"] == "covered"
+
+    assumptions = body["summary"]["assumptions"]
+    assert any(
+        "T1078" in a and "Okta" in a and "verify that telemetry is actually flowing" in a
+        for a in assumptions
+    ), assumptions
+
+
+@pytest.mark.asyncio
 async def test_org_isolation(client, db_session):
     _, _, headers_a = await _make_user(db_session, email="a@example.com")
     _, _, headers_b = await _make_user(db_session, email="b@example.com")

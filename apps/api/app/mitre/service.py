@@ -665,6 +665,34 @@ async def _run_pipeline_body(
                         "deterministic heuristic"
                     )
 
+            # Stage 5.7 — rule-vs-inventory telemetry cross-check (plan
+            # phase A3): a covered/partial technique whose supporting
+            # rule(s) declare a log source that maps to a telemetry
+            # category absent from the customer's OWN Log Sources/Tooling
+            # sheets is flagged as a possible shelfware rule. Only surfaced
+            # when a Log Sources sheet was actually uploaded — no sheet
+            # means nothing to cross-check against, so no claim.
+            env_lists_early = params.get("environment_lists") or {}
+            if "log_sources" in (env_lists_early.get("sheets_found") or {}):
+                shelfware = quality.telemetry_shelfware_check(
+                    coverage["techniques"],
+                    use_cases,
+                    env_lists_early.get("log_sources") or [],
+                    env_lists_early.get("tooling") or [],
+                    covered_confidence=settings["confidence_covered"],
+                    partial_confidence=settings["confidence_partial_floor"],
+                )
+                for item in shelfware:
+                    primary = item["rules"][0]
+                    source_text = primary["log_source"] or "unspecified"
+                    coverage["assumptions"].append(
+                        f"{item['technique_id']} is covered by rule "
+                        f"'{primary['name']}', but its log source "
+                        f"'{source_text}' doesn't match anything in your Log "
+                        "Sources sheet — verify that telemetry is actually "
+                        "flowing."
+                    )
+
             # Stage 6 — deterministic gap ranking + roadmap bucketing,
             # threat-weighted by the customer's industry/actor profile
             # (Phase 11 — pure lookup, ordering only).

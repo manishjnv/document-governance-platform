@@ -11,6 +11,7 @@ from app.mitre.quality import (
     compute_quality,
     quality_rollup,
     strength_bucket,
+    telemetry_shelfware_check,
 )
 
 from tests.test_mitre_agents import _agent
@@ -188,3 +189,84 @@ async def test_ai_failure_degrades_to_heuristic():
     before = results[0]["strength"]
     assert apply_ai_ratings(results, rated["ratings"]) == 0
     assert results[0]["strength"] == before
+
+
+# --- Phase A3: rule-vs-inventory telemetry cross-check (shelfware detector) ---
+# T1059.001 in the shared synthetic _index() expects endpoint telemetry
+# (data_sources=["Process Creation", "Command Execution"]).
+
+
+def test_shelfware_flagged_when_declared_source_absent_from_inventory():
+    results = [_result("T1059.001", "covered")]
+    use_cases = [_uc("r1", "T1059.001", log_source="Sysmon")]
+    flagged = telemetry_shelfware_check(
+        results, use_cases, log_sources=["Okta"], tooling=[], index=_index()
+    )
+    assert len(flagged) == 1
+    assert flagged[0]["technique_id"] == "T1059.001"
+    assert flagged[0]["rules"][0]["name"] == "rule-r1"
+    assert flagged[0]["missing_categories"] == ["endpoint", "network", "registry"]
+
+
+def test_not_flagged_when_log_source_sheet_confirms_category():
+    results = [_result("T1059.001", "covered")]
+    use_cases = [_uc("r1", "T1059.001", log_source="Sysmon")]
+    flagged = telemetry_shelfware_check(
+        results, use_cases, log_sources=["Sysmon"], tooling=[], index=_index()
+    )
+    assert flagged == []
+
+
+def test_tooling_sheet_also_counts_as_provided():
+    results = [_result("T1059.001", "covered")]
+    use_cases = [_uc("r1", "T1059.001", log_source="Sysmon")]
+    flagged = telemetry_shelfware_check(
+        results, use_cases, log_sources=[], tooling=["CrowdStrike Falcon"], index=_index()
+    )
+    assert flagged == []
+
+
+def test_no_workbook_at_all_still_flags_pure_function_level():
+    # The pure function itself doesn't know "no workbook" -- that's the
+    # caller's job (service.py only calls this when a Log Sources sheet was
+    # actually uploaded). With empty lists, nothing is "provided" so a
+    # category-recognizable rule is flagged.
+    results = [_result("T1059.001", "covered")]
+    use_cases = [_uc("r1", "T1059.001", log_source="Sysmon")]
+    flagged = telemetry_shelfware_check(
+        results, use_cases, log_sources=[], tooling=[], index=_index()
+    )
+    assert len(flagged) == 1
+
+
+def test_one_matching_rule_clears_the_flag():
+    results = [_result("T1059.001", "covered")]
+    use_cases = [
+        _uc("r1", "T1059.001", log_source="Sysmon"),
+        _uc("r2", "T1059.001", log_source="CrowdStrike Falcon"),
+    ]
+    flagged = telemetry_shelfware_check(
+        results, use_cases, log_sources=["CrowdStrike Falcon"], tooling=[], index=_index()
+    )
+    assert flagged == []
+
+
+def test_rule_with_no_categorizable_source_is_ignored_not_flagged():
+    results = [_result("T1059.001", "covered")]
+    use_cases = [_uc("r1", "T1059.001", log_source=None, logic=None)]
+    flagged = telemetry_shelfware_check(
+        results, use_cases, log_sources=["Okta"], tooling=[], index=_index()
+    )
+    assert flagged == []
+
+
+def test_only_covered_and_partial_states_are_considered():
+    results = [
+        _result("T1059.001", "not_covered"),
+        _result("T1046", "not_applicable"),
+    ]
+    use_cases = [_uc("r1", "T1059.001", log_source="Sysmon")]
+    flagged = telemetry_shelfware_check(
+        results, use_cases, log_sources=["Okta"], tooling=[], index=_index()
+    )
+    assert flagged == []
