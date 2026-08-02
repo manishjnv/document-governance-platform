@@ -394,7 +394,8 @@ stamping. Registered nowhere in `ReviewOrchestrator`.
 | --- | --- | --- |
 | `POST /assessments` | admin, reviewer | Multipart create + synchronous parse → 201 + parse preview. 413 >50MB; 422 bad type/columns/caps/intake/unreadable-pdf. |
 | `POST /assessments/{id}/run` | admin, reviewer | 202 fire-and-forget; 409 if running/completed (pending/failed may run). |
-| `GET /assessments` | any | List (desc): status, headline strict/weighted %, `domains_brief` per row (per-domain strict %/covered/applicable from stored summary — no N+1). |
+| `GET /assessments` | any | List (desc): status, headline strict/weighted %, `domains_brief` per row (per-domain strict %/covered/applicable from stored summary — no N+1). Phase 14f: `archived` + `project_name` per row; `?include_archived=true` includes soft-archived rows (default hides them). |
+| `PATCH /assessments/{id}` | admin, reviewer | Phase 14f housekeeping: `{"name"?, "archived"?}` — rename (1-255 chars) and/or soft-archive (params JSONB flag; archived rows leave the default list but stay selectable in Compare). Audited `mitre.assessment_updated`. Deliberately no delete here. |
 | `GET /assessments/{id}` | any | Status + params + summary + technique_results. Applies the 30-min stale-run guard. |
 | `GET /assessments/{id}/use-cases` | any | Paginated rows (skip/limit≤500), `mapping_status` filter. |
 | `GET /assessments/{id}/report?format=html\|pdf` | any (viewers may read — plan §15 Q1) | 409 unless completed. `{"format","data"}`; PDF as base64-in-JSON (matches reviews.py so the frontend blob pattern is shared). PDF unavailable locally → graceful 500 with message. |
@@ -405,7 +406,7 @@ stamping. Registered nowhere in `ReviewOrchestrator`.
 | `GET/POST/PATCH/DELETE /connections`, `POST /connections/{id}/test` | admin | Phase 13b/13d saved connections: secret AES-256-GCM at rest (write-only — no response ever carries it), config revalidated on change, schedule trio validated as a unit (13c), GET includes per-connection `health` (last pull/error + scheduled-failure streak). `/test` = dry-run rule count. Vault unconfigured → 503. |
 | `POST /assessments/from-connection/{id}` | admin, reviewer | Phase 13b: same pipeline as from-siem, secret decrypted in-process from the vault for the pull only; provenance gains connection_id/name. |
 | `PATCH /assessments/{id}/use-cases/{use_case_id}/mappings` | admin, reviewer | 409 unless `completed`. Phase 10 override: body `{"technique_ids": [...]}` = the FULL new list for that rule (empty = maps to nothing, max 20). Every ID validated via `resolve()` (revoked→successor with a note; deprecated/unknown/malformed → 422). Row becomes `mapping_status='manual'`, mappings `source='manual'` @ 1.0; coverage/gaps/roadmap recomputed inline (pure code, `service.recompute_results`, narrative kept + assumption note appended, counts gain a `manual` key). `SELECT … FOR UPDATE` on the assessment serializes concurrent edits; audits `mitre.mappings_edited`. |
-| `GET /assessments/{id}/techniques/{tid}/explain` | any | Phase 14a: plain-language four-block explanation (what / where / why / what-good-looks-like) for one technique. 409 unless completed; 404 if the technique isn't in the stored register. Fully deterministic — curated files + stored result data + `ranking.technique_feasibility` for non-gap techniques; no LLM. |
+| `GET /assessments/{id}/techniques/{tid}/explain` | any | Phase 14a: plain-language four-block explanation (what / where / why / what-good-looks-like) for one technique. 409 unless completed; 404 if the technique isn't in the stored register. Fully deterministic — curated files + stored result data + `ranking.technique_feasibility` for non-gap techniques; no LLM. Phase 14g adds `where.expected_telemetry` (ATT&CK data sources) and `where.in_scope_because` (environment entries whose parsed interpretation put the domain/platforms in play). |
 | `GET /assessments/{id}/compare/{other_id}` | any | `{id}` = current, `{other_id}` = baseline. Both org-owned (404) + completed (409). |
 | `GET /threat-catalog` | any | Phase 11: curated actor list (name + ATT&CK G-code + note) and profiled-industry labels from `threat_profiles.json` — feeds the wizard's actor chips. Static, org-agnostic. |
 | `GET /settings` / `PATCH /settings` | admin | The 5 tunables; PATCH validates types/ranges + `partial_floor < covered`; audited. Intake note: `threat_actors` (≤10) is validated against the catalog at create — unknown names 422. |
@@ -454,23 +455,32 @@ Audit events (`audit_logs`): `mitre.assessment_created` / `_completed` /
 
 ## 11. Reports
 
-- **PDF** (`report?format=pdf`) — one document, executive first: cover +
-  methodology footnote ("scores detection presence, not efficacy") →
-  executive summary (headline strict % with weighted noted, per-domain
-  bars, narrative exec summary, top-5 gaps, roadmap-at-a-glance, rule
-  counts) → per-tactic coverage tables per domain → full gap register →
-  roadmap detail with prose → assumptions → N/A appendix grouped
-  (matrix / platform / deprecated / customer-declared with verbatim
-  reasons) → use-case appendix (capped at 500 rows, cap stated; the XLSX
-  holds everything) → audit footer (attack_version, GIT_SHA, models_used,
-  thresholds, narrative provenance, timestamps). WeasyPrint is imported
-  lazily — native libs exist only in the prod image (Dockerfile.prod);
-  local dev returns the graceful message.
-- **XLSX** (`export.xlsx`) — sheets: Summary, Coverage by Tactic,
-  Technique Register (one row per technique + mapped rule names),
-  Use-Case Mappings (incl. the guarded Logic column), Gaps &
-  Recommendations, Roadmap, Not Applicable, Assumptions. Bold headers,
-  frozen top rows, sane widths — a working register, not a brochure.
+- **PDF** (`report?format=pdf`, rebuilt Phase 14e) — cover (project
+  metadata, upload summary, headline + plain subtitle, methodology, TOC
+  with real page numbers via `target-counter`) → executive section (≤2
+  pages by construction: traffic-light domain scorecard, top-5 fixes in
+  plain words with threat tie-ins + "details p. N" cross-refs,
+  roadmap-at-a-glance + effort-to-impact projection, trend vs the
+  previous completed run — fetched by the report endpoint) → detailed
+  section (stacked per-tactic bars with tactic one-liners, parent-level
+  heatmap grids, gap register grouped by feasibility where each entry
+  carries the 14a why-phrase + detection sketch + via-log-source + the
+  AI recommendation with its badge) → appendices (register with names,
+  N/A grouped, assumptions, 14g how-we-read-your-files, rule mappings in
+  numeric order with plain-words statuses, 500-row cap stated) → audit
+  footer (attack_version, GIT_SHA, models_used, thresholds, narrative +
+  SIEM provenance). Running header + page N of M. WeasyPrint imported
+  lazily — native libs exist only in the prod image.
+- **XLSX** (`export.xlsx`, polished Phase 14c) — sheets: **Read Me**
+  (guide, colored legend cells, key numbers, "is this % bad?" context),
+  Summary (+What-it-means column, metadata rows), Coverage by Tactic,
+  Technique Register (+Name, plain-words state, **Why** via
+  `plain_language.derive_why`, tactic names), Use-Case Mappings (numeric
+  row sort, plain-words statuses, guarded Logic column), Gaps &
+  Recommendations (feasibility-grouped, colored section headers),
+  Roadmap, Not Applicable, Assumptions, and (when present) the 14g
+  **How We Read Your Files** evidence sheet. Frozen headers,
+  auto-filter, wrapped text, state/tier/feasibility fills.
 
 ---
 
@@ -485,7 +495,17 @@ overflow on every page (real-browser checked).
 
 - **`/mitre`** — list: status badge, strict-% bar (weighted in tooltip),
   per-domain mini-bars (`domains_brief`), trend arrow vs the previous
-  completed run, empty-state explainer, New assessment CTA.
+  completed run, empty-state explainer, New assessment CTA. Phase 14f:
+  client-side search (name/project), status filter, show-archived
+  toggle, coverage sparkline over completed runs, 14d project name on
+  rows, inline rename + archive/unarchive actions (admin/reviewer).
+- **Phase 14b drill-down layer** — `DrillDownPanel` (technique list with
+  state colors, plain phrases, partial why-brief) + `RuleListPanel`
+  (rules with plain-words mapping status and, 14g, the per-mapping
+  journey: source/confidence/rationale verbatim) sit behind every
+  number: tiles, heatmap headers, N/A group counts, rules-by-status
+  chips, the 14d `UploadSummaryCard` counts, and the wizard's
+  parse-preview tiles. Rows click through to the technique drawer.
 - **`/mitre/new`** — single-page wizard: the plan-§2 privacy notice shown
   BEFORE any file; two drag-drop zones (client validation mirrors server
   rules); template download links; intake (industry/region selects,
@@ -628,7 +648,13 @@ you're alone on `edgp_test`.
 | 13a | `09b545e` | 08-02 | SIEM design (`598c2dc`) + Sentinel connector, token-at-trigger: `connectors/` package (resolve-then-pin egress guard, fixed Microsoft hosts), `POST /assessments/from-siem`, template-CSV reuse of the create path, wizard source toggle; REVISE→fixed→ACCEPT |
 | 13b | `a94aabb` | 08-02 | Credential vault: migration 034 `mitre_connections`, AES-256-GCM AAD-bound secrets (`SIEM_CRED_KEY`), admin CRUD secret-write-only + `/test` + `from-connection`; heaviest review, ACCEPT (7/7 verified + crypto probes) |
 | 13c+13d | `496b2bb` | 08-02 | Scheduler/worker (`scopewise-worker`, migration 035, 15-min sweep, self-healing dedup, per-call engines) + provenance surfacing (list chip/results line/report footer), connection health + streak, admin email at 2 consecutive scheduled failures; both REVISE→fixed→ACCEPT; prod deploy |
-| 14a | — | 08-02 | UX clarity (plan: `MITRE_UX_CLARITY_PLAN.md`): drawer four plain-language blocks driven by curated `technique_plain_language.json` (57 entries) + `tactic_lines.json` (21 shortnames), pure `plain_language.py` why-phrase derivation (golden-tested), `GET .../techniques/{tid}/explain`, `ranking.technique_feasibility` helper. No migration, no pipeline change, no runtime LLM. Suite 781→797/7. |
+| 14a | `98c82b0` | 08-02 | UX clarity (plan: `MITRE_UX_CLARITY_PLAN.md`): drawer four plain-language blocks driven by curated `technique_plain_language.json` (57 entries) + `tactic_lines.json` (21 shortnames), pure `plain_language.py` why-phrase derivation (golden-tested), `GET .../techniques/{tid}/explain`, `ranking.technique_feasibility` helper. No migration, no pipeline change, no runtime LLM. Suite 781→797/7. |
+| 14b | `eea44e3` | 08-02 | Every number clickable: `DrillDownPanel` (technique lists, grouped-by-state, partial why-brief inline) + `RuleListPanel` wired to coverage/domain/state tiles, heatmap domain+tactic headers, N/A group counts, rules-by-status chips, wizard parse-preview tiles; technique names enriched into GET at read time; headline subtitle + "is this % bad?" popover; header hover definitions; pluralization fixes. |
+| 14c | `4a2325f` | 08-02 | XLSX polish: Read Me guide sheet first, auto-filter/wrap/frozen everywhere, state/tier/feasibility fills, register Name + plain-words + Why columns (reuses `derive_why`) with tactic names, numeric row sort + plain-words statuses, feasibility-grouped gaps with colored headers, Summary What-it-means column ("Strict %"→"Coverage %"). Structure goldens. |
+| 14d | `36415d2` | 08-02 | Project metadata (project/scope/prepared-by/purpose in `params.intake`, capped, display-only, never sent to LLMs) + `files[]` in GET + XLSX metadata rows + wizard inputs + header line + `UploadSummaryCard` (clickable rule split/disabled counts, environment summary). Also lands the 14g parser: `parse_environment_file` emits additive per-entry `interpretations`. |
+| 14e | `c15ab34` | 08-02 | PDF redesign: cover (metadata, upload summary, TOC with `target-counter` page numbers) → executive ≤2 pages (traffic-light scorecard, top-5 fixes with curated definitions + threat tie-ins + cross-refs, effort-to-impact projection, trend vs previous completed run — the report endpoint now fetches it) → detailed (stacked tactic bars + tactic one-liners, parent-level heatmap grids, feasibility-grouped gap register with why/sketch/via/AI-badge per entry) → appendices (incl. how-we-read-your-files). Running header + page N of M. |
+| 14f | `c64b324` | 08-02 | Past-run history: header "Past runs" dropdown (delta vs current, jump, Compare shortcut), list search/status filter/sparkline/project names, inline rename + soft archive via `PATCH /assessments/{id}` (params JSONB flag — no migration, no deletes); archived hidden from default list (`include_archived` query), still selectable in Compare. |
+| 14g | `bee1f8f` | 08-02 | Evidence trail: explain gains `expected_telemetry` + `in_scope_because` (drawer renders both); rule panel shows the per-mapping journey (plain source, confidence, rationale verbatim); XLSX "How We Read Your Files" sheet; threat-profile-matches chip → drill panel. Suite at **800/7** after 14a–14g. |
 
 ## 16. Optional feature work (plan §14 — not launch blockers)
 

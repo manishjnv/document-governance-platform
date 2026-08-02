@@ -75,6 +75,17 @@ one sentence each:
   (you / keyword / AI), confidence, detection-strength score.
 - N/A → reason verbatim (already exists).
 
+**3b. Detection-strength rubric (make the score readable).** Clicking
+the strength badge ("Moderate · 70/100") opens a factor checklist
+rendered from the Phase 12 heuristic's existing per-factor output —
+e.g. "✓ tagged by you · ✓ enabled · ✓ detection logic present ·
+✗ expected telemetry confirmed" — plus a band legend (what
+Strong/Moderate/Weak mean in one sentence each) and a "to raise this
+score" line naming the missing factor concretely ("mention the log/data
+source the rule reads — ATT&CK expects historian/operational-database
+telemetry for this technique"). No scoring changes — presentation of
+the factors `quality.py` already computes.
+
 **4. What would good look like?**
 A sample detection sketch, deterministic-first (coding-over-AI):
 
@@ -264,6 +275,19 @@ unshown; one gap needs a small parse-output extension.
   `<rationale>`, NN% confidence — verify" / "could not be mapped".
 - Effect: which technique cells this rule turns green/amber, and its
   detection-strength score with the Phase 12 factor breakdown.
+
+**Cross-links in the technique drawer (both directions clickable):**
+
+- Mapped rule name → that rule's evidence journey (above).
+- "Why is this technique in scope for you" → the environment entries
+  that made its domain/platform applicable ("assessed because your
+  Assets sheet contains 'OT/SCADA PLC segment'"), linking into the
+  per-entry interpretations list.
+- Expected-vs-actual telemetry: ATT&CK's data sources for the
+  technique side by side with the customer's onboarded log sources
+  (matched ones ticked) — this also explains every "could not confirm
+  the expected telemetry" strength penalty and what wording would
+  satisfy it.
 
 **Per environment entry — how we read your inventory.** An
 "interpretations" list (new: the parser computes this per entry today

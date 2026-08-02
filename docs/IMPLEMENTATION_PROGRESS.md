@@ -770,6 +770,33 @@ tests (file validation vs the pinned dataset, why-phrase goldens incl.
 the sample-kit covered-vs-disabled acceptance, endpoint E2E); **full
 suite 797 passed / 7 skipped**; `tsc` clean.
 
+**MITRE Phase 14 COMPLETE — 14b–14g all shipped (2026-08-02, one
+session):** the remaining six sub-phases of
+`docs/planning/MITRE_UX_CLARITY_PLAN.md`, one commit each. **14b**
+(`eea44e3`) every number clickable — DrillDownPanel + RuleListPanel
+behind tiles/heatmap headers/N-A counts/rule chips/wizard preview tiles,
+names enriched into GET, headline subtitle + "is this % bad?" popover,
+pluralization + header-definition microcopy. **14c** (`4a2325f`) XLSX
+polish — Read Me guide sheet, color fills, register Name/plain-words/Why
+columns, numeric sort + plain statuses, feasibility-grouped gaps,
+Summary explanations. **14d** (`36415d2`) project metadata riding
+params.intake (no migration) + files[] in GET + wizard inputs + header
+line + UploadSummaryCard; also lands the 14g parser (additive per-entry
+environment `interpretations`). **14e** (`c15ab34`) PDF redesign — cover
+with metadata/upload summary/TOC (real page numbers), ≤2-page executive
+(traffic-light scorecard, top-5 fixes with curated definitions + threat
+tie-ins + cross-refs, effort-to-impact projection, trend vs previous
+run), detailed stacked bars/heatmap grids/feasibility-grouped gap
+register with why+sketch+via+AI badge per entry, evidence appendix.
+**14f** (`c64b324`) past-run history — header Past-runs dropdown with
+delta + Compare shortcut, list search/filter/sparkline, inline rename +
+soft archive (JSONB flag, PATCH endpoint, no deletes, archived stays in
+Compare). **14g** (`bee1f8f`) evidence trail — explain gains
+expected-telemetry + in-scope-because, rule panel shows the mapping
+journey verbatim, XLSX How-We-Read-Your-Files sheet, threat-profile
+matches chip. No migrations anywhere in Phase 14; **full suite 800
+passed / 7 skipped**; `tsc` clean; deployed to prod.
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)
