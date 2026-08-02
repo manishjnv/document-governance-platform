@@ -663,6 +663,39 @@ the 5th tunable. Full suite **713 passed / 7 skipped** (solo on shared
 `edgp_test`); `tsc` clean; Sonnet light review **ACCEPT** (one cosmetic
 duplicate-actor note, fixed same session).
 
+**Phase 12 COMPLETE — per-rule detection-strength scoring (2026-08-02,
+commit `436612a`, DEPLOYED to prod):** fifth optional feature (plan §14),
+coding-first per the coding-over-AI rule. New pure
+`app/mitre/quality.py`: a deterministic 0-100 "detection strength" per
+covered/partial technique that has direct qualifying rules — provenance
+base (customer/manual 30, keyword 25, high-conf AI 20, low-conf AI 10) +
+enabled bonus (30 / 15 unknown / 0 disabled, so a disabled rule can
+never read "strong") + detection-logic-present (10) + telemetry match
+(30: the rule's log_source/logic, capped at 2000 chars, run through
+ranking.py's existing data-component category bridge against the
+technique's ATT&CK data sources) + redundancy (5 per extra rule, cap
+10). Buckets strong ≥75 / moderate ≥45 / weak; rationale built from
+fixed fragments only (no raw rule text). Stored as
+`strength`/`strength_rationale` on technique_results + a
+`summary.quality` rollup {scored, avg_strength, strong, moderate, weak}.
+**Deliberately separate from coverage %** — coverage/applicability/
+ranking untouched (review-verified); the methodology footnote's
+"presence, not efficacy" caveat now has its efficacy counterpart.
+**AI strictly optional:** new `MitreQualityAgent` (own prompt, rubric
+bands matching the heuristic buckets) re-rates only
+heuristic-inconclusive items (logic present, expected telemetry known,
+no match), gated behind new org setting `quality_ai_enabled` — **OFF by
+default** — capped 40 items/25-per-batch/500-char excerpts, outputs
+clamped 0-100 with unknown IDs dropped, any failure keeps the heuristic;
+merged scores visibly prefixed "AI-assessed:". The Phase 10 manual-edit
+recompute re-annotates heuristic-only. UI: strength chip + rationale in
+the technique drawer, a "Strength" column on gap rows; tooltips state
+it is distinct from the coverage %. No migration. 10 new tests
+(`test_mitre_quality.py`) + the settings round-trip gained the 6th key.
+Full suite **723 passed / 7 skipped**; `tsc` clean; Sonnet review
+**ACCEPT** (7/7 checks, zero findings). Prompt documented in
+`PROMPT_ENGINEERING_GUIDE.md`.
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)

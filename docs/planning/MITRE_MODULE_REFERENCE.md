@@ -1,9 +1,9 @@
 # MITRE ATT&CK Coverage Assessment — Module Reference
 
-**Status:** COMPLETE (Phases 0–7 + optional Phases 8–11), launch-ready,
+**Status:** COMPLETE (Phases 0–7 + optional Phases 8–12), launch-ready,
 live in production at `https://scopewise.assessiq.in/mitre`. No known
-quality gaps — remaining plan-§14 optional features (Phases 12–13 in the
-kickoff prompt) are built only on request.
+quality gaps — the remaining plan-§14 optional feature (Phase 13, SIEM
+pull, design-first) is built only on request.
 **Written:** 2026-08-02, after Phase 7. This is the end-to-end reference
 for what the module is and how every piece works; the original design
 rationale lives in `docs/planning/MITRE_ASSESSMENT_PLAN.md` (read that for
@@ -12,12 +12,12 @@ rationale lives in `docs/planning/MITRE_ASSESSMENT_PLAN.md` (read that for
 **Baselines:** backend **687 passed / 7 skipped**, certified at the
 Phase 7 gate (`b183f75`; the 7th skip = the PDF-render test on dev boxes
 without WeasyPrint's native libs — prod image has them, prod render smoke
-PASSED 2026-08-02); `npx tsc --noEmit` clean (re-verified 2026-08-02). Backend count after optional Phases 8–11:
-**713 passed / 7 skipped** (certified solo on shared `edgp_test` — see
+PASSED 2026-08-02); `npx tsc --noEmit` clean (re-verified 2026-08-02). Backend count after optional Phases 8–12:
+**723 passed / 7 skipped** (certified solo on shared `edgp_test` — see
 the `edgp-test-single-runner-rule` memory for why runs from two sessions
-at once deadlock). Prod state: **deployed through Phase 11** —
-`/opt/scopewise` at `62f1df2`; migrations 029–033 all applied to
-`scopewise_prod` (Phase 11 adds none).
+at once deadlock). Prod state: **deployed through Phase 12** —
+`/opt/scopewise` at `436612a`; migrations 029–033 all applied to
+`scopewise_prod` (Phases 11–12 add none).
 
 ---
 
@@ -66,6 +66,7 @@ in-app results with a Navigator-style heatmap, executive+detailed PDF, an
 | `coverage.py` | Pure: use cases + applicability → per-technique states + all rollups. Thresholds are module constants overridable per call (org tunables). See §6. |
 | `keyword_tag.py` | Pure, Phase 6: deterministic keyword/alias tagging pre-pass that runs BEFORE the LLM. See §7. |
 | `ranking.py` | Pure: coverage results + customer log-sources/tooling → priority-ranked gap list + short/mid/long roadmap buckets. See §6. |
+| `quality.py` | Pure, Phase 12: deterministic 0-100 "detection strength" per covered/partial technique (provenance + enabled + logic-present + telemetry-match signals) + rationale + rollup. An EFFICACY signal, deliberately separate from coverage %. See §6. |
 | `agents.py` | `MitreTaggingAgent` (tagging + extraction prompt modes) and `MitreNarrativeAgent` — `ReviewAgent` subclasses (ConflictDetector pattern: inherit the OpenRouter client + GLM-5.2→DeepSeek→MiniMax→Qwen chain + unparseable-JSON-advances-chain). Batch drivers with 60s/120s retry and degrade discipline. See §8. |
 | `ingest.py` | Structured file readers: xlsx (openpyxl direct cell access — deliberately NOT `parse_document()`, whose ExcelParser flattens columns), xls (xlrd), csv (stdlib). Header/sheet/platform synonym detection (~90 real-world variants), trust-boundary guards. See §5. |
 | `service.py` | Pipeline driver (`run_assessment_pipeline`, fire-and-forget task under a process-wide `Semaphore(3)`), `build_mappings` (customer-tag validation), `compare_assessments` (trend diff), org tunables get/set (`mitre_settings`). |
@@ -167,7 +168,9 @@ All UUID v4 PKs, `org_id` FK → organizations CASCADE, tz-aware timestamps
   (customization.py pattern; absent row = code default). Keys/defaults:
   `confidence_covered=0.7`, `confidence_partial_floor=0.4`,
   `partial_credit=0.5`, `count_disabled_as_coverage=false`,
-  `threat_weighting_enabled=true` (Phase 11 — gap-ordering only).
+  `threat_weighting_enabled=true` (Phase 11 — gap-ordering only),
+  `quality_ai_enabled=false` (Phase 12 — optional AI strength re-rating;
+  quality never depends on it).
 
 **`summary` JSONB shape** (what reports/frontend/compare consume):
 
@@ -182,6 +185,10 @@ roadmap:     {short[], mid[], long[]}   (same gap dicts, bucketed)
 narrative:   {executive_summary, gap_recommendations{tid→text},
               roadmap_prose{short,mid,long}, generated_by: ai|template,
               model_used}
+quality:     {scored, avg_strength, strong, moderate, weak}  (Phase 12
+             rollup; technique_results entries additionally carry
+             strength 0-100 + strength_rationale on covered/partial
+             techniques with direct rules)
 assumptions[]           not_applicable[]: {technique_id, domain, reason}
 applicable_domains[]    counts: {use_cases, customer_tagged, ai_tagged,
                                  unmapped, invalid}  (+keyword_tagged rows
@@ -276,6 +283,21 @@ never a coverage/state change). Org-toggleable via
 `threat_weighting_enabled` (default on); when off, ordering reverts but
 the annotation stays (provenance).
 
+**Quality** (`quality.compute_quality(results, use_cases, …)`, Phase 12)
+— annotates covered/partial techniques that have direct qualifying rules
+with a deterministic 0-100 detection strength: provenance base
+(customer/manual 30, keyword 25, AI≥covered-conf 20, AI below 10) +
+enabled bonus (30/15 unknown/0 disabled — a disabled rule can never
+reach "strong") + logic present (10) + telemetry match (30 — the rule's
+log_source/logic run through ranking's category bridge against the
+technique's data sources), best rule + redundancy bonus (5/extra rule,
+cap 10). Buckets: strong ≥75 / moderate ≥45 / weak. Rationale built from
+fixed fragments only. Returns the "inconclusive" items (logic present,
+expected telemetry known, no match) for the OPTIONAL AI pass (§8) —
+gated by `quality_ai_enabled` (off), capped, degrade-to-heuristic.
+Never touches states, coverage %, or ranking; recompute (Phase 10)
+re-annotates heuristic-only.
+
 **Compare** (`service.compare_assessments(current, baseline)`) — pure diff
 of two completed runs: `newly_covered` (now covered, wasn't), `regressed`
 (was covered → partial/not_covered), `na_changed` (entered/left the
@@ -336,6 +358,13 @@ stamping. Registered nowhere in `ReviewOrchestrator`.
   answer, never invent IDs — and every emitted ID is STILL re-validated
   through `resolve()` in code. `_CONFIDENCE_CALIBRATION` appended so
   confidence semantics match the product.
+- **`MitreQualityAgent`** (Phase 12, OPTIONAL — `quality_ai_enabled` off
+  by default) — subclasses `MitreTaggingAgent` for the plumbing, own
+  prompt (rubric bands matching the heuristic buckets; "rate ONLY from
+  the given logic"). Sees only heuristic-inconclusive items, max 40/run,
+  500-char excerpts; outputs clamped 0-100 in code, unknown IDs dropped,
+  rationale capped 300, merged scores prefixed "AI-assessed:"; any
+  failure keeps the deterministic heuristic score.
 - **`MitreNarrativeAgent`** — ONE call per run over computed JSON only
   (rollups, top-15 gaps + hints, roadmap counts, industry/region). Hard
   rules: plain English; may repeat but NEVER introduces/alters/rounds a
@@ -460,9 +489,12 @@ overflow on every page (real-browser checked).
   (CSS-grid Navigator-style tactic heatmap, sub-techniques indented,
   click → technique drawer showing state/tactics/N-A reason/mapped rules
   with enabled+source ("Tagged by you" / "Matched by rule" / "AI-mapped")
-  +confidence), **Gaps & Roadmap** (ranked table with P-tier/feasibility
+  +confidence; Phase 12 adds a detection-strength chip + rationale line
+  in the drawer), **Gaps & Roadmap** (ranked table with P-tier/feasibility
   badges, a Phase 11 violet "Threat match" chip on profile-relevant rows,
-  narrative recommendations, and the AI-written/template provenance
+  a Phase 12 "Strength" column (partial gaps' scores, tooltip states it
+  is separate from coverage %), narrative recommendations, and the
+  AI-written/template provenance
   badge; short/mid/long sections), **Assumptions & N/A** (grouped
   appendix, verbatim customer reasons), **Compare** (baseline selector →
   delta chips with improvement-is-green semantics incl. inverted metrics,
@@ -491,6 +523,7 @@ absent; prod render verified live). Frontend: `tsc --noEmit` clean.
 | `test_mitre_navigator.py` | Golden single-domain layer (colors/comments/enabled/versions/legend), multi-domain stable order, gated-domain exclusion; endpoint json vs zip, viewer-readable, cross-org 404 + pending 409. |
 | `test_mitre_mapping_edit.py` | Phase 10 PATCH: manual provenance + inline recompute (states flip, counts.manual, assumption note, audit row), empty-list unmap, invalid/malformed/over-cap 422s, non-completed 409, cross-org 404 (both IDs) + viewer 403. |
 | `test_mitre_threat_profile.py` | Phase 11: every curated ID resolves `ok` + alias integrity, real-file lookup (Banking alias, unknown = no-op), within-tier lift golden, no-tier-jump golden, toggle-off keeps order but keeps annotation, intake threat_actors 422s (unknown/non-list/over-10). |
+| `test_mitre_quality.py` | Phase 12: heuristic goldens (full-signal 100, disabled capped 70, telemetry match +30, low-conf AI weak, redundancy cap, no-telemetry note, only direct-rule covered/partial scored), inconclusive selection, rollup, AI pass clamped/filtered/merged + garbage-degrades-to-heuristic. |
 
 Reminder: migrations 029/031/032 (and 030) must be applied to `edgp_test`
 before running the suite.
@@ -563,6 +596,7 @@ you're alone on `edgp_test`.
 | 9 (opt) | `ed9cec9` | 08-02 | Column-mapping wizard: preview `headers`+`sample_rows`, `POST .../remap` with validated override + atomic run-race guard, CSV reader caps, threadpool parse; REVISE→ACCEPT; prod deploy |
 | 10 (opt) | `6ce8e48` | 08-02 | Per-mapping reviewer override: `PATCH .../use-cases/{id}/mappings` (resolve()-validated full-list edit, `manual` provenance @ 1.0, migration 033 + ORM lockstep, FOR UPDATE serialization, audit) + inline pure recompute + drawer edit UI; ACCEPT; prod deploy |
 | 11 (opt) | `62f1df2` | 08-02 | Threat-informed gap weighting: curated `threat_profiles.json` (143 validated IDs, cited sources), `build_threat_profile` + within-tier sort lift, `threat_weighting_enabled` tunable, intake `threat_actors` + `GET /threat-catalog`, wizard actor chips + "Threat match" gap chip; no migration/AI; ACCEPT; prod deploy |
+| 12 (opt) | `436612a` | 08-02 | Detection-strength scoring: pure `quality.py` heuristic (0-100 + rationale on technique_results, `summary.quality` rollup), optional `MitreQualityAgent` behind `quality_ai_enabled` (off, degrade-to-heuristic), drawer chip + gaps Strength column labeled distinct from coverage %; no migration; ACCEPT; prod deploy |
 
 ## 16. Optional feature work (plan §14 — not launch blockers)
 
@@ -570,12 +604,13 @@ Originally deferred by design; queued as optional **Phases 8–13** (one
 feature per session, kickoff prompt committed as `cf6e9e4`). **Shipped:
 Phase 8 (ATT&CK Navigator layer export), Phase 9 (interactive
 column-mapping wizard), Phase 10 (per-mapping reviewer override +
-inline recompute), and Phase 11 (threat-informed actor/industry gap
-weighting)** — see §15 for commits. Still open, build only on request:
-Phase 12 per-rule detection *quality* scoring (v1 scores presence —
-stated in the methodology footnote and assumptions), Phase 13
-scheduled/continuous re-assessment + SIEM API pulls (design-first), plus
-ICS/Mobile entries in the priorities file and per-org priority-tier
-overrides (the `mitre_settings` pattern already supports it). When one
-of these lands, extend §15's history table and the relevant sections
-here.
+inline recompute), Phase 11 (threat-informed actor/industry gap
+weighting), and Phase 12 (per-rule detection-strength scoring — the
+methodology footnote's "presence, not efficacy" caveat now has a
+separate, clearly-labeled efficacy signal beside it)** — see §15 for
+commits. Still open, build only on request: Phase 13
+scheduled/continuous re-assessment + SIEM API pulls (design-first,
+START WITH brainstorming per the kickoff), plus ICS/Mobile entries in
+the priorities file and per-org priority-tier overrides (the
+`mitre_settings` pattern already supports it). When one of these lands,
+extend §15's history table and the relevant sections here.
