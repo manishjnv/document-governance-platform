@@ -472,16 +472,22 @@ p {{ margin: 4px 0; }}
 .badge {{ display: inline-block; border: 1px solid #d1d5db; border-radius: 9px; padding: 0 6px; font-size: 9px; color: #6b7280; vertical-align: middle; }}
 .badge.ai {{ background: #ede9fe; border-color: #ddd6fe; color: #6d28d9; }}
 .badge.threat {{ background: #ede9fe; border-color: #ddd6fe; color: #6d28d9; }}
-.fix {{ border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 8px; margin: 6px 0; page-break-inside: avoid; }}
-.gap {{ border-bottom: 1px solid #e5e7eb; padding: 6px 0; page-break-inside: avoid; }}
+.fix {{ border: 1px solid #dbe4f0; border-radius: 6px; padding: 6px 8px; margin: 6px 0; background: #fbfdff; page-break-inside: avoid; }}
+.gap {{ border: 1px solid #e5e7eb; border-radius: 6px; padding: 7px 9px; margin: 6px 0; background: #fdfdfd; page-break-inside: avoid; }}
 .heatmap {{ line-height: 1.15; }}
 .heatmap .cell {{ display: inline-block; color: #fff; font-size: 7px; padding: 1px 3px; margin: 1px; border-radius: 2px; }}
-table {{ width: 100%; border-collapse: collapse; margin: 6px 0 10px; font-size: 11px; }}
-th {{ text-align: left; background: #f3f4f6; padding: 4px 6px; border-bottom: 1px solid #d1d5db; }}
-td {{ padding: 4px 6px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }}
+/* Professional table grid: bordered cells, branded header, zebra rows. */
+table {{ width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 11px; border: 1px solid #b6c6d8; }}
+th {{ text-align: left; background: #0057B8; color: #fff; font-weight: 600; padding: 5px 7px; border: 1px solid #0057B8; }}
+th + th {{ border-left: 1px solid rgba(255,255,255,0.35); }}
+td {{ padding: 4px 7px; border: 1px solid #dde5ee; vertical-align: top; }}
+tbody tr:nth-child(even) td {{ background: #f4f7fb; }}
 td.num {{ text-align: right; white-space: nowrap; }}
 ul {{ margin: 4px 0 4px 18px; }}
+/* The cover metadata block stays a quiet, borderless key/value list. */
+table.cover-meta, .cover-meta th, .cover-meta td {{ border: none; }}
 .cover-meta th {{ background: none; width: 30%; color: #6b7280; font-weight: normal; }}
+.cover-meta tr:nth-child(even) td {{ background: none; }}
 .toc {{ margin: 10px 0 0 0; }}
 .toc a {{ text-decoration: none; color: #333; }}
 .toc li {{ margin: 2px 0; }}
