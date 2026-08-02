@@ -241,6 +241,20 @@ export function GapsRoadmap({
                         </TooltipContent>
                       </Tooltip>
                     )}
+                    {gap.crown_jewel_relevant && (
+                      <Tooltip delayDuration={150}>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex cursor-default items-center gap-1 text-[11px] text-amber-700">
+                            <Dot className="bg-amber-500" />
+                            Crown jewel
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs text-xs">
+                          Relevant to an asset you declared as a crown jewel.
+                          Affects ordering only — never the coverage score.
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                   </span>
                 </TableCell>
                 <TableCell className="hidden whitespace-nowrap px-2 py-1.5 lg:table-cell">

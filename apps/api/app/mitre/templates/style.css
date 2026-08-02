@@ -40,6 +40,7 @@ p { margin: 3px 0; }
 .badge { display: inline-block; background: #e5e7eb; border: 1px solid #cbd5e1; border-radius: 9px; padding: 0 7px; font-size: 9px; font-weight: 600; color: #374151; vertical-align: middle; }
 .badge.ai { background: #ede9fe; border-color: #c4b5fd; color: #5b21b6; }
 .badge.threat { background: #ede9fe; border-color: #c4b5fd; color: #5b21b6; }
+.badge.crown { background: #fef3c7; border-color: #fbbf24; color: #78350f; }
 .badge.p1 { background: #f43f5e; border-color: #f43f5e; color: #fff; }
 .badge.p2 { background: #f59e0b; border-color: #f59e0b; color: #4a2c03; }
 .badge.p3 { background: #38bdf8; border-color: #38bdf8; color: #082f49; }

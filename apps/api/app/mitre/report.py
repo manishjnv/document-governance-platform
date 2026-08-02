@@ -401,6 +401,8 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
                    else "<span class='badge'>Unranked</span> ")
                 + ("<span class='badge threat'>Threat match: " + _esc(", ".join(relevance)) + "</span> "
                    if relevance else "")
+                + ("<span class='badge crown'>Crown jewel</span> "
+                   if g.get("crown_jewel_relevant") else "")
                 + f"{_state_chip(g.get('state', ''))}</p>"
                 f"<p><em>Why it's a gap:</em> {_esc(why)}</p>"
                 + (f"<p><em>What good looks like:</em> {_esc(sketch)}</p>" if sketch else "")

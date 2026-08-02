@@ -122,6 +122,60 @@ _TOOLING_RULES = [
       "industrial"), {"ot"}),
 ]
 
+# Crown-jewel free-text entries -> derived ATT&CK platform names and/or the
+# telemetry categories above (Phase A4). Deterministic, curated, reuses the
+# exact same platform/category vocab the rest of the module already uses —
+# no new taxonomy invented. Unmatched entries are the caller's job to
+# surface as a single assumption line, never an error (see crown_jewel_hints).
+_CROWN_JEWEL_RULES = [
+    (("vcenter", "esxi", "vsphere"), {"platforms": {"ESXi"}}),
+    (("database", "sql server", "oracle db", "postgres", "mysql", "mongodb",
+      "data warehouse"), {"categories": {"application", "cloud"}}),
+    (("payment", "pos system", "card processing", "payment gateway"),
+     {"categories": {"application"}}),
+    (("domain controller", "active directory", "adfs"), {"categories": {"identity"}}),
+    (("kubernetes", "k8s", "container platform"), {"platforms": {"Containers"}}),
+    (("s3 bucket", "cloud storage", "blob storage", "data lake"), {"categories": {"cloud"}}),
+    (("email server", "exchange server", "mail server"), {"categories": {"application"}}),
+    (("erp", "sap", "financial system", "financial platform"), {"categories": {"application"}}),
+    (("scada", "plc", "historian", "ot network"), {"categories": {"ot"}}),
+    (("windows server", "file server"), {"platforms": {"Windows"}}),
+    (("linux server",), {"platforms": {"Linux"}}),
+]
+
+
+def crown_jewel_hints(entries) -> tuple:
+    """Crown-jewel free-text entries -> ({"platforms": set, "categories":
+    set}, [unmatched entry, ...]). Pure keyword bridge, same discipline as
+    _categories_provided — SUBSTRING match over the normalized entry text.
+    An entry can match more than one rule; an entry matching nothing is
+    returned verbatim for a single assumption line."""
+    platforms, categories, unmatched = set(), set(), []
+    for entry in entries or []:
+        norm = _norm(entry)
+        hit = False
+        for keywords, hints in _CROWN_JEWEL_RULES:
+            if any(kw in norm for kw in keywords):
+                platforms |= hints.get("platforms", set())
+                categories |= hints.get("categories", set())
+                hit = True
+        if not hit:
+            unmatched.append(str(entry))
+    return {"platforms": platforms, "categories": categories}, unmatched
+
+
+def _technique_categories(tech: dict) -> list:
+    """ATT&CK data-source components -> coarse telemetry categories for one
+    technique (same mapping quality.py uses for its own, unrelated,
+    telemetry-match scoring — kept local here to avoid a quality<->ranking
+    import cycle, since quality.py already imports FROM ranking.py)."""
+    categories = []
+    for component in tech.get("data_sources") or []:
+        category = component_category(component)
+        if category and category not in categories:
+            categories.append(category)
+    return categories
+
 
 def _norm(value) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", str(value or "").lower())).strip()
@@ -225,6 +279,7 @@ def build_threat_profile(industry, actors, profiles=None) -> dict:
 def rank_gaps(
     techniques, log_sources, tooling, *,
     index=None, priorities=None, profile=None, threat_weighting=True,
+    crown_jewels=None, crown_jewel_weighting=True,
 ) -> dict:
     """Coverage per-technique results -> ranked gap list + roadmap buckets.
 
@@ -233,10 +288,15 @@ def rank_gaps(
     profile: build_threat_profile() output (or None) — matching gaps carry
     threat_relevance labels and, when threat_weighting is on (org tunable
     `threat_weighting_enabled`, default on), rank above EQUAL-TIER peers.
-    Never changes coverage %, states, or tier — ordering/emphasis only.
+    crown_jewels: raw Crown Jewels sheet rows (or None) — Phase A4. Matching
+    gaps carry crown_jewel_relevant=True and, when crown_jewel_weighting is
+    on (org tunable `crown_jewel_weighting_enabled`, default on), rank above
+    equal-tier peers — a THIRD sort key, after tier and threat_relevance,
+    never a tier jump. Never changes coverage %, states, or tier.
     Returns {"gaps": [gap...], "roadmap": {"short": [...], "mid": [...],
-    "long": [...]}} — gap dicts carry technique_id, name, domain, state,
-    tier, tactics, feasibility, via, category, hint, threat_relevance, rank.
+    "long": [...]}, "crown_jewel_unmatched": [str, ...]} — gap dicts carry
+    technique_id, name, domain, state, tier, tactics, feasibility, via,
+    category, hint, threat_relevance, crown_jewel_relevant, rank.
     """
     index = index if index is not None else DEFAULT
     if priorities is None:
@@ -245,6 +305,7 @@ def rank_gaps(
 
     onboarded = _categories_provided(log_sources, _LOG_SOURCE_RULES)
     ownable = _categories_provided(tooling, _TOOLING_RULES)
+    cj_hints, cj_unmatched = crown_jewel_hints(crown_jewels)
 
     tactic_position = {}
     for domain in index.domains:
@@ -263,6 +324,10 @@ def rank_gaps(
             tactic_position.get((result["domain"], t), 99) for t in result["tactics"]
         ] or [99]
         relevance = (profile or {}).get("techniques", {}).get(result["technique_id"])
+        crown_jewel_relevant = bool(
+            set(tech.get("platforms") or []) & cj_hints["platforms"]
+            or set(_technique_categories(tech)) & cj_hints["categories"]
+        )
         gaps.append(
             {
                 "technique_id": result["technique_id"],
@@ -276,6 +341,7 @@ def rank_gaps(
                 "category": category,
                 "hint": hint,
                 "threat_relevance": relevance or None,
+                "crown_jewel_relevant": crown_jewel_relevant,
                 "_tactic_pos": min(positions),
             }
         )
@@ -287,6 +353,9 @@ def rank_gaps(
             # customer's industry/actor profile beats equal-tier peers but
             # never jumps a tier (and never touches coverage numbers).
             0 if (threat_weighting and g["threat_relevance"]) else 1,
+            # Phase A4: crown-jewel lift, same within-tier pattern, one step
+            # further down the sort key so it never overrides threat weighting.
+            0 if (crown_jewel_weighting and g["crown_jewel_relevant"]) else 1,
             _FEASIBILITY_RANK[g["feasibility"]],
             _STATE_RANK[g["state"]],
             g["_tactic_pos"],
@@ -298,4 +367,4 @@ def rank_gaps(
         gap.pop("_tactic_pos")
         gap["rank"] = rank
         roadmap[gap["feasibility"]].append(gap)
-    return {"gaps": gaps, "roadmap": roadmap}
+    return {"gaps": gaps, "roadmap": roadmap, "crown_jewel_unmatched": cj_unmatched}

@@ -230,3 +230,78 @@ def test_deterministic_modules_import_no_ai(module):
         name.startswith("app.ai") or name.endswith("agents") or "openrouter" in name
         for name in imports
     ), f"{module.__name__} imports an AI module: {imports}"
+
+
+# --- Phase A4: Crown Jewels -> gap-ranking lift ---
+
+from app.mitre.ranking import crown_jewel_hints  # noqa: E402
+
+
+def test_crown_jewel_hints_bridge_goldens():
+    hints, unmatched = crown_jewel_hints([
+        "Primary vCenter cluster", "Customer database (Oracle DB)",
+        "Payment gateway", "Domain Controllers (AD)", "some random asset",
+    ])
+    assert hints["platforms"] == {"ESXi"}
+    assert hints["categories"] == {"application", "cloud", "identity"}
+    assert unmatched == ["some random asset"]
+
+
+def test_crown_jewel_hints_no_entries_is_noop():
+    hints, unmatched = crown_jewel_hints([])
+    assert hints == {"platforms": set(), "categories": set()}
+    assert unmatched == []
+    hints, unmatched = crown_jewel_hints(None)
+    assert hints == {"platforms": set(), "categories": set()}
+    assert unmatched == []
+
+
+def test_crown_jewel_lift_within_tier_never_jumps_tier():
+    # Two techniques in the SAME tier, one crown-jewel-relevant (matches
+    # the "application"/"cloud" hint from a database crown jewel via its
+    # Cloud Storage Access data source) -> it must rank first within the
+    # tier. A tier-1 technique still outranks both regardless.
+    techniques = [
+        _result("T1059.001", "not_covered"),  # tier 1 (via shared _PRIORITIES pattern below)
+        _result("T1530", "not_covered"),      # cloud storage access -> "cloud" category
+        _result("T1112", "not_covered"),      # registry -> no crown-jewel match
+    ]
+    priorities = {"techniques": [
+        {"technique_id": "T1059.001", "tier": 1},
+        {"technique_id": "T1530", "tier": 2},
+        {"technique_id": "T1112", "tier": 2},
+    ]}
+    ranked = rank_gaps(
+        techniques, ["Sysmon"], [], index=_index(), priorities=priorities,
+        crown_jewels=["Customer database"],
+    )
+    order = [g["technique_id"] for g in ranked["gaps"]]
+    assert order == ["T1059.001", "T1530", "T1112"]  # tier 1 first, then crown-jewel lift within tier 2
+    assert ranked["gaps"][1]["crown_jewel_relevant"] is True
+    assert ranked["gaps"][2]["crown_jewel_relevant"] is False
+
+
+def test_crown_jewel_weighting_toggle_off_keeps_annotation_drops_lift():
+    techniques = [
+        _result("T1530", "not_covered"),
+        _result("T1112", "not_covered"),
+    ]
+    priorities = {"techniques": [
+        {"technique_id": "T1530", "tier": 2},
+        {"technique_id": "T1112", "tier": 2},
+    ]}
+    ranked = rank_gaps(
+        techniques, ["Sysmon"], [], index=_index(), priorities=priorities,
+        crown_jewels=["Customer database"], crown_jewel_weighting=False,
+    )
+    by_id = {g["technique_id"]: g for g in ranked["gaps"]}
+    # annotation survives even with the lift disabled...
+    assert by_id["T1530"]["crown_jewel_relevant"] is True
+    # ...but ordering falls back to id order (no lift applied)
+    assert [g["technique_id"] for g in ranked["gaps"]] == ["T1112", "T1530"]
+
+
+def test_no_crown_jewels_sheet_is_a_noop():
+    ranked = _rank([_result("T1046", "not_covered")], log_sources=["Sysmon"])
+    assert ranked["gaps"][0]["crown_jewel_relevant"] is False
+    assert ranked["crown_jewel_unmatched"] == []

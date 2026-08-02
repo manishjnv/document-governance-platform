@@ -292,6 +292,7 @@ async def test_settings_roundtrip_and_validation(client, db_session):
         "partial_credit": 0.5,
         "count_disabled_as_coverage": False,
         "threat_weighting_enabled": True,  # Phase 11
+        "crown_jewel_weighting_enabled": True,  # Phase A4
         "quality_ai_enabled": False,  # Phase 12
         "report_display_name": "ScopeWise",  # Phase 14h
         "report_accent_color": "#0057B8",  # Phase 14h

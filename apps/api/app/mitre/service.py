@@ -53,6 +53,10 @@ SETTING_DEFAULTS = {
     # above equal-tier peers in the ranked gap list. Ordering only — never
     # changes coverage %.
     "threat_weighting_enabled": True,
+    # Phase A4: lift gaps relevant to the customer's declared crown-jewel
+    # assets above equal-tier peers (within-tier only, same pattern as
+    # Phase 11 threat weighting). Ordering only — never changes coverage %.
+    "crown_jewel_weighting_enabled": True,
     # Phase 12: OPTIONAL AI re-rating of heuristic-inconclusive detection
     # strengths. OFF by default; quality never depends on AI.
     "quality_ai_enabled": False,
@@ -67,6 +71,7 @@ SETTING_DEFAULTS = {
 _BOOL_SETTINGS = {
     "count_disabled_as_coverage",
     "threat_weighting_enabled",
+    "crown_jewel_weighting_enabled",
     "quality_ai_enabled",
 }
 
@@ -253,6 +258,13 @@ def recompute_results(assessment, use_case_rows) -> None:
             thresholds.get(
                 "threat_weighting_enabled",
                 SETTING_DEFAULTS["threat_weighting_enabled"],
+            )
+        ),
+        crown_jewels=env_lists.get("crown_jewels") or [],
+        crown_jewel_weighting=bool(
+            thresholds.get(
+                "crown_jewel_weighting_enabled",
+                SETTING_DEFAULTS["crown_jewel_weighting_enabled"],
             )
         ),
     )
@@ -672,13 +684,13 @@ async def _run_pipeline_body(
             # sheets is flagged as a possible shelfware rule. Only surfaced
             # when a Log Sources sheet was actually uploaded — no sheet
             # means nothing to cross-check against, so no claim.
-            env_lists_early = params.get("environment_lists") or {}
-            if "log_sources" in (env_lists_early.get("sheets_found") or {}):
+            env_lists = params.get("environment_lists") or {}
+            if "log_sources" in (env_lists.get("sheets_found") or {}):
                 shelfware = quality.telemetry_shelfware_check(
                     coverage["techniques"],
                     use_cases,
-                    env_lists_early.get("log_sources") or [],
-                    env_lists_early.get("tooling") or [],
+                    env_lists.get("log_sources") or [],
+                    env_lists.get("tooling") or [],
                     covered_confidence=settings["confidence_covered"],
                     partial_confidence=settings["confidence_partial_floor"],
                 )
@@ -696,7 +708,6 @@ async def _run_pipeline_body(
             # Stage 6 — deterministic gap ranking + roadmap bucketing,
             # threat-weighted by the customer's industry/actor profile
             # (Phase 11 — pure lookup, ordering only).
-            env_lists = params.get("environment_lists") or {}
             profile = ranking.build_threat_profile(
                 intake.get("industry"), intake.get("threat_actors") or []
             )
@@ -706,11 +717,20 @@ async def _run_pipeline_body(
                 env_lists.get("tooling") or [],
                 profile=profile,
                 threat_weighting=bool(settings["threat_weighting_enabled"]),
+                crown_jewels=env_lists.get("crown_jewels") or [],
+                crown_jewel_weighting=bool(settings["crown_jewel_weighting_enabled"]),
             )
             if profile["labels"]:
                 coverage["assumptions"].append(
                     "gap ranking prioritizes techniques associated with your "
                     "declared threat profile: " + ", ".join(profile["labels"])
+                )
+            if ranked["crown_jewel_unmatched"]:
+                coverage["assumptions"].append(
+                    f"{len(ranked['crown_jewel_unmatched'])} crown-jewel "
+                    "entries didn't match a known platform/category and were "
+                    "not used for gap prioritization: "
+                    + ", ".join(ranked["crown_jewel_unmatched"][:5])
                 )
 
             # Stage 7 — narrative over COMPUTED data only; degrades to

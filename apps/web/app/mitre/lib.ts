@@ -102,6 +102,8 @@ export interface Gap {
   hint: string;
   /** Phase 11: industry/actor labels this gap is relevant to (or absent). */
   threat_relevance?: string[] | null;
+  /** Phase A4: crown-jewel asset relevance (ordering lift only). */
+  crown_jewel_relevant?: boolean;
   rank: number;
 }
 

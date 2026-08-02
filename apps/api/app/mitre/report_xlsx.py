@@ -455,6 +455,11 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
             telemetry_cell = "\n\n".join(
                 plain_language.telemetry_lines(g.get("technique_id"), index)
             )
+            # Phase A4: crown-jewel relevance noted inline (no new column —
+            # keeps this sheet's structure stable across phases).
+            recommendation = gap_recs.get(g.get("technique_id")) or g.get("hint") or ""
+            if g.get("crown_jewel_relevant"):
+                recommendation = f"[Crown jewel] {recommendation}"
             ws_gaps.append([_guard(v) for v in [
                 g.get("rank"), g.get("technique_id"), g.get("name"),
                 tier if ranked else "Unranked",
@@ -463,7 +468,7 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
                  else f"Onboard from tooling you own: {g.get('via')}" if bucket == "mid" and g.get("via")
                  else g.get("via") or "Needs a new log source"),
                 telemetry_cell,
-                gap_recs.get(g.get("technique_id")) or g.get("hint"),
+                recommendation,
             ]])
             row_idx += 1
             if ranked:
