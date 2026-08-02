@@ -1008,6 +1008,24 @@ were cut after the benchmark showed them firing inside broad multi-tool
 catch-all Sigma rules with no offsetting true positive. 5 new
 FP-regression pins added.
 
+**MITRE accuracy plan, phase A6 (2026-08-03):** customer template
+upgrade + optional health columns, migration 036 (`mitre_use_cases`
+gains `severity`/`last_triggered`, plain nullable columns, applied to
+edgp_dev+edgp_test immediately). Use-case template: "Severity"/"Last
+Triggered" columns after Status, leniently parsed (native Excel dates
+normalized, literal "never" recognized), 3 new example rows;
+`quality.py` applies small deterministic strength deltas from both
+(severity ±10/±5; "never" caps strength at 70; >180-day-stale applies
+-10) — absent values are a no-op. Environment template: new "Read Me"
+sheet first (verified safe against the sheet-name synonym matcher);
+Log Sources sheet gains Present?/Parser-Format/Normalized/Last-Event-
+Seen columns (purely positional, old 2-column dumps unaffected); Assets
+header-row recognition widened for ServiceNow/Lansweeper CMDB exports.
+`ranking.py` downgrades a gap's feasibility short→mid when its onboarded
+source isn't normalized or looks stale (>30 days), reason in the hint —
+never a state/coverage change. 34 new tests; suite green; `tsc --noEmit`
+clean; both templates verified to round-trip through real ingest.
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)
