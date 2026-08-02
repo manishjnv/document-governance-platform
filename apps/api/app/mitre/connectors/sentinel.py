@@ -12,12 +12,15 @@ COLUMN_SYNONYMS) so the existing create path parses it like any upload.
 
 import csv
 import io
+import logging
 import re
 import urllib.parse
 
 from ..ingest import MAX_USE_CASE_ROWS
 from .base import ConnectorConfigError, ConnectorError
 from .egress import EgressError, fetch_json  # noqa: F401 — EgressError re-exported for callers
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_HOSTS = frozenset({"login.microsoftonline.com", "management.azure.com"})
 API_VERSION = "2023-02-01"
@@ -40,6 +43,44 @@ CONFIG_FIELDS = {
 }
 
 _CSV_HEADERS = ["Rule Name", "Description", "Query", "MITRE ATT&CK", "Status", "Log Source"]
+
+# Plan phase A7 — auto-import the workspace's onboarded data connectors so
+# Sentinel customers can skip the manual Log Sources sheet. Deliberately
+# reads Microsoft.SecurityInsights/dataConnectors (SAME resource provider,
+# SAME host, SAME token/scope as the alertRules pull above) rather than the
+# Log Analytics workspace "tables" API — the latter needs
+# Microsoft.OperationalInsights/workspaces/tables/read, a permission the
+# documented "Microsoft Sentinel Reader" role (see MITRE_SIEM_INTEGRATION_
+# PLAN.md §2.1) does not grant; dataConnectors is fully covered by that
+# same role, so this feature requires NO new customer-side permission.
+# Kind values are Microsoft's own built-in Sentinel data-connector
+# identifiers (Microsoft Learn: "Sentinel data connectors reference");
+# mapped to source NAME STRINGS the module's existing log-source keyword
+# bridge (ranking.py's _LOG_SOURCE_RULES) already recognizes, so this adds
+# NO new taxonomy. A kind absent from this table is reported, never
+# silently dropped (contract point 2).
+_DATA_CONNECTOR_KIND_TO_SOURCE = {
+    "AzureActiveDirectory": "Azure AD",
+    "AzureActiveDirectoryIdentityProtection": "Azure AD",
+    "MicrosoftDefenderAdvancedThreatProtection": "Microsoft Defender",
+    "MicrosoftThreatProtection": "Microsoft Defender",
+    "AzureSecurityCenter": "Azure Security Center",
+    "MicrosoftCloudAppSecurity": "Microsoft Defender for Cloud Apps",
+    "Office365": "Office 365",
+    "OfficeATP": "Office 365",
+    "AmazonWebServicesCloudTrail": "AWS CloudTrail",
+    "AmazonWebServicesS3": "AWS CloudTrail",
+    "SecurityEvents": "Windows Security Events",
+    "WindowsSecurityEvents": "Windows Security Events",
+    "WindowsFirewall": "Windows Firewall",
+    "Dynamics365": "Dynamics 365",
+    "DNS": "DNS logs",
+    "CiscoASA": "Cisco ASA",
+    "PaloAltoNetworks": "Palo Alto",
+    "Fortinet": "Fortinet",
+    "CheckPoint": "Check Point",
+}
+MAX_CONNECTORS = 500  # defensive cap — mirrors MAX_PAGES discipline
 
 
 def validate_config(config: dict) -> dict:
@@ -187,9 +228,68 @@ def pull(config: dict, secret: str) -> dict:
         )
 
     csv_bytes, csv_warnings = _rules_to_csv(rules)
+    derived_log_sources, unmapped_connectors, dc_warnings = _pull_data_connectors(
+        config, auth_headers
+    )
     return {
         "csv_bytes": csv_bytes,
         "rule_count": len(rules),
-        "warnings": warnings + csv_warnings,
+        "warnings": warnings + csv_warnings + dc_warnings,
         "stats": {"pages": pages, "platform": "sentinel"},
+        "derived_log_sources": derived_log_sources,
+        "unmapped_connectors": unmapped_connectors,
     }
+
+
+def _pull_data_connectors(config: dict, auth_headers: dict) -> tuple:
+    """Plan phase A7: best-effort read of the workspace's onboarded data
+    connectors -> (log_sources, unmapped_kind_names, warnings). NEVER
+    raises — an inventory-pull failure must not fail the assessment
+    (contract point 4); on any error (network, unexpected shape, or a
+    malformed/non-dict entry in the response) this degrades to
+    ([], [], [one warning]), same as if the workbook simply wasn't
+    provided. The whole body is one broad try/except (defense-in-depth
+    beyond the specific exceptions anticipated below) precisely because
+    it processes an untrusted external API response and this feature must
+    never turn into an unhandled 500 that fails the whole assessment."""
+    degrade_warning = [
+        "could not auto-import log sources from Sentinel (data connector "
+        "listing failed) — the Log Sources sheet can still be uploaded manually"
+    ]
+    try:
+        path = (
+            f"/subscriptions/{config['subscription_id']}"
+            f"/resourceGroups/{config['resource_group']}"
+            f"/providers/Microsoft.OperationalInsights/workspaces/{config['workspace']}"
+            f"/providers/Microsoft.SecurityInsights/dataConnectors"
+            f"?api-version={API_VERSION}"
+        )
+        status, payload = fetch_json(
+            "management.azure.com", path, allowed_hosts=ALLOWED_HOSTS, headers=auth_headers
+        )
+        if status != 200:
+            return [], [], degrade_warning
+        connectors = payload.get("value")
+        if not isinstance(connectors, list):
+            return [], [], degrade_warning
+
+        sources, unmapped, seen = [], [], set()
+        for connector in connectors[:MAX_CONNECTORS]:
+            if not isinstance(connector, dict):
+                continue  # malformed entry -- skip, never crash
+            kind = str(connector.get("kind") or "").strip()
+            if not kind:
+                continue
+            source = _DATA_CONNECTOR_KIND_TO_SOURCE.get(kind)
+            if source:
+                if source not in seen:
+                    seen.add(source)
+                    sources.append(source)
+            elif kind not in unmapped:
+                unmapped.append(kind)
+        return sources, unmapped, []
+    except Exception as exc:  # noqa: BLE001 — see docstring: must never raise
+        logger.warning(
+            f"Sentinel data-connector auto-import degraded: {type(exc).__name__}"
+        )
+        return [], [], degrade_warning

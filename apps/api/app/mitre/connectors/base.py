@@ -5,9 +5,14 @@ A connector module exposes:
     pull(config: dict, secret: str) -> dict    # PullResult, or ConnectorError/EgressError
 
 PullResult = {"csv_bytes": bytes, "rule_count": int, "warnings": [str],
-              "stats": {...}} — csv_bytes is a canonical template CSV that
-feeds the EXISTING create path (ingest.parse_use_case_file), so tag
-validation, preview, caps and the stored artifact all come for free.
+              "stats": {...}, "derived_log_sources": [str],
+              "unmapped_connectors": [str]} — csv_bytes is a canonical
+template CSV that feeds the EXISTING create path
+(ingest.parse_use_case_file), so tag validation, preview, caps and the
+stored artifact all come for free. derived_log_sources/unmapped_connectors
+(plan phase A7) are the Sentinel connector's best-effort auto-import of
+the workspace's onboarded data connectors — always present (possibly
+empty), never raise on their own failure.
 
 Secrets pass through as function arguments only: never stored, never
 logged, never embedded in any error message. No LLM anywhere here

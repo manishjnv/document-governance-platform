@@ -257,8 +257,13 @@ def test_next_link_must_stay_on_allowlisted_https_host():
             sentinel._next_page_path(bad)
 
 
-def _fake_sentinel_fetch(monkeypatch, pages, token_status=200):
+def _fake_sentinel_fetch(monkeypatch, pages, token_status=200, dc_pages=None):
+    """Phase A7: dataConnectors calls are routed separately from alertRules
+    pages so existing callers don't need to account for the extra
+    auto-import read — default is an empty connector list (no derived log
+    sources), unless a test opts in with dc_pages=[...]."""
     calls = []
+    dc_pages = list(dc_pages) if dc_pages is not None else None
 
     def fake(host, path, *, allowed_hosts, method="GET", headers=None, body=None):
         calls.append({"host": host, "path": path, "method": method})
@@ -267,6 +272,8 @@ def _fake_sentinel_fetch(monkeypatch, pages, token_status=200):
                 return token_status, {}
             assert b"client_credentials" in body  # secret goes in the body, once
             return 200, {"access_token": "tok-123"}
+        if "dataConnectors" in path:
+            return dc_pages.pop(0) if dc_pages else (200, {"value": []})
         return pages.pop(0)
 
     monkeypatch.setattr(sentinel, "fetch_json", fake)
@@ -328,6 +335,141 @@ def test_pull_follows_next_link_within_allowlist(monkeypatch):
 def test_unknown_platform_rejected():
     with pytest.raises(ConnectorConfigError, match="Unknown SIEM platform"):
         connectors_base.pull_rules("splunk", {}, "s")
+
+
+# ---------------------------------------------------------------------------
+# Phase A7 — data-connector auto-import (mapping goldens, degrade, secrets)
+# ---------------------------------------------------------------------------
+
+_CONNECTORS = [
+    {"name": "aad", "kind": "AzureActiveDirectory"},
+    {"name": "mdatp", "kind": "MicrosoftDefenderAdvancedThreatProtection"},
+    {"name": "o365", "kind": "Office365"},
+    {"name": "dup-aad", "kind": "AzureActiveDirectoryIdentityProtection"},  # maps to same source
+    {"name": "weird", "kind": "SomeFutureConnectorKindNobodyHasSeen"},
+]
+
+
+def test_data_connector_mapping_golden(monkeypatch):
+    calls = _fake_sentinel_fetch(
+        monkeypatch, [(200, {"value": _RULES})],
+        dc_pages=[(200, {"value": _CONNECTORS})],
+    )
+    result = sentinel.pull(sentinel.validate_config(_GOOD_CONFIG), "s")
+    assert result["derived_log_sources"] == ["Azure AD", "Microsoft Defender", "Office 365"]
+    assert result["unmapped_connectors"] == ["SomeFutureConnectorKindNobodyHasSeen"]
+    assert any(c["path"].endswith(f"dataConnectors?api-version={sentinel.API_VERSION}") for c in calls)
+
+
+def test_data_connector_pull_degrades_without_failing_the_whole_pull(monkeypatch):
+    # dataConnectors 500 -> the alertRules pull still succeeds; a warning
+    # is added, never an exception (contract point 4: failure isolation).
+    calls = _fake_sentinel_fetch(
+        monkeypatch, [(200, {"value": _RULES})], dc_pages=[(500, {})],
+    )
+    result = sentinel.pull(sentinel.validate_config(_GOOD_CONFIG), "s")
+    assert result["rule_count"] == 3
+    assert result["derived_log_sources"] == []
+    assert any("could not auto-import" in w for w in result["warnings"])
+    assert len(calls) == 3  # token + alertRules + the failed dataConnectors call
+
+
+def test_data_connector_pull_network_error_also_degrades(monkeypatch):
+    def raising_fetch(host, path, *, allowed_hosts, method="GET", headers=None, body=None):
+        if host == "login.microsoftonline.com":
+            return 200, {"access_token": "tok"}
+        if "dataConnectors" in path:
+            raise EgressError("simulated network failure")
+        return 200, {"value": _RULES}
+
+    monkeypatch.setattr(sentinel, "fetch_json", raising_fetch)
+    result = sentinel.pull(sentinel.validate_config(_GOOD_CONFIG), "s")
+    assert result["rule_count"] == 3
+    assert result["derived_log_sources"] == []
+    assert any("could not auto-import" in w for w in result["warnings"])
+
+
+def test_data_connector_response_never_carries_the_secret(monkeypatch):
+    calls = _fake_sentinel_fetch(
+        monkeypatch, [(200, {"value": _RULES})], dc_pages=[(200, {"value": _CONNECTORS})],
+    )
+    sentinel.pull(sentinel.validate_config(_GOOD_CONFIG), "s3cr3t-value")
+    assert not any("s3cr3t-value" in str(c) for c in calls)
+
+
+def test_data_connector_malformed_entries_degrade_not_crash(monkeypatch):
+    # Adversarial finding (2026-08-03 A7 self-review): a non-dict entry in
+    # the "value" array must not raise an unhandled exception -- that
+    # would defeat the "inventory pull failure never fails the assessment"
+    # contract. Mix of a string, None, and a valid dict.
+    malformed = ["not-a-dict", None, 42, {"kind": "Office365"}]
+    _fake_sentinel_fetch(
+        monkeypatch, [(200, {"value": _RULES})], dc_pages=[(200, {"value": malformed})],
+    )
+    result = sentinel.pull(sentinel.validate_config(_GOOD_CONFIG), "s")
+    assert result["rule_count"] == 3          # alertRules pull unaffected
+    assert result["derived_log_sources"] == ["Office 365"]  # the one valid entry still mapped
+
+
+@pytest.mark.asyncio
+async def test_from_siem_auto_imports_log_sources_end_to_end(client, db_session, monkeypatch):
+    _fake_sentinel_fetch(
+        monkeypatch, [(200, {"value": _RULES})], dc_pages=[(200, {"value": _CONNECTORS})],
+    )
+    _, _, headers = await _make_user(db_session)
+    res = await client.post(
+        "/api/v1/mitre/assessments/from-siem", headers=headers, json=_body()
+    )
+    assert res.status_code == 201, res.text
+    preview = res.json()
+    assert preview["environment_provided"] is True
+    assert preview["sheets_found"]["log_sources"] == (
+        "Microsoft Sentinel data connectors (auto-imported)"
+    )
+    assert any(
+        "auto-imported from Sentinel" in a and "3 data" in a
+        for a in preview["assumptions"]
+    )
+    assert any(
+        "SomeFutureConnectorKindNobodyHasSeen" in a for a in preview["assumptions"]
+    )
+
+    got = (
+        await client.get(
+            f"/api/v1/mitre/assessments/{preview['assessment_id']}", headers=headers
+        )
+    ).json()
+    env_lists = got["params"]["environment_lists"]
+    assert env_lists["log_sources"] == ["Azure AD", "Microsoft Defender", "Office 365"]
+    assert env_lists["sheets_found"]["log_sources"] == (
+        "Microsoft Sentinel data connectors (auto-imported)"
+    )
+    # inventory_provided (Assets) stays False -- no platforms were derived,
+    # so the coverage-is-a-lower-bound assumption stays honest.
+    assert got["params"]["environment"]["inventory_provided"] is False
+
+
+@pytest.mark.asyncio
+async def test_from_siem_empty_data_connectors_is_a_noop(client, db_session, monkeypatch):
+    _fake_sentinel_fetch(
+        monkeypatch, [(200, {"value": _RULES})], dc_pages=[(200, {"value": []})],
+    )
+    _, _, headers = await _make_user(db_session)
+    res = await client.post(
+        "/api/v1/mitre/assessments/from-siem", headers=headers, json=_body()
+    )
+    assert res.status_code == 201, res.text
+    preview = res.json()
+    assert preview["environment_provided"] is False
+    assert preview["sheets_found"] == {}
+    assert not any("auto-imported from Sentinel" in a for a in preview["assumptions"])
+    got = (
+        await client.get(
+            f"/api/v1/mitre/assessments/{preview['assessment_id']}", headers=headers
+        )
+    ).json()
+    assert got["params"]["environment_lists"]["log_sources"] == []
+    assert got["params"]["environment_lists"]["sheets_found"] == {}
 
 
 # ---------------------------------------------------------------------------

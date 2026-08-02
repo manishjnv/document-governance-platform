@@ -551,12 +551,51 @@ async def _create_assessment_from_pull(
         "platforms": [],
         "has_ics_assets": False,
         "has_managed_mobile": False,
+        # Phase A7: auto-imported log sources count as "provided" for Log
+        # Sources feasibility/cross-check purposes only — NOT for Assets/
+        # platform filtering (no platforms are derived here), so the
+        # lower-bound coverage assumption stays honest.
         "inventory_provided": False,
         "exclusions": intake_data.get("exclusions", []),
     }
     pulled_at = datetime.now(timezone.utc)
     default_name = f"Sentinel pull {pulled_at.strftime('%Y-%m-%d %H:%M')}"
     config = config or {}
+
+    # Phase A7: best-effort auto-import of onboarded Sentinel data
+    # connectors into Log Sources — only when the pull actually derived
+    # some (an empty/failed inventory pull is a silent no-op, never an
+    # error; there is also no environment-workbook upload path on this
+    # endpoint today, so "explicit beats derived" has nothing to merge
+    # under yet).
+    env_parsed = None
+    siem_assumptions = []
+    derived_sources = result.get("derived_log_sources") or []
+    if derived_sources:
+        env_parsed = {
+            "log_sources": derived_sources,
+            "tooling": [],
+            "crown_jewels": [],
+            "sheets_found": {"log_sources": "Microsoft Sentinel data connectors (auto-imported)"},
+            "interpretations": [
+                {"entry": s, "sheet": "Log Sources",
+                 "interpretation": "auto-imported from a Sentinel data connector"}
+                for s in derived_sources
+            ],
+        }
+        siem_assumptions.append(
+            f"log sources auto-imported from Sentinel ({len(derived_sources)} data "
+            "connectors) — upload an environment workbook to override"
+        )
+    unmapped_connectors = result.get("unmapped_connectors") or []
+    if unmapped_connectors:
+        shown = ", ".join(unmapped_connectors[:10])
+        more = f" (+{len(unmapped_connectors) - 10} more)" if len(unmapped_connectors) > 10 else ""
+        siem_assumptions.append(
+            f"{len(unmapped_connectors)} Sentinel data connector kind(s) not "
+            f"recognized (not counted as log sources): {shown}{more}"
+        )
+
     response = await _persist_new_assessment(
         db,
         current_user,
@@ -573,13 +612,13 @@ async def _create_assessment_from_pull(
         parsed=parsed,
         intake_data=intake_data,
         environment_dict=environment_dict,
-        env_parsed=None,
+        env_parsed=env_parsed,
         extraction_text=None,
         warnings=list(parsed["warnings"]) + result["warnings"],
         parse_assumptions=[
             f"rules were pulled read-only from Microsoft Sentinel "
             f"({result['rule_count']} rules) rather than uploaded"
-        ],
+        ] + siem_assumptions,
         extra_params={
             "siem": {
                 "platform": "sentinel",
