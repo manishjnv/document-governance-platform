@@ -346,6 +346,33 @@ async def test_xlsx_endpoint_streams_with_content_type(client, db_session):
 
 
 @pytest.mark.asyncio
+async def test_executive_scope_report(client, db_session):
+    """scope=executive returns the 1-3 page leadership cut: cover + executive
+    section only — no detailed section, appendices, TOC, or cross-refs."""
+    org, user, headers = await _make_user(db_session, role="viewer")
+    done = await _seed(db_session, org, user)
+    res = await client.get(
+        f"/api/v1/mitre/assessments/{done.assessment_id}/report",
+        params={"format": "html", "scope": "executive"},
+        headers=headers,
+    )
+    assert res.status_code == 200
+    html = res.json()["data"]
+    assert "Top 5 things to fix first" in html
+    assert "Executive summary" in html
+    assert "Appendix: technique register" not in html
+    assert "Gap register" not in html
+    assert "<h3>Contents</h3>" not in html
+    assert "class='xref'" not in html
+    res = await client.get(
+        f"/api/v1/mitre/assessments/{done.assessment_id}/report",
+        params={"scope": "bogus"},
+        headers=headers,
+    )
+    assert res.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_rename_archive_and_list_filter(client, db_session):
     """Phase 14f: PATCH rename + soft-archive flag; archived rows leave the
     default list but return with include_archived=true. No delete exists."""

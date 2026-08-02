@@ -1283,6 +1283,8 @@ async def get_assessment(
             {
                 **r,
                 "name": (attack_data.DEFAULT.get(r.get("technique_id")) or {}).get("name"),
+                # platforms feed the on-page search ("is linux/asset X covered?")
+                "platforms": (attack_data.DEFAULT.get(r.get("technique_id")) or {}).get("platforms") or [],
             }
             for r in technique_results
         ]
@@ -1720,14 +1722,31 @@ async def _load_use_case_dicts(db, assessment_id: UUID, org_id) -> list:
 async def assessment_report(
     assessment_id: UUID,
     format: str = Query("html"),
+    scope: str = Query("full", description="full | executive (1-3 page leadership summary) | coverage | gaps | assumptions (single tab)"),
     current_user: TokenData = Depends(get_current_user),  # viewers may read (plan §15 Q1)
     db: AsyncSession = Depends(get_db),
 ):
     """Mirrors reviews.py's report shape: {"format", "data"} with PDF as
     base64-in-JSON so the existing frontend blob pattern works."""
+    if scope not in ("full", "executive", "coverage", "gaps", "assumptions"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="scope must be one of: full, executive, coverage, gaps, assumptions",
+        )
     org_id = UUID(str(current_user.org_id))
     assessment = await _completed_assessment(db, assessment_id, org_id)
     use_cases = await _load_use_case_dicts(db, assessment_id, org_id)
+    files_result = await db.execute(
+        select(MitreFile).where(
+            (MitreFile.assessment_id == assessment_id)
+            & (MitreFile.org_id == org_id)
+            & (MitreFile.deleted_at.is_(None))
+        )
+    )
+    report_files = [
+        {"kind": f.kind, "filename": f.filename, "row_count": f.row_count}
+        for f in files_result.scalars().all()
+    ]
     # Phase 14e: trend block — diff against the most recent completed run
     # before this one, when one exists (pure compare, no extra cost at scale).
     previous_result = await db.execute(
@@ -1757,7 +1776,8 @@ async def assessment_report(
     # offload so it can't stall the single-worker event loop (2026-08-02
     # adversarial review, non-blocking finding #2).
     html = await run_in_threadpool(
-        mitre_report.build_html_report, assessment, use_cases, compare
+        mitre_report.build_html_report, assessment, use_cases, compare,
+        report_files, scope,
     )
 
     if format.lower() == "pdf":
@@ -1776,21 +1796,30 @@ async def assessment_report(
 @router.get("/assessments/{assessment_id}/export.xlsx", summary="Detailed XLSX gap register")
 async def assessment_export_xlsx(
     assessment_id: UUID,
+    scope: str = Query("full", description="full | coverage | gaps | assumptions (single tab's sheets)"),
     current_user: TokenData = Depends(get_current_user),  # viewers may download (plan §15 Q1)
     db: AsyncSession = Depends(get_db),
 ):
     """StreamingResponse with the real xlsx content-type — deliberately NOT
     the base64-in-JSON shape (plan §10)."""
+    if scope not in ("full", "coverage", "gaps", "assumptions"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="scope must be one of: full, coverage, gaps, assumptions",
+        )
     org_id = UUID(str(current_user.org_id))
     assessment = await _completed_assessment(db, assessment_id, org_id)
     use_cases = await _load_use_case_dicts(db, assessment_id, org_id)
-    content = await run_in_threadpool(mitre_report.build_xlsx_export, assessment, use_cases)
+    content = await run_in_threadpool(
+        mitre_report.build_xlsx_export, assessment, use_cases, scope
+    )
     filename = _sanitize_filename(assessment.name)[:80] or "assessment"
+    suffix = "attack-coverage" if scope == "full" else scope
     return StreamingResponse(
         io.BytesIO(content),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={
-            "Content-Disposition": f'attachment; filename="{filename}-attack-coverage.xlsx"'
+            "Content-Disposition": f'attachment; filename="{filename}-{suffix}.xlsx"'
         },
     )
 

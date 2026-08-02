@@ -15,6 +15,7 @@ prod image — local dev fails soft at call time, not import time.
 import io
 import logging
 import os
+import re
 from datetime import datetime, timezone
 
 from app.scoring.report import _esc  # house escaper, stored-XSS lesson baked in
@@ -39,6 +40,13 @@ DOMAIN_LABELS = {"enterprise": "Enterprise", "ics": "ICS / OT", "mobile": "Mobil
 # PDF appendix cap — a 5,000-row use-case appendix belongs in the XLSX, not
 # a PDF. The cap is stated in the report when it bites.
 MAX_APPENDIX_ROWS = 500
+
+# Per-tab PDF cuts (scope -> [start, end) markers inside the full document)
+_SECTION_SCOPES = {
+    "coverage": ('<h2 id="tactics"', '<h2 id="gapreg"'),
+    "gaps": ('<h2 id="gapreg"', "<!-- ========================== APPENDICES"),
+    "assumptions": ('<h2 id="na"', '<h2 id="mappings"'),
+}
 
 _NA_GROUPS = [
     ("Whole matrix not applicable", lambda r: "matrix:" in r),
@@ -96,7 +104,8 @@ def _stacked_bar(covered, partial, not_covered, applicable) -> str:
     )
 
 
-def build_html_report(assessment, use_cases: list, compare=None, files=None) -> str:
+def build_html_report(assessment, use_cases: list, compare=None, files=None,
+                      scope="full") -> str:
     """Executive + detailed report as one self-contained HTML document
     (rebuilt in Phase 14e: cover → executive ≤2 pages → detailed →
     appendices, TOC with real page numbers, running header, deterministic
@@ -107,6 +116,9 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None) -> 
     enabled, mappings, mapping_status}. compare: optional
     service.compare_assessments() output (+ baseline_name) for the trend
     block. files: optional [{kind, filename, row_count}] for the cover.
+    scope: "full" (default) | "executive" (cover + executive section only —
+    the 1-3 page leadership PDF) | "coverage" / "gaps" / "assumptions"
+    (title + just that tab's section, for per-tab downloads).
     """
     from app.mitre import attack_data, plain_language
 
@@ -463,7 +475,7 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None) -> 
             )
         )
 
-    return f"""<!DOCTYPE html>
+    html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -609,6 +621,29 @@ makes no claim about them.</p>
 <div class="footer">{' · '.join(footer_bits)}</div>
 </div></body></html>"""
 
+    if scope == "executive":
+        # Cut everything between the DETAILED marker and the footer, drop the
+        # TOC (its page numbers point at removed sections), and strip the
+        # executive cross-reference links whose anchors no longer exist.
+        start = html.index("<!-- =========================== DETAILED")
+        end = html.index('<div class="footer">')
+        html = html[:start] + html[end:]
+        toc_start = html.index("<h3>Contents</h3>")
+        toc_end = html.index("</ul>", toc_start) + len("</ul>")
+        html = html[:toc_start] + html[toc_end:]
+        html = re.sub(r"<a class='xref' href='#g-[^']*'></a>", "", html)
+    elif scope in _SECTION_SCOPES:
+        # Per-tab download: document title + just that section + footer.
+        start_marker, end_marker = _SECTION_SCOPES[scope]
+        head_end = html.index('<table class="cover-meta"')
+        section_start = html.index(start_marker)
+        section_end = html.index(end_marker)
+        footer_start = html.index('<div class="footer">')
+        html = html[:head_end] + html[section_start:section_end] + html[footer_start:]
+        html = html.replace(' class="page-break"', '')
+        html = re.sub(r"<a class='xref' href='#g-[^']*'></a>", "", html)
+    return html
+
 
 def generate_pdf(html_content: str) -> bytes:
     """HTML -> PDF. Lazy import: WeasyPrint's native libs exist only in the
@@ -668,7 +703,7 @@ def _row_ref_sort_key(uc: dict):
     )
 
 
-def build_xlsx_export(assessment, use_cases: list) -> bytes:
+def build_xlsx_export(assessment, use_cases: list, scope: str = "full") -> bytes:
     """The detailed gap register as a 9-sheet workbook (Phase 14c polish):
     'Read Me' guide sheet first, colored state/priority/feasibility cells,
     frozen headers + auto-filter + wrapped text everywhere, technique names
@@ -689,14 +724,18 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
 
     wb = Workbook()
     bold = Font(bold=True)
+    italic = Font(italic=True)
     wrap = Alignment(wrap_text=True, vertical="top")
-    thin = Side(style="thin", color="B8C4D4")
+    wrap_center = Alignment(wrap_text=True, vertical="top", horizontal="center")
+    # Clearly visible grid (the earlier pale blue read as "no border" in Excel)
+    thin = Side(style="thin", color="8496AD")
     cell_border = Border(left=thin, right=thin, top=thin, bottom=thin)
 
     def fill(color):
         return PatternFill(start_color=color, end_color=color, fill_type="solid")
 
-    def sheet(title, headers, rows, widths, first=False, filters=True, borders=True):
+    def sheet(title, headers, rows, widths, first=False, filters=True,
+              borders=True, center_cols=()):
         ws = wb.active if first else wb.create_sheet()
         ws.title = title
         ws.append([_guard(h) for h in headers])
@@ -704,11 +743,13 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
             cell.font = bold
             if borders:
                 cell.border = cell_border
+            if cell.column in center_cols:
+                cell.alignment = wrap_center
         for row in rows:
             ws.append([_guard(v) for v in row])
         for row in ws.iter_rows(min_row=2):
             for cell in row:
-                cell.alignment = wrap
+                cell.alignment = wrap_center if cell.column in center_cols else wrap
                 if borders:
                     cell.border = cell_border
         ws.freeze_panes = "A2"
@@ -784,16 +825,16 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
     for i, w in enumerate((28, 46, 78), start=1):
         ws_sum.column_dimensions[get_column_letter(i)].width = w
 
-    def sum_row(values, *, fills=None, fonts=None, merge=False, height=None):
+    def sum_row(values, *, fills=None, fonts=None, merge=False, height=None,
+                center=()):
         ws_sum.append([_guard(v) for v in values])
         r = ws_sum.max_row
         if merge:
             ws_sum.merge_cells(start_row=r, start_column=1, end_row=r, end_column=3)
         for c in range(1, 4):
             cell = ws_sum.cell(row=r, column=c)
-            cell.alignment = wrap
-            if not merge:  # merged title/section/prose rows stay unruled
-                cell.border = cell_border
+            cell.alignment = wrap_center if c in center else wrap
+            cell.border = cell_border  # all-borders, merged content included
             if fills and fills.get(c):
                 cell.fill = fill(fills[c])
             if fonts and fonts.get(c):
@@ -817,28 +858,48 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
     sum_row([f"ATT&CK v{assessment.attack_version} · run completed "
              f"{str(assessment.completed_at or '')[:16]}", "", ""], merge=True)
 
+    # Simple compact pointers instead of a paragraph — deterministic, built
+    # from the computed numbers (the fuller narrative stays in the PDF).
     section("EXECUTIVE SUMMARY")
-    exec_text = narrative.get("executive_summary") or ""
-    if exec_text:
-        sum_row([exec_text, "", ""], merge=True,
-                height=max(30, 14 * (len(exec_text) // 140 + 1)))
-    sum_row([
-        f"Of the {overall.get('applicable')} attacker techniques that apply to "
-        f"your environment, your rules can detect {overall.get('covered')} "
-        f"(plus {overall.get('partial')} partially). Is "
-        f"{overall.get('strict_pct')}% bad? Probably not: early SIEM programs "
-        "typically start under 10% — the roadmap matters more than the grade.",
-        "", ""], merge=True, height=40)
+    top_gap_names = ", ".join(
+        f"{g.get('technique_id')} {g.get('name')}" for g in summary.get("gaps", [])[:3]
+    )
+    roadmap_counts = {b: len(summary.get("roadmap", {}).get(b, [])) for b in ("short", "mid", "long")}
+    pointers = [
+        (f"• Your rules detect {overall.get('covered')} of "
+         f"{overall.get('applicable')} applicable attacker techniques — "
+         f"{overall.get('strict_pct')}% coverage ({overall.get('weighted_pct')}% weighted).",
+         bold),
+        (f"• {overall.get('not_covered')} techniques have no detection today; "
+         f"{overall.get('partial')} are only partially covered.", None),
+    ]
+    if top_gap_names:
+        pointers.append((f"• Start here: {top_gap_names}.", bold))
+    pointers.append(
+        (f"• Roadmap: {roadmap_counts['short']} gaps buildable now with logs you "
+         f"already collect · {roadmap_counts['mid']} need log onboarding first · "
+         f"{roadmap_counts['long']} need a new capability.", None))
+    pointers.append(
+        (f"• Is {overall.get('strict_pct')}% bad? Probably not: early SIEM "
+         "programs typically start under 10% — the roadmap matters more than "
+         "the grade.", italic))
+    for text, font in pointers:
+        sum_row([text, "", ""], merge=True, height=26,
+                fonts={1: font} if font else None)
 
     section("KEY NUMBERS")
-    sum_row(["Metric", "Value", "What it means"], fonts={1: bold, 2: bold, 3: bold})
+    sum_row(["Metric", "Value", "What it means"],
+            fonts={1: bold, 2: bold, 3: bold}, center=(2,))
     r = sum_row(["Coverage %", overall.get("strict_pct"),
                  "Of the techniques that apply to your environment, the share "
-                 "with at least one qualifying detection rule."])
+                 "with at least one qualifying detection rule."], center=(2,))
     ws_sum.cell(row=r, column=2).fill = fill(_pct_fill_color(overall.get("strict_pct")))
+    ws_sum.cell(row=r, column=1).font = bold
     ws_sum.cell(row=r, column=2).font = bold
-    sum_row(["Weighted coverage %", overall.get("weighted_pct"),
-             "Same, but half-covered techniques count as 0.5 instead of 0."])
+    r = sum_row(["Weighted coverage %", overall.get("weighted_pct"),
+                 "Same, but half-covered techniques count as 0.5 instead of 0."],
+                center=(2,))
+    ws_sum.cell(row=r, column=2).font = bold
     for label, key, meaning in (
         ("Covered", "covered", "Techniques at least one enabled rule detects."),
         ("Partial", "partial", "Techniques reached only by a disabled rule, a "
@@ -847,26 +908,30 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
         ("Not applicable", "not_applicable", "Techniques excluded from the score "
          "(wrong platform, excluded by you, or deprecated)."),
     ):
-        r = sum_row([label, overall.get(key), meaning])
+        r = sum_row([label, overall.get(key), meaning], center=(2,))
         ws_sum.cell(row=r, column=2).fill = fill(_XLSX_STATE_FILLS[key])
+        ws_sum.cell(row=r, column=2).font = bold
     sum_row(["Applicable techniques", overall.get("applicable"),
-             "The denominator: techniques that apply to your environment."])
+             "The denominator: techniques that apply to your environment."],
+            center=(2,))
     for k, d in summary.get("domains", {}).items():
         r = sum_row([f"{DOMAIN_LABELS.get(k, k)} coverage %", d.get("strict_pct"),
-                     f"Coverage within the {DOMAIN_LABELS.get(k, k)} matrix only."])
+                     f"Coverage within the {DOMAIN_LABELS.get(k, k)} matrix only."],
+                    center=(2,))
         if d.get("applicable"):
             ws_sum.cell(row=r, column=2).fill = fill(_pct_fill_color(d.get("strict_pct")))
 
     top_gaps = summary.get("gaps", [])[:5]
     if top_gaps:
         section("TOP 5 THINGS TO FIX FIRST")
-        sum_row(["Gap", "Effort", "Recommendation"], fonts={1: bold, 2: bold, 3: bold})
+        sum_row(["Gap", "Effort", "Recommendation"],
+                fonts={1: bold, 2: bold, 3: bold}, center=(2,))
         for g in top_gaps:
             r = sum_row([
                 f"#{g.get('rank')} {g.get('technique_id')} {g.get('name')}",
                 FEASIBILITY_LABELS.get(g.get("feasibility"), ""),
                 gap_recs.get(g.get("technique_id")) or g.get("hint") or "",
-            ])
+            ], fonts={1: bold}, center=(2,))
             bucket_color = _XLSX_FEAS_FILLS.get(g.get("feasibility"))
             if bucket_color:
                 ws_sum.cell(row=r, column=2).fill = fill(bucket_color)
@@ -902,6 +967,7 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
             for t in d.get("tactics", [])
         ],
         [12, 26, 10, 10, 12, 8, 12, 12, 12],
+        center_cols=(3, 4, 5, 6, 7, 8, 9),
     )
 
     # ------------------------------------------------------- Technique Register
@@ -951,6 +1017,7 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
         ["Technique", "Name", "Matrix", "Tactics", "State", "In plain words", "Why", "Mapped rules", "Rule names"],
         [register_row(r) for r in results],
         [12, 30, 10, 26, 12, 26, 70, 12, 50],
+        center_cols=(3, 5, 8),
     )
     for i, r in enumerate(results, start=2):
         color = _XLSX_STATE_FILLS.get(r.get("state"))
@@ -974,6 +1041,7 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
             for uc in sorted_ucs
         ],
         [10, 42, 9, 30, 22, 12, 12, 16, 60, 60],
+        center_cols=(3, 6),
     )
 
     # --------------------------------------------- Gaps grouped by feasibility
@@ -1016,7 +1084,7 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
                 ws_gaps.cell(row=row_idx, column=5).fill = fill(state_color)
     for row in ws_gaps.iter_rows(min_row=2):
         for cell in row:
-            cell.alignment = wrap
+            cell.alignment = wrap_center if cell.column in (1, 4, 5) else wrap
             cell.border = cell_border
     ws_gaps.freeze_panes = "A2"
     for i, width in enumerate([7, 12, 34, 12, 12, 34, 70], start=1):
@@ -1042,6 +1110,7 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
             for n in summary.get("not_applicable", [])
         ],
         [12, 10, 80],
+        center_cols=(2,),
     )
 
     sheet(
@@ -1064,6 +1133,18 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
             ],
             [40, 18, 80],
         )
+
+    # Per-tab download: keep only that tab's sheets (built once, then pruned
+    # — cheapest way to guarantee identical content and styling).
+    _SCOPE_SHEETS = {
+        "coverage": {"Coverage by Tactic", "Technique Register"},
+        "gaps": {"Gaps & Recommendations", "Roadmap"},
+        "assumptions": {"Not Applicable", "Assumptions", "How We Read Your Files"},
+    }
+    if scope in _SCOPE_SHEETS:
+        for name in list(wb.sheetnames):
+            if name not in _SCOPE_SHEETS[scope]:
+                del wb[name]
 
     buf = io.BytesIO()
     wb.save(buf)

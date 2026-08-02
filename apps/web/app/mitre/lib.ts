@@ -151,6 +151,8 @@ export interface TechniqueResult {
   strength_rationale?: string | null;
   /** Phase 14b: technique name, enriched by the API at read time. */
   name?: string | null;
+  /** ATT&CK platforms, enriched at read time (feeds the on-page search). */
+  platforms?: string[];
 }
 
 export interface Assessment {

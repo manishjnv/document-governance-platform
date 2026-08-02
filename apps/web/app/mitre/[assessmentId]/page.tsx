@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { useParams, useRouter } from 'next/navigation';
-import { FileDown, FileJson, FileSpreadsheet, History, Loader2, Play, Target } from 'lucide-react';
+import { FileDown, FileJson, FileSpreadsheet, History, Loader2, Play, Search as SearchIcon, Target } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -240,11 +240,11 @@ export default function MitreResultsPage() {
     }
   };
 
-  const handleDownloadPdf = async () => {
+  const handleDownloadPdf = async (scope: 'full' | 'executive' | 'coverage' | 'gaps' | 'assumptions') => {
     setDownloadError('');
     try {
       const res = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments/${assessmentId}/report?format=pdf`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments/${assessmentId}/report?format=pdf&scope=${scope}`,
         { headers: authHeaders() }
       );
       const binary = atob(res.data.data);
@@ -254,7 +254,9 @@ export default function MitreResultsPage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${assessment?.name || 'assessment'}-attack-coverage.pdf`;
+      link.download = `${assessment?.name || 'assessment'}-${
+        scope === 'executive' ? 'executive-summary' : scope === 'full' ? 'attack-coverage' : scope
+      }.pdf`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (err: any) {
@@ -262,22 +264,66 @@ export default function MitreResultsPage() {
     }
   };
 
-  const handleDownloadXlsx = async () => {
+  const handleDownloadXlsx = async (scope: 'full' | 'coverage' | 'gaps' | 'assumptions' = 'full') => {
     setDownloadError('');
     try {
       const res = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments/${assessmentId}/export.xlsx`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments/${assessmentId}/export.xlsx?scope=${scope}`,
         { headers: authHeaders(), responseType: 'blob' }
       );
       const url = URL.createObjectURL(res.data);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${assessment?.name || 'assessment'}-attack-coverage.xlsx`;
+      link.download = `${assessment?.name || 'assessment'}-${
+        scope === 'full' ? 'attack-coverage' : scope
+      }.xlsx`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (err: any) {
       setDownloadError(err.response?.data?.detail || 'Failed to download the XLSX export');
     }
+  };
+
+  // On-page answer to "is this area / asset / TTP covered?" — matches
+  // technique IDs and names, tactic names (area), ATT&CK platforms (asset),
+  // and your own rule names/log sources; results open in the drill-down
+  // panel grouped by state, each row one click from the full drawer story.
+  const [siteSearch, setSiteSearch] = useState('');
+  const runSiteSearch = () => {
+    const query = siteSearch.trim().toLowerCase();
+    if (!query || !summary) return;
+    const tacticKeys = new Set<string>();
+    for (const [domainKey, domain] of Object.entries(summary.domains)) {
+      for (const t of domain.tactics) {
+        if (t.name.toLowerCase().includes(query)) tacticKeys.add(`${domainKey}:${t.id}`);
+      }
+    }
+    const ruleTechniqueIds = new Set(
+      useCases
+        .filter(
+          (uc) =>
+            uc.name.toLowerCase().includes(query) ||
+            (uc.log_source ?? '').toLowerCase().includes(query)
+        )
+        .flatMap((uc) => uc.mappings.map((m) => m.technique_id))
+    );
+    const matches = techniques.filter(
+      (t) =>
+        t.technique_id.toLowerCase().includes(query) ||
+        (t.name ?? '').toLowerCase().includes(query) ||
+        (t.platforms ?? []).some((p) => p.toLowerCase().includes(query)) ||
+        t.tactics.some((id) => tacticKeys.has(`${t.domain}:${id}`)) ||
+        ruleTechniqueIds.has(t.technique_id)
+    );
+    openDrill(
+      `“${siteSearch.trim()}” — ${matches.length} technique${matches.length === 1 ? '' : 's'}`,
+      matches,
+      {
+        grouped: true,
+        subtitle:
+          'Matches on technique ID/name, attack stage, platform, and your rule names — grouped by coverage state. Click any row for the full story.',
+      }
+    );
   };
 
   const handleDownloadNavigator = async () => {
@@ -454,21 +500,35 @@ export default function MitreResultsPage() {
                 <Tooltip delayDuration={150}>
                   <TooltipTrigger asChild>
                     <span>
-                      <Button size="sm" variant="outline" onClick={handleDownloadPdf} disabled={!completed}>
-                        <FileDown size={14} className="mr-1" aria-hidden="true" /> PDF
+                      <Button size="sm" variant="outline" onClick={() => handleDownloadPdf('executive')} disabled={!completed}>
+                        <FileDown size={14} className="mr-1" aria-hidden="true" /> Exec PDF
                       </Button>
                     </span>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs text-xs">
                     {completed
-                      ? 'Executive + detailed report as a PDF.'
+                      ? 'A 1–3 page executive summary — scorecard, top-5 fixes, roadmap and trend. Made for forwarding to leadership.'
                       : 'Available once the assessment completes.'}
                   </TooltipContent>
                 </Tooltip>
                 <Tooltip delayDuration={150}>
                   <TooltipTrigger asChild>
                     <span>
-                      <Button size="sm" variant="outline" onClick={handleDownloadXlsx} disabled={!completed}>
+                      <Button size="sm" variant="outline" onClick={() => handleDownloadPdf('full')} disabled={!completed}>
+                        <FileDown size={14} className="mr-1" aria-hidden="true" /> Full PDF
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs text-xs">
+                    {completed
+                      ? 'The complete report: executive summary plus the detailed gap register, coverage tables and appendices.'
+                      : 'Available once the assessment completes.'}
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip delayDuration={150}>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button size="sm" variant="outline" onClick={() => handleDownloadXlsx('full')} disabled={!completed}>
                         <FileSpreadsheet size={14} className="mr-1" aria-hidden="true" /> XLSX
                       </Button>
                     </span>
@@ -489,7 +549,7 @@ export default function MitreResultsPage() {
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs text-xs">
                     {completed
-                      ? 'Coverage as a MITRE ATT&CK Navigator layer — open it in the official Navigator (one file per matrix).'
+                      ? 'For your technical team: a machine-readable layer file (JSON) to open at attack.mitre.org/navigator — it paints your coverage onto MITRE’s official interactive matrix. Not a readable document; use the PDFs for that.'
                       : 'Available once the assessment completes.'}
                   </TooltipContent>
                 </Tooltip>
@@ -580,7 +640,7 @@ export default function MitreResultsPage() {
                   onDrillRules={openRuleDrillRules}
                 />
 
-                <div className="flex gap-1 border-b" role="tablist" aria-label="Assessment result views">
+                <div className="flex flex-wrap items-center gap-1 border-b" role="tablist" aria-label="Assessment result views">
                   {TABS.map((t) => (
                     <button
                       key={t.key}
@@ -598,6 +658,66 @@ export default function MitreResultsPage() {
                       {t.label}
                     </button>
                   ))}
+                  {/* Right side of the same row: site search + this-tab-only
+                      downloads (no extra toolbar row). */}
+                  <span className="ml-auto flex items-center gap-1 pb-1">
+                    <input
+                      type="search"
+                      value={siteSearch}
+                      onChange={(e) => setSiteSearch(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && runSiteSearch()}
+                      placeholder="Is it covered? Try 'T1486', 'ransomware', 'linux', 'RDP'…"
+                      aria-label="Search techniques, attack stages, platforms and rules"
+                      className="h-7 w-64 max-w-[50vw] rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                    <Tooltip delayDuration={150}>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label="Search this assessment"
+                          onClick={runSiteSearch}
+                          className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <SearchIcon size={14} aria-hidden="true" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs text-xs">
+                        Search anything — a technique ID or name, an attack stage,
+                        a platform/asset type, or one of your rules — and see its
+                        coverage state instantly.
+                      </TooltipContent>
+                    </Tooltip>
+                    {tab !== 'compare' && (
+                      <>
+                        <Tooltip delayDuration={150}>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label="Download only this tab as PDF"
+                              onClick={() => handleDownloadPdf(tab as 'coverage' | 'gaps' | 'assumptions')}
+                              className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              <FileDown size={14} aria-hidden="true" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent className="text-xs">Download only this tab as PDF</TooltipContent>
+                        </Tooltip>
+                        <Tooltip delayDuration={150}>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label="Download only this tab as Excel"
+                              onClick={() => handleDownloadXlsx(tab as 'coverage' | 'gaps' | 'assumptions')}
+                              className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              <FileSpreadsheet size={14} aria-hidden="true" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent className="text-xs">Download only this tab as Excel</TooltipContent>
+                        </Tooltip>
+                      </>
+                    )}
+                  </span>
                 </div>
 
                 {tab === 'coverage' && (
