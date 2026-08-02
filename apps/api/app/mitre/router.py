@@ -310,6 +310,13 @@ async def _persist_new_assessment(
     and return the parse-preview response. Phase 13a extracted this so the
     SIEM pull reuses tag validation/preview/caps byte-for-byte."""
     org_id = UUID(str(current_user.org_id))
+    # user_id may be absent for worker-triggered runs whose connection
+    # creator was deleted (created_by SET NULL) — audit tolerates None.
+    user_id = (
+        UUID(str(current_user.user_id))
+        if getattr(current_user, "user_id", None)
+        else None
+    )
     assessment_id = uuid4()
     storage = await get_storage_instance()
 
@@ -372,7 +379,7 @@ async def _persist_new_assessment(
             **({"extraction_text": extraction_text} if extraction_text else {}),
             **(extra_params or {}),
         },
-        created_by=UUID(str(current_user.user_id)),
+        created_by=user_id,
     )
     db.add(assessment)
     db.add_all(file_rows)
@@ -403,7 +410,7 @@ async def _persist_new_assessment(
     await log_action(
         db,
         org_id=org_id,
-        user_id=UUID(str(current_user.user_id)),
+        user_id=user_id,
         action="mitre.assessment_created",
         resource_type="mitre_assessment",  # migration 030
         resource_id=assessment_id,
@@ -498,6 +505,7 @@ async def _create_assessment_from_pull(
     name,
     intake_data,
     connection,
+    trigger="manual",
 ):
     """Shared pull→CSV→create path for token-at-trigger (13a) AND saved
     connections (13b). The secret is a transient argument only — callers
@@ -562,7 +570,7 @@ async def _create_assessment_from_pull(
         extra_params={
             "siem": {
                 "platform": "sentinel",
-                "trigger": "manual",
+                "trigger": trigger,
                 "pulled_at": pulled_at.isoformat(),
                 "rule_count": result["rule_count"],
                 # non-secret workspace reference only — never the secret
@@ -596,9 +604,50 @@ def _connection_out(connection: MitreConnection) -> dict:
         "config": connection.config,
         "key_version": connection.key_version,
         "secret_set": True,  # a row cannot exist without one (NOT NULL)
+        # Phase 13c schedule (null cadence = auto-runs off)
+        "schedule_cadence": connection.schedule_cadence,
+        "schedule_hour_utc": connection.schedule_hour_utc,
+        "schedule_weekday": connection.schedule_weekday,
+        "last_scheduled_at": (
+            connection.last_scheduled_at.isoformat()
+            if connection.last_scheduled_at
+            else None
+        ),
         "created_at": connection.created_at.isoformat() if connection.created_at else None,
         "updated_at": connection.updated_at.isoformat() if connection.updated_at else None,
     }
+
+
+def _apply_schedule_fields(connection: MitreConnection, payload: dict) -> None:
+    """Validate + apply the Phase 13c schedule trio as a unit. Rules:
+    cadence null clears everything; daily needs hour; weekly needs hour +
+    weekday; weekday is meaningless outside weekly."""
+    cadence = payload.get("schedule_cadence", connection.schedule_cadence)
+    hour = payload.get("schedule_hour_utc", connection.schedule_hour_utc)
+    weekday = payload.get("schedule_weekday", connection.schedule_weekday)
+
+    def bad(detail):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail
+        )
+
+    if cadence is None:
+        connection.schedule_cadence = None
+        connection.schedule_hour_utc = None
+        connection.schedule_weekday = None
+        return
+    if cadence not in ("daily", "weekly"):
+        bad("schedule_cadence must be null, 'daily' or 'weekly'")
+    if not isinstance(hour, int) or isinstance(hour, bool) or not 0 <= hour <= 23:
+        bad("schedule_hour_utc must be an integer 0-23")
+    if cadence == "weekly":
+        if not isinstance(weekday, int) or isinstance(weekday, bool) or not 0 <= weekday <= 6:
+            bad("schedule_weekday must be an integer 0-6 (0=Monday) for weekly schedules")
+    else:
+        weekday = None
+    connection.schedule_cadence = cadence
+    connection.schedule_hour_utc = hour
+    connection.schedule_weekday = weekday
 
 
 async def _get_connection(db, connection_id: UUID, org_id) -> MitreConnection:
@@ -672,11 +721,13 @@ def _validated_platform_config(payload: dict) -> tuple:
         )
 
 
-@router.get("/connections", summary="List saved SIEM connections (Phase 13b)")
+@router.get("/connections", summary="List saved SIEM connections + health (Phase 13b/13d)")
 async def list_connections(
     current_user: TokenData = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ):
+    from app.mitre.tasks import connection_health
+
     result = await db.execute(
         select(MitreConnection)
         .where(
@@ -685,7 +736,14 @@ async def list_connections(
         )
         .order_by(MitreConnection.created_at.desc())
     )
-    return [_connection_out(c) for c in result.scalars().all()]
+    out = []
+    for connection in result.scalars().all():
+        # Phase 13d: last pull/error + scheduled-failure streak per row.
+        # Per-connection query is fine at admin-view scale.
+        out.append(
+            {**_connection_out(connection), "health": await connection_health(db, connection)}
+        )
+    return out
 
 
 @router.post("/connections", status_code=status.HTTP_201_CREATED, summary="Save a SIEM connection (secret stored encrypted)")
@@ -704,10 +762,13 @@ async def create_connection(
     connection_id = uuid4()
     ciphertext, key_version = _encrypt_or_503(secret, aad=str(connection_id))
     del secret
+    # collapse ALL whitespace incl. CRLF — the name reaches an email
+    # Subject header in 13d (header-injection hardening)
+    clean_name = " ".join(str(payload.get("name") or "").split())
     connection = MitreConnection(
         connection_id=connection_id,
         org_id=org_id,
-        name=(str(payload.get("name") or "").strip() or f"Sentinel · {config['workspace']}")[:255],
+        name=(clean_name or f"Sentinel · {config['workspace']}")[:255],
         platform=platform,
         config=config,
         secret_ciphertext=ciphertext,
@@ -746,7 +807,8 @@ async def update_connection(
             {"platform": connection.platform, "config": payload["config"]}
         )
     if "name" in payload:
-        name = str(payload.get("name") or "").strip()
+        # whitespace-collapsed incl. CRLF (email Subject hardening, 13d)
+        name = " ".join(str(payload.get("name") or "").split())
         if name:
             connection.name = name[:255]
     if "secret" in payload:
@@ -755,6 +817,11 @@ async def update_connection(
             secret, aad=str(connection.connection_id)
         )
         del secret
+    if any(
+        k in payload
+        for k in ("schedule_cadence", "schedule_hour_utc", "schedule_weekday")
+    ):
+        _apply_schedule_fields(connection, payload)
     connection.updated_at = datetime.now(timezone.utc)
     await db.commit()
 
@@ -1083,11 +1150,18 @@ async def list_assessments(
     for a in result.scalars().all():
         summary = a.summary or {}
         overall = summary.get("overall", {})
+        siem = (a.params or {}).get("siem") or {}
         items.append(
             {
                 "assessment_id": str(a.assessment_id),
                 "name": a.name,
                 "status": a.status,
+                # Phase 13d provenance chip: platform + trigger only
+                "siem": (
+                    {"platform": siem.get("platform"), "trigger": siem.get("trigger")}
+                    if siem
+                    else None
+                ),
                 "attack_version": a.attack_version,
                 "created_at": a.created_at.isoformat() if a.created_at else None,
                 "completed_at": a.completed_at.isoformat() if a.completed_at else None,

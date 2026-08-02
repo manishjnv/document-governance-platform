@@ -60,6 +60,9 @@ services:
       SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL}
       STORAGE_TYPE: local
       STORAGE_LOCAL_PATH: /app/data/uploads
+      # MITRE Phase 13b vault master key (32-byte base64; generated into
+      # .env at deploy, never committed). Absent => saved connections 503.
+      SIEM_CRED_KEY: ${SIEM_CRED_KEY:-}
     volumes:
       - scopewise_uploads:/app/data/uploads
     ports:
@@ -67,6 +70,44 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - scopewise-net
+
+  # MITRE Phase 13c: Celery worker + in-process beat for scheduled SIEM
+  # pulls. Shared-VPS discipline: no published ports, scopewise-net only,
+  # hard resource caps (host has several unrelated projects).
+  worker:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile.prod
+    container_name: scopewise-worker
+    restart: unless-stopped
+    command: celery -A app.core.celery_app worker -B --loglevel=info --concurrency=2
+    mem_limit: 512m
+    cpus: 0.5
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379
+      # deliberately NO JWT_SECRET_KEY / OAuth vars: the worker never
+      # verifies tokens — least privilege (adversarial finding #2).
+      # SMTP is needed since 13d: scheduled-failure admin notifications.
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      GIT_SHA: ${GIT_SHA:-unknown}
+      SMTP_SERVER: ${SMTP_SERVER}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL}
+      STORAGE_TYPE: local
+      STORAGE_LOCAL_PATH: /app/data/uploads
+      SIEM_CRED_KEY: ${SIEM_CRED_KEY:-}
+    volumes:
+      - scopewise_uploads:/app/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - scopewise-net
 

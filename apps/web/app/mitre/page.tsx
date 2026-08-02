@@ -119,12 +119,17 @@ export default function MitreListPage() {
             <Target size={18} strokeWidth={2} className="text-primary" aria-hidden="true" />
             MITRE Assessments
           </h1>
-          <Button asChild size="sm">
-            <Link href="/mitre/new">
-              <Plus size={15} className="mr-1" aria-hidden="true" />
-              New assessment
-            </Link>
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Button asChild size="sm" variant="outline">
+              <Link href="/mitre/connections">SIEM connections</Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href="/mitre/new">
+                <Plus size={15} className="mr-1" aria-hidden="true" />
+                New assessment
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {error && (
@@ -170,7 +175,26 @@ export default function MitreListPage() {
                       className="cursor-pointer"
                       onClick={() => router.push(`/mitre/${item.assessment_id}`)}
                     >
-                      <TableCell className="text-sm font-medium">{item.name}</TableCell>
+                      <TableCell className="text-sm font-medium">
+                        <span className="inline-flex flex-wrap items-center gap-1.5">
+                          {item.name}
+                          {item.siem && (
+                            <Tooltip delayDuration={150}>
+                              <TooltipTrigger asChild>
+                                <span className="inline-flex cursor-default items-center rounded-full border border-sky-200 bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-800">
+                                  Sentinel{item.siem.trigger === 'scheduled' ? ' · auto' : ''}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs text-xs">
+                                Rules pulled read-only from Microsoft Sentinel
+                                {item.siem.trigger === 'scheduled'
+                                  ? ' by the automatic schedule.'
+                                  : ' (manual pull).'}
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         <span
                           className={cn(

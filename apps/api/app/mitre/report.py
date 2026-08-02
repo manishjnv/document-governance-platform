@@ -211,6 +211,21 @@ def build_html_report(assessment, use_cases: list) -> str:
         footer_bits.append(
             "models: " + _esc("; ".join(f"{k}: {', '.join(v)}" for k, v in models_used.items()))
         )
+    siem = params.get("siem") or {}
+    if siem:
+        # Phase 13d provenance: which SIEM, manual vs scheduled, when.
+        # Non-secret fields only (workspace_ref never holds credentials).
+        source_bits = [
+            "source: Microsoft Sentinel pull",
+            _esc(siem.get("trigger") or "manual"),
+        ]
+        if (siem.get("workspace_ref") or {}).get("workspace"):
+            source_bits.append(_esc(siem["workspace_ref"]["workspace"]))
+        if siem.get("connection_name"):
+            source_bits.append(_esc(siem["connection_name"]))
+        if siem.get("pulled_at"):
+            source_bits.append("pulled " + _esc(str(siem["pulled_at"])[:16]))
+        footer_bits.append(" · ".join(source_bits))
     if thresholds:
         footer_bits.append(
             _esc(

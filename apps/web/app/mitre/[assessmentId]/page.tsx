@@ -339,6 +339,22 @@ export default function MitreResultsPage() {
               </div>
             )}
 
+            {(() => {
+              // Phase 13d provenance line: only for SIEM-pulled assessments
+              const siem = (assessment.params as any)?.siem;
+              if (!siem) return null;
+              return (
+                <p className="text-xs text-muted-foreground">
+                  Rules pulled read-only from Microsoft Sentinel
+                  {siem.trigger === 'scheduled' ? ' by the automatic schedule' : ''}
+                  {siem.connection_name ? ` · connection “${siem.connection_name}”` : ''}
+                  {siem.workspace_ref?.workspace ? ` · workspace ${siem.workspace_ref.workspace}` : ''}
+                  {siem.pulled_at ? ` · ${fmtDate(siem.pulled_at)}` : ''}
+                  {typeof siem.rule_count === 'number' ? ` · ${siem.rule_count} rules` : ''}
+                </p>
+              );
+            })()}
+
             {assessment.status === 'running' && (
               <div className="flex items-center gap-3 rounded-md bg-sky-50 p-5 text-sm text-sky-900">
                 <Loader2 size={18} className="animate-spin" aria-hidden="true" />

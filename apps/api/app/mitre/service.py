@@ -361,17 +361,25 @@ def compare_assessments(current, baseline) -> dict:
     }
 
 
-async def run_assessment_pipeline(assessment_id: UUID, org_id: UUID) -> None:
+async def run_assessment_pipeline(
+    assessment_id: UUID, org_id: UUID, *, session_factory=None
+) -> None:
     """Fire-and-forget task body. Own AsyncSession; any failure lands the
     assessment in status=failed with error_message (lifecycle CHECKs).
     Concurrency-capped; queued runs simply wait their turn (the 30-min
-    stale-run guard is generous enough to cover realistic queue waits)."""
+    stale-run guard is generous enough to cover realistic queue waits).
+
+    session_factory (Phase 13c): the Celery worker passes a per-call
+    sessionmaker because the app-wide engine binds to the first event loop
+    (document_tasks.py pattern) — the API path leaves it None."""
     async with _PIPELINE_SEMAPHORE:
-        await _run_pipeline_body(assessment_id, org_id)
+        await _run_pipeline_body(assessment_id, org_id, session_factory)
 
 
-async def _run_pipeline_body(assessment_id: UUID, org_id: UUID) -> None:
-    async with AsyncSessionLocal() as db:
+async def _run_pipeline_body(
+    assessment_id: UUID, org_id: UUID, session_factory=None
+) -> None:
+    async with (session_factory or AsyncSessionLocal)() as db:
         try:
             result = await db.execute(
                 select(MitreAssessment).where(

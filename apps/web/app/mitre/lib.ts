@@ -20,6 +20,30 @@ export interface AssessmentListItem {
   strict_pct: number | null;
   weighted_pct: number | null;
   domains_brief?: Record<string, DomainBrief>;
+  /** Phase 13d: present when the rules were pulled from a SIEM. */
+  siem?: { platform: string | null; trigger: string | null } | null;
+}
+
+/** Phase 13d: a saved SIEM connection + pull health (admin view). */
+export interface SiemConnection {
+  connection_id: string;
+  name: string;
+  platform: string;
+  config: Record<string, string>;
+  key_version: number;
+  secret_set: boolean;
+  schedule_cadence: 'daily' | 'weekly' | null;
+  schedule_hour_utc: number | null;
+  schedule_weekday: number | null;
+  last_scheduled_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  health: {
+    last_pull_at: string | null;
+    last_status: string | null;
+    last_error: string | null;
+    scheduled_failure_streak: number;
+  };
 }
 
 export interface CompareEntry {

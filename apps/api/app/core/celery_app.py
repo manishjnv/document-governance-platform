@@ -15,7 +15,8 @@ celery_app = Celery(
     "edgp",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["app.tasks.document_tasks"],
+    # app.mitre.tasks also registers the beat schedule (Phase 13c)
+    include=["app.tasks.document_tasks", "app.mitre.tasks"],
 )
 
 celery_app.conf.task_serializer = "json"
