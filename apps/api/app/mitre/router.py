@@ -23,7 +23,7 @@ from app.compliance.audit import log_action
 from app.core.cache import invalidate_cache
 from app.db.session import get_db
 from app.dependencies import get_current_user, require_role
-from app.mitre import attack_data, ingest, service
+from app.mitre import attack_data, ingest, navigator, service
 from app.mitre import report as mitre_report
 from app.models.mitre_assessment import MitreAssessment
 from app.models.mitre_file import MitreFile
@@ -579,6 +579,51 @@ async def assessment_export_xlsx(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={
             "Content-Disposition": f'attachment; filename="{filename}-attack-coverage.xlsx"'
+        },
+    )
+
+
+@router.get("/assessments/{assessment_id}/navigator", summary="ATT&CK Navigator layer export (json/zip)")
+async def assessment_navigator_export(
+    assessment_id: UUID,
+    current_user: TokenData = Depends(get_current_user),  # viewers may download (report policy)
+    db: AsyncSession = Depends(get_db),
+):
+    """One Navigator 4.5 layer per applicable domain (Phase 8): a single
+    applicable domain downloads as plain layer JSON; multiple domains as a
+    zip with one layer file each. Open at mitre-attack.github.io/attack-navigator."""
+    import zipfile
+
+    org_id = UUID(str(current_user.org_id))
+    assessment = await _completed_assessment(db, assessment_id, org_id)
+    layers = navigator.build_navigator_layers(assessment)
+    if not layers:  # defensive — completed assessments always have >=1 domain
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="No applicable domains to export",
+        )
+    base = _sanitize_filename(assessment.name)[:80] or "assessment"
+
+    if len(layers) == 1:
+        domain, layer = layers[0]
+        return StreamingResponse(
+            io.BytesIO(json.dumps(layer, indent=2).encode("utf-8")),
+            media_type="application/json",
+            headers={
+                "Content-Disposition": f'attachment; filename="{base}-navigator-{domain}.json"'
+            },
+        )
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for domain, layer in layers:
+            zf.writestr(f"{base}-navigator-{domain}.json", json.dumps(layer, indent=2))
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{base}-navigator-layers.zip"'
         },
     )
 

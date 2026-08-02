@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { useParams, useRouter } from 'next/navigation';
-import { FileDown, FileSpreadsheet, Loader2, Play, Target } from 'lucide-react';
+import { FileDown, FileJson, FileSpreadsheet, Loader2, Play, Target } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -183,6 +183,25 @@ export default function MitreResultsPage() {
     }
   };
 
+  const handleDownloadNavigator = async () => {
+    setDownloadError('');
+    try {
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments/${assessmentId}/navigator`,
+        { headers: authHeaders(), responseType: 'blob' }
+      );
+      const isZip = String(res.headers['content-type'] ?? '').includes('zip');
+      const url = URL.createObjectURL(res.data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${assessment?.name || 'assessment'}-navigator${isZip ? '-layers.zip' : '-layer.json'}`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setDownloadError(err.response?.data?.detail || 'Failed to download the Navigator layer');
+    }
+  };
+
   const handleRun = async () => {
     setRunError('');
     try {
@@ -257,6 +276,20 @@ export default function MitreResultsPage() {
                   <TooltipContent className="max-w-xs text-xs">
                     {completed
                       ? 'Full gap register as a spreadsheet — every technique, rule, gap and assumption.'
+                      : 'Available once the assessment completes.'}
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip delayDuration={150}>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button size="sm" variant="outline" onClick={handleDownloadNavigator} disabled={!completed}>
+                        <FileJson size={14} className="mr-1" aria-hidden="true" /> Navigator
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs text-xs">
+                    {completed
+                      ? 'Coverage as a MITRE ATT&CK Navigator layer — open it in the official Navigator (one file per matrix).'
                       : 'Available once the assessment completes.'}
                   </TooltipContent>
                 </Tooltip>
