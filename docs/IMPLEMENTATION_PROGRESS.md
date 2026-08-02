@@ -797,6 +797,30 @@ journey verbatim, XLSX How-We-Read-Your-Files sheet, threat-profile
 matches chip. No migrations anywhere in Phase 14; **full suite 800
 passed / 7 skipped**; `tsc` clean; deployed to prod.
 
+**MITRE Phase 14 polish — user-feedback pass (2026-08-02, deployed
+`4f93523`):** five refinements from walking the deployed UI. **(1)
+Resizable panels** (`6051af6`): drawer + both drill-down panels gain a
+mouse-draggable left-edge handle (`useSheetResize.tsx` — shared width
+remembered in localStorage, keyboard-arrow accessible, clamped to the
+viewport; phones stay full-width). **(2) Heatmap context** (`6051af6`):
+cells show "ID Name" truncated in the same footprint; one delegated
+custom tooltip serves all ~900 cells (solid background, smooth fade,
+plain-words state + N/A reason) instead of native `title`; drawer hides
+the ICS "None"/PRE pseudo-platforms and fixes a/an grammar; mobile
+guards added (past-runs dropdown viewport clamp, header row wraps).
+**(3) XLSX Summary redesign** (`bdde5f5`): sectioned sheet with branded
+title band, EXECUTIVE SUMMARY (narrative text + "is this % bad?"
+context), KEY NUMBERS (traffic-light coverage cell, state-colored
+counts), TOP 5 THINGS TO FIX FIRST (effort fills + recommendations),
+ABOUT THIS ASSESSMENT. **(4) Gaps table density** (`4f93523`): rows
+~50% tighter, single-line technique, pastel pills replaced with
+dot+text that carries meaning — "P1 · Critical", "70 · Moderate",
+"Build now · via Sysmon". **(5) Assumptions & N/A redesign**
+(`4f93523`): two-column accent-bordered assumptions grid; N/A appendix
+as reason-aggregated group cards (37 identical "deprecated" rows → one
+line) with technique chips that open the drawer. Numbers untouched;
+suite stays **800/7**, `tsc` clean.
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)
