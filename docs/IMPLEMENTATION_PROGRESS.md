@@ -960,6 +960,28 @@ note, replaced "Final scoring" with a defined verdict rubric + 0-10
 data-sufficiency score). Full plan: `docs/planning/MITRE_ACCURACY_IMPROVEMENT_PLAN.md`
 (phases A1-A8, running sequentially this session).
 
+**MITRE accuracy plan, phase A2 (2026-08-03):** offline tagging-accuracy
+benchmark, `scripts/benchmark_tagging.py` (dev-run-only, never imported by
+the app) — samples public Sigma detection rules (their own `attack.tXXXX`
+tags as ground truth), runs the real keyword pre-pass (optionally the real
+AI tagger behind `--with-ai`, off by default), reports precision/recall/F1
+(exact + parent-level-credit) and per-confidence-bucket accuracy. Measured
+on 300 rules: keyword-layer exact precision 0.365 / recall 0.145 (Sigma
+rules typically carry only their primary tag, so this is a conservative
+floor). No threshold/prompt/alias changed. New regression fixture (25
+pinned Sigma-derived rows) + `test_mitre_tagging_benchmark.py` (2 tests,
+no network/LLM).
+
+**MITRE accuracy plan, phase A3 (2026-08-03):** rule-vs-inventory
+telemetry cross-check (shelfware detector). New pure
+`quality.telemetry_shelfware_check()`: flags a covered/partial technique
+whose supporting rule(s) ALL declare a log source category (via the
+existing ranking.py bridge) absent from the customer's own Log
+Sources/Tooling sheets — one assumption line per flagged technique,
+gated on a Log Sources sheet actually being uploaded, rendered by the
+existing Assumptions UI/PDF/XLSX with zero renderer changes. Never
+touches coverage/state/ranking. 7 new goldens + 1 new E2E test.
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)
