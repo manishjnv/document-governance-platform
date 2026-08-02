@@ -1,8 +1,8 @@
 # MITRE ATT&CK Coverage Assessment — Module Reference
 
-**Status:** COMPLETE (Phases 0–7 + optional Phases 8–10), launch-ready,
+**Status:** COMPLETE (Phases 0–7 + optional Phases 8–11), launch-ready,
 live in production at `https://scopewise.assessiq.in/mitre`. No known
-quality gaps — remaining plan-§14 optional features (Phases 11–13 in the
+quality gaps — remaining plan-§14 optional features (Phases 12–13 in the
 kickoff prompt) are built only on request.
 **Written:** 2026-08-02, after Phase 7. This is the end-to-end reference
 for what the module is and how every piece works; the original design
@@ -12,12 +12,12 @@ rationale lives in `docs/planning/MITRE_ASSESSMENT_PLAN.md` (read that for
 **Baselines:** backend **687 passed / 7 skipped**, certified at the
 Phase 7 gate (`b183f75`; the 7th skip = the PDF-render test on dev boxes
 without WeasyPrint's native libs — prod image has them, prod render smoke
-PASSED 2026-08-02); `npx tsc --noEmit` clean (re-verified 2026-08-02). Backend count after optional Phases 8–10:
-**707 passed / 7 skipped** (Phase 10 certified solo on shared
-`edgp_test` — see the `edgp-test-single-runner-rule` memory for why runs
-from two sessions at once deadlock). Prod state: **deployed through
-Phase 10** — `/opt/scopewise` at `6ce8e48`; migrations 029–033 all
-applied to `scopewise_prod`.
+PASSED 2026-08-02); `npx tsc --noEmit` clean (re-verified 2026-08-02). Backend count after optional Phases 8–11:
+**713 passed / 7 skipped** (certified solo on shared `edgp_test` — see
+the `edgp-test-single-runner-rule` memory for why runs from two sessions
+at once deadlock). Prod state: **deployed through Phase 11** —
+`/opt/scopewise` at `62f1df2`; migrations 029–033 all applied to
+`scopewise_prod` (Phase 11 adds none).
 
 ---
 
@@ -75,6 +75,7 @@ in-app results with a Navigator-style heatmap, executive+detailed PDF, an
 | `data/attack.json` | Pinned ATT&CK **v19.1** compact dataset (0.7 MB, checked in — the app NEVER fetches from the internet). Enterprise 858 techniques/15 tactics, ICS 118/12, Mobile 190/14 (counts include revoked/deprecated, which carry flags). |
 | `data/technique_priorities.json` | Curated 40-technique priority tier list (tiers 1–3) for gap ranking. Sources cited in-file (Red Canary TDR, CISA #StopRansomware, Picus, DBIR, M-Trends). **User-approved 2026-08-01** (stamped in-file). Enterprise-only in v1. |
 | `data/keyword_aliases.json` | Curated tool/command → technique alias map (39 aliases, cited sources) for the Phase 6 pre-pass, e.g. `mimikatz`→T1003.001, `-enc`→T1059.001. |
+| `data/threat_profiles.json` | Phase 11: curated industry (10 profiles + banking/insurance aliases, keyed to the wizard's INDUSTRIES lowercased) and actor (10 ATT&CK groups incl. G-codes) → technique lists, sources cited in-file (DBIR/CISA/M-Trends/Dragos/HC3/FS-ISAC + ATT&CK Groups). 143 IDs, all resolve `ok` (test-enforced). Feeds threat-informed gap weighting — ordering only, never coverage %. |
 
 ### Everything else
 
@@ -165,7 +166,8 @@ All UUID v4 PKs, `org_id` FK → organizations CASCADE, tz-aware timestamps
 - **`mitre_settings`** — org-keyed tunables `(org_id, setting_key) → JSONB`
   (customization.py pattern; absent row = code default). Keys/defaults:
   `confidence_covered=0.7`, `confidence_partial_floor=0.4`,
-  `partial_credit=0.5`, `count_disabled_as_coverage=false`.
+  `partial_credit=0.5`, `count_disabled_as_coverage=false`,
+  `threat_weighting_enabled=true` (Phase 11 — gap-ordering only).
 
 **`summary` JSONB shape** (what reports/frontend/compare consume):
 
@@ -174,7 +176,8 @@ overall / domains.{enterprise|ics|mobile}:   covered, partial, not_covered,
     not_applicable, applicable, strict_pct, weighted_pct
 domains.*.tactics[]:  {id, shortname, name, <same rollup fields>}
 gaps[]:      {technique_id, name, domain, state, tier, tactics[], feasibility
-              (short|mid|long), via, category, hint, rank}
+              (short|mid|long), via, category, hint,
+              threat_relevance (labels[]|null, Phase 11), rank}
 roadmap:     {short[], mid[], long[]}   (same gap dicts, bucketed)
 narrative:   {executive_summary, gap_recommendations{tid→text},
               roadmap_prose{short,mid,long}, generated_by: ai|template,
@@ -264,7 +267,14 @@ category is already onboarded (names the exact source), **mid** =
 obtainable from tooling they own, **long** = new capability (or no
 standard telemetry → "bespoke detection engineering"). Every gap carries a
 plain-English `hint`; the narrative's `gap_recommendations` override it in
-displays when present.
+displays when present. **Phase 11 threat weighting:**
+`build_threat_profile(industry, actors)` looks up the curated
+`threat_profiles.json` (exact technique IDs; unknown industry/actor =
+no-op) and matching gaps carry `threat_relevance` labels and sort above
+EQUAL-TIER peers (a second sort key right after tier — never a tier jump,
+never a coverage/state change). Org-toggleable via
+`threat_weighting_enabled` (default on); when off, ordering reverts but
+the annotation stays (provenance).
 
 **Compare** (`service.compare_assessments(current, baseline)`) — pure diff
 of two completed runs: `newly_covered` (now covered, wasn't), `regressed`
@@ -358,7 +368,8 @@ stamping. Registered nowhere in `ReviewOrchestrator`.
 | `POST /assessments/{id}/remap` | admin/reviewer | 409 unless `pending` (atomic status-conditional guard in the row-replacement transaction — run/remap race closed). Phase 9 wizard: `{"columns": {field: 0-based index}}` re-parses the stored dump with an explicit map (`validate_column_override` 422s bad fields/indexes), replaces rows, updates `params.columns`, audits `mitre.assessment_remapped`, returns a fresh parse preview (`headers` + `sample_rows` now on create too). 422 for pdf/docx extraction dumps. |
 | `PATCH /assessments/{id}/use-cases/{use_case_id}/mappings` | admin, reviewer | 409 unless `completed`. Phase 10 override: body `{"technique_ids": [...]}` = the FULL new list for that rule (empty = maps to nothing, max 20). Every ID validated via `resolve()` (revoked→successor with a note; deprecated/unknown/malformed → 422). Row becomes `mapping_status='manual'`, mappings `source='manual'` @ 1.0; coverage/gaps/roadmap recomputed inline (pure code, `service.recompute_results`, narrative kept + assumption note appended, counts gain a `manual` key). `SELECT … FOR UPDATE` on the assessment serializes concurrent edits; audits `mitre.mappings_edited`. |
 | `GET /assessments/{id}/compare/{other_id}` | any | `{id}` = current, `{other_id}` = baseline. Both org-owned (404) + completed (409). |
-| `GET /settings` / `PATCH /settings` | admin | The 4 tunables; PATCH validates types/ranges + `partial_floor < covered`; audited. |
+| `GET /threat-catalog` | any | Phase 11: curated actor list (name + ATT&CK G-code + note) and profiled-industry labels from `threat_profiles.json` — feeds the wizard's actor chips. Static, org-agnostic. |
+| `GET /settings` / `PATCH /settings` | admin | The 5 tunables; PATCH validates types/ranges + `partial_floor < covered`; audited. Intake note: `threat_actors` (≤10) is validated against the catalog at create — unknown names 422. |
 | `DELETE /assessments/{id}` | admin, reviewer | Soft delete. |
 
 Audit events (`audit_logs`): `mitre.assessment_created` / `_completed` /
@@ -439,6 +450,7 @@ overflow on every page (real-browser checked).
 - **`/mitre/new`** — single-page wizard: the plan-§2 privacy notice shown
   BEFORE any file; two drag-drop zones (client validation mirrors server
   rules); template download links; intake (industry/region selects,
+  Phase 11 threat-actor chips fed by `GET /threat-catalog`,
   disabled-rules toggle default No, scope-exclusions editor requiring
   target+reason); submit → inline parse preview (counts,
   detected-column chips, environment echo, warnings) → Run → redirect.
@@ -449,7 +461,8 @@ overflow on every page (real-browser checked).
   click → technique drawer showing state/tactics/N-A reason/mapped rules
   with enabled+source ("Tagged by you" / "Matched by rule" / "AI-mapped")
   +confidence), **Gaps & Roadmap** (ranked table with P-tier/feasibility
-  badges + narrative recommendations + AI-written/template provenance
+  badges, a Phase 11 violet "Threat match" chip on profile-relevant rows,
+  narrative recommendations, and the AI-written/template provenance
   badge; short/mid/long sections), **Assumptions & N/A** (grouped
   appendix, verbatim customer reasons), **Compare** (baseline selector →
   delta chips with improvement-is-green semantics incl. inverted metrics,
@@ -477,6 +490,7 @@ absent; prod render verified live). Frontend: `tsc --noEmit` clean.
 | `test_mitre_report.py` | HTML escapes planted `<script>`, XLSX guard incl. real-workbook readback + Logic column, 409s, StreamingResponse content-type, compare golden + cross-org 404, `domains_brief`. |
 | `test_mitre_navigator.py` | Golden single-domain layer (colors/comments/enabled/versions/legend), multi-domain stable order, gated-domain exclusion; endpoint json vs zip, viewer-readable, cross-org 404 + pending 409. |
 | `test_mitre_mapping_edit.py` | Phase 10 PATCH: manual provenance + inline recompute (states flip, counts.manual, assumption note, audit row), empty-list unmap, invalid/malformed/over-cap 422s, non-completed 409, cross-org 404 (both IDs) + viewer 403. |
+| `test_mitre_threat_profile.py` | Phase 11: every curated ID resolves `ok` + alias integrity, real-file lookup (Banking alias, unknown = no-op), within-tier lift golden, no-tier-jump golden, toggle-off keeps order but keeps annotation, intake threat_actors 422s (unknown/non-list/over-10). |
 
 Reminder: migrations 029/031/032 (and 030) must be applied to `edgp_test`
 before running the suite.
@@ -548,18 +562,20 @@ you're alone on `edgp_test`.
 | 8 (opt) | `cdf6cce` | 08-02 | ATT&CK Navigator layer export (pure `navigator.py`, format 4.5, json/zip endpoint, results-page button); no migration/AI; review waived per kickoff (read-only JSON) |
 | 9 (opt) | `ed9cec9` | 08-02 | Column-mapping wizard: preview `headers`+`sample_rows`, `POST .../remap` with validated override + atomic run-race guard, CSV reader caps, threadpool parse; REVISE→ACCEPT; prod deploy |
 | 10 (opt) | `6ce8e48` | 08-02 | Per-mapping reviewer override: `PATCH .../use-cases/{id}/mappings` (resolve()-validated full-list edit, `manual` provenance @ 1.0, migration 033 + ORM lockstep, FOR UPDATE serialization, audit) + inline pure recompute + drawer edit UI; ACCEPT; prod deploy |
+| 11 (opt) | `62f1df2` | 08-02 | Threat-informed gap weighting: curated `threat_profiles.json` (143 validated IDs, cited sources), `build_threat_profile` + within-tier sort lift, `threat_weighting_enabled` tunable, intake `threat_actors` + `GET /threat-catalog`, wizard actor chips + "Threat match" gap chip; no migration/AI; ACCEPT; prod deploy |
 
 ## 16. Optional feature work (plan §14 — not launch blockers)
 
 Originally deferred by design; queued as optional **Phases 8–13** (one
 feature per session, kickoff prompt committed as `cf6e9e4`). **Shipped:
 Phase 8 (ATT&CK Navigator layer export), Phase 9 (interactive
-column-mapping wizard), and Phase 10 (per-mapping reviewer override +
-inline recompute)** — see §15 for commits. Still open, build only on
-request: Phase 11 threat-informed actor/industry weighting, Phase 12
-per-rule detection *quality* scoring (v1 scores presence — stated in the
-methodology footnote and assumptions), Phase 13 scheduled/continuous
-re-assessment + SIEM API pulls (design-first), plus ICS/Mobile entries in
-the priorities file and per-org priority-tier overrides (the
-`mitre_settings` pattern already supports it). When one of these lands,
-extend §15's history table and the relevant sections here.
+column-mapping wizard), Phase 10 (per-mapping reviewer override +
+inline recompute), and Phase 11 (threat-informed actor/industry gap
+weighting)** — see §15 for commits. Still open, build only on request:
+Phase 12 per-rule detection *quality* scoring (v1 scores presence —
+stated in the methodology footnote and assumptions), Phase 13
+scheduled/continuous re-assessment + SIEM API pulls (design-first), plus
+ICS/Mobile entries in the priorities file and per-org priority-tier
+overrides (the `mitre_settings` pattern already supports it). When one
+of these lands, extend §15's history table and the relevant sections
+here.

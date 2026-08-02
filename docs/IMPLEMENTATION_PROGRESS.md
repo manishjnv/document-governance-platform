@@ -635,6 +635,34 @@ blocking findings; verified cross-org scoping, resolve() coverage,
 recompute parity with the pipeline's persist block, FOR UPDATE race
 handling, audit correctness).
 
+**Phase 11 COMPLETE — threat-informed gap weighting (2026-08-02, commit
+`62f1df2`, DEPLOYED to prod):** fourth optional feature (plan §14),
+fully deterministic per the coding-over-AI rule — no LLM anywhere in the
+path. New curated `app/mitre/data/threat_profiles.json`: 10 industry
+profiles keyed to the wizard's INDUSTRIES values (banking/insurance
+alias onto financial services) + 10 named ATT&CK groups (FIN7, Wizard
+Spider, Lazarus, APT28/29/41, Sandworm, Volt Typhoon, Scattered Spider,
+LockBit affiliates), 143 technique IDs total, every one machine-validated
+to resolve `ok` against the pinned v19.1 dataset (test-enforced), sources
+cited in the file header (DBIR 2025, CISA #StopRansomware/AA23-325A/
+AA23-320A/AA24-038A, M-Trends, Dragos, HC3, FS-ISAC, ATT&CK Groups).
+`ranking.build_threat_profile()` + a second sort key right after tier:
+profile-relevant gaps rank above EQUAL-TIER peers — never a tier jump,
+never any change to coverage %/states (ranking runs strictly downstream
+of coverage; verified in review). Gaps carry `threat_relevance` labels;
+the narrative's top-gaps input includes them; an assumption line records
+the active profile. Org tunable `threat_weighting_enabled` (default on,
+`mitre_settings` pattern); the Phase 10 recompute path honors the same
+profile + the toggle stamped in `params.thresholds`. Intake gains
+optional `threat_actors` (validated against the curated catalog, deduped,
+max 10, unknown → 422); new `GET /threat-catalog` endpoint feeds the
+wizard's actor chips; gap rows show a violet "Threat match" chip with a
+plain-English tooltip. No migration. 6 new tests
+(`test_mitre_threat_profile.py`) + the settings round-trip updated for
+the 5th tunable. Full suite **713 passed / 7 skipped** (solo on shared
+`edgp_test`); `tsc` clean; Sonnet light review **ACCEPT** (one cosmetic
+duplicate-actor note, fixed same session).
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)
