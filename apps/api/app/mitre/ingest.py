@@ -85,6 +85,9 @@ COLUMN_SYNONYMS = {
         "search name", "analytic", "analytic name", "content name",
         "detection rule name", "signature", "display name", "use case title",
         "correlation search", "correlation search name",
+        # Sentinel/tracker exports seen in real customer workbooks (2026-08-02)
+        "analytical rule", "analytic rule", "analytics rule",
+        "analytical rule name", "analytics rule name", "rule display name",
     },
     "logic": {
         "logic", "detection logic", "rule logic", "query", "search",
@@ -94,6 +97,8 @@ COLUMN_SYNONYMS = {
         "aql", "eql", "esql", "sigma", "sigma rule", "rule definition",
         "detection rule logic", "alert query", "kql query", "spl query",
         "detection criteria", "criteria", "rule expression", "expression",
+        "query conditions", "query condition", "conditions", "query logic",
+        "rule conditions",
     },
     "description": {
         "description", "desc", "summary", "details", "notes",
@@ -110,7 +115,9 @@ COLUMN_SYNONYMS = {
         "data sources", "datasource", "index", "source", "sourcetype",
         "log source index",
         "log type", "data type", "event source", "source type",
-        "telemetry", "telemetry source", "source index", "device type",
+        "telemetry", "telemetry source",
+        "datasource used", "data source used", "data sources used",
+        "log source used", "datasources used", "data connector", "source index", "device type",
         "log source type", "siem index",
     },
 }
@@ -536,6 +543,11 @@ def _sheet_entries(rows: list[list], skipped: list | None = None) -> list[str]:
             "platform", "platforms", "asset", "assets", "name", "log source",
             "log sources", "source", "tool", "tooling", "crown jewel",
             "crown jewels", "entry", "item",
+            # real-world inventory header variants (2026-08-02 customer sample)
+            "asset platform", "asset platforms", "asset type", "asset name",
+            "device technology", "device vendor", "technology", "technologies",
+            "log source name", "tool name", "security tooling", "crown jewel name",
+            "system", "systems", "description",
         }:
             continue
         if len(row) > 1 and parse_enabled(row[1]) is False:
