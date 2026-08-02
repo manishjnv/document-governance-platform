@@ -840,6 +840,36 @@ search over technique/tactic/platform/rule with state-grouped results
 (`2698eda`). Suite **801 passed / 7 skipped** (executive-scope test
 added); `tsc` clean; all render-verified in the prod container.
 
+**MITRE Phase 14h — report branding & polish (2026-08-02), 4 sequential
+commits, full detail in `docs/planning/MITRE_MODULE_REFERENCE.md` §11/§15:**
+**(1) Refactor** (`fa7ba86`): split the monolithic `report.py` into
+Jinja2 `templates/` (base/cover/executive/detail/appendix/style.css) +
+`report_common.py` (shared constants/helpers) + `report_xlsx.py` (XLSX
+builder) — zero behavior change, pure structural split.
+**(2) Branding** (`e5ff17a`): three new org-scoped `mitre_settings`
+overrides — report display name, accent color (hex-validated), optional
+watermark text — flow through to both the PDF (logo + repeating page
+header + diagonal watermark via WeasyPrint CSS GCPM) and the XLSX
+builder; no migration (reuses the existing generic settings table).
+**(3) XLSX polish** (`77221f9`): native `DataBarRule` conditional
+formatting + a `BarChart` on the Coverage by Tactic sheet; a genuine
+3-color `ColorScaleRule` and a numeric (sortable) Priority column with
+a `"P"0` display format on Gaps & Recommendations, replacing the old
+static per-tier cell fill; `Read Me` sheet protection
+(`protection.sheet = True`, no password — accidental-edit guard only);
+workbook core properties (title/creator/description) — openpyxl-native
+only throughout, xlsxwriter intentionally never used. Note: openpyxl has
+no wired-up support for the docProps "Company" extended property (dead
+code excluded from serialization in the library itself, confirmed by
+source inspection); `description` carries the org display name instead.
+**(4) PDF metadata + docs** (this update): `<meta>` tags in `base.html`
+so WeasyPrint stamps `/Author`, `/Subject`, `/Keywords` on the generated
+PDF; this doc and `MITRE_MODULE_REFERENCE.md` updated. All four units
+verified individually and together against the full backend suite (no
+regressions, no computed number changed anywhere) and `tsc --noEmit`;
+no DB migration in any of the four. Suite **802 passed / 7 skipped**
+after unit 3 (+1 new XLSX-polish test).
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)

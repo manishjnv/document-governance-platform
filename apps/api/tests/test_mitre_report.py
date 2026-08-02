@@ -262,6 +262,22 @@ async def test_xlsx_phase14h_polish(db_session):
     assert "Acme Corp" in wb.properties.description
 
 
+@pytest.mark.asyncio
+async def test_html_report_pdf_metadata_tags(db_session):
+    """Phase 14h: base.html carries <meta> tags WeasyPrint maps straight to
+    PDF document properties (author -> /Author, description -> /Subject,
+    keywords -> /Keywords; <title> -> /Title was already covered by the
+    existing page_title assertions). Checked on the plain HTML string so
+    this test runs without WeasyPrint's native libs."""
+    org, user, _ = await _make_user(db_session)
+    assessment = await _seed(db_session, org, user)
+    html = build_html_report(assessment, [], branding={"report_display_name": "Acme Corp"})
+    assert '<meta name="author" content="Acme Corp">' in html
+    assert '<meta name="description" content="MITRE ATT&amp;CK coverage assessment for' in html
+    assert 'overall coverage 33.3%' in html
+    assert '<meta name="keywords" content="MITRE ATT&amp;CK, coverage assessment, gap analysis, Acme Corp">' in html
+
+
 def test_compare_golden():
     class A:  # minimal stand-in with the attributes compare reads
         pass

@@ -74,7 +74,10 @@ in-app results with a Navigator-style heatmap, executive+detailed PDF, an
 | `ingest.py` | Structured file readers: xlsx (openpyxl direct cell access — deliberately NOT `parse_document()`, whose ExcelParser flattens columns), xls (xlrd), csv (stdlib). Header/sheet/platform synonym detection (~90 real-world variants), trust-boundary guards. See §5. |
 | `service.py` | Pipeline driver (`run_assessment_pipeline`, fire-and-forget task under a process-wide `Semaphore(3)`), `build_mappings` (customer-tag validation), `compare_assessments` (trend diff), org tunables get/set (`mitre_settings`). |
 | `router.py` | All endpoints under `/api/v1/mitre` (§9). Org-scoped, soft-delete-aware, upload trust boundary. |
-| `report.py` | HTML report builder + lazy-WeasyPrint `generate_pdf` + 8-sheet XLSX writer with formula-injection guard. All three builders are synchronous and are called via `run_in_threadpool` from the router. See §11. |
+| `report.py` | HTML report builder (Jinja2, `templates/`) + lazy-WeasyPrint `generate_pdf`. All builders are synchronous and are called via `run_in_threadpool` from the router. Phase 14h split the former monolithic file into this + `report_common.py` + `report_xlsx.py`; `build_xlsx_export` is re-exported here for backward compatibility. See §11. |
+| `report_common.py` | Phase 14h: shared constants/helpers (`_esc`, `_guard` formula-injection guard, state/tier labels, `resolve_branding()` merging per-org overrides over `DEFAULT_BRANDING` with defense-in-depth hex re-validation). |
+| `report_xlsx.py` | Phase 14h: the XLSX gap-register builder (`build_xlsx_export`, split out of `report.py`), openpyxl-native only (no xlsxwriter). |
+| `templates/` | Phase 14h: Jinja2 templates for the HTML/PDF report — `base.html` (shared shell, running page-header brand element, watermark), `cover.html`, `executive.html`, `detail.html`, `appendix.html`, `style.css` (Jinja-templated so `{{ brand_color }}` interpolates directly into the `<style>` block). |
 | `navigator.py` | Pure, Phase 8: builds one ATT&CK Navigator layer (format 4.5) per applicable domain from STORED technique_results — colors mirror the report palette, N/A → `enabled:false` with the reason as the comment, deterministic (no timestamps, byte-stable). |
 | `data/attack.json` | Pinned ATT&CK **v19.1** compact dataset (0.7 MB, checked in — the app NEVER fetches from the internet). Enterprise 858 techniques/15 tactics, ICS 118/12, Mobile 190/14 (counts include revoked/deprecated, which carry flags). |
 | `data/technique_priorities.json` | Curated 40-technique priority tier list (tiers 1–3) for gap ranking. Sources cited in-file (Red Canary TDR, CISA #StopRansomware, Picus, DBIR, M-Trends). **User-approved 2026-08-01** (stamped in-file). Enterprise-only in v1. |
@@ -455,6 +458,16 @@ Audit events (`audit_logs`): `mitre.assessment_created` / `_completed` /
 
 ## 11. Reports
 
+**Phase 14h (branding + polish):** three org-scoped `mitre_settings`
+overrides — `report_display_name` (default "ScopeWise"), `report_accent_color`
+(hex, validated at write time in `service.py` and again at render time in
+`resolve_branding()` since it's interpolated into a CSS `<style>` block),
+`report_watermark_text` (optional, empty by default). Both `report.py` and
+`report_xlsx.py` builders accept a trailing `branding` dict; the two
+router endpoints fetch org settings and pass it through. No new endpoints,
+no admin UI, no DB migration (`mitre_settings` is already a generic
+org-scoped KV table).
+
 - **PDF** (`report?format=pdf`, rebuilt Phase 14e) — cover (project
   metadata, upload summary, headline + plain subtitle, methodology, TOC
   with real page numbers via `target-counter`) → executive section (≤2
@@ -470,17 +483,34 @@ Audit events (`audit_logs`): `mitre.assessment_created` / `_completed` /
   numeric order with plain-words statuses, 500-row cap stated) → audit
   footer (attack_version, GIT_SHA, models_used, thresholds, narrative +
   SIEM provenance). Running header + page N of M. WeasyPrint imported
-  lazily — native libs exist only in the prod image.
-- **XLSX** (`export.xlsx`, polished Phase 14c) — sheets: **Read Me**
-  (guide, colored legend cells, key numbers, "is this % bad?" context),
-  Summary (+What-it-means column, metadata rows), Coverage by Tactic,
-  Technique Register (+Name, plain-words state, **Why** via
-  `plain_language.derive_why`, tactic names), Use-Case Mappings (numeric
-  row sort, plain-words statuses, guarded Logic column), Gaps &
-  Recommendations (feasibility-grouped, colored section headers),
-  Roadmap, Not Applicable, Assumptions, and (when present) the 14g
-  **How We Read Your Files** evidence sheet. Frozen headers,
-  auto-filter, wrapped text, state/tier/feasibility fills.
+  lazily — native libs exist only in the prod image. Phase 14h adds: a
+  logo in the cover + a repeating page header (WeasyPrint CSS GCPM
+  `position: running()`/`content: element()`), an optional diagonal
+  watermark (`position: fixed`), and document metadata (`<meta>` tags in
+  `base.html`'s `<head>` — WeasyPrint maps these to the PDF's
+  `/Author`/`/Subject`/`/Keywords`, `<title>` → `/Title`).
+- **XLSX** (`export.xlsx`, polished Phase 14c, further polished Phase 14h)
+  — sheets: **Read Me** (guide, colored legend cells, key numbers, "is
+  this % bad?" context, Phase 14h: `protection.sheet = True` —
+  accidental-edit guard, no password), Summary (+What-it-means column,
+  metadata rows), Coverage by Tactic (Phase 14h: `DataBarRule`
+  conditional formatting on the Coverage %/Weighted % columns + a native
+  `BarChart` of coverage % per tactic), Technique Register (+Name,
+  plain-words state, **Why** via `plain_language.derive_why`, tactic
+  names), Use-Case Mappings (numeric row sort, plain-words statuses,
+  guarded Logic column), Gaps & Recommendations (feasibility-grouped,
+  colored section headers; Phase 14h: Priority column is now a real
+  integer with a `"P"0` number format — displays as P1/P2/P3 but is
+  sortable/rankable — plus a genuine 3-color `ColorScaleRule` replacing
+  the old static per-cell fill), Roadmap, Not Applicable, Assumptions,
+  and (when present) the 14g **How We Read Your Files** evidence sheet.
+  Frozen headers, auto-filter, wrapped text, state/tier/feasibility fills.
+  Phase 14h also sets workbook core properties before save: `title`
+  (includes the assessment name), `creator` ("ScopeWise"), and
+  `description` (org display name — openpyxl has no wired-up support for
+  the docProps/app.xml "Company" extended property, confirmed by source
+  inspection, so `description` carries that role instead). openpyxl-native
+  only throughout — xlsxwriter is intentionally not used.
 
 ---
 
@@ -561,9 +591,10 @@ overflow on every page (real-browser checked).
 
 ## 13. Testing
 
-Backend baseline **687 passed / 7 skipped** (6 pre-existing platform
-skips + the PDF test, which auto-skips where WeasyPrint's native libs are
-absent; prod render verified live). Frontend: `tsc --noEmit` clean.
+Backend baseline **802 passed / 7 skipped** (Phase 14h, unit 3/4 — 6
+pre-existing platform skips + the PDF test, which auto-skips where
+WeasyPrint's native libs are absent; prod render verified live). Frontend:
+`tsc --noEmit` clean.
 
 | File | Covers |
 | --- | --- |
@@ -573,7 +604,7 @@ absent; prod render verified live). Frontend: `tsc --noEmit` clean.
 | `test_mitre_api.py` | Real-Postgres E2E create→run→poll→results with hand-computed states, org isolation, 409 double-run, settings RBAC+validation, stale-run guard, intake validation. LLM stubbed via an autouse fixture (a local key can never leak into tests). |
 | `test_mitre_agents.py` | Tagging batch success/failure-degrade, garbage-JSON chain advance, invalid/revoked AI IDs, confidence floor, extraction mode, narrative AI+template paths, all-batches-fail+zero-tags → failed, keyword-tag FP regression pins. |
 | `test_mitre_ranking.py` | Feasibility buckets (onboarded/ownable/new/no-telemetry), tier ordering, state tie-break, covered/N-A exclusion, deterministic-layer-imports-no-AI guard. |
-| `test_mitre_report.py` | HTML escapes planted `<script>`, XLSX guard incl. real-workbook readback + Logic column, 409s, StreamingResponse content-type, compare golden + cross-org 404, `domains_brief`. |
+| `test_mitre_report.py` | HTML escapes planted `<script>`, XLSX guard incl. real-workbook readback + Logic column, 409s, StreamingResponse content-type, compare golden + cross-org 404, `domains_brief`; Phase 14h: `test_xlsx_phase14h_polish` (data-bar/color-scale CF rule counts, native chart presence, numeric Priority + number_format, Read Me sheet protection, workbook core properties). |
 | `test_mitre_navigator.py` | Golden single-domain layer (colors/comments/enabled/versions/legend), multi-domain stable order, gated-domain exclusion; endpoint json vs zip, viewer-readable, cross-org 404 + pending 409. |
 | `test_mitre_mapping_edit.py` | Phase 10 PATCH: manual provenance + inline recompute (states flip, counts.manual, assumption note, audit row), empty-list unmap, invalid/malformed/over-cap 422s, non-completed 409, cross-org 404 (both IDs) + viewer 403. |
 | `test_mitre_threat_profile.py` | Phase 11: every curated ID resolves `ok` + alias integrity, real-file lookup (Banking alias, unknown = no-op), within-tier lift golden, no-tier-jump golden, toggle-off keeps order but keeps annotation, intake threat_actors 422s (unknown/non-list/over-10). |
@@ -676,6 +707,7 @@ you're alone on `edgp_test`.
 | 14f | `c64b324` | 08-02 | Past-run history: header "Past runs" dropdown (delta vs current, jump, Compare shortcut), list search/status filter/sparkline/project names, inline rename + soft archive via `PATCH /assessments/{id}` (params JSONB flag — no migration, no deletes); archived hidden from default list (`include_archived` query), still selectable in Compare. |
 | 14g | `bee1f8f` | 08-02 | Evidence trail: explain gains `expected_telemetry` + `in_scope_because` (drawer renders both); rule panel shows the per-mapping journey (plain source, confidence, rationale verbatim); XLSX "How We Read Your Files" sheet; threat-profile-matches chip → drill panel. Suite at **800/7** after 14a–14g. |
 | 14-polish | `6051af6`…`2698eda` | 08-02 | User-feedback passes after walking the deployed UI (full per-commit detail: `SESSION_HANDOFF_2026_08_02_MITRE_PHASE_14_POLISH.md`): (1) all three side panels mouse-resizable via a left-edge drag handle (`useSheetResize` — shared remembered width, keyboard arrows, viewport-clamped, phones stay full-width); (2) heatmap cells show "ID Name" truncated in the same footprint + ONE delegated custom tooltip for all ~900 cells (solid bg, smooth fade, plain-words state/N-A reason) replacing native `title`; drawer hides ICS "None"/PRE pseudo-platforms, a/an grammar fix; mobile guards (past-runs dropdown viewport clamp, header row wraps); (3) XLSX Summary rebuilt as a sectioned sheet — branded title band, EXECUTIVE SUMMARY (narrative + context line), KEY NUMBERS (traffic-light coverage cell, state-colored counts), TOP 5 THINGS TO FIX FIRST, ABOUT THIS ASSESSMENT; (4) gaps table ~50% denser (px-2/py-1.5, single-line technique) with dot+text badges that carry meaning (P1 · Critical / 70 · Moderate / Build now · via Sysmon) replacing pastel pills; (5) Assumptions & N/A rebuilt — two-column accent-border assumptions grid, N/A appendix as reason-aggregated group cards with clickable technique chips. Later waves: heatmap hover fixes + collapsible matrices + legend filter (`9eabcd1`,`4d579c2`); report tables bordered grid + branded headers + zebra (`35f5d40`); darker fonts, filled state/priority pills, one-row-per-reason N/A, two-column assumptions, compact appendix tables (`a9534b5`); attack-stage table headers + balanced columns, XLSX all-cell borders (`9256ab1`); list page table→card grid (`b8d0e75`); export scopes (executive/per-tab PDF + scoped XLSX), XLSX Summary emphasis pass (visible borders, pointer-style exec summary, bold/centered values), on-page coverage search + platforms enrichment (`2698eda`). Suite 801/7 after the scope test. |
+| 14h | `fa7ba86`,`e5ff17a`,`77221f9` + this commit | 08-02 | Report branding & polish, 4 sequential commits: (1) refactor — split the monolithic `report.py` into Jinja2 `templates/` + `report_common.py` + `report_xlsx.py`, zero behavior change; (2) branding — 3 new `mitre_settings` overrides (display name/accent color/watermark text), logo + running page header + optional watermark in the PDF, no migration; (3) XLSX polish — `DataBarRule`/native `BarChart` on Coverage by Tactic, `ColorScaleRule` + numeric Priority column on Gaps & Recommendations, Read Me sheet protection, workbook core properties (openpyxl-native only, xlsxwriter forbidden — no wired-up "Company" property in openpyxl, used `description` instead); (4) PDF metadata + this doc update. No computed numbers changed anywhere; suite 801→802/7 (+1 new test in unit 3). |
 
 ## 16. Optional feature work (plan §14 — not launch blockers)
 
