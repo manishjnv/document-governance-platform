@@ -749,6 +749,27 @@ reviews REVISE→fixed→ACCEPT. 18 new tests; **full suite 781 passed /
 7 skipped**; `tsc` clean. Ops: worker env needs `SIEM_CRED_KEY` +
 `SMTP_*`; migrations 034–035 in all 3 DBs.
 
+**MITRE Phase 14a COMPLETE (2026-08-02) — gap drill-down drawer (UX
+clarity for non-technical users):** first of six sub-phases in
+`docs/planning/MITRE_UX_CLARITY_PLAN.md` (kickoff prompts:
+`docs/phases/prompts/MITRE_PHASE_14_UX_PROMPT.md`; 14b–14f pending).
+The technique drawer now renders four plain-language blocks for every
+state — *what is this* (curated definition + "attackers use this to…"),
+*where is the gap* (tactic story line, your-log-source-that-could-see-it,
+platforms), *why is it a gap* (deterministic one-sentence why-phrase:
+no-rule count / disabled rule / low-confidence AI / sub-technique rollup /
+covered proof + strength / N-A verbatim), *what would good look like*
+(vendor-neutral detection sketch + closest-covered-rule starting point).
+Backing: two NEW hand-curated data files
+(`app/mitre/data/technique_plain_language.json` — 57 techniques =
+priorities ∪ threat-profiles union; `data/tactic_lines.json` — 21 tactic
+shortnames), pure `app/mitre/plain_language.py`, and
+`GET /assessments/{id}/techniques/{tid}/explain` (org-scoped, read-only,
+deterministic — no runtime LLM, no migration, no pipeline change). 16 new
+tests (file validation vs the pinned dataset, why-phrase goldens incl.
+the sample-kit covered-vs-disabled acceptance, endpoint E2E); **full
+suite 797 passed / 7 skipped**; `tsc` clean.
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)

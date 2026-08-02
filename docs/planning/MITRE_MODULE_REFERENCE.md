@@ -80,6 +80,9 @@ in-app results with a Navigator-style heatmap, executive+detailed PDF, an
 | `data/technique_priorities.json` | Curated 40-technique priority tier list (tiers 1–3) for gap ranking. Sources cited in-file (Red Canary TDR, CISA #StopRansomware, Picus, DBIR, M-Trends). **User-approved 2026-08-01** (stamped in-file). Enterprise-only in v1. |
 | `data/keyword_aliases.json` | Curated tool/command → technique alias map (39 aliases, cited sources) for the Phase 6 pre-pass, e.g. `mimikatz`→T1003.001, `-enc`→T1059.001. |
 | `data/threat_profiles.json` | Phase 11: curated industry (10 profiles + banking/insurance aliases, keyed to the wizard's INDUSTRIES lowercased) and actor (10 ATT&CK groups incl. G-codes) → technique lists, sources cited in-file (DBIR/CISA/M-Trends/Dragos/HC3/FS-ISAC + ATT&CK Groups). 143 IDs, all resolve `ok` (test-enforced). Feeds threat-informed gap weighting — ordering only, never coverage %. |
+| `plain_language.py` | Pure, Phase 14a: loads the two curated files below, `describe_technique()` (curated entry or attack.json first-sentence fallback), `detection_sketch()` ("Using `<via>`, alert on: `<hint>`"), and `derive_why()` — the deterministic one-sentence why-phrase per state (not-covered count / disabled rule / low-confidence AI / sub-technique rollup / covered proof + strength / N-A verbatim). Golden-tested; reused by the drawer explain endpoint (and the Phase 14c XLSX "Why" column when built). |
+| `data/technique_plain_language.json` | Phase 14a: hand-curated definition / attacker_use / detection_hint for the 57 techniques in technique_priorities ∪ threat_profiles (the realistic top-gap set). Never runtime-LLM; ID validity + rule coverage test-enforced. |
+| `data/tactic_lines.json` | Phase 14a: one plain-English story line per tactic shortname (21 — all three domains, incl. v19's enterprise stealth/defense-impairment split). Completeness vs attack.json test-enforced. |
 
 ### Everything else
 
@@ -402,6 +405,7 @@ stamping. Registered nowhere in `ReviewOrchestrator`.
 | `GET/POST/PATCH/DELETE /connections`, `POST /connections/{id}/test` | admin | Phase 13b/13d saved connections: secret AES-256-GCM at rest (write-only — no response ever carries it), config revalidated on change, schedule trio validated as a unit (13c), GET includes per-connection `health` (last pull/error + scheduled-failure streak). `/test` = dry-run rule count. Vault unconfigured → 503. |
 | `POST /assessments/from-connection/{id}` | admin, reviewer | Phase 13b: same pipeline as from-siem, secret decrypted in-process from the vault for the pull only; provenance gains connection_id/name. |
 | `PATCH /assessments/{id}/use-cases/{use_case_id}/mappings` | admin, reviewer | 409 unless `completed`. Phase 10 override: body `{"technique_ids": [...]}` = the FULL new list for that rule (empty = maps to nothing, max 20). Every ID validated via `resolve()` (revoked→successor with a note; deprecated/unknown/malformed → 422). Row becomes `mapping_status='manual'`, mappings `source='manual'` @ 1.0; coverage/gaps/roadmap recomputed inline (pure code, `service.recompute_results`, narrative kept + assumption note appended, counts gain a `manual` key). `SELECT … FOR UPDATE` on the assessment serializes concurrent edits; audits `mitre.mappings_edited`. |
+| `GET /assessments/{id}/techniques/{tid}/explain` | any | Phase 14a: plain-language four-block explanation (what / where / why / what-good-looks-like) for one technique. 409 unless completed; 404 if the technique isn't in the stored register. Fully deterministic — curated files + stored result data + `ranking.technique_feasibility` for non-gap techniques; no LLM. |
 | `GET /assessments/{id}/compare/{other_id}` | any | `{id}` = current, `{other_id}` = baseline. Both org-owned (404) + completed (409). |
 | `GET /threat-catalog` | any | Phase 11: curated actor list (name + ATT&CK G-code + note) and profiled-industry labels from `threat_profiles.json` — feeds the wizard's actor chips. Static, org-agnostic. |
 | `GET /settings` / `PATCH /settings` | admin | The 5 tunables; PATCH validates types/ranges + `partial_floor < covered`; audited. Intake note: `threat_actors` (≤10) is validated against the catalog at create — unknown names 422. |
@@ -495,8 +499,12 @@ overflow on every page (real-browser checked).
   (CSS-grid Navigator-style tactic heatmap, sub-techniques indented,
   click → technique drawer showing state/tactics/N-A reason/mapped rules
   with enabled+source ("Tagged by you" / "Matched by rule" / "AI-mapped")
-  +confidence; Phase 12 adds a detection-strength chip + rationale line
-  in the drawer), **Gaps & Roadmap** (ranked table with P-tier/feasibility
+  +confidence; Phase 12 adds a detection-strength chip + rationale line;
+  Phase 14a adds the four plain-language blocks — what is this / where is
+  the gap (tactic story line, via-log-source, platforms) / why is it a gap
+  (deterministic why-phrase) / what would good look like (detection sketch
+  + closest-covered-rule starting point) — fetched per-open from the
+  explain endpoint, graceful fallback to the pre-14a content if it fails), **Gaps & Roadmap** (ranked table with P-tier/feasibility
   badges, a Phase 11 violet "Threat match" chip on profile-relevant rows,
   a Phase 12 "Strength" column (partial gaps' scores, tooltip states it
   is separate from coverage %), narrative recommendations, and the
@@ -534,6 +542,7 @@ absent; prod render verified live). Frontend: `tsc --noEmit` clean.
 | `test_mitre_connections.py` | 13b: crypto round-trip/AAD-transplant/key-version/corrupt/missing-key, CRUD secret-write-only (+DB ciphertext scan), all-admin-routes RBAC, org-isolation 404s, 503 mapping, secret length cap, dry-run test endpoint, from-connection provenance, DEBUG-level log-scrub. |
 | `test_mitre_schedule.py` | 13c: due-instant goldens (daily/weekly/wrap), schedule PATCH validation, sweep advance-on-enqueue + dedup-no-advance, stale-running self-heal (+enqueue same pass), pending-preview non-blocking, worker pull completed/failed/deleted-connection paths. |
 | `test_mitre_siem_health.py` | 13d: list `siem` brief + report-footer provenance (secret-free), health/streak math, notification at exactly 2 / once per streak / reset on success / no secrets or rule content in the email, threshold pin. |
+| `test_mitre_plain_language.py` | 14a: curated IDs all resolve `ok` + cover priorities ∪ threat-profiles, entries complete, tactic lines cover every dataset shortname, first-sentence fallback, why-phrase goldens per state (incl. the sample-kit covered-vs-disabled visible difference), explain endpoint E2E (four blocks, sibling closest-rule, 404/409). |
 
 Reminder: migrations 029/031/032 (and 030) must be applied to `edgp_test`
 before running the suite.
@@ -619,6 +628,7 @@ you're alone on `edgp_test`.
 | 13a | `09b545e` | 08-02 | SIEM design (`598c2dc`) + Sentinel connector, token-at-trigger: `connectors/` package (resolve-then-pin egress guard, fixed Microsoft hosts), `POST /assessments/from-siem`, template-CSV reuse of the create path, wizard source toggle; REVISE→fixed→ACCEPT |
 | 13b | `a94aabb` | 08-02 | Credential vault: migration 034 `mitre_connections`, AES-256-GCM AAD-bound secrets (`SIEM_CRED_KEY`), admin CRUD secret-write-only + `/test` + `from-connection`; heaviest review, ACCEPT (7/7 verified + crypto probes) |
 | 13c+13d | `496b2bb` | 08-02 | Scheduler/worker (`scopewise-worker`, migration 035, 15-min sweep, self-healing dedup, per-call engines) + provenance surfacing (list chip/results line/report footer), connection health + streak, admin email at 2 consecutive scheduled failures; both REVISE→fixed→ACCEPT; prod deploy |
+| 14a | — | 08-02 | UX clarity (plan: `MITRE_UX_CLARITY_PLAN.md`): drawer four plain-language blocks driven by curated `technique_plain_language.json` (57 entries) + `tactic_lines.json` (21 shortnames), pure `plain_language.py` why-phrase derivation (golden-tested), `GET .../techniques/{tid}/explain`, `ranking.technique_feasibility` helper. No migration, no pipeline change, no runtime LLM. Suite 781→797/7. |
 
 ## 16. Optional feature work (plan §14 — not launch blockers)
 

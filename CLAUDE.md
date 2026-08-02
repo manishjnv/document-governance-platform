@@ -100,7 +100,7 @@ last incident.
 ## Testing
 
 - Full backend suite: `cd apps/api && python -m pytest` — baseline is
-  **781 passed, 7 skipped** (measured 2026-08-02 after MITRE Phase 13d;
+  **797 passed, 7 skipped** (measured 2026-08-02 after MITRE Phase 14a;
   if two sessions run the suite at once the shared edgp_test DB
   deadlocks — see memory `edgp-test-single-runner-rule`; the
   7th skip is the prod-only WeasyPrint PDF render test; the
