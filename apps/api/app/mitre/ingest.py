@@ -522,10 +522,11 @@ def _match_platform(entry_norm: str) -> str | None:
     return None
 
 
-def _sheet_entries(rows: list[list]) -> list[str]:
+def _sheet_entries(rows: list[list], skipped: list | None = None) -> list[str]:
     """First-column entries of a sheet, honoring an optional second
     'present?' column (a recognizable False skips the row) and skipping a
-    header-ish first row."""
+    header-ish first row. Phase 14g: rows skipped via Present=No are also
+    recorded into ``skipped`` when a list is passed (evidence trail)."""
     entries = []
     for idx, row in enumerate(rows):
         first = str(row[0]).strip() if row and row[0] is not None else ""
@@ -538,6 +539,8 @@ def _sheet_entries(rows: list[list]) -> list[str]:
         }:
             continue
         if len(row) > 1 and parse_enabled(row[1]) is False:
+            if skipped is not None:
+                skipped.append(first)
             continue
         entries.append(first)
         if len(entries) > MAX_ASSET_ROWS:
@@ -577,19 +580,26 @@ def parse_environment_file(content: bytes, file_type: str) -> dict:
     assumptions, warnings = [], []
     platforms, unmatched = [], []
     has_ics, has_mobile = False, False
+    # Phase 14g: per-entry evidence trail — additive output only, no
+    # semantic change to platforms/flags/lists.
+    interpretations: list[dict] = []
 
     if "assets" in sheets_found:
-        for entry in _sheet_entries(sheets_found["assets"][1]):
+        skipped_assets: list = []
+        for entry in _sheet_entries(sheets_found["assets"][1], skipped=skipped_assets):
             # Markers and platform matching are independent: "OT/SCADA
             # network" both flags ICS and maps to Network Devices.
             entry_norm = _norm(entry)
             matched = False
+            read_as = []
             if any(_word_match(m, entry_norm) for m in _ICS_MARKERS):
                 has_ics = True
                 matched = True
+                read_as.append("enabled the ICS/OT matrix")
             if any(_word_match(m, entry_norm) for m in _MOBILE_MARKERS):
                 has_mobile = True
                 matched = True
+                read_as.append("enabled the Mobile matrix")
             platform = _match_platform(entry_norm)
             if platform:
                 if platform in ("Android", "iOS"):
@@ -597,8 +607,20 @@ def parse_environment_file(content: bytes, file_type: str) -> dict:
                 if platform not in platforms:
                     platforms.append(platform)
                 matched = True
+                read_as.append(f"counted as platform {platform}")
             if not matched:
                 unmatched.append(entry)
+            interpretations.append({
+                "entry": entry,
+                "sheet": "Assets",
+                "interpretation": "; ".join(read_as)
+                or "not recognized — ignored for platform filtering",
+            })
+        interpretations.extend(
+            {"entry": e, "sheet": "Assets",
+             "interpretation": "skipped — you marked it Present = No"}
+            for e in skipped_assets
+        )
         if unmatched:
             shown = ", ".join(unmatched[:10])
             more = f" (+{len(unmatched) - 10} more)" if len(unmatched) > 10 else ""
@@ -612,9 +634,29 @@ def parse_environment_file(content: bytes, file_type: str) -> dict:
             "platform filtering skipped; coverage % is a lower bound"
         )
 
+    _LIST_INTERPRETATIONS = {
+        "log_sources": "log source onboarded — feeds detection feasibility "
+                       "(short-term roadmap bucketing)",
+        "tooling": "security tooling you own — feeds mid-term feasibility "
+                   "(telemetry you could onboard)",
+        "crown_jewels": "noted as a crown-jewel asset",
+    }
+
     def _plain_list(kind: str, label: str) -> list[str]:
         if kind in sheets_found:
-            return _sheet_entries(sheets_found[kind][1])
+            skipped: list = []
+            entries = _sheet_entries(sheets_found[kind][1], skipped=skipped)
+            interpretations.extend(
+                {"entry": e, "sheet": label,
+                 "interpretation": _LIST_INTERPRETATIONS[kind]}
+                for e in entries
+            )
+            interpretations.extend(
+                {"entry": e, "sheet": label,
+                 "interpretation": "skipped — you marked it Present = No"}
+                for e in skipped
+            )
+            return entries
         assumptions.append(
             f"environment workbook has no recognizable {label} sheet"
         )
@@ -625,6 +667,7 @@ def parse_environment_file(content: bytes, file_type: str) -> dict:
     crown_jewels = _plain_list("crown_jewels", "Crown Jewels")
 
     return {
+        "interpretations": interpretations,
         "environment": {
             "platforms": platforms,
             "has_ics_assets": has_ics,

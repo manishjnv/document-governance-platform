@@ -160,6 +160,16 @@ export interface Assessment {
   error_message: string | null;
   created_at: string | null;
   completed_at: string | null;
+  /** Phase 14d: the uploaded files behind this assessment. */
+  files?: { kind: string; filename: string; file_type: string; row_count: number | null }[];
+}
+
+/** Phase 14d: optional project metadata living in params.intake. */
+export interface IntakeMeta {
+  project_name?: string | null;
+  scope_label?: string | null;
+  prepared_by?: string | null;
+  purpose_note?: string | null;
 }
 
 /** Phase 14a: plain-language four-block explanation for one technique. */

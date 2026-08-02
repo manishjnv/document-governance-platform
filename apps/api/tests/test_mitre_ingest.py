@@ -121,6 +121,30 @@ def test_environment_workbook_parsing():
     assert any("Security Tooling" in a for a in parsed["assumptions"])
     assert any("Crown Jewels" in a for a in parsed["assumptions"])
     assert any("SAP ERP" in a for a in parsed["assumptions"])
+    # Phase 14g: per-entry evidence trail (additive output)
+    by_entry = {i["entry"]: i for i in parsed["interpretations"]}
+    assert by_entry["Windows Server 2019"]["interpretation"] == "counted as platform Windows"
+    assert "enabled the ICS/OT matrix" in by_entry["OT/SCADA network"]["interpretation"]
+    assert by_entry["SAP ERP"]["interpretation"] == (
+        "not recognized — ignored for platform filtering"
+    )
+    assert by_entry["Sysmon"]["sheet"] == "Log Sources"
+    assert "short-term" in by_entry["Sysmon"]["interpretation"]
+
+
+def test_environment_present_no_rows_recorded_as_skipped():
+    """Phase 14g: a Present=No row is excluded from parsing (unchanged) AND
+    shows up in the evidence trail as skipped."""
+    content = _xlsx(
+        [["Asset", "Present?"], ["Windows fleet", "Yes"], ["VMware ESXi estate", "No"]],
+        sheet_name="Assets",
+    )
+    parsed = parse_environment_file(content, "xlsx")
+    assert parsed["environment"]["platforms"] == ["Windows"]
+    by_entry = {i["entry"]: i for i in parsed["interpretations"]}
+    assert by_entry["VMware ESXi estate"]["interpretation"] == (
+        "skipped — you marked it Present = No"
+    )
 
 
 def test_environment_mobile_detection_and_missing_assets_sheet():

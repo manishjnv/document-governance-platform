@@ -141,6 +141,13 @@ def _parse_intake(raw: Optional[str]) -> dict:
         "count_disabled_as_coverage": disabled,
         "exclusions": exclusions,
         "threat_actors": actors,
+        # Phase 14d: optional project metadata — display-only (header, report
+        # cover, XLSX Summary); never sent to any LLM. All optional so
+        # pre-14d assessments and minimal API calls behave unchanged.
+        "project_name": str(intake.get("project_name") or "").strip()[:200] or None,
+        "scope_label": str(intake.get("scope_label") or "").strip()[:200] or None,
+        "prepared_by": str(intake.get("prepared_by") or "").strip()[:200] or None,
+        "purpose_note": str(intake.get("purpose_note") or "").strip()[:500] or None,
     }
 
 
@@ -373,6 +380,8 @@ async def _persist_new_assessment(
                 "tooling": env_parsed["tooling"] if env_parsed else [],
                 "crown_jewels": env_parsed["crown_jewels"] if env_parsed else [],
                 "sheets_found": env_parsed["sheets_found"] if env_parsed else {},
+                # Phase 14g: per-entry evidence trail from the parser
+                "interpretations": env_parsed.get("interpretations", []) if env_parsed else [],
             },
             "parse_assumptions": parse_assumptions,
             "warnings": warnings,
@@ -1213,7 +1222,27 @@ async def get_assessment(
             for r in technique_results
         ]
 
+    # Phase 14d: the uploaded files behind this assessment (feeds the
+    # "what this assessment is based on" card; exists for all assessments).
+    files_result = await db.execute(
+        select(MitreFile).where(
+            (MitreFile.assessment_id == assessment_id)
+            & (MitreFile.org_id == UUID(str(current_user.org_id)))
+            & (MitreFile.deleted_at.is_(None))
+        )
+    )
+    files = [
+        {
+            "kind": f.kind,
+            "filename": f.filename,
+            "file_type": f.file_type,
+            "row_count": f.row_count,
+        }
+        for f in files_result.scalars().all()
+    ]
+
     return {
+        "files": files,
         "assessment_id": str(assessment.assessment_id),
         "name": assessment.name,
         "status": assessment.status,

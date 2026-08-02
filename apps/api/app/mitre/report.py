@@ -471,11 +471,26 @@ def build_xlsx_export(assessment, use_cases: list) -> bytes:
          f"Coverage within the {DOMAIN_LABELS.get(k, k)} matrix only."]
         for k, d in summary.get("domains", {}).items()
     ]
+    # Phase 14d: optional project metadata rows (only when provided).
+    intake = params.get("intake") or {}
+    metadata_rows = [
+        [label, intake[key], meaning]
+        for key, label, meaning in (
+            ("project_name", "Organization / project", "Who this assessment is for."),
+            ("scope_label", "Scope", "The department or scope this run covers."),
+            ("prepared_by", "Prepared by", "Who prepared this assessment."),
+            ("purpose_note", "Purpose", "Why this assessment was run."),
+        )
+        if intake.get(key)
+    ]
     sheet(
         "Summary",
         ["Metric", "Value", "What it means"],
         [
             ["Assessment", assessment.name, "The name this run was saved under."],
+        ]
+        + metadata_rows
+        + [
             ["ATT&CK version", assessment.attack_version,
              "The MITRE ATT&CK release the assessment is pinned to."],
             ["Completed", str(assessment.completed_at or ""), ""],

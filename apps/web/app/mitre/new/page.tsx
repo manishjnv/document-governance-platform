@@ -162,6 +162,11 @@ export default function NewMitreAssessmentPage() {
   // field -> 0-based column index; '' = not mapped
   const [colMap, setColMap] = useState<Record<string, string>>({});
   const [applying, setApplying] = useState(false);
+  // Phase 14d: optional project metadata (display-only; rides the intake)
+  const [projectName, setProjectName] = useState('');
+  const [scopeLabel, setScopeLabel] = useState('');
+  const [preparedBy, setPreparedBy] = useState('');
+  const [purposeNote, setPurposeNote] = useState('');
   // Phase 11: curated threat-actor catalog + selection (optional intake)
   const [actorCatalog, setActorCatalog] = useState<
     { name: string; attack_id: string | null; note: string | null }[]
@@ -224,6 +229,12 @@ export default function NewMitreAssessmentPage() {
         target: x.target.trim(),
         reason: x.reason.trim(),
       })),
+      // Phase 14d: optional project metadata — makes the report
+      // self-identifying when it's forwarded around.
+      project_name: projectName.trim() || null,
+      scope_label: scopeLabel.trim() || null,
+      prepared_by: preparedBy.trim() || null,
+      purpose_note: purposeNote.trim() || null,
     };
 
     setSubmitting(true);
@@ -558,6 +569,50 @@ export default function NewMitreAssessmentPage() {
                       ))}
                     </select>
                   </div>
+                </div>
+
+                {/* Phase 14d: optional project metadata — shown on the
+                    assessment header and report covers, so a forwarded
+                    report identifies itself. */}
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {(
+                    [
+                      ['mitre-project', 'Organization / project', projectName, setProjectName, 'e.g. Contoso Bank SOC'],
+                      ['mitre-scope', 'Department or scope', scopeLabel, setScopeLabel, 'e.g. EMEA production estate'],
+                      ['mitre-prepared', 'Prepared by', preparedBy, setPreparedBy, 'e.g. Jane Doe, Security Engineering'],
+                    ] as const
+                  ).map(([id, label, value, setter, placeholder]) => (
+                    <div key={id}>
+                      <label htmlFor={id} className="mb-1.5 block text-sm font-medium">
+                        {label}{' '}
+                        <span className="font-normal text-muted-foreground">(optional)</span>
+                      </label>
+                      <input
+                        id={id}
+                        type="text"
+                        maxLength={200}
+                        value={value}
+                        onChange={(e) => setter(e.target.value)}
+                        placeholder={placeholder}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <label htmlFor="mitre-purpose" className="mb-1.5 block text-sm font-medium">
+                    Purpose{' '}
+                    <span className="font-normal text-muted-foreground">(optional)</span>
+                  </label>
+                  <textarea
+                    id="mitre-purpose"
+                    maxLength={500}
+                    rows={2}
+                    value={purposeNote}
+                    onChange={(e) => setPurposeNote(e.target.value)}
+                    placeholder="e.g. Annual detection-coverage review for the audit committee"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
                 </div>
 
                 {actorCatalog.length > 0 && (

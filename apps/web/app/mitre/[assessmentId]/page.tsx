@@ -20,6 +20,7 @@ import {
 } from '../lib';
 import { DrillDownPanel } from '../components/DrillDownPanel';
 import { RuleListPanel } from '../components/RuleListPanel';
+import { UploadSummaryCard } from '../components/UploadSummaryCard';
 import { AssumptionsNA } from '../components/AssumptionsNA';
 import { CompareView } from '../components/CompareView';
 import { CoverageHeatmap } from '../components/CoverageHeatmap';
@@ -53,7 +54,7 @@ export default function MitreResultsPage() {
   } | null>(null);
   const [ruleDrill, setRuleDrill] = useState<{
     title: string;
-    status: string | null;
+    rules: UseCaseItem[];
   } | null>(null);
   const [runError, setRunError] = useState('');
   const [downloadError, setDownloadError] = useState('');
@@ -308,13 +309,26 @@ export default function MitreResultsPage() {
     items: TechniqueResult[],
     opts?: { grouped?: boolean; subtitle?: string }
   ) => setDrill({ title, items, grouped: opts?.grouped, subtitle: opts?.subtitle });
+  const openRuleDrillRules = (title: string, rules: UseCaseItem[]) =>
+    setRuleDrill({ title, rules });
   const openRuleDrill = (mappingStatus: string | null, title: string) =>
-    setRuleDrill({ title, status: mappingStatus });
-  const ruleDrillRules = ruleDrill
-    ? ruleDrill.status
-      ? useCases.filter((uc) => uc.mapping_status === ruleDrill.status)
-      : useCases
-    : [];
+    openRuleDrillRules(
+      title,
+      mappingStatus
+        ? useCases.filter((uc) => uc.mapping_status === mappingStatus)
+        : useCases
+    );
+  // Phase 14d: optional project metadata from the intake (all fields optional).
+  const intakeMeta = ((assessment?.params as any)?.intake ?? {}) as {
+    project_name?: string | null;
+    scope_label?: string | null;
+    prepared_by?: string | null;
+    purpose_note?: string | null;
+  };
+  const metaLine = [intakeMeta.project_name, intakeMeta.scope_label,
+    intakeMeta.prepared_by ? `Prepared by ${intakeMeta.prepared_by}` : null]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <AppShell fullWidth>
@@ -385,6 +399,12 @@ export default function MitreResultsPage() {
                 </span>
               </div>
             </div>
+            {(metaLine || intakeMeta.purpose_note) && (
+              <div className="text-xs text-muted-foreground">
+                {metaLine && <p>{metaLine}</p>}
+                {intakeMeta.purpose_note && <p>{intakeMeta.purpose_note}</p>}
+              </div>
+            )}
             {downloadError && (
               <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                 {downloadError}
@@ -454,6 +474,13 @@ export default function MitreResultsPage() {
                   onDrill={openDrill}
                 />
 
+                <UploadSummaryCard
+                  assessment={assessment}
+                  summary={summary}
+                  useCases={useCases}
+                  onDrillRules={openRuleDrillRules}
+                />
+
                 <div className="flex gap-1 border-b" role="tablist" aria-label="Assessment result views">
                   {TABS.map((t) => (
                     <button
@@ -520,7 +547,7 @@ export default function MitreResultsPage() {
                 />
                 <RuleListPanel
                   title={ruleDrill?.title ?? null}
-                  rules={ruleDrillRules}
+                  rules={ruleDrill?.rules ?? []}
                   truncated={useCasesTotal > useCases.length}
                   onSelectTechnique={setSelectedTechnique}
                   onClose={() => setRuleDrill(null)}
