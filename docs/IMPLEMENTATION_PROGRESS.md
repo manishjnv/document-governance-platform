@@ -484,6 +484,49 @@ LLM key is read from `settings.openrouter_api_key` (app config / `.env`),
 never the shell env — verify the app's LLM budget there or in-container,
 not via a global env var.
 
+**Phase 6 COMPLETE — coding-over-AI (2026-08-02, built, NOT yet
+committed/deployed):** deterministic keyword/alias tagging pre-pass per
+`docs/phases/prompts/MITRE_PHASE_6_CODING_OVER_AI_PROMPT.md`. (Task A)
+New pure `app/mitre/keyword_tag.py` + curated
+`app/mitre/data/keyword_aliases.json` (39 tool/command aliases with
+cited sources): untagged rules are matched against exact ATT&CK
+technique names (multi-word only, pre-compromise TA0042/TA0043
+excluded, cross-domain-ambiguous names dropped) and literal alias
+patterns with punctuation-significant boundaries (`at.exe` never fires
+on "look at exe files"); every ID re-validated through
+`attack_data.resolve()`; matches get `mapping_status='keyword_tagged'`
+(migration `031_mitre_keyword_tagged_status.sql` + ORM CheckConstraint
+in lockstep, applied to edgp_dev+edgp_test, **prod pending deploy**),
+confidence 0.9, and skip the LLM — only the residue goes to AI tagging;
+an AI-down run now survives on keyword matches alone. Drawer shows
+"Matched by rule" via `SOURCE_META` (lib.ts). Quality gate on a 22-rule
+realistic dump: **14 keyword-tagged / 8 AI (63% fewer AI calls), every
+mapping hand-verified, zero false positives**, all near-miss traps
+rejected. (Task B) ingest header/sheet/platform synonyms widened
+(~90 real-world variants: "att&ck id", "mitre_ttp", "kql query", AKS,
+Duo, Palo Alto, iPadOS, modbus…). (Task C) ranking feasibility maps
+extended from a deterministic scan of all 113 ATT&CK data components —
+new `mobile` (MDM/EMM) and `ot` (Claroty/Nozomi/Dragos) telemetry
+categories fix mobile/ICS gaps wrongly bucketed "no standard
+telemetry"; recon/threat-intel components left unmatched on purpose;
+`test_deterministic_modules_import_no_ai` guards the whole pure layer.
+(Task D) `build_mappings` regression test added (valid+revoked+invalid
+in one row). **Adversarial sign-off (Sonnet takeover): REVISE → both
+blocking findings fixed same-session → re-verified ACCEPT (reviewer
+empirically confirmed all FP cases closed)** — (V1) MITRE recon/resource-dev
+category-word names ("Credentials", "DNS Server") could false-map
+benign ops rules at 0.9 and inflate coverage → excluded pre-compromise
+tactics + single-word names from the name index (distinctive singles
+live in the alias file), reviewer's 6 empirical FP rules pinned as
+regression tests; (V2) uncapped 32K logic cells → ~50 min worker-thread
+scan on a 5k-row dump → `_FIELD_CAP=2000` in the matcher + the router's
+logic-fallback capped at the root. Non-blocking: the logic column is
+dropped at create when BOTH description and logic exist (pre-existing
+Phase 2 behavior; documented, needs a schema column — deferred). Full
+suite **686 passed / 7 skipped** (+36), `tsc` clean. Deploy checklist:
+commit → push → VPS loop → **apply migration 031 to scopewise_prod** →
+smoke.
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)
