@@ -457,3 +457,38 @@ keep chronological.)*
   `test_agent_parse_fallback.py`. Pattern to remember: any parser or
   model adapter that can produce "empty but status=success" needs a
   content floor at the next trust boundary — status flags alone lie.
+
+### 20. Search snippets showed literal `<b>RFP</b>` markup on the SOW Review page (2026-08-03)
+
+- **Symptom:** After the nav consolidation moved global search onto
+  `/dashboard`, result snippets rendered the highlight markup as
+  visible text — `<b>RFP</b>) Most companies will have…` — instead of
+  bolding the matched term (user-reported with a screenshot from prod).
+- **Root cause:** the backend (`app/search/engine.py`) builds snippets
+  with Postgres `ts_headline`, whose default `StartSel`/`StopSel`
+  delimiters are literal `<b>`/`</b>` strings embedded in the text.
+  React auto-escapes interpolated strings, so the markers displayed
+  verbatim. **Latent, not new:** the retired `/search` page's
+  `SearchResults.tsx` rendered `{result.snippet}` the same way and had
+  the same bug all along — the consolidation just put it where someone
+  looked. The tempting one-line fix (`dangerouslySetInnerHTML`) would
+  have been a stored-XSS hole: `ts_headline` does not escape the
+  surrounding text, and `parsed_text` is uploaded-document content
+  (attacker-controlled — same trust class as RCA the HTML-report XSS
+  fix protects).
+- **Fix (`8becf2b` + follow-up,
+  `apps/web/components/SnippetText.tsx`):** shared component splits the
+  snippet on `/<\/?b>/` and renders odd segments as `<mark>` elements,
+  even segments as plain (auto-escaped) text; `snippetPlainText()` for
+  tooltips/CSV. Unbalanced markers can at worst mis-bold a segment —
+  never inject markup. Grepping for sibling consumers found the SAME
+  live bug in `KnowledgeBaseSearch.tsx` (its snippets come from
+  `app/insights/knowledge.py`'s `ts_headline`) — both surfaces now use
+  the shared component. `SearchResults.tsx` (unused by any page) left
+  as-is.
+- **Prevention:** any API field produced by `ts_headline` (or any
+  highlighter) is MIXED content — plain text with a known, tiny marker
+  vocabulary. Render it through `components/SnippetText.tsx`; never
+  trust it as HTML and never flatten it to escaped text. When a
+  rendering bug is found in one consumer of a backend field, grep for
+  every other consumer of that field before closing the fix.

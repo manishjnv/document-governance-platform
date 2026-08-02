@@ -11,6 +11,7 @@ import axios from 'axios';
 import Link from 'next/link';
 import { ArrowDown, ArrowUp, ChevronRight, FolderOpen, Loader2, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SnippetText, snippetPlainText } from '@/components/SnippetText';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -74,28 +75,6 @@ interface SearchResponse {
   skip: number;
   limit: number;
   results: SearchResult[];
-}
-
-/** ts_headline marks query matches with <b>…</b>. Render ONLY those markers
- * as highlights and everything else as plain (auto-escaped) text — never
- * dangerouslySetInnerHTML: parsed_text is uploaded-document content, so raw
- * HTML rendering would be a stored-XSS sink (house rule). Unbalanced tags
- * worst-case mis-bold a segment; they can never inject markup. */
-function SnippetText({ snippet }: { snippet: string }) {
-  const parts = snippet.split(/<\/?b>/);
-  return (
-    <>
-      {parts.map((part, i) =>
-        i % 2 === 1 ? (
-          <mark key={i} className="bg-transparent font-semibold text-foreground">
-            {part}
-          </mark>
-        ) : (
-          <Fragment key={i}>{part}</Fragment>
-        )
-      )}
-    </>
-  );
 }
 
 function ScoreCell({ value }: { value: number | null }) {
@@ -745,7 +724,7 @@ export default function DashboardPage() {
                     <TableCell>{(r.rank * 100).toFixed(0)}%</TableCell>
                     <TableCell
                       className="max-w-xs truncate text-muted-foreground"
-                      title={r.snippet.replace(/<\/?b>/g, '')}
+                      title={snippetPlainText(r.snippet)}
                     >
                       <SnippetText snippet={r.snippet} />
                     </TableCell>

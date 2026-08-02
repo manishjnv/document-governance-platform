@@ -7,6 +7,7 @@
 
 import { useCallback, useState } from 'react';
 import axios from 'axios';
+import { SnippetText } from '@/components/SnippetText';
 
 interface KBArticle {
   article_id: string;
@@ -172,9 +173,13 @@ export default function KnowledgeBaseSearch({
                       </span>
                     </div>
 
-                    {/* Snippet */}
+                    {/* Snippet — ts_headline markers rendered safely (RCA #20) */}
                     <p className="text-gray-700 text-sm leading-relaxed line-clamp-3">
-                      {article.snippet || 'No preview available'}
+                      {article.snippet ? (
+                        <SnippetText snippet={article.snippet} />
+                      ) : (
+                        'No preview available'
+                      )}
                     </p>
                   </div>
                 ))}
