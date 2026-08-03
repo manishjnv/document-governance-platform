@@ -464,3 +464,32 @@ def test_real_environment_template_round_trips():
     # "Read Me" is an unrecognized sheet name -> tolerated, never surfaced
     # as a data sheet or an unmapped-entry assumption.
     assert not any("Read Me" in a for a in parsed["assumptions"])
+
+
+# --- Phase A11 piece 2: templates regenerated with styling only (values
+# unchanged above -- these check the openpyxl readback for the new styling) ---
+
+def test_real_templates_have_branded_header_fill_and_bordered_grid():
+    import openpyxl
+
+    brand_rgb, white_rgb = "000057B8", "00FFFFFF"
+    for name, sheets in (
+        ("scopewise-mitre-use-cases.xlsx", ["Rules"]),
+        ("scopewise-mitre-environment.xlsx",
+         ["Read Me", "Assets", "Log Sources", "Security Tooling", "Crown Jewels"]),
+    ):
+        wb = openpyxl.load_workbook(TEMPLATES_DIR / name)
+        for sheet_name in sheets:
+            ws = wb[sheet_name]
+            header = ws.cell(row=1, column=1)
+            assert header.fill.fgColor.rgb == brand_rgb, (name, sheet_name)
+            assert header.font.color.rgb == white_rgb, (name, sheet_name)
+            if sheet_name == "Read Me":
+                continue  # prose sheet, not a data-entry grid
+            example_row = ws.cell(row=2, column=1)
+            assert example_row.border.left.style == "thin", (name, sheet_name)
+            # ~100 pre-formatted blank rows so customer content lands in a grid
+            last_row = ws.cell(row=ws.max_row, column=1)
+            assert last_row.value is None
+            assert last_row.border.left.style == "thin", (name, sheet_name)
+            assert ws.max_row >= 100
