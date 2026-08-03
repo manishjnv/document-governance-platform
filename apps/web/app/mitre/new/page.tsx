@@ -505,6 +505,11 @@ export default function NewMitreAssessmentPage() {
                     onError={setError}
                   />
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  If one device sends more than one kind of log, list each log type as its
+                  own row in Log Sources — &quot;Infoblox - DNS logs&quot; and &quot;Infoblox
+                  - SSH logs&quot; — so each stream gets credited separately.
+                </p>
                 <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs">
                   <a
                     href="/templates/scopewise-mitre-use-cases.xlsx"
