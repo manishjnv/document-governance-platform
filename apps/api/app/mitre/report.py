@@ -644,6 +644,12 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
         toc_end = html.index("</ul>", toc_start) + len("</ul>")
         html = html[:toc_start] + html[toc_end:]
         html = re.sub(r"<a class='xref' href='#g-[^']*'></a>", "", html)
+        # Phase A11 piece 3: this cut is ONLY cover + executive summary (the
+        # detailed/appendix parts are already gone above) — forcing a break
+        # between them here just strands a half-empty page 2. Let the two
+        # flow together; the full PDF still keeps the break (a genuine
+        # cover->executive PART boundary there).
+        html = html.replace(' class="page-break"', '')
     elif scope in _SECTION_SCOPES:
         # Per-tab download: document title + just that section + footer.
         start_marker, end_marker = _SECTION_SCOPES[scope]

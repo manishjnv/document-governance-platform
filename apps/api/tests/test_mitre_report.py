@@ -260,6 +260,25 @@ async def test_html_report_gaps_scope_keeps_roadmap_and_register(db_session):
 
 
 @pytest.mark.asyncio
+async def test_html_report_page_break_audit(db_session):
+    """Phase A11 piece 3: hard page breaks survive ONLY at genuine PART
+    boundaries (cover->executive->detailed->appendix); sub-sections inside
+    a part (roadmap, inside "detailed") flow continuously so content isn't
+    stranded on a near-empty page."""
+    org, user, _headers = await _make_user(db_session, role="viewer")
+    assessment = await _seed(db_session, org, user)
+    html = build_html_report(assessment, [])
+
+    def has_break(anchor_id):
+        return f'id="{anchor_id}" class="page-break"' in html
+
+    assert has_break("exec")       # cover -> executive
+    assert has_break("tactics")    # executive -> detailed
+    assert has_break("register")   # detailed -> appendix
+    assert not has_break("roadmap")  # sub-section within "detailed" -- flows
+
+
+@pytest.mark.asyncio
 async def test_xlsx_formula_injection_guard(db_session):
     org, user, _ = await _make_user(db_session)
     assessment = await _seed(db_session, org, user)
@@ -600,6 +619,9 @@ async def test_executive_scope_report(client, db_session):
     assert "Gap register" not in html
     assert "<h3>Contents</h3>" not in html
     assert "class='xref'" not in html
+    # Phase A11 piece 3: no forced page breaks left in the trimmed
+    # executive cut -- cover + executive summary flow continuously.
+    assert 'class="page-break"' not in html
     res = await client.get(
         f"/api/v1/mitre/assessments/{done.assessment_id}/report",
         params={"scope": "bogus"},

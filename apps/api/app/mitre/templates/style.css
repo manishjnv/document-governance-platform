@@ -25,8 +25,8 @@ body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Liberation San
 .cover-logo .cover-logo-img { height: 36px; vertical-align: middle; margin-right: 8px; }
 .cover-logo .cover-logo-name { font-size: 15px; font-weight: 600; color: {{ brand_color }}; vertical-align: middle; }
 h1 { font-size: 22px; color: {{ brand_color }}; margin-bottom: 2px; string-set: doctitle content(); }
-h2 { font-size: 15px; color: #003D82; margin: 18px 0 6px; border-bottom: 2px solid {{ brand_color }}; padding-bottom: 3px; }
-h3 { font-size: 13px; margin: 12px 0 4px; }
+h2 { font-size: 15px; color: #003D82; margin: 18px 0 6px; border-bottom: 2px solid {{ brand_color }}; padding-bottom: 3px; page-break-after: avoid; }
+h3 { font-size: 13px; margin: 12px 0 4px; page-break-after: avoid; }
 h3.bucket { padding: 3px 6px; border-radius: 4px; }
 h3.short { background: #d1fae5; }
 h3.mid { background: #fef3c7; }
@@ -34,7 +34,7 @@ h3.long { background: #e5e7eb; }
 p { margin: 3px 0; }
 .muted { color: #4b5563; font-size: 11px; }
 .headline { font-size: 40px; font-weight: bold; color: {{ brand_color }}; }
-.tiles { display: flex; gap: 8px; margin: 8px 0; }
+.tiles { display: flex; gap: 8px; margin: 8px 0; page-break-inside: avoid; }
 .tile { flex: 1; background: #f3f4f6; border-radius: 6px; padding: 8px; text-align: center; }
 .tile b { display: block; font-size: 18px; }
 .badge { display: inline-block; background: #e5e7eb; border: 1px solid #cbd5e1; border-radius: 9px; padding: 0 7px; font-size: 9px; font-weight: 600; color: #374151; vertical-align: middle; }
@@ -49,6 +49,7 @@ p { margin: 3px 0; }
 .heatmap .cell { display: inline-block; color: #fff; font-size: 7px; padding: 1px 3px; margin: 1px; border-radius: 2px; }
 /* Professional table grid: bordered cells, branded header, zebra rows. */
 table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 11px; border: 1px solid #b6c6d8; }
+thead { page-break-after: avoid; }  /* header never strands alone at a page bottom */
 th { text-align: left; background: {{ brand_color }}; color: #fff; font-weight: 600; padding: 5px 7px; border: 1px solid {{ brand_color }}; }
 th + th { border-left: 1px solid rgba(255,255,255,0.35); }
 td { padding: 4px 7px; border: 1px solid #dde5ee; vertical-align: top; }
