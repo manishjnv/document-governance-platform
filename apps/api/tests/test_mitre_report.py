@@ -40,11 +40,14 @@ async def _make_user(db_session, *, role="admin"):
     return org, user, {"Authorization": f"Bearer {token}"}
 
 
-def _gap(tid, name, rank=1, state="not_covered"):
+def _gap(tid, name, rank=1, state="not_covered", threat_relevance=("Banking",),
+          crown_jewel_relevant=True):
     return {
         "technique_id": tid, "name": name, "domain": "enterprise", "state": state,
         "tier": 2, "tactics": ["TA0002"], "feasibility": "short", "via": "Sysmon",
         "category": "registry", "hint": "build the detection now", "rank": rank,
+        "threat_relevance": list(threat_relevance) if threat_relevance else None,
+        "crown_jewel_relevant": crown_jewel_relevant,
     }
 
 
@@ -160,6 +163,53 @@ async def test_html_report_escapes_untrusted_strings(db_session):
 
 
 @pytest.mark.asyncio
+async def test_html_report_roadmap_index_and_register_dedup(db_session):
+    """Phase A9: the roadmap section is a compact per-bucket index (ID, Name,
+    Priority, cross-ref) that points into the gap register; the gap's full
+    narrative (why/recommendation) prints exactly once, in the register —
+    not repeated inline in the roadmap."""
+    org, user, _ = await _make_user(db_session)
+    assessment = await _seed(db_session, org, user)
+    html = build_html_report(assessment, [])
+
+    assert '<h2 id="roadmap"' in html
+    assert '<h2 id="gapreg"' in html
+    assert "Gap register" in html
+    roadmap_start = html.index('<h2 id="roadmap"')
+    register_start = html.index('<h2 id="gapreg"')
+    assert roadmap_start < register_start
+    roadmap_slice = html[roadmap_start:register_start]
+    register_slice = html[register_start:]
+
+    # index table: technique id + cross-ref present, full narrative absent
+    assert "T1112" in roadmap_slice
+    assert "<a class='xref' href='#g-T1112'></a>" in roadmap_slice
+    assert "Build a Sysmon registry detection." not in roadmap_slice
+    assert "Why it's a gap:" not in roadmap_slice
+
+    # single home: the full narrative and its anchor appear exactly once
+    assert "Build a Sysmon registry detection." in register_slice
+    assert register_slice.count("id='g-T1112'") == 1
+
+
+@pytest.mark.asyncio
+async def test_html_report_gaps_scope_keeps_roadmap_and_register(db_session):
+    """Phase A9: the gaps tab scope keeps both the roadmap index and the
+    (untouched) gap register; the coverage tab scope keeps neither."""
+    org, user, _headers = await _make_user(db_session, role="viewer")
+    assessment = await _seed(db_session, org, user)
+
+    gaps_html = build_html_report(assessment, [], scope="gaps")
+    assert '<h2 id="roadmap"' in gaps_html
+    assert "Gap register" in gaps_html
+
+    coverage_html = build_html_report(assessment, [], scope="coverage")
+    assert '<h2 id="roadmap"' not in coverage_html
+    assert "Gap register" not in coverage_html
+    assert "Coverage by attack stage" in coverage_html
+
+
+@pytest.mark.asyncio
 async def test_xlsx_formula_injection_guard(db_session):
     org, user, _ = await _make_user(db_session)
     assessment = await _seed(db_session, org, user)
@@ -168,9 +218,8 @@ async def test_xlsx_formula_injection_guard(db_session):
                   "mappings": [], "mapping_status": "customer_tagged"}]
     wb = load_workbook(io.BytesIO(build_xlsx_export(assessment, use_cases)))
     assert set(wb.sheetnames) == {
-        "Read Me", "Summary", "Coverage by Tactic", "Technique Register",
-        "Use-Case Mappings", "Gaps & Recommendations", "Roadmap",
-        "Not Applicable", "Assumptions",
+        "Read Me", "Summary", "Coverage by Tactic", "Technique Tracker",
+        "Use-Case Mappings", "Not Applicable", "Assumptions",
     }
     assert wb.sheetnames[0] == "Read Me"                # Phase 14c guide sheet
     ws = wb["Use-Case Mappings"]
@@ -181,11 +230,12 @@ async def test_xlsx_formula_injection_guard(db_session):
 
 
 @pytest.mark.asyncio
-async def test_xlsx_phase14c_structure(db_session):
-    """Phase 14c structure goldens (not pixel styling): Read Me content,
-    register Name/plain-words/Why columns with tactic names, plain-words
-    mapping status, numeric row sort, feasibility-grouped gaps, renamed
-    Summary metric."""
+async def test_xlsx_tracker_structure(db_session):
+    """Phase A9: the merged Technique Tracker sheet — exact header order, no
+    interleaved section-header rows, one row per APPLICABLE technique (N/A
+    excluded), covered rows leave gap-only columns blank, a gap row is fully
+    populated including the new Threat match/Crown jewel/Roadmap bucket/
+    Owner-Status-Target-date-Notes columns."""
     org, user, _ = await _make_user(db_session)
     assessment = await _seed(db_session, org, user)
     use_cases = [
@@ -204,19 +254,48 @@ async def test_xlsx_phase14c_structure(db_session):
     texts = [str(c.value) for row in readme.iter_rows() for c in row if c.value]
     assert any("Is 33.3% bad?" in t for t in texts)
     assert any("What each sheet contains" in t for t in texts)
+    assert any("Technique Tracker" in t for t in texts)
 
-    reg = wb["Technique Register"]
-    headers = [c.value for c in reg[1]]
-    assert headers[:7] == ["Technique", "Name", "Matrix", "Tactics", "State",
-                           "In plain words", "Why"]
-    rows = {r[0].value: r for r in reg.iter_rows(min_row=2)}
+    tracker = wb["Technique Tracker"]
+    headers = [c.value for c in tracker[1]]
+    assert headers == [
+        "Technique ID", "Name", "Tactic(s)", "Domain", "State", "Why", "Strength",
+        "Priority", "Threat match", "Crown jewel", "Feasibility", "Roadmap bucket",
+        "Recommendation", "Log fields needed", "Via", "Owner", "Status",
+        "Target date", "Notes",
+    ]
+    # no interleaved section-header rows: every data row's first cell is a
+    # real technique id from the applicable set (N/A technique T1200 excluded)
+    ids = [r[0].value for r in tracker.iter_rows(min_row=2)]
+    assert all(str(i).startswith("T") for i in ids)
+    assert len(ids) == 3 and "T1200" not in ids
+    assert set(ids) == {"T1059.001", "T1003.001", "T1112"}
+
+    rows = {r[0].value: r for r in tracker.iter_rows(min_row=2)}
     covered = rows["T1059.001"]
     assert covered[1].value == "PowerShell"             # name from the pinned index
-    assert covered[3].value == "Execution"              # tactic name, not TA0002
-    assert "Covered by your rule 'PS rule'" in covered[6].value
-    not_covered = rows["T1112"]
-    assert not_covered[5].value == "No rule detects this"
-    assert "maps to this technique" in not_covered[6].value
+    assert covered[2].value == "Execution"              # tactic name, not TA0002
+    assert "Covered by your rule 'PS rule'" in covered[5].value
+    # covered row: gap-only columns blank (no gap entry for a covered technique)
+    for col in (7, 8, 9, 10, 11, 12, 13, 14):
+        assert covered[col].value in (None, "")
+
+    gap_row = rows["T1112"]
+    assert gap_row[4].value == "No rule detects this"   # State (plain words)
+    assert "maps to this technique" in gap_row[5].value  # Why
+    assert gap_row[7].value == 2                        # Priority: numeric P2
+    assert gap_row[7].number_format == '"P"0'
+    assert gap_row[8].value == "Banking"                # Threat match
+    assert gap_row[9].value == "Yes"                    # Crown jewel
+    assert gap_row[10].value == "Short term (0–3 mo)"   # Feasibility
+    assert gap_row[11].value == "Short"                 # Roadmap bucket VALUE
+    assert gap_row[12].value == "Build a Sysmon registry detection."  # Recommendation
+    assert "your query needs:" in gap_row[13].value      # Log fields needed
+    assert "Windows Registry Key Modification" in gap_row[13].value
+    assert gap_row[14].value == "Sysmon"                # Via
+    # blank customer-tracking columns
+    for col in (15, 16, 17, 18):
+        assert gap_row[col].value in (None, "")
 
     ucs = wb["Use-Case Mappings"]
     assert ucs["A2"].value == "s:2"                     # numeric sort: 2 before 10
@@ -224,22 +303,49 @@ async def test_xlsx_phase14c_structure(db_session):
     assert ucs["D2"].value == "You tagged this"         # plain-words status
     assert ucs["D3"].value == "Could not be mapped"
 
-    gaps = wb["Gaps & Recommendations"]
-    a_col = [c[0].value for c in gaps.iter_rows(min_col=1, max_col=1) if c[0].value]
-    assert any(str(v).startswith("Short term") for v in a_col)  # section header
-
-    # Phase 14h: "Log fields needed" column (curated per data-source component)
-    gap_headers = [c.value for c in gaps[1]]
-    assert gap_headers == ["Rank", "Technique", "Name", "Priority", "State",
-                           "Log source to use", "Log fields needed", "Recommendation"]
-    gap_row = next(r for r in gaps.iter_rows(min_row=2) if r[1].value == "T1112")
-    telemetry_cell = gap_row[6].value
-    assert "your query needs:" in telemetry_cell
-    assert "Windows Registry Key Modification" in telemetry_cell
-
     summary_metrics = [r[0].value for r in wb["Summary"].iter_rows(min_row=2)]
     assert "Coverage %" in summary_metrics
     assert "Strict coverage %" not in summary_metrics
+
+
+def test_xlsx_tracker_formula_guard():
+    """Phase A9: the Tracker's merged Recommendation column carries the same
+    attacker-controlled narrative text the old Gaps & Recommendations sheet
+    did — the formula-injection guard must still apply."""
+    class A:
+        pass
+
+    a = A()
+    a.assessment_id = uuid.uuid4()
+    a.name = "x"
+    a.completed_at = datetime.now(timezone.utc)
+    a.attack_version = "19.1"
+    a.summary = _summary()
+    a.summary["narrative"]["gap_recommendations"]["T1112"] = FORMULA
+    a.technique_results = _results({"T1112": "not_covered"})
+    a.params = {"thresholds": {"confidence_covered": 0.7}, "models_used": {}}
+
+    wb = load_workbook(io.BytesIO(build_xlsx_export(a, [])))
+    tracker = wb["Technique Tracker"]
+    row = next(r for r in tracker.iter_rows(min_row=2) if r[0].value == "T1112")
+    assert row[12].value == "'" + FORMULA               # Recommendation, guarded
+
+
+@pytest.mark.asyncio
+async def test_xlsx_scope_pruning(db_session):
+    """Phase A9: coverage and gaps per-tab downloads both keep the merged
+    Tracker sheet (it now carries both roles); assumptions is unaffected."""
+    org, user, _ = await _make_user(db_session)
+    assessment = await _seed(db_session, org, user)
+
+    coverage_wb = load_workbook(io.BytesIO(build_xlsx_export(assessment, [], scope="coverage")))
+    assert set(coverage_wb.sheetnames) == {"Coverage by Tactic", "Technique Tracker"}
+
+    gaps_wb = load_workbook(io.BytesIO(build_xlsx_export(assessment, [], scope="gaps")))
+    assert set(gaps_wb.sheetnames) == {"Technique Tracker"}
+
+    assumptions_wb = load_workbook(io.BytesIO(build_xlsx_export(assessment, [], scope="assumptions")))
+    assert set(assumptions_wb.sheetnames) == {"Not Applicable", "Assumptions"}
 
 
 @pytest.mark.asyncio
@@ -258,9 +364,9 @@ async def test_xlsx_phase14h_polish(db_session):
     assert len(ws_tactic.conditional_formatting._cf_rules) == 2  # Coverage % + Weighted %
     assert len(ws_tactic._charts) == 1
 
-    ws_gaps = wb["Gaps & Recommendations"]
-    assert len(ws_gaps.conditional_formatting._cf_rules) == 1
-    priority_cells = [c[3] for c in ws_gaps.iter_rows(min_row=2, max_col=4) if c[1].value]
+    ws_tracker = wb["Technique Tracker"]
+    assert len(ws_tracker.conditional_formatting._cf_rules) == 1
+    priority_cells = [c[7] for c in ws_tracker.iter_rows(min_row=2) if c[0].value]
     assert any(isinstance(c.value, int) for c in priority_cells)  # numeric, not "P2" string
     assert all(c.number_format == '"P"0' for c in priority_cells if isinstance(c.value, int))
 
