@@ -724,6 +724,7 @@ export default function MitreResultsPage() {
                   <CoverageHeatmap
                     summary={summary}
                     techniques={techniques}
+                    logSources={assessment?.log_source_coverage ?? undefined}
                     onSelectTechnique={setSelectedTechnique}
                     onDrill={openDrill}
                   />

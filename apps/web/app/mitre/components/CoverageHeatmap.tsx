@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { DOMAIN_LABELS, STATE_META, STATE_PLAIN, Summary, TechniqueResult, orderedDomains } from '../lib';
+import { DOMAIN_LABELS, LogSourceCoverageGroup, STATE_META, STATE_PLAIN, Summary, TechniqueResult, orderedDomains } from '../lib';
 import type { DrillHandler } from './ExecutiveBand';
 
 // "PRE" and "None" are ATT&CK's environment-independent markers, not real
@@ -33,11 +33,13 @@ const depthCell = (ruleCount: number) =>
 export function CoverageHeatmap({
   summary,
   techniques,
+  logSources,
   onSelectTechnique,
   onDrill,
 }: {
   summary: Summary;
   techniques: TechniqueResult[];
+  logSources?: LogSourceCoverageGroup[];
   onSelectTechnique: (techniqueId: string) => void;
   onDrill: DrillHandler;
 }) {
@@ -80,6 +82,22 @@ export function CoverageHeatmap({
       else next.add(platform);
       return next;
     });
+  // Log-source lens ("what does our EDR alone cover?"): filter to techniques
+  // reached by rules from the selected log source(s). Keyed by display name.
+  const [sourceFilter, setSourceFilter] = useState<Set<string>>(new Set());
+  const toggleSourceFilter = (source: string) =>
+    setSourceFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(source)) next.delete(source);
+      else next.add(source);
+      return next;
+    });
+
+  const sourceRowRefs = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const g of logSources ?? []) map.set(g.log_source, new Set(g.row_refs));
+    return map;
+  }, [logSources]);
 
   // Platform-agnostic techniques (no real platform tags) always match.
   const matchesPlatform = (t: TechniqueResult) => {
@@ -87,6 +105,14 @@ export function CoverageHeatmap({
     const plats = realPlatforms(t);
     return plats.length === 0 || plats.some((p) => platformFilter.has(p));
   };
+  const matchesSource = (t: TechniqueResult) => {
+    if (sourceFilter.size === 0) return true;
+    return t.use_case_refs.some((ref) =>
+      [...sourceFilter].some((s) => sourceRowRefs.get(s)?.has(ref))
+    );
+  };
+  const lensActive = platformFilter.size > 0 || sourceFilter.size > 0;
+  const matchesLens = (t: TechniqueResult) => matchesPlatform(t) && matchesSource(t);
 
   const countShown = (list: TechniqueResult[]) => {
     let covered = 0;
@@ -227,11 +253,62 @@ export function CoverageHeatmap({
           )}
         </div>
       )}
-      {platformFilter.size > 0 && (
+      {/* Log-source chips — "what does this source alone buy you": click to
+          show only techniques reached by rules from that log source. */}
+      {(logSources?.length ?? 0) > 1 && (
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="text-muted-foreground">Detected via:</span>
+          {(logSources ?? []).map((g) => {
+            const active = sourceFilter.has(g.log_source);
+            const dimmed = sourceFilter.size > 0 && !active;
+            return (
+              <Tooltip key={g.log_source} delayDuration={150}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => toggleSourceFilter(g.log_source)}
+                    className={cn(
+                      'flex items-center gap-1 rounded border px-1.5 py-0.5 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      active ? 'border-primary/40 bg-muted font-medium' : 'border-transparent bg-muted/40',
+                      dimmed && 'opacity-40'
+                    )}
+                  >
+                    {g.log_source}
+                    <span className="text-muted-foreground">
+                      {g.rule_count} rule{g.rule_count === 1 ? '' : 's'}
+                    </span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs text-xs">
+                  {g.rule_count} detection rule{g.rule_count === 1 ? '' : 's'} use{' '}
+                  {g.log_source}, reaching {g.techniques_covered} technique
+                  {g.techniques_covered === 1 ? '' : 's'}. Click to show only what this
+                  log source detects.
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+          {sourceFilter.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setSourceFilter(new Set())}
+              className="text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              All sources
+            </button>
+          )}
+        </div>
+      )}
+      {lensActive && (
         <p className="text-xs text-muted-foreground">
-          Showing techniques that can run on {[...platformFilter].join(', ')} — counts
-          update to match. Platform-independent techniques (e.g. Reconnaissance) stay
-          visible.
+          Showing techniques
+          {platformFilter.size > 0 && <> that can run on {[...platformFilter].join(', ')}</>}
+          {platformFilter.size > 0 && sourceFilter.size > 0 && <> and are</>}
+          {sourceFilter.size > 0 && <> detected by rules using {[...sourceFilter].join(', ')}</>}
+          {' '}— counts update to match.
+          {platformFilter.size > 0 &&
+            ' Platform-independent techniques (e.g. Reconnaissance) stay visible.'}
         </p>
       )}
 
@@ -308,12 +385,9 @@ export function CoverageHeatmap({
       </div>
 
       {activeDomains.map(([domainKey, domain]) => {
-        const domainShown =
-          platformFilter.size > 0
-            ? countShown(
-                techniques.filter((t) => t.domain === domainKey && matchesPlatform(t))
-              )
-            : null;
+        const domainShown = lensActive
+          ? countShown(techniques.filter((t) => t.domain === domainKey && matchesLens(t)))
+          : null;
         return (
         <section key={domainKey}>
           <h3 className="mb-2 flex items-center gap-1 text-sm font-semibold">
@@ -339,7 +413,7 @@ export function CoverageHeatmap({
                     (t) =>
                       t.domain === domainKey &&
                       t.state !== 'not_applicable' &&
-                      matchesPlatform(t)
+                      matchesLens(t)
                   ),
                   { grouped: true }
                 )
@@ -347,7 +421,7 @@ export function CoverageHeatmap({
               className="font-normal text-muted-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {domainShown
-                ? `— ${domainShown.covered}/${domainShown.applicable} covered (${domainShown.pct}%) on selected platforms`
+                ? `— ${domainShown.covered}/${domainShown.applicable} covered (${domainShown.pct}%) with current filters`
                 : `— ${domain.covered}/${domain.applicable} covered (${domain.strict_pct}%)`}
             </button>
           </h3>
@@ -361,11 +435,10 @@ export function CoverageHeatmap({
             >
               {domain.tactics.map((tactic) => {
                 const inTactic = byDomainTactic.get(`${domainKey}:${tactic.id}`) ?? [];
-                // Platform filter narrows what counts; state filter only
-                // narrows what's drawn (matching the legend's behavior).
-                const platCells =
-                  platformFilter.size > 0 ? inTactic.filter(matchesPlatform) : inTactic;
-                const tacticShown = platformFilter.size > 0 ? countShown(platCells) : null;
+                // Platform/log-source lenses narrow what counts; state filter
+                // only narrows what's drawn (matching the legend's behavior).
+                const platCells = lensActive ? inTactic.filter(matchesLens) : inTactic;
+                const tacticShown = lensActive ? countShown(platCells) : null;
                 const cells = platCells.filter(
                   (t) => stateFilter.size === 0 || stateFilter.has(t.state)
                 );
@@ -392,7 +465,7 @@ export function CoverageHeatmap({
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs text-xs">
                         {tacticShown
-                          ? `${tactic.name}: ${tacticShown.covered} of ${tacticShown.applicable} applicable techniques covered (${tacticShown.pct}%) on the selected platforms. Click for the list.`
+                          ? `${tactic.name}: ${tacticShown.covered} of ${tacticShown.applicable} applicable techniques covered (${tacticShown.pct}%) with the current filters. Click for the list.`
                           : `${tactic.name}: ${tactic.covered} covered, ${tactic.partial} partial, ${tactic.not_covered} not covered, ${tactic.not_applicable} not applicable (strict ${tactic.strict_pct}%). Click for the list.`}
                       </TooltipContent>
                     </Tooltip>
