@@ -45,6 +45,7 @@ pasted into a fresh session. Check off phases here as they complete.
 | A8 | Threat-profile expansion + region weighting | ☑ |
 | A9 | Report consolidation: XLSX Technique Tracker + PDF roadmap dedup | ☑ |
 | A10 | Device-level truth: platform synonyms, per-stream guidance, coverage-by-log-source, unmonitored-capability check | ☐ |
+| A11 | Report/template visual polish: header fills, template borders, executive PDF flow | ☐ |
 
 Deliberately dropped: "covered"→"has detection" relabel (pure
 positioning — needs a user decision, not a build session; raise it when
@@ -528,4 +529,77 @@ sheet. Touch ONLY scopewise-* containers.
 
 Report: per-piece diff summary, suite + tsc results, deploy SHA, smoke
 table with the before/after unmapped-assets line.
+```
+
+## Phase A11 — Report/template visual polish (XLSX headers, template borders, executive PDF flow)
+
+Added 2026-08-03 from user UI/report review. Three cosmetic fixes, zero
+behavior change — no numbers, no parsing, no pipeline. Verified starting
+state: template header rows are bold but have NO fill; template content
+cells have NO borders; every PDF section h2 carries `page-break`
+(`page-break-before: always`), which strands mostly-blank pages in the
+executive cut.
+
+```text
+Read CLAUDE.md, docs/planning/MITRE_MODULE_REFERENCE.md §11,
+apps/api/app/mitre/report_xlsx.py, templates/style.css +
+executive.html/detail.html/appendix.html, the two templates in
+apps/web/public/templates/, and the Ground rules of
+docs/planning/MITRE_ACCURACY_IMPROVEMENT_PLAN.md. Baseline: whatever
+the CLAUDE.md line says when you start (863+/7); tsc clean. Run A10
+first if it is still unchecked — this phase may touch the same files.
+
+PIECE 1 — XLSX report header fills (report_xlsx.py): every sheet's
+header row gets ONE consistent, unique background fill (use the
+existing branded band color family — dark fill + the existing
+white-bold font) so headers are visually distinct from data rows on
+every sheet, including the Technique Tracker and any sheet added by
+A10. Audit all sheets; some already have styled headers — make them
+uniform, not additive. Data-row fills (state/tier colors) unchanged.
+
+PIECE 2 — Downloadable templates (apps/web/public/templates/*.xlsx):
+regenerate BOTH template files with styling only — header/sheet names
+and all cell VALUES stay byte-identical to today (Ground rule 3; the
+ingest regression test must still pass unchanged):
+  a. Header rows: same unique fill as Piece 1 + bold white font.
+  b. All-borders (thin) on header + example rows, AND pre-format ~100
+     blank data rows per sheet with the same thin borders so customer-
+     entered content lands in a visible grid (form feel). Column
+     widths sized to the headers/examples.
+  c. Do it via a small throwaway script run once (scratchpad, not
+     committed) OR commit a scripts/build_mitre_templates.py if one
+     does not exist — prefer the committed generator so future template
+     edits stop being hand-surgery. Open both files after writing to
+     verify (openpyxl readback assertions in the existing template
+     test: header fill present, example-row border present).
+
+PIECE 3 — PDF whitespace / flow (templates + style.css): target: no
+page in the executive PDF (scope=executive) more than ~10-20% blank.
+  a. Remove `page-break` from section h2s WITHIN the executive scope —
+     content flows continuously; a section starts on a new page only
+     when it would not fit at all. Keep `page-break-inside: avoid` on
+     atomic blocks (scorecard, .fix cards, tables' header+first rows)
+     so nothing splits ugly.
+  b. Full PDF: keep hard breaks only where a genuinely new PART starts
+     (cover -> executive -> detailed -> appendix). Between sections
+     inside a part (roadmap -> gap register -> telemetry reference,
+     tactic sections), drop the forced break and let flow decide.
+  c. Verify with a real WeasyPrint render (Docker if local libs are
+     absent — the A9 session's disposable-container pattern): report
+     executive page count before/after and eyeball-describe the blank
+     share; assert no orphaned heading (heading alone at page bottom —
+     use `page-break-after: avoid` on h2/h3).
+Tests: existing report goldens still green (styling asserts only where
+the template test already reads styles); no numeric output changes.
+Wrap-up: full suite alone on edgp_test + tsc, docs (reference §11,
+progress, tick A11 here), commit per piece.
+
+DEPLOY (authorized): push, standard VPS loop (no migration), smoke:
+download both templates from the live wizard (header fill + bordered
+grid visible in Excel), full + executive PDF (executive now flows
+continuously, blank share visibly reduced), full XLSX (uniform header
+fills on every sheet). Touch ONLY scopewise-* containers.
+
+Report: per-piece diff summary, executive PDF page count before/after,
+suite + tsc results, deploy SHA, smoke table.
 ```
