@@ -84,8 +84,8 @@ MAX_APPENDIX_ROWS = 500
 
 # Per-tab PDF cuts (scope -> [start, end) markers inside the full document)
 _SECTION_SCOPES = {
-    "coverage": ('<h2 id="tactics"', '<h2 id="gapreg"'),
-    "gaps": ('<h2 id="gapreg"', "<!-- ========================== APPENDICES"),
+    "coverage": ('<h2 id="tactics"', '<h2 id="roadmap"'),
+    "gaps": ('<h2 id="roadmap"', "<!-- ========================== APPENDICES"),
     "assumptions": ('<h2 id="na"', '<h2 id="mappings"'),
 }
 
@@ -356,70 +356,101 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
             f"<div class='heatmap'>{cells}</div>"
         )
 
-    # --- detailed: gap register grouped by feasibility -------------------
-    gap_sections = ""
-    referenced_components: set = set()
+    # --- detailed: roadmap — compact per-bucket index into the register --
+    # (Phase A9: this used to hold the full per-gap narrative inline per
+    # bucket, duplicating what the gap register below also needs to be the
+    # single home of that detail; it now just points there.)
+    roadmap_sections = ""
     for bucket in ("short", "mid", "long"):
         bucket_gaps = [g for g in gaps if g.get("feasibility") == bucket]
         if not bucket_gaps:
             continue
-        entries = ""
-        for g in bucket_gaps:
-            tid = g.get("technique_id")
-            result = next((r for r in results if r.get("technique_id") == tid), None) or {
-                "technique_id": tid, "state": g.get("state"), "na_reason": None,
-            }
-            mapped = mapped_by_technique.get(tid, [])
-            why = plain_language.derive_why(
-                result, mapped, total_rules=total_rules,
-                sub_states=plain_language.sub_states_for(result, mapped, state_by_id, index),
-                confidence_covered=confidence_covered,
-            )
-            sketch = plain_language.detection_sketch(tid, g.get("via"))
-            # Phase 14h: name the components here; the field guidance is
-            # printed ONCE in the reference table below (the same components
-            # recur across hundreds of gaps — repeating the full text per gap
-            # added ~1.2MB / ~680 pages on a real 842-gap assessment).
-            telemetry_components = [
-                e["component"] for e in plain_language.telemetry_requirements(tid, index)
-                if e["fields"]
-            ]
-            for _component in telemetry_components:
-                referenced_components.add(_component)
-            via_line = (
-                f"Uses logs you already collect: {g.get('via')}" if bucket == "short" and g.get("via")
-                else f"Onboard telemetry from tooling you own: {g.get('via')}" if bucket == "mid" and g.get("via")
-                else "Needs a new telemetry capability"
-            )
-            tier = g.get("tier", 4)
-            relevance = g.get("threat_relevance") or []
-            entries += (
-                f"<div class='gap' id='g-{_esc(tid)}'>"
-                f"<p><span class='num muted'>#{_esc(g.get('rank'))}</span> "
-                f"<strong>{_esc(tid)} {_esc(g.get('name'))}</strong> "
-                + (f"<span class='badge p{tier}'>P{tier}</span> " if tier < 4
-                   else "<span class='badge'>Unranked</span> ")
-                + ("<span class='badge threat'>Threat match: " + _esc(", ".join(relevance)) + "</span> "
-                   if relevance else "")
-                + ("<span class='badge crown'>Crown jewel</span> "
-                   if g.get("crown_jewel_relevant") else "")
-                + f"{_state_chip(g.get('state', ''))}</p>"
-                f"<p><em>Why it's a gap:</em> {_esc(why)}</p>"
-                + (f"<p><em>What good looks like:</em> {_esc(sketch)}</p>" if sketch else "")
-                + (f"<p class='muted'>Log fields needed: {_esc(', '.join(telemetry_components))}"
-                   " — see the log-fields reference after this register.</p>"
-                   if telemetry_components else "")
-                + f"<p class='muted'>{_esc(via_line)}</p>"
-                + (f"<p>{ai_badge} {_esc(gap_recs.get(tid))}</p>" if gap_recs.get(tid)
-                   else f"<p class='muted'>{_esc(g.get('hint') or '')}</p>")
-                + "</div>"
-            )
-        gap_sections += (
+        index_rows = "".join(
+            f"<tr><td>{_esc(g.get('technique_id'))}</td><td>{_esc(g.get('name'))}</td>"
+            f"<td class='num'>{'P' + str(g['tier']) if g.get('tier', 4) < 4 else 'Unranked'}</td>"
+            f"<td><a class='xref' href='#g-{_esc(g.get('technique_id'))}'></a></td></tr>"
+            for g in bucket_gaps
+        )
+        roadmap_sections += (
             f"<h3 class='bucket {bucket}'>{_esc(FEASIBILITY_LABELS[bucket])} — "
             f"{len(bucket_gaps)} item{'' if len(bucket_gaps) == 1 else 's'}</h3>"
             f"<p class='muted'>{_esc(narrative.get('roadmap_prose', {}).get(bucket, ''))}</p>"
-            + entries
+            "<table class='compact'><thead><tr><th>Technique</th><th>Name</th>"
+            "<th>Priority</th><th>Full details</th></tr></thead>"
+            f"<tbody>{index_rows}</tbody></table>"
         )
+
+    # --- detailed: gap register — single home of full per-gap detail ----
+    # Dense table (not spaced-out cards) so every gap's full narrative
+    # prints exactly once without the per-card spacing/badge overhead that
+    # drove ~680 pages on a real 842-gap assessment; ranked order, one row
+    # per gap, anchored by id for the roadmap's "details p. N" cross-refs.
+    referenced_components: set = set()
+    register_body_rows = ""
+    for g in gaps:
+        tid = g.get("technique_id")
+        result = next((r for r in results if r.get("technique_id") == tid), None) or {
+            "technique_id": tid, "state": g.get("state"), "na_reason": None,
+        }
+        mapped = mapped_by_technique.get(tid, [])
+        why = plain_language.derive_why(
+            result, mapped, total_rules=total_rules,
+            sub_states=plain_language.sub_states_for(result, mapped, state_by_id, index),
+            confidence_covered=confidence_covered,
+        )
+        sketch = plain_language.detection_sketch(tid, g.get("via"))
+        bucket = g.get("feasibility")
+        # Phase 14h: name the components here; the field guidance is
+        # printed ONCE in the reference table below (the same components
+        # recur across hundreds of gaps — repeating the full text per gap
+        # added ~1.2MB / ~680 pages on a real 842-gap assessment).
+        telemetry_components = [
+            e["component"] for e in plain_language.telemetry_requirements(tid, index)
+            if e["fields"]
+        ]
+        for _component in telemetry_components:
+            referenced_components.add(_component)
+        via_line = (
+            f"Uses logs you already collect: {g.get('via')}" if bucket == "short" and g.get("via")
+            else f"Onboard telemetry from tooling you own: {g.get('via')}" if bucket == "mid" and g.get("via")
+            else "Needs a new telemetry capability"
+        )
+        tier = g.get("tier", 4)
+        relevance = g.get("threat_relevance") or []
+        flags = (
+            [f"<span class='badge p{tier}'>P{tier}</span>"] if tier < 4
+            else ["<span class='badge'>Unranked</span>"]
+        )
+        if relevance:
+            flags.append("<span class='badge threat'>Threat match: " + _esc(", ".join(relevance)) + "</span>")
+        if g.get("crown_jewel_relevant"):
+            flags.append("<span class='badge crown'>Crown jewel</span>")
+        details_bits = [f"<em>Why it's a gap:</em> {_esc(why)}"]
+        if sketch:
+            details_bits.append(f"<em>What good looks like:</em> {_esc(sketch)}")
+        if telemetry_components:
+            details_bits.append(
+                f"<span class='muted'>Log fields needed: {_esc(', '.join(telemetry_components))}"
+                " — see the log-fields reference after this register.</span>"
+            )
+        details_bits.append(f"<span class='muted'>{_esc(via_line)}</span>")
+        if gap_recs.get(tid):
+            details_bits.append(f"{ai_badge} {_esc(gap_recs.get(tid))}")
+        else:
+            details_bits.append(f"<span class='muted'>{_esc(g.get('hint') or '')}</span>")
+        register_body_rows += (
+            f"<tr id='g-{_esc(tid)}'>"
+            f"<td class='num'>#{_esc(g.get('rank'))}</td>"
+            f"<td><strong>{_esc(tid)} {_esc(g.get('name'))}</strong></td>"
+            f"<td>{' '.join(flags)}</td>"
+            f"<td>{_state_chip(g.get('state', ''))}</td>"
+            f"<td>{'<br>'.join(details_bits)}</td></tr>"
+        )
+    gap_register_html = (
+        "<table class='compact'><thead><tr><th>#</th><th>Technique</th>"
+        "<th>Flags</th><th>State</th><th>Details</th></tr></thead>"
+        f"<tbody>{register_body_rows}</tbody></table>"
+    ) if gaps else "<p class='muted'>No gaps — nothing to register.</p>"
 
     # Phase 14h reference: one row per curated component referenced above.
     telemetry_reference = ""
@@ -586,7 +617,8 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
         "tactic_sections": tactic_sections,
         "heatmap_sections": heatmap_sections,
         "gaps_len": len(gaps),
-        "gap_sections": gap_sections,
+        "roadmap_sections": roadmap_sections,
+        "gap_register_html": gap_register_html,
         "telemetry_reference": telemetry_reference,
         "results_len": len(results),
         "register_rows": register_rows,
