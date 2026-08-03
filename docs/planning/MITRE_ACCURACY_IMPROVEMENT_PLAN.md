@@ -44,6 +44,7 @@ pasted into a fresh session. Check off phases here as they complete.
 | A7 | Sentinel data-connector auto-import | ☑ |
 | A8 | Threat-profile expansion + region weighting | ☑ |
 | A9 | Report consolidation: XLSX Technique Tracker + PDF roadmap dedup | ☑ |
+| A10 | Device-level truth: platform synonyms, per-stream guidance, coverage-by-log-source, unmonitored-capability check | ☐ |
 
 Deliberately dropped: "covered"→"has detection" relabel (pure
 positioning — needs a user decision, not a build session; raise it when
@@ -422,4 +423,109 @@ still 200. Touch ONLY scopewise-* containers.
 
 Report: per-part diff summary, before/after PDF page count, XLSX sheet
 list before/after, suite + tsc results, deploy SHA + smoke table.
+```
+
+## Phase A10 — Device-level truth (4 small pieces, one theme)
+
+Added 2026-08-03 after Acme UI testing surfaced the "Infoblox problem":
+a DNS appliance whose rows land in the unmapped-assets assumption, and —
+worse — a device whose primary telemetry (DNS logs) can be entirely
+unmonitored while nothing in the product says so from the device's side.
+**Overriding style rule for every piece: the customer-facing output must
+be plain English a non-SOC manager understands on first read.** No
+category jargon ("network telemetry category"), no ATT&CK-speak without
+a gloss; every new UI element gets a plain-words tooltip; wording
+examples below are the bar, match them.
+
+```text
+Read CLAUDE.md, docs/planning/MITRE_MODULE_REFERENCE.md §§5,6,12,
+apps/api/app/mitre/ingest.py (_PLATFORM_RULES, _sheet_entries,
+parse_environment_file), ranking.py (the log-source category bridge),
+and the Ground rules of docs/planning/MITRE_ACCURACY_IMPROVEMENT_PLAN.md.
+Backend baseline 863 passed / 7 skipped; tsc clean. No migration
+expected (new curated JSON + parse-time fields in params + UI). All
+numbers stay deterministic; the honesty boundary holds throughout: we
+only compare what the customer DECLARED in their sheets — never claim
+to have verified that any log is actually flowing.
+
+PIECE 1 — Platform synonym additions (ingest.py _PLATFORM_RULES):
+  photon os -> Linux, photon -> Linux (Photon OS is a Linux distro),
+  infoblox -> Network Devices, dns appliance -> Network Devices,
+  dns appliances -> Network Devices, rubrik -> Linux.
+  Deliberately NO bare "dns" rule ("DNS servers" may be Windows/Linux
+  boxes — precision over recall). One platform per row stays (no
+  multi-platform mechanism). Tests in test_mitre_ingest.py: the three
+  vendors resolve from full phrases ("Photon OS appliances" -> Linux,
+  "Infoblox DNS appliances" -> Network Devices, "Rubrik backup
+  appliances" -> Linux); "cisco ios" still -> Network Devices (ordering
+  regression); AND a stay-unmapped pin: "IOT Platform devices" and
+  "Mainframe z/OS billing platform" must REMAIN unmapped with the
+  assumption line — ATT&CK v19.1 has no IoT/mainframe platform and
+  mapping them would be dishonest. Comment the pin so a future session
+  doesn't "fix" it.
+
+PIECE 2 — "One row per log stream" guidance (no header changes):
+  Environment template's Read Me sheet + the wizard's environment
+  drop-zone helper text gain one plain line, e.g.: "If one device sends
+  more than one kind of log, list each log type as its own row —
+  'Infoblox - DNS logs' and 'Infoblox - SSH logs' — so each stream gets
+  credited separately." Existing sheet names/headers byte-identical
+  (Ground rule 3). Template regression test still green.
+
+PIECE 3 — Coverage by log source (see what each device buys you):
+  Deterministic read-time grouping: rules grouped by their log_source
+  normalized through the SAME matcher the ranking bridge uses (reuse it
+  — do NOT write a second normalizer); per group: rule count, the
+  techniques those rules map to with states, and tactic names. Surface:
+  (a) results page — the UploadSummaryCard's log-source list becomes
+  clickable, opening the existing DrillDownPanel/RuleListPanel pattern
+  with a header like "What Sysmon gives you: 12 rules alerting on 9
+  techniques"; (b) one new XLSX sheet "Coverage by Log Source" (plain
+  columns: Log source | Rules | Techniques covered | Attack stages |
+  Techniques), added to the scope map alongside Use-Case Mappings.
+  Ungroupable log_source values fall into an "Other / unrecognized"
+  group, never dropped. No pipeline change — compute in the router/
+  report layer from stored use_cases + technique_results.
+
+PIECE 4 — Unmonitored-capability check (the Infoblox insight):
+  New curated data/device_classes.json (same cited-and-test-enforced
+  style as the other curated files): appliance-class keyword ->
+  expected primary telemetry category + plain-English capability name.
+  Seed ~10 classes: dns appliance/infoblox/bluecat -> network (DNS
+  query logs), edr vendors -> endpoint (process/endpoint logs), email
+  gateway/proofpoint/mimecast -> application (email logs), firewall
+  vendors -> network (traffic logs), idp vendors -> identity (sign-in
+  logs), backup/rubrik/veeam -> application (backup audit logs), proxy
+  -> network, waf -> application. At parse time, for each Assets/
+  Security Tooling entry matching a class: if NO Log Sources row maps
+  to the expected category, emit ONE aggregated finding per device
+  class (not per gap). Wording bar (match this): "Your inventory lists
+  a DNS appliance (Infoblox), but no DNS-log source is declared. Its
+  main security value — spotting attacks in DNS traffic — appears
+  unmonitored. Declaring/enabling DNS query logging would move N gaps
+  closer to buildable." N = the existing feasibility category
+  intersection, aggregated; list the top few technique IDs. Surface:
+  assumptions slot (free flow to UI tab, PDF appendix, XLSX Assumptions
+  — verify all three render it) AND the UploadSummaryCard as a
+  highlighted insight line. If the environment workbook has no Log
+  Sources sheet at all, the check is silent (no claim without data).
+  Tests: class-map integrity (keys resolve to real bridge categories),
+  flagged/not-flagged goldens (DNS appliance + no DNS source ->
+  finding; DNS appliance + DNS source -> silent; no workbook ->
+  silent), wording snapshot, E2E assumption presence.
+
+Wrap-up: full suite alone on edgp_test (pg_stat_activity first) +
+npx tsc --noEmit; update the CLAUDE.md baseline, module reference
+(§5/§6/§11/§12/§13/§15), IMPLEMENTATION_PROGRESS.md, tick A10 here.
+Commit per piece (4 commits + docs).
+
+DEPLOY (authorized): push, standard VPS loop (no migration), smoke on
+https://scopewise.assessiq.in: re-create an Acme-style assessment —
+Photon/Infoblox/Rubrik rows now resolve (orange unmapped line shrinks
+to IoT + z/OS only), the unmonitored-capability insight appears when
+DNS logs are omitted, log-source list is clickable, XLSX has the new
+sheet. Touch ONLY scopewise-* containers.
+
+Report: per-piece diff summary, suite + tsc results, deploy SHA, smoke
+table with the before/after unmapped-assets line.
 ```
