@@ -244,7 +244,11 @@ write (a real bug caught by the Phase 5 adversarial review).
   platform vocabulary (Windows/Linux/macOS/Containers/ESXi/IaaS/SaaS/
   Office Suite/Identity Provider/Network Devices/Android/iOS) via
   longest-first word-boundary rules ("cisco ios" → Network Devices, not
-  iOS); the header-row recognition set is widened for ServiceNow/
+  iOS; plan phase A10 added photon os/photon → Linux, rubrik → Linux,
+  infoblox/dns appliance(s) → Network Devices — deliberately no bare
+  "dns" rule, precision over recall; IoT/mainframe z/OS entries stay
+  unmapped on purpose, ATT&CK v19.1 has no such platform); the header-row
+  recognition set is widened for ServiceNow/
   Lansweeper CMDB exports ("os", "operating system", "ci type", "class",
   "ostype" — plan phase A6); OT/ICS and mobile/MDM marker rows set the
   domain gates; unmatched rows become an assumption, never an error.
@@ -252,7 +256,11 @@ write (a real bug caught by the Phase 5 adversarial review).
   existing name/present? pair — Parser/Format, Normalized (Y/N), Last
   Event Seen (plan phase A6) — captured as `log_source_health` and
   consumed by `ranking.py`'s feasibility bucketing (§6); absent → no
-  health entry, old 2-column dumps parse identically.
+  health entry, old 2-column dumps parse identically. Plan phase A10: the
+  environment template's Read Me sheet and the wizard's environment
+  drop-zone both gained a plain guidance line — one log stream per row
+  (e.g. "Infoblox - DNS logs" and "Infoblox - SSH logs" as separate rows)
+  so each stream gets credited separately; sheet names/headers unchanged.
 - **pdf/docx dumps**: text via the existing `parse_document()` (OCR
   fallback + 30-page cap inherited); <200 extractable chars → 422
   (mirrors the review pipeline's unreadable guard); rows AI-extracted at
@@ -296,6 +304,22 @@ sheets; one assumption per flagged technique, gated on a Log Sources
 sheet actually being uploaded (or auto-imported — plan phase A7). Never
 changes state/coverage/ranking.
 
+**Unmonitored-capability check** (`quality.unmonitored_capability_check`,
+plan phase A10 — the "Infoblox problem") — curated `data/device_classes.json`
+maps appliance-class keywords (DNS appliance/Infoblox/BlueCat, EDR, email
+gateway, firewall, IdP, backup, proxy, WAF) to an expected primary
+telemetry category + plain-English capability. For each class matched by
+an Assets or Security Tooling entry, if none of the customer's OWN Log
+Sources map (via the SAME ranking category bridge, reused) to that
+category, one AGGREGATED finding is emitted (never per-gap) with N = the
+count of ranked gaps in that category (a class with zero such gaps stays
+silent — nothing actionable to say). Run as pipeline "Stage 6.5" (needs
+`ranked["gaps"]`), gated on a Log Sources sheet actually having been
+uploaded; appends its plain-English message straight into the same
+assumptions list every other cross-check uses (surfaces in the UI
+Assumptions tab, PDF appendix, XLSX Assumptions sheet, and — highlighted —
+the `UploadSummaryCard` via a stable message prefix).
+
 **Coverage** (`compute_coverage(use_cases, applicability, *, thresholds…)`)
 — per applicable technique: `covered` (≥1 enabled mapping with confidence
 ≥ 0.7), `partial` (only disabled-rule mappings, or only 0.4–0.7
@@ -308,6 +332,17 @@ covered/applicable; weighted % credits partial at 0.5. Unknown/malformed
 mapping IDs are ignored with an assumption; revoked IDs silently credit
 their successor (assumption noted). `enabled: null` → treated enabled +
 assumption.
+
+**Coverage by log source** (`report_common.compute_log_source_coverage`,
+plan phase A10 — "see what each device buys you") — deterministic
+READ-TIME grouping (no pipeline change): detection rules grouped by their
+log_source, normalized through `ranking._norm` (reused, never a second
+normalizer); per group: rule count, the techniques those rules map to
+with current state, and tactic names. Rules with no log_source land in
+"Other / unrecognized" — never dropped. Shared by the results-page
+drill-down (`GET /assessments/{id}`'s `log_source_coverage` field, only
+once completed) and the XLSX "Coverage by Log Source" sheet, so the two
+views can never drift apart.
 
 **Ranking** (`rank_gaps`) — gaps = applicable techniques in
 `not_covered|partial`, sorted by priority tier (priorities file; unlisted
@@ -580,8 +615,13 @@ org-scoped KV table).
   Via, then four blank customer-tracking columns — Owner, Status, Target
   date, Notes — that make the sheet double as a working tracker), Use-Case
   Mappings (numeric row sort, plain-words statuses, guarded Logic column),
-  Not Applicable, Assumptions, and (when present) the 14g **How We Read
-  Your Files** evidence sheet. Frozen headers, auto-filter, wrapped text,
+  **Coverage by Log Source** (plan phase A10 — one row per detection-rule
+  log source via `report_common.compute_log_source_coverage`, the SAME
+  function the results-page drill-down uses so the two views can't drift:
+  Log source, Rules, Techniques covered, Attack stages, Techniques;
+  excluded from scoped downloads the same way Use-Case Mappings already
+  is), Not Applicable, Assumptions, and (when present) the 14g **How We
+  Read Your Files** evidence sheet. Frozen headers, auto-filter, wrapped text,
   state/tier/feasibility fills. Per-tab scope pruning: `coverage` and
   `gaps` both keep the Tracker (it now carries both roles); `assumptions`
   unaffected. Phase 14h also sets workbook core properties before save:
@@ -620,6 +660,12 @@ overflow on every page (real-browser checked).
   number: tiles, heatmap headers, N/A group counts, rules-by-status
   chips, the 14d `UploadSummaryCard` counts, and the wizard's
   parse-preview tiles. Rows click through to the technique drawer.
+  Plan phase A10: `UploadSummaryCard`'s log-source count is now a
+  clickable toggle that expands the per-source `log_source_coverage`
+  groups (plain-words chips, e.g. "Sysmon: 12 rules → 9 techniques"),
+  each opening `RuleListPanel` with a "What X gives you" title; the
+  unmonitored-capability finding (§6) renders as a highlighted
+  amber line filtered from `summary.assumptions` by its message prefix.
 - **Post-14 polish layer** (2026-08-02 evening): all three side panels
   are mouse-resizable via a left-edge drag handle (`useSheetResize` —
   shared remembered width, keyboard arrows, phones stay full-width);
@@ -670,23 +716,23 @@ overflow on every page (real-browser checked).
 
 ## 13. Testing
 
-Backend baseline **863 passed / 7 skipped** (measured 2026-08-03 after the
-MITRE accuracy plan A1-A9 — the 7th skip is the prod-only WeasyPrint PDF
+Backend baseline **876 passed / 7 skipped** (measured 2026-08-03 after the
+MITRE accuracy plan A1-A10 — the 7th skip is the prod-only WeasyPrint PDF
 render test; prod render verified live). Frontend: `tsc --noEmit` clean.
 
 | File | Covers |
 | --- | --- |
 | `test_mitre_applicability.py` | Domain gating, platform filter (+PRE/"None" exemptions), exclusion attribution + most-specific-wins, parent-exclusion inheritance, no-inventory behavior, deprecated reason, ID validation, real-dataset smoke, priorities-file IDs resolve `ok`. |
 | `test_mitre_coverage.py` | State thresholds (incl. exact 0.7 boundary), disabled policy param, enabled-None assumption, revoked-mapping remap, invalid-ID handling, sub-technique rollup, multi-tactic counting, golden strict/weighted %. |
-| `test_mitre_ingest.py` | Template + messy-header detection, csv, empty/over-cap/no-name-column 422s, environment workbook (sheets, platform normalization, ICS/mobile flags, missing-sheet assumptions). |
-| `test_mitre_api.py` | Real-Postgres E2E create→run→poll→results with hand-computed states, org isolation, 409 double-run, settings RBAC+validation, stale-run guard, intake validation. LLM stubbed via an autouse fixture (a local key can never leak into tests). |
+| `test_mitre_ingest.py` | Template + messy-header detection, csv, empty/over-cap/no-name-column 422s, environment workbook (sheets, platform normalization, ICS/mobile flags, missing-sheet assumptions); Phase A10: Photon OS/Infoblox/Rubrik platform-synonym goldens + "cisco ios" ordering regression + IoT/mainframe z/OS stay-unmapped pin. |
+| `test_mitre_api.py` | Real-Postgres E2E create→run→poll→results with hand-computed states, org isolation, 409 double-run, settings RBAC+validation, stale-run guard, intake validation. LLM stubbed via an autouse fixture (a local key can never leak into tests). Phase A10: `log_source_coverage` grouping asserted in the main E2E; unmonitored-capability-check flagged/silent E2E goldens. |
 | `test_mitre_agents.py` | Tagging batch success/failure-degrade, garbage-JSON chain advance, invalid/revoked AI IDs, confidence floor, extraction mode, narrative AI+template paths, all-batches-fail+zero-tags → failed, keyword-tag FP regression pins. |
 | `test_mitre_ranking.py` | Feasibility buckets (onboarded/ownable/new/no-telemetry), tier ordering, state tie-break, covered/N-A exclusion, deterministic-layer-imports-no-AI guard. |
-| `test_mitre_report.py` | HTML escapes planted `<script>`, XLSX guard incl. real-workbook readback + Logic column, 409s, StreamingResponse content-type, compare golden + cross-org 404, `domains_brief`; Phase 14h: `test_xlsx_phase14h_polish` (data-bar/color-scale CF rule counts, native chart presence, numeric Priority + number_format, Read Me sheet protection, workbook core properties); Phase A9: `test_xlsx_tracker_structure` (merged Tracker sheet headers exact, one covered row with blank gap/tracking columns, one gap row fully populated incl. Threat match/Crown jewel/Roadmap bucket), `test_xlsx_tracker_formula_guard` (formula guard on the Recommendation column), `test_xlsx_scope_pruning` (coverage/gaps both keep the Tracker), `test_html_report_roadmap_index_and_register_dedup` (roadmap index has no duplicated narrative, register is the single home, one anchor per gap), `test_html_report_gaps_scope_keeps_roadmap_and_register`. |
+| `test_mitre_report.py` | HTML escapes planted `<script>`, XLSX guard incl. real-workbook readback + Logic column, 409s, StreamingResponse content-type, compare golden + cross-org 404, `domains_brief`; Phase 14h: `test_xlsx_phase14h_polish` (data-bar/color-scale CF rule counts, native chart presence, numeric Priority + number_format, Read Me sheet protection, workbook core properties); Phase A9: `test_xlsx_tracker_structure` (merged Tracker sheet headers exact, one covered row with blank gap/tracking columns, one gap row fully populated incl. Threat match/Crown jewel/Roadmap bucket), `test_xlsx_tracker_formula_guard` (formula guard on the Recommendation column), `test_xlsx_scope_pruning` (coverage/gaps both keep the Tracker), `test_html_report_roadmap_index_and_register_dedup` (roadmap index has no duplicated narrative, register is the single home, one anchor per gap), `test_html_report_gaps_scope_keeps_roadmap_and_register`. Phase A10: `compute_log_source_coverage` grouping/normalization/unresolvable-id goldens, "Coverage by Log Source" sheet in the formula-injection-guard sheet-set assertion. |
 | `test_mitre_navigator.py` | Golden single-domain layer (colors/comments/enabled/versions/legend), multi-domain stable order, gated-domain exclusion; endpoint json vs zip, viewer-readable, cross-org 404 + pending 409. |
 | `test_mitre_mapping_edit.py` | Phase 10 PATCH: manual provenance + inline recompute (states flip, counts.manual, assumption note, audit row), empty-list unmap, invalid/malformed/over-cap 422s, non-completed 409, cross-org 404 (both IDs) + viewer 403. |
 | `test_mitre_threat_profile.py` | Phase 11: every curated ID resolves `ok` + alias integrity, real-file lookup (Banking alias, unknown = no-op), within-tier lift golden, no-tier-jump golden, toggle-off keeps order but keeps annotation, intake threat_actors 422s (unknown/non-list/over-10). |
-| `test_mitre_quality.py` | Phase 12: heuristic goldens (full-signal 100, disabled capped 70, telemetry match +30, low-conf AI weak, redundancy cap, no-telemetry note, only direct-rule covered/partial scored), inconclusive selection, rollup, AI pass clamped/filtered/merged + garbage-degrades-to-heuristic. |
+| `test_mitre_quality.py` | Phase 12: heuristic goldens (full-signal 100, disabled capped 70, telemetry match +30, low-conf AI weak, redundancy cap, no-telemetry note, only direct-rule covered/partial scored), inconclusive selection, rollup, AI pass clamped/filtered/merged + garbage-degrades-to-heuristic. Phase A10: `unmonitored_capability_check` flagged/silent/aggregation-not-per-gap goldens + `device_classes.json` integrity (every `expected_category` resolves against the real ranking bridge categories). |
 | `test_mitre_siem.py` | 13a: egress deny-set table (+mixed-answer rebinding), pin assertion, allowlist-before-resolve, redirect/size caps, hostile Retry-After, nextLink suffix-spoof, Sentinel config regexes (+dot-edge resource groups), normalization goldens round-tripped through real ingest, endpoint E2E + secret-absence scan + RBAC. No test touches the network. |
 | `test_mitre_connections.py` | 13b: crypto round-trip/AAD-transplant/key-version/corrupt/missing-key, CRUD secret-write-only (+DB ciphertext scan), all-admin-routes RBAC, org-isolation 404s, 503 mapping, secret length cap, dry-run test endpoint, from-connection provenance, DEBUG-level log-scrub. |
 | `test_mitre_schedule.py` | 13c: due-instant goldens (daily/weekly/wrap), schedule PATCH validation, sweep advance-on-enqueue + dedup-no-advance, stale-running self-heal (+enqueue same pass), pending-preview non-blocking, worker pull completed/failed/deleted-connection paths. |
@@ -796,6 +842,7 @@ you're alone on `edgp_test`.
 | A3 | (pending commit) | 08-03 | Accuracy-plan phase A3: rule-vs-inventory telemetry cross-check (shelfware detector). New pure `quality.telemetry_shelfware_check()` — for a covered/partial technique whose qualifying rules ALL declare a log source that maps (via ranking.py's `_categories_provided`/`_LOG_SOURCE_RULES` bridge, reused not duplicated) to a telemetry category absent from the customer's own Log Sources/Tooling sheets, emits one flagged entry (one matching rule clears it). Wired into `service.run_assessment_pipeline` as stage 5.7, gated on `"log_sources" in params.environment_lists.sheets_found` (no Log Sources sheet uploaded → no claim); each flagged technique adds ONE assumption line ("T1078 is covered by rule 'X', but its log source 'Okta' doesn't match anything in your Log Sources sheet — verify that telemetry is actually flowing."), rendered with zero changes by the existing UI Assumptions tab / PDF appendix / XLSX Assumptions sheet (all three iterate `summary.assumptions` generically — verified by code inspection). Never touches state/coverage/ranking. Not wired into `recompute_results` (Phase 10 manual-edit path), which by design freezes assumption text from the original run. 7 new goldens in `test_mitre_quality.py` + 1 new E2E in `test_mitre_api.py` asserting the assumption text appears. |
 | 14i | `75b58bf` | 08-03 | "What logs do I need?" per gap (plan's second, distinctly-titled §14h section — relabeled 14i here to avoid colliding with the already-shipped report-branding 14h above): new curated `data/telemetry_fields.json` (top 35 of 113 ATT&CK data-source components by technique-reference frequency, 83%/88% coverage at top 25/35 — `fields`/`where`/`gotcha` per component, hand-written, never runtime-LLM); pure `plain_language.telemetry_requirements()` + `telemetry_lines()` (curated entry or bare-component-name fallback for the long tail). Surfaced in exactly 3 places, no new UI area: explain endpoint `good.telemetry` rendered in the drawer's existing "What would good look like?" block (one compact line per component: fields, where, gotcha in muted text); XLSX "Log fields needed" column on Gaps & Recommendations (reuses existing bordered/wrapped styling helpers); PDF/HTML gap register names each gap's telemetry components under the detection sketch, with the full guidance in a single "Log fields reference" table after the register (review fix: printing the guidance per gap repeated 1.23 MB / ~680 pages on the 842-gap customer sample, since 487 techniques share "Process Creation"; the table is 35 rows / 19 KB and lives inside the register section so the per-tab `gaps` scope keeps it while `executive` still excludes it). Honesty boundary preserved throughout: wording is "your query needs X; your `<source>` should carry it" — never "your source is missing X" (this product never ingests raw logs, so field-level verification is never claimed). No coverage/scoring/pipeline change, no migration, no new settings; 62 no-data-source techniques keep their unchanged "bespoke detection engineering" verdict. Suite 803→809/7 (+6 new tests in `test_mitre_plain_language.py` + the extended XLSX structure golden); `tsc --noEmit` clean. |
 | A9 | (pending commit) | 08-03 | Accuracy-plan phase A9: report consolidation. PART 1 (XLSX) — merged "Technique Register", "Gaps & Recommendations", and "Roadmap" sheets (pure duplication: Roadmap was the same gap dicts re-bucketed, Gaps was a subset of the Register) into ONE "Technique Tracker" sheet: one row per applicable technique (covered rows leave gap-only columns blank), no interleaved section-header rows so auto-filter/sort works across the whole sheet, 19 columns ending in four blank customer-tracking columns (Owner/Status/Target date/Notes) so the sheet doubles as a working tracker. Scope pruning updated so both `coverage` and `gaps` per-tab downloads keep the Tracker. PART 2 (PDF) — split the old combined "gap register grouped by feasibility" block into a compact **Roadmap** section (prose + counts per bucket + a 4-column index table: Technique ID, Name, Priority, "details p. N" cross-ref via the existing Phase 14e `target-counter` pattern) followed by the **Gap register**, now the single, unchanged-content home of every gap's full narrative — reformatted from spaced-out `<div>` cards into one dense `<table>` (same text, less chrome) with a stable `id="g-{technique_id}"` anchor per row for the roadmap's cross-refs. Measured on a real 603-gap synthetic render (WeasyPrint, disposable container — no WeasyPrint locally): 116 pages before → 114 pages after; the dense-table reformat's per-gap savings were largely offset by the new Roadmap index table, so the net cut was modest (~2 pages), not the large share the motivating note anticipated — reported here rather than overstated. Report layer only: no coverage/ranking/pipeline change, no migration, no new settings. Suite 859→863/7 (+4 new tests: Tracker structure/formula-guard/scope-pruning, roadmap-index/register-dedup); `tsc --noEmit` clean. |
+| A10 | (pending commit) | 08-03 | Accuracy-plan phase A10: device-level truth, 4 pieces. PIECE 1 — `ingest._PLATFORM_RULES` gains photon os/photon→Linux, rubrik→Linux, infoblox/dns appliance(s)→Network Devices (deliberately no bare "dns"); IoT/mainframe z/OS stay unmapped on purpose (ATT&CK v19.1 has no such platform), pinned by regression test. PIECE 2 — one plain guidance line ("one log stream per row") added to the environment template's Read Me sheet (openpyxl edit, values-only addition) and the wizard's environment drop-zone; sheet names/headers byte-identical. PIECE 3 — new `report_common.compute_log_source_coverage()` groups detection rules by log_source (normalized via `ranking._norm`, reused not reimplemented); surfaced as `GET /assessments/{id}`'s `log_source_coverage` field (completed assessments only) driving a clickable log-source list in `UploadSummaryCard` → `RuleListPanel`, and a new "Coverage by Log Source" XLSX sheet (excluded from scoped downloads like Use-Case Mappings already is) — one function, two views, can't drift. PIECE 4 — new curated `data/device_classes.json` (8 appliance classes: DNS appliance, EDR, email gateway, firewall, IdP, backup, proxy, WAF → expected telemetry category + plain capability) backs `quality.unmonitored_capability_check()`: an Assets/Security-Tooling entry matching a class whose expected category has NO matching Log Sources entry emits one aggregated finding (N = ranked gaps in that category; silent if N=0 or no Log Sources sheet at all) — wired into the pipeline as "Stage 6.5" after ranking, message flows into the existing assumptions slot (UI tab/PDF appendix/XLSX sheet) plus a highlighted `UploadSummaryCard` line. No migration, no coverage/ranking-number change anywhere. Suite 863→876/7 (+13 new tests across `test_mitre_ingest.py`, `test_mitre_quality.py`, `test_mitre_report.py`, `test_mitre_api.py`); `tsc --noEmit` clean. |
 
 ## 16. Optional feature work (plan §14 — not launch blockers)
 

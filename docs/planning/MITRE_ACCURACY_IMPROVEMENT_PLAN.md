@@ -44,7 +44,8 @@ pasted into a fresh session. Check off phases here as they complete.
 | A7 | Sentinel data-connector auto-import | ☑ |
 | A8 | Threat-profile expansion + region weighting | ☑ |
 | A9 | Report consolidation: XLSX Technique Tracker + PDF roadmap dedup | ☑ |
-| A10 | Device-level truth: platform synonyms, per-stream guidance, coverage-by-log-source, unmonitored-capability check | ☐ |
+| A10 | Device-level truth: platform synonyms, per-stream guidance, coverage-by-log-source, unmonitored-capability check | ☑ |
+| A11 | Report/template visual polish: XLSX header fills, template borders, executive PDF flow | ☐ |
 | A11 | Report/template visual polish: header fills, template borders, executive PDF flow | ☐ |
 
 Deliberately dropped: "covered"→"has detection" relabel (pure

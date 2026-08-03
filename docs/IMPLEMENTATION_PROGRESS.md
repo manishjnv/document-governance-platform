@@ -1094,6 +1094,36 @@ only, no coverage/ranking/pipeline change, no migration. 4 new tests;
 suite **863 passed / 7 skipped** (+4 over A8's 859); `tsc --noEmit`
 clean.
 
+**MITRE accuracy plan, phase A10 (2026-08-03):** device-level truth, 4
+pieces. Platform synonyms: photon os/photon→Linux, rubrik→Linux,
+infoblox/dns appliance(s)→Network Devices (no bare "dns" — precision over
+recall); IoT/mainframe z/OS stay unmapped on purpose (ATT&CK v19.1 has no
+such platform), pinned by regression test. Template/wizard guidance: one
+plain line ("one log stream per row, e.g. 'Infoblox - DNS logs' and
+'Infoblox - SSH logs' as separate rows") added to the environment
+template's Read Me sheet and the wizard's environment drop-zone; sheet
+names/headers stayed byte-identical. Coverage by log source: new
+`report_common.compute_log_source_coverage()` groups detection rules by
+log_source (normalized via `ranking._norm`, reused not reimplemented) —
+surfaced as a clickable log-source list in `UploadSummaryCard` (opens the
+existing `RuleListPanel` with a "What X gives you: N rules alerting on M
+techniques" title) and a new "Coverage by Log Source" XLSX sheet, both
+driven by the same function so they can't drift; excluded from scoped
+downloads the same way Use-Case Mappings already is. Unmonitored-
+capability check (the "Infoblox problem"): new curated
+`data/device_classes.json` (8 appliance classes — DNS appliance, EDR,
+email gateway, firewall, IdP, backup, proxy, WAF — mapped to an expected
+telemetry category + plain capability) backs
+`quality.unmonitored_capability_check()`, wired into the pipeline as
+"Stage 6.5" after ranking: an Assets/Security-Tooling entry matching a
+class whose expected category has no matching Log Sources entry emits
+ONE aggregated finding (N = ranked gaps in that category; silent when
+N=0 or there's no Log Sources sheet at all), flowing into the same
+assumptions slot every other cross-check uses plus a highlighted
+`UploadSummaryCard` line. No migration, no coverage/ranking-number change
+anywhere. 13 new tests across ingest/quality/report/api; suite **876
+passed / 7 skipped** (+13 over A9's 863); `tsc --noEmit` clean.
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)
