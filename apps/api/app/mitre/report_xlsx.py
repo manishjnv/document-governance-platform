@@ -131,7 +131,7 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
          f"{overall.get('covered')} of {overall.get('applicable')} techniques that "
          "apply to your environment have at least one detection rule."],
         [f"Gaps to work on: {len(summary.get('gaps', []))}",
-         "Ranked by priority in the 'Gaps & Recommendations' sheet — start at the top."],
+         "Ranked by priority in the 'Technique Tracker' sheet — start at the top."],
         [f"Rules analyzed: {(summary.get('counts') or {}).get('use_cases', len(use_cases))}",
          "Your uploaded detection rules — see 'Use-Case Mappings' for what each one maps to."],
         [f"Is {strict_pct}% bad? Probably not: early SIEM detection programs typically "
