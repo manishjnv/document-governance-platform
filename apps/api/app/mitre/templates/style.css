@@ -59,6 +59,12 @@ td.num { text-align: right; white-space: nowrap; }
 table.compact { font-size: 10px; }
 table.compact td { padding: 2px 5px; }
 table.compact th { padding: 3px 5px; }
+/* Register table: fixed 2-column split so Details keeps ~2/3 of the width;
+   the technique cell stacks id/name over its state chip + flag badges. */
+table.register { table-layout: fixed; }
+table.register th:first-child { width: 34%; }
+table.register td { overflow-wrap: break-word; }
+.gap-meta { display: block; margin-top: 2px; }
 ul { margin: 4px 0 4px 18px; }
 /* Space optimization: assumptions flow in two columns. */
 ul.two-col { columns: 2; column-gap: 16px; }

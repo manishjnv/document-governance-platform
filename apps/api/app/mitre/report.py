@@ -438,17 +438,19 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
             details_bits.append(f"{ai_badge} {_esc(gap_recs.get(tid))}")
         else:
             details_bits.append(f"<span class='muted'>{_esc(g.get('hint') or '')}</span>")
+        # Two-column layout: rank/id/name with state+flags stacked beneath in
+        # ONE technique cell, so Details keeps ~2/3 of the page width instead
+        # of losing it to three sparse columns (#/Flags/State).
         register_body_rows += (
             f"<tr id='g-{_esc(tid)}'>"
-            f"<td class='num'>#{_esc(g.get('rank'))}</td>"
-            f"<td><strong>{_esc(tid)} {_esc(g.get('name'))}</strong></td>"
-            f"<td>{' '.join(flags)}</td>"
-            f"<td>{_state_chip(g.get('state', ''))}</td>"
+            f"<td class='gap-tech'><strong>#{_esc(g.get('rank'))} · {_esc(tid)}</strong> "
+            f"{_esc(g.get('name'))}"
+            f"<span class='gap-meta'>{_state_chip(g.get('state', ''))} {' '.join(flags)}</span></td>"
             f"<td>{'<br>'.join(details_bits)}</td></tr>"
         )
     gap_register_html = (
-        "<table class='compact'><thead><tr><th>#</th><th>Technique</th>"
-        "<th>Flags</th><th>State</th><th>Details</th></tr></thead>"
+        "<table class='compact register'><thead><tr><th>Technique</th>"
+        "<th>Details</th></tr></thead>"
         f"<tbody>{register_body_rows}</tbody></table>"
     ) if gaps else "<p class='muted'>No gaps — nothing to register.</p>"
 
