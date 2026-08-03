@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileDown } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -97,6 +97,7 @@ export function CoverageHeatmap({
   // reached by rules from the selected log source(s). Keyed by display name.
   const [sourceFilter, setSourceFilter] = useState<Set<string>>(new Set());
   const [sourceQuery, setSourceQuery] = useState('');
+  const [platformQuery, setPlatformQuery] = useState('');
   const toggleSourceFilter = (source: string) =>
     setSourceFilter((prev) => {
       const next = new Set(prev);
@@ -156,6 +157,42 @@ export function CoverageHeatmap({
   const lensActive = platformFilter.size > 0 || sourceFilter.size > 0 || !!activeGroup;
   const matchesLens = (t: TechniqueResult) =>
     matchesPlatform(t) && matchesSource(t) && matchesGroup(t);
+
+  // What the customer currently sees (all lenses + state filter) — also
+  // exactly what "Download shown" exports.
+  const shownTechniques = techniques.filter(
+    (t) => matchesLens(t) && (stateFilter.size === 0 || stateFilter.has(t.state))
+  );
+  const downloadShownCsv = () => {
+    const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+    const tacticName = new Map<string, string>();
+    for (const [dk, d] of Object.entries(summary.domains)) {
+      for (const tac of d.tactics) tacticName.set(`${dk}:${tac.id}`, tac.name);
+    }
+    const header = [
+      'Technique ID', 'Name', 'Domain', 'Tactics', 'State',
+      'Platforms', 'Mapped rule count', 'Rule refs',
+    ];
+    const rows = shownTechniques.map((t) => [
+      t.technique_id,
+      t.name ?? '',
+      DOMAIN_LABELS[t.domain] ?? t.domain,
+      t.tactics.map((id) => tacticName.get(`${t.domain}:${id}`) ?? id).join('; '),
+      t.state,
+      (t.platforms ?? []).join('; '),
+      String(t.use_case_refs.length),
+      t.use_case_refs.join('; '),
+    ]);
+    const csv = [header, ...rows].map((r) => r.map(esc).join(',')).join('\n');
+    const url = URL.createObjectURL(
+      new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
+    );
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'coverage-shown.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const countShown = (list: TechniqueResult[]) => {
     let covered = 0;
@@ -286,6 +323,17 @@ export function CoverageHeatmap({
               <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
                 Show only techniques that can run on… (% = coverage there)
               </DropdownMenuLabel>
+              {platformStats.length > 8 && (
+                <div className="px-2 pb-1">
+                  <input
+                    value={platformQuery}
+                    onChange={(e) => setPlatformQuery(e.target.value)}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    placeholder="Search platforms…"
+                    className="w-full rounded border bg-background px-1.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+              )}
               {platformFilter.size > 0 && (
                 <DropdownMenuItem
                   className="text-xs"
@@ -295,7 +343,13 @@ export function CoverageHeatmap({
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              {platformStats.map(([platform, s]) => {
+              {platformStats
+                .filter(
+                  ([platform]) =>
+                    !platformQuery ||
+                    platform.toLowerCase().includes(platformQuery.toLowerCase())
+                )
+                .map(([platform, s]) => {
                 const pct = s.applicable
                   ? Math.round((100 * s.covered) / s.applicable)
                   : 0;
@@ -308,7 +362,7 @@ export function CoverageHeatmap({
                     className="text-xs"
                   >
                     <span className="flex-1">{platform}</span>
-                    <span className="ml-2 tabular-nums text-muted-foreground">
+                    <span className="ml-2 font-semibold tabular-nums">
                       {s.covered}/{s.applicable} · {pct}%
                     </span>
                   </DropdownMenuCheckboxItem>
@@ -329,7 +383,7 @@ export function CoverageHeatmap({
               <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
                 Show only what a log source&apos;s rules detect
               </DropdownMenuLabel>
-              {(logSources?.length ?? 0) > 12 && (
+              {(logSources?.length ?? 0) > 8 && (
                 <div className="px-2 pb-1">
                   <input
                     value={sourceQuery}
@@ -364,7 +418,7 @@ export function CoverageHeatmap({
                     className="text-xs"
                   >
                     <span className="min-w-0 flex-1 truncate">{g.log_source}</span>
-                    <span className="ml-2 shrink-0 tabular-nums text-muted-foreground">
+                    <span className="ml-2 shrink-0 font-semibold tabular-nums">
                       {g.rule_count} rule{g.rule_count === 1 ? '' : 's'}
                     </span>
                   </DropdownMenuCheckboxItem>
@@ -379,30 +433,65 @@ export function CoverageHeatmap({
             );
             return (
               <span>
-                <span className="font-medium">
-                  {vs.covered}/{vs.applicable} of their techniques covered ({vs.pct}%)
-                </span>
+                <span className="font-semibold tabular-nums">
+                  {vs.covered}/{vs.applicable}
+                </span>{' '}
+                of their techniques covered (
+                <span className="font-semibold">{vs.pct}%</span>)
                 {activeGroup.aliases.length > 0 && (
-                  <span className="text-muted-foreground">
-                    {' '}
-                    · aka {activeGroup.aliases.slice(0, 3).join(', ')}
-                  </span>
+                  <span> · aka {activeGroup.aliases.slice(0, 3).join(', ')}</span>
                 )}
               </span>
             );
           })()}
+        <Tooltip delayDuration={150}>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={downloadShownCsv}
+              className={cn(lensTriggerCls(false), 'ml-auto')}
+            >
+              <FileDown size={12} aria-hidden="true" />
+              Download shown (
+              <span className="font-semibold tabular-nums">{shownTechniques.length}</span>)
+            </button>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs text-xs">
+            CSV of exactly the techniques currently shown — your threat-group, platform,
+            log-source and state filters all apply. The report buttons above always
+            export the full assessment.
+          </TooltipContent>
+        </Tooltip>
       </div>
       {lensActive && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs">
           Showing techniques{' '}
           {[
-            activeGroup && `used by ${activeGroup.name}`,
-            platformFilter.size > 0 && `that can run on ${[...platformFilter].join(', ')}`,
-            sourceFilter.size > 0 &&
-              `detected by rules using ${[...sourceFilter].join(', ')}`,
+            activeGroup && (
+              <span key="g">
+                used by <span className="font-semibold">{activeGroup.name}</span>
+              </span>
+            ),
+            platformFilter.size > 0 && (
+              <span key="p">
+                that can run on{' '}
+                <span className="font-semibold">{[...platformFilter].join(', ')}</span>
+              </span>
+            ),
+            sourceFilter.size > 0 && (
+              <span key="s">
+                detected by rules using{' '}
+                <span className="font-semibold">{[...sourceFilter].join(', ')}</span>
+              </span>
+            ),
           ]
             .filter(Boolean)
-            .join(' · ')}{' '}
+            .map((clause, i) => (
+              <span key={i}>
+                {i > 0 && ' · '}
+                {clause}
+              </span>
+            ))}{' '}
           — counts update to match.
           {platformFilter.size > 0 &&
             ' Platform-independent techniques (e.g. Reconnaissance) stay visible.'}
@@ -519,9 +608,29 @@ export function CoverageHeatmap({
               }
               className="font-normal text-muted-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              {domainShown
-                ? `— ${domainShown.covered}/${domainShown.applicable} covered (${domainShown.pct}%) with current filters`
-                : `— ${domain.covered}/${domain.applicable} covered (${domain.strict_pct}%)`}
+              {domainShown ? (
+                <>
+                  —{' '}
+                  <span className="font-semibold tabular-nums text-foreground">
+                    {domainShown.covered}/{domainShown.applicable}
+                  </span>{' '}
+                  covered (
+                  <span className="font-semibold text-foreground">{domainShown.pct}%</span>
+                  ) with current filters
+                </>
+              ) : (
+                <>
+                  —{' '}
+                  <span className="font-semibold tabular-nums text-foreground">
+                    {domain.covered}/{domain.applicable}
+                  </span>{' '}
+                  covered (
+                  <span className="font-semibold text-foreground">
+                    {domain.strict_pct}%
+                  </span>
+                  )
+                </>
+              )}
             </button>
           </h3>
           {!collapsed.has(domainKey) && (
@@ -557,8 +666,12 @@ export function CoverageHeatmap({
                           className="mb-1 w-full rounded px-1 text-left hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           <div className="truncate text-xs font-semibold">{tactic.name}</div>
-                          <div className="text-[10px] text-muted-foreground">
-                            {(tacticShown ?? tactic).covered}/{(tacticShown ?? tactic).applicable} covered
+                          <div className="text-[10px]">
+                            <span className="font-semibold tabular-nums">
+                              {(tacticShown ?? tactic).covered}/
+                              {(tacticShown ?? tactic).applicable}
+                            </span>{' '}
+                            <span className="text-muted-foreground">covered</span>
                           </div>
                         </button>
                       </TooltipTrigger>

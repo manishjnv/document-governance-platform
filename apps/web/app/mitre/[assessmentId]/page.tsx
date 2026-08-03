@@ -321,13 +321,28 @@ export default function MitreResultsPage() {
         )
         .flatMap((uc) => uc.mappings.map((m) => m.technique_id))
     );
+    // Threat groups too ("apt29", "lazarus", "cozy bear") — ≥3 chars so a
+    // 1-2 letter query can't union half the group catalog into the result.
+    const groupTechniqueIds = new Set(
+      query.length >= 3
+        ? threatGroups
+            .filter(
+              (g) =>
+                g.name.toLowerCase().includes(query) ||
+                g.id.toLowerCase() === query ||
+                g.aliases.some((a) => a.toLowerCase().includes(query))
+            )
+            .flatMap((g) => g.technique_ids)
+        : []
+    );
     const matches = techniques.filter(
       (t) =>
         t.technique_id.toLowerCase().includes(query) ||
         (t.name ?? '').toLowerCase().includes(query) ||
         (t.platforms ?? []).some((p) => p.toLowerCase().includes(query)) ||
         t.tactics.some((id) => tacticKeys.has(`${t.domain}:${id}`)) ||
-        ruleTechniqueIds.has(t.technique_id)
+        ruleTechniqueIds.has(t.technique_id) ||
+        groupTechniqueIds.has(t.technique_id)
     );
     openDrill(
       `“${siteSearch.trim()}” — ${matches.length} technique${matches.length === 1 ? '' : 's'}`,
@@ -335,7 +350,7 @@ export default function MitreResultsPage() {
       {
         grouped: true,
         subtitle:
-          'Matches on technique ID/name, attack stage, platform, and your rule names — grouped by coverage state. Click any row for the full story.',
+          'Matches on technique ID/name, attack stage, platform, threat group, and your rule names — grouped by coverage state. Click any row for the full story.',
       }
     );
   };
@@ -680,8 +695,8 @@ export default function MitreResultsPage() {
                       value={siteSearch}
                       onChange={(e) => setSiteSearch(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && runSiteSearch()}
-                      placeholder="Is it covered? Try 'T1486', 'ransomware', 'linux', 'RDP'…"
-                      aria-label="Search techniques, attack stages, platforms and rules"
+                      placeholder="Is it covered? Try 'T1486', 'ransomware', 'linux', 'APT29'…"
+                      aria-label="Search techniques, attack stages, platforms, threat groups and rules"
                       className="h-7 w-64 max-w-[50vw] rounded-md border border-input bg-background px-2 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     />
                     <Tooltip delayDuration={150}>
@@ -697,8 +712,8 @@ export default function MitreResultsPage() {
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs text-xs">
                         Search anything — a technique ID or name, an attack stage,
-                        a platform/asset type, or one of your rules — and see its
-                        coverage state instantly.
+                        a platform/asset type, a threat group, or one of your rules —
+                        and see its coverage state instantly.
                       </TooltipContent>
                     </Tooltip>
                     {tab !== 'compare' && (
