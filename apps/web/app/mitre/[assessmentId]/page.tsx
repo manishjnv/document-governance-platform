@@ -15,6 +15,7 @@ import {
   STATUS_META,
   TechniqueExplain,
   TechniqueResult,
+  ThreatGroup,
   UseCaseItem,
   fmtDate,
 } from '../lib';
@@ -39,6 +40,7 @@ export default function MitreResultsPage() {
   const assessmentId = params.assessmentId;
 
   const [assessment, setAssessment] = useState<Assessment | null>(null);
+  const [threatGroups, setThreatGroups] = useState<ThreatGroup[]>([]);
   const [useCases, setUseCases] = useState<UseCaseItem[]>([]);
   const [useCasesTotal, setUseCasesTotal] = useState(0);
   const [error, setError] = useState('');
@@ -88,6 +90,18 @@ export default function MitreResultsPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assessmentId]);
+
+  // Static per-ATT&CK-version group catalog for the threat-group overlay;
+  // fetched once, failure just hides the picker.
+  useEffect(() => {
+    axios
+      .get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/attack/groups`, {
+        headers: authHeaders(),
+      })
+      .then((res) => setThreatGroups(res.data.groups ?? []))
+      .catch(() => setThreatGroups([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Initial load + poll every 5s while running (visibility-aware — the
   // admin page's pattern with a shorter interval).
@@ -725,6 +739,7 @@ export default function MitreResultsPage() {
                     summary={summary}
                     techniques={techniques}
                     logSources={assessment?.log_source_coverage ?? undefined}
+                    threatGroups={threatGroups}
                     onSelectTechnique={setSelectedTechnique}
                     onDrill={openDrill}
                   />

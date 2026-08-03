@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { DOMAIN_LABELS, LogSourceCoverageGroup, STATE_META, STATE_PLAIN, Summary, TechniqueResult, orderedDomains } from '../lib';
+import { DOMAIN_LABELS, LogSourceCoverageGroup, STATE_META, STATE_PLAIN, Summary, TechniqueResult, ThreatGroup, orderedDomains } from '../lib';
 import type { DrillHandler } from './ExecutiveBand';
 
 // "PRE" and "None" are ATT&CK's environment-independent markers, not real
@@ -34,12 +34,14 @@ export function CoverageHeatmap({
   summary,
   techniques,
   logSources,
+  threatGroups,
   onSelectTechnique,
   onDrill,
 }: {
   summary: Summary;
   techniques: TechniqueResult[];
   logSources?: LogSourceCoverageGroup[];
+  threatGroups?: ThreatGroup[];
   onSelectTechnique: (techniqueId: string) => void;
   onDrill: DrillHandler;
 }) {
@@ -99,6 +101,20 @@ export function CoverageHeatmap({
     return map;
   }, [logSources]);
 
+  // Threat-group overlay: lens the matrix to one ATT&CK group's catalogued
+  // techniques. Parents of listed sub-techniques are included so the roll-up
+  // view still shows where the group operates.
+  const [groupId, setGroupId] = useState('');
+  const activeGroup = useMemo(() => {
+    const g = groupId ? (threatGroups ?? []).find((x) => x.id === groupId) : undefined;
+    if (!g) return null;
+    const idSet = new Set(g.technique_ids);
+    for (const id of g.technique_ids) {
+      if (id.includes('.')) idSet.add(id.split('.')[0]);
+    }
+    return { ...g, idSet };
+  }, [groupId, threatGroups]);
+
   // Platform-agnostic techniques (no real platform tags) always match.
   const matchesPlatform = (t: TechniqueResult) => {
     if (platformFilter.size === 0) return true;
@@ -111,8 +127,11 @@ export function CoverageHeatmap({
       [...sourceFilter].some((s) => sourceRowRefs.get(s)?.has(ref))
     );
   };
-  const lensActive = platformFilter.size > 0 || sourceFilter.size > 0;
-  const matchesLens = (t: TechniqueResult) => matchesPlatform(t) && matchesSource(t);
+  const matchesGroup = (t: TechniqueResult) =>
+    !activeGroup || activeGroup.idSet.has(t.technique_id);
+  const lensActive = platformFilter.size > 0 || sourceFilter.size > 0 || !!activeGroup;
+  const matchesLens = (t: TechniqueResult) =>
+    matchesPlatform(t) && matchesSource(t) && matchesGroup(t);
 
   const countShown = (list: TechniqueResult[]) => {
     let covered = 0;
@@ -207,6 +226,47 @@ export function CoverageHeatmap({
       onMouseOver={(e) => showTip(e.target as Element)}
       onMouseOut={hideTip}
     >
+      {/* Threat-group overlay — "how would we fare against APT29?" */}
+      {(threatGroups?.length ?? 0) > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <label htmlFor="threat-group-lens" className="text-muted-foreground">
+            Threat group:
+          </label>
+          <select
+            id="threat-group-lens"
+            value={groupId}
+            onChange={(e) => setGroupId(e.target.value)}
+            className="max-w-[260px] rounded border bg-background px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <option value="">None — full matrix</option>
+            {(threatGroups ?? []).map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name} ({g.id})
+              </option>
+            ))}
+          </select>
+          {activeGroup &&
+            (() => {
+              const vs = countShown(
+                techniques.filter((t) => activeGroup.idSet.has(t.technique_id))
+              );
+              return (
+                <span>
+                  <span className="font-medium">
+                    {vs.covered}/{vs.applicable} of their techniques covered ({vs.pct}%)
+                  </span>
+                  {activeGroup.aliases.length > 0 && (
+                    <span className="text-muted-foreground">
+                      {' '}
+                      · aka {activeGroup.aliases.slice(0, 3).join(', ')}
+                    </span>
+                  )}
+                </span>
+              );
+            })()}
+        </div>
+      )}
+
       {/* Platform chips — Navigator-style lens: click to show only techniques
           that can run on that platform. Percentages are per-platform coverage
           (covered / applicable among techniques tagged with that platform). */}
@@ -302,13 +362,20 @@ export function CoverageHeatmap({
       )}
       {lensActive && (
         <p className="text-xs text-muted-foreground">
-          Showing techniques
-          {platformFilter.size > 0 && <> that can run on {[...platformFilter].join(', ')}</>}
-          {platformFilter.size > 0 && sourceFilter.size > 0 && <> and are</>}
-          {sourceFilter.size > 0 && <> detected by rules using {[...sourceFilter].join(', ')}</>}
-          {' '}— counts update to match.
+          Showing techniques{' '}
+          {[
+            activeGroup && `used by ${activeGroup.name}`,
+            platformFilter.size > 0 && `that can run on ${[...platformFilter].join(', ')}`,
+            sourceFilter.size > 0 &&
+              `detected by rules using ${[...sourceFilter].join(', ')}`,
+          ]
+            .filter(Boolean)
+            .join(' · ')}{' '}
+          — counts update to match.
           {platformFilter.size > 0 &&
             ' Platform-independent techniques (e.g. Reconnaissance) stay visible.'}
+          {activeGroup &&
+            " Group technique lists are MITRE's directly-attributed set — tradecraft via the group's malware and tools may go further."}
         </p>
       )}
 

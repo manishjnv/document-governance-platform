@@ -170,6 +170,15 @@ export interface LogSourceCoverageGroup {
   row_refs: string[];
 }
 
+/** One ATT&CK threat group from the pinned release's static catalog
+ * (GET /mitre/attack/groups), for the coverage tab's threat-group overlay. */
+export interface ThreatGroup {
+  id: string;
+  name: string;
+  aliases: string[];
+  technique_ids: string[];
+}
+
 export interface Assessment {
   assessment_id: string;
   name: string;

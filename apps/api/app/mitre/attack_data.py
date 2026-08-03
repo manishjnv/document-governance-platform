@@ -35,6 +35,7 @@ class AttackIndex:
         self.domains = {}
         self.by_id = {}
         self.children = {}  # parent technique id -> [sub-technique dicts]
+        merged_groups = {}  # group id -> group dict, technique_ids unioned
         for domain, dd in dataset.get("domains", {}).items():
             techniques = []
             for raw in dd.get("techniques", []):
@@ -47,6 +48,20 @@ class AttackIndex:
                 "tactics": dd.get("tactics", []),
                 "techniques": techniques,
             }
+            # Groups repeat across domain bundles (a group's mobile techniques
+            # live in the mobile bundle) — merge by id, first-seen name wins.
+            for g in dd.get("groups", []):
+                m = merged_groups.setdefault(
+                    g["id"], {**g, "technique_ids": set()}
+                )
+                m["technique_ids"].update(g["technique_ids"])
+        self.groups = sorted(
+            (
+                {**g, "technique_ids": sorted(g["technique_ids"])}
+                for g in merged_groups.values()
+            ),
+            key=lambda g: g["name"].lower(),
+        )
 
     def get(self, technique_id):
         return self.by_id.get(technique_id)

@@ -53,6 +53,16 @@ _RUNNING_TASKS: set = set()
 _MAX_CUSTOMER_CHARS = 200
 
 
+@router.get("/attack/groups", summary="ATT&CK threat groups (static catalog)")
+async def list_attack_groups(current_user: TokenData = Depends(get_current_user)):
+    """The pinned release's group -> technique catalog for the coverage tab's
+    threat-group overlay. Static per ATT&CK version — no org data involved."""
+    return {
+        "attack_version": attack_data.DEFAULT.version,
+        "groups": attack_data.DEFAULT.groups,
+    }
+
+
 def _sanitize_customer(value: Optional[str]) -> Optional[str]:
     """Trim + cap (Phase A12 trend scoping key). Empty means "not set" — the
     JSONB key is omitted rather than stored as ''."""

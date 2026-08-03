@@ -113,6 +113,51 @@ def build_data_sources_map(objs: list[dict], id2obj: dict) -> dict:
     return result
 
 
+def extract_groups(objs: list[dict], revoked_by: dict) -> list[dict]:
+    """ATT&CK groups (intrusion-set) with their directly-used technique ids.
+
+    Direct group --uses--> attack-pattern relationships only (the same set
+    Navigator shows on a group page); techniques revoked in this release are
+    followed to their successor. Revoked/deprecated groups are skipped.
+    """
+    ext_of = {}  # attack-pattern STIX id -> live external id
+    for o in objs:
+        if o["type"] != "attack-pattern":
+            continue
+        ext = attack_external_id(o)
+        if not ext or not TECHNIQUE_ID_RE.match(ext):
+            continue
+        if o.get("revoked"):
+            ext = revoked_by.get(o["id"])
+        if ext:
+            ext_of[o["id"]] = ext
+
+    groups = {}
+    for o in objs:
+        if o["type"] != "intrusion-set" or o.get("revoked") or o.get("x_mitre_deprecated"):
+            continue
+        gid = attack_external_id(o)
+        if not gid or not gid.startswith("G"):
+            continue
+        groups[o["id"]] = {
+            "id": gid,
+            "name": o.get("name", ""),
+            "aliases": [a for a in o.get("aliases", []) if a != o.get("name")],
+            "technique_ids": set(),
+        }
+    for o in objs:
+        if o["type"] == "relationship" and o["relationship_type"] == "uses":
+            group = groups.get(o["source_ref"])
+            ext = ext_of.get(o.get("target_ref", ""))
+            if group is not None and ext:
+                group["technique_ids"].add(ext)
+    return [
+        {**g, "technique_ids": sorted(g["technique_ids"])}
+        for g in groups.values()
+        if g["technique_ids"]
+    ]
+
+
 def compact_domain(bundle: dict) -> dict:
     objs = bundle["objects"]
     id2obj = {o["id"]: o for o in objs}
@@ -181,7 +226,11 @@ def compact_domain(bundle: dict) -> dict:
             }
         )
     techniques.sort(key=lambda t: t["id"])
-    return {"tactics": tactics, "techniques": techniques}
+    return {
+        "tactics": tactics,
+        "techniques": techniques,
+        "groups": extract_groups(objs, revoked_by),
+    }
 
 
 def validate(domains: dict) -> list[str]:
@@ -204,6 +253,15 @@ def validate(domains: dict) -> list[str]:
                 errors.append(f"{name}: sub-technique {t['id']} parent missing")
         if not dd["tactics"]:
             errors.append(f"{name}: no tactics extracted")
+        for g in dd.get("groups", []):
+            unknown = [t for t in g["technique_ids"] if t not in ids]
+            if unknown:
+                errors.append(f"{name}: group {g['id']} cites unknown techniques {unknown[:3]}")
+    if len(domains["enterprise"].get("groups", [])) < 100:
+        errors.append(
+            f"enterprise: {len(domains['enterprise'].get('groups', []))} groups "
+            "< sanity floor 100"
+        )
     ent = len(domains["enterprise"]["techniques"])
     for other in ("ics", "mobile"):
         if ent <= 2 * len(domains[other]["techniques"]):
