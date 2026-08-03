@@ -488,6 +488,11 @@ _PLATFORM_RULES = sorted(
         ("linux", "Linux"), ("ubuntu", "Linux"), ("rhel", "Linux"),
         ("red hat", "Linux"), ("centos", "Linux"), ("debian", "Linux"),
         ("suse", "Linux"), ("fedora", "Linux"),
+        # Phase A10: Photon OS is VMware's Linux appliance distro; Rubrik
+        # backup appliances run on Linux. Deliberately NO bare "dns" rule
+        # below (see Network Devices group) -- "DNS servers" could be a
+        # Windows or Linux box, precision over recall.
+        ("photon os", "Linux"), ("photon", "Linux"), ("rubrik", "Linux"),
         ("macos", "macOS"), ("mac os", "macOS"), ("os x", "macOS"),
         ("osx", "macOS"), ("mac", "macOS"),
         ("containers", "Containers"), ("container", "Containers"),
@@ -534,6 +539,10 @@ _PLATFORM_RULES = sorted(
         ("check point", "Network Devices"), ("checkpoint", "Network Devices"),
         ("meraki", "Network Devices"), ("aruba", "Network Devices"),
         ("sonicwall", "Network Devices"), ("mikrotik", "Network Devices"),
+        # Phase A10: DNS appliances (the "Infoblox problem") -- a DNS
+        # appliance is a network device, not a generic server platform.
+        ("infoblox", "Network Devices"), ("dns appliance", "Network Devices"),
+        ("dns appliances", "Network Devices"),
         ("android", "Android"),
         ("ios", "iOS"), ("iphone", "iOS"), ("ipad", "iOS"),
         ("ipados", "iOS"),

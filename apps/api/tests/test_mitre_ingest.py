@@ -309,6 +309,47 @@ def test_widened_environment_sheet_and_platform_synonyms():
     assert parsed["crown_jewels"] == ["Payment gateway"]
 
 
+# --- Phase A10 piece 1: device-level platform synonyms (the "Infoblox problem") ---
+
+def test_a10_photon_infoblox_rubrik_platform_synonyms():
+    content = _xlsx(
+        [["Asset"], ["Photon OS appliances"], ["Infoblox DNS appliances"],
+         ["Rubrik backup appliances"], ["Cisco IOS switches"]],
+        sheet_name="Assets",
+    )
+    parsed = parse_environment_file(content, "xlsx")
+    env = parsed["environment"]
+    assert set(env["platforms"]) == {"Linux", "Network Devices"}
+    by_entry = {i["entry"]: i for i in parsed["interpretations"]}
+    assert by_entry["Photon OS appliances"]["interpretation"] == "counted as platform Linux"
+    assert by_entry["Infoblox DNS appliances"]["interpretation"] == "counted as platform Network Devices"
+    assert by_entry["Rubrik backup appliances"]["interpretation"] == "counted as platform Linux"
+    # ordering regression: "cisco ios" must still resolve to Network Devices,
+    # never iOS (word-boundary + longest-match discipline unaffected by A10)
+    assert by_entry["Cisco IOS switches"]["interpretation"] == "counted as platform Network Devices"
+
+
+def test_a10_iot_and_mainframe_stay_unmapped():
+    """ATT&CK v19.1 has no IoT/mainframe platform -- mapping these would be
+    dishonest, so they must remain in the unmapped-assets assumption line.
+    Pinned so a future session doesn't "fix" this by inventing a mapping."""
+    content = _xlsx(
+        [["Asset"], ["IOT Platform devices"], ["Mainframe z/OS billing platform"]],
+        sheet_name="Assets",
+    )
+    parsed = parse_environment_file(content, "xlsx")
+    assert parsed["environment"]["platforms"] == []
+    by_entry = {i["entry"]: i for i in parsed["interpretations"]}
+    assert by_entry["IOT Platform devices"]["interpretation"] == (
+        "not recognized — ignored for platform filtering"
+    )
+    assert by_entry["Mainframe z/OS billing platform"]["interpretation"] == (
+        "not recognized — ignored for platform filtering"
+    )
+    assert any("IOT Platform devices" in a for a in parsed["assumptions"])
+    assert any("Mainframe z/OS billing platform" in a for a in parsed["assumptions"])
+
+
 # --- Phase A6: severity/last-triggered use-case columns (new-column goldens) ---
 
 def test_use_case_severity_and_last_triggered_columns_parsed():
