@@ -534,16 +534,21 @@ org-scoped KV table).
   plain words with threat tie-ins + "details p. N" cross-refs,
   roadmap-at-a-glance + effort-to-impact projection, trend vs the
   previous completed run — fetched by the report endpoint) → detailed
-  section (stacked per-tactic bars with tactic one-liners, parent-level
-  heatmap grids, gap register grouped by feasibility where each entry
-  carries the 14a why-phrase + detection sketch + via-log-source + the
-  AI recommendation with its badge, Phase 14i: a "Log fields needed" line
-  per gap NAMING its telemetry components, with the field guidance printed
-  ONCE in a "Log fields reference" table right after the register — per-gap
-  repetition added ~1.23 MB / ~680 pages on a real 842-gap assessment
-  because 487 techniques share "Process Creation"; the table sits inside
-  the register section so the per-tab `gaps` scope keeps it and the
-  `executive` cut still drops it)
+  section: stacked per-tactic bars with tactic one-liners, parent-level
+  heatmap grids, then (Phase A9 split) a **Roadmap** block — per
+  short/mid/long bucket, the roadmap prose + item count + a compact
+  index table (Technique ID, Name, Priority, "details p. N" cross-ref via
+  the same `target-counter` pattern) — followed by the **Gap register**,
+  the single home of every gap's full narrative (14a why-phrase +
+  detection sketch + via-log-source + AI recommendation with its badge +
+  the 14i "Log fields needed" pointer), rendered as one dense table (not
+  the old spaced-out cards) with a stable `id="g-{technique_id}"` anchor
+  per row so the roadmap's cross-refs resolve; the field guidance itself
+  still prints ONCE in a "Log fields reference" table right after the
+  register (Phase 14i pattern, unchanged — 487 techniques sharing
+  "Process Creation" would otherwise repeat it per gap). Both blocks sit
+  inside the per-tab `gaps` scope; `coverage` scope ends before the
+  roadmap heading; `executive` still drops both entirely.
   → appendices (register with names,
   N/A grouped, assumptions, 14g how-we-read-your-files, rule mappings in
   numeric order with plain-words statuses, 500-row cap stated) → audit
@@ -561,20 +566,26 @@ org-scoped KV table).
   accidental-edit guard, no password), Summary (+What-it-means column,
   metadata rows), Coverage by Tactic (Phase 14h: `DataBarRule`
   conditional formatting on the Coverage %/Weighted % columns + a native
-  `BarChart` of coverage % per tactic), Technique Register (+Name,
-  plain-words state, **Why** via `plain_language.derive_why`, tactic
-  names), Use-Case Mappings (numeric row sort, plain-words statuses,
-  guarded Logic column), Gaps & Recommendations (feasibility-grouped,
-  colored section headers; Phase 14h: Priority column is now a real
-  integer with a `"P"0` number format — displays as P1/P2/P3 but is
-  sortable/rankable — plus a genuine 3-color `ColorScaleRule` replacing
-  the old static per-cell fill; Phase 14i: a "Log fields needed" column
-  via `plain_language.telemetry_lines`, blank for techniques with no
-  curated data-source component), Roadmap, Not Applicable, Assumptions,
-  and (when present) the 14g **How We Read Your Files** evidence sheet.
-  Frozen headers, auto-filter, wrapped text, state/tier/feasibility fills.
-  Phase 14h also sets workbook core properties before save: `title`
-  (includes the assessment name), `creator` ("ScopeWise"), and
+  `BarChart` of coverage % per tactic), **Technique Tracker** (Phase A9 —
+  replaces the old Technique Register / Gaps & Recommendations / Roadmap
+  sheets, which were pure duplication: Roadmap was the same gap dicts
+  re-bucketed, Gaps was a subset of the Register. One row per APPLICABLE
+  technique — covered rows leave the gap-only columns blank, no
+  interleaved section-header rows so sort/filter works across the whole
+  sheet. Columns: Technique ID, Name, Tactic(s), Domain, State, Why (via
+  `plain_language.derive_why`), Strength, Priority (real integer with the
+  14h `"P"0` number format + `ColorScaleRule`), Threat match, Crown jewel,
+  Feasibility, Roadmap bucket (Short/Mid/Long as a plain value),
+  Recommendation, Log fields needed (via `plain_language.telemetry_lines`),
+  Via, then four blank customer-tracking columns — Owner, Status, Target
+  date, Notes — that make the sheet double as a working tracker), Use-Case
+  Mappings (numeric row sort, plain-words statuses, guarded Logic column),
+  Not Applicable, Assumptions, and (when present) the 14g **How We Read
+  Your Files** evidence sheet. Frozen headers, auto-filter, wrapped text,
+  state/tier/feasibility fills. Per-tab scope pruning: `coverage` and
+  `gaps` both keep the Tracker (it now carries both roles); `assumptions`
+  unaffected. Phase 14h also sets workbook core properties before save:
+  `title` (includes the assessment name), `creator` ("ScopeWise"), and
   `description` (org display name — openpyxl has no wired-up support for
   the docProps/app.xml "Company" extended property, confirmed by source
   inspection, so `description` carries that role instead). openpyxl-native
@@ -659,10 +670,9 @@ overflow on every page (real-browser checked).
 
 ## 13. Testing
 
-Backend baseline **809 passed / 7 skipped** (Phase 14i, +6 new telemetry-
-fields tests over the post-14h 803/7 baseline — 6 pre-existing platform
-skips + the PDF test, which auto-skips where WeasyPrint's native libs are
-absent; prod render verified live). Frontend: `tsc --noEmit` clean.
+Backend baseline **863 passed / 7 skipped** (measured 2026-08-03 after the
+MITRE accuracy plan A1-A9 — the 7th skip is the prod-only WeasyPrint PDF
+render test; prod render verified live). Frontend: `tsc --noEmit` clean.
 
 | File | Covers |
 | --- | --- |
@@ -672,7 +682,7 @@ absent; prod render verified live). Frontend: `tsc --noEmit` clean.
 | `test_mitre_api.py` | Real-Postgres E2E create→run→poll→results with hand-computed states, org isolation, 409 double-run, settings RBAC+validation, stale-run guard, intake validation. LLM stubbed via an autouse fixture (a local key can never leak into tests). |
 | `test_mitre_agents.py` | Tagging batch success/failure-degrade, garbage-JSON chain advance, invalid/revoked AI IDs, confidence floor, extraction mode, narrative AI+template paths, all-batches-fail+zero-tags → failed, keyword-tag FP regression pins. |
 | `test_mitre_ranking.py` | Feasibility buckets (onboarded/ownable/new/no-telemetry), tier ordering, state tie-break, covered/N-A exclusion, deterministic-layer-imports-no-AI guard. |
-| `test_mitre_report.py` | HTML escapes planted `<script>`, XLSX guard incl. real-workbook readback + Logic column, 409s, StreamingResponse content-type, compare golden + cross-org 404, `domains_brief`; Phase 14h: `test_xlsx_phase14h_polish` (data-bar/color-scale CF rule counts, native chart presence, numeric Priority + number_format, Read Me sheet protection, workbook core properties); Phase 14i: `test_xlsx_phase14c_structure` extended for the "Log fields needed" column header + curated cell content. |
+| `test_mitre_report.py` | HTML escapes planted `<script>`, XLSX guard incl. real-workbook readback + Logic column, 409s, StreamingResponse content-type, compare golden + cross-org 404, `domains_brief`; Phase 14h: `test_xlsx_phase14h_polish` (data-bar/color-scale CF rule counts, native chart presence, numeric Priority + number_format, Read Me sheet protection, workbook core properties); Phase A9: `test_xlsx_tracker_structure` (merged Tracker sheet headers exact, one covered row with blank gap/tracking columns, one gap row fully populated incl. Threat match/Crown jewel/Roadmap bucket), `test_xlsx_tracker_formula_guard` (formula guard on the Recommendation column), `test_xlsx_scope_pruning` (coverage/gaps both keep the Tracker), `test_html_report_roadmap_index_and_register_dedup` (roadmap index has no duplicated narrative, register is the single home, one anchor per gap), `test_html_report_gaps_scope_keeps_roadmap_and_register`. |
 | `test_mitre_navigator.py` | Golden single-domain layer (colors/comments/enabled/versions/legend), multi-domain stable order, gated-domain exclusion; endpoint json vs zip, viewer-readable, cross-org 404 + pending 409. |
 | `test_mitre_mapping_edit.py` | Phase 10 PATCH: manual provenance + inline recompute (states flip, counts.manual, assumption note, audit row), empty-list unmap, invalid/malformed/over-cap 422s, non-completed 409, cross-org 404 (both IDs) + viewer 403. |
 | `test_mitre_threat_profile.py` | Phase 11: every curated ID resolves `ok` + alias integrity, real-file lookup (Banking alias, unknown = no-op), within-tier lift golden, no-tier-jump golden, toggle-off keeps order but keeps annotation, intake threat_actors 422s (unknown/non-list/over-10). |
@@ -785,6 +795,7 @@ you're alone on `edgp_test`.
 | A2 | (pending commit) | 08-03 | Accuracy-plan phase A2: offline tagging-accuracy benchmark, `scripts/benchmark_tagging.py` (dev-run-only, never imported by the app) — downloads/caches a Sigma rules clone, samples N rules (default 300, seedable) carrying resolvable `attack.tXXXX` tags, strips them as ground truth, converts to the module's use-case row shape, runs the REAL `keyword_tag_rows` pre-pass (and optionally the real `MitreTaggingAgent` behind `--with-ai`, off by default), reports micro-averaged precision/recall/F1 (exact + parent-level-credit variants) and per-confidence-bucket accuracy, plus a capped confusion sample. Measured on 300 Sigma rules (seed 42): keyword-layer exact precision 0.365 / recall 0.145 / F1 0.207; parent-credit precision 0.465 / recall 0.184 / F1 0.264 (caveat: Sigma rules typically carry only their primary technique tag, so this is a conservative floor, not the pre-pass's true precision — some "false positives" are plausible untagged matches). No threshold/prompt/alias changed — measurement only. New pinned regression fixture `apps/api/tests/fixtures/sigma_keyword_bench.json` (25 real Sigma-derived rows) + `test_mitre_tagging_benchmark.py` (2 tests, precision floor 0.25, no network/LLM). |
 | A3 | (pending commit) | 08-03 | Accuracy-plan phase A3: rule-vs-inventory telemetry cross-check (shelfware detector). New pure `quality.telemetry_shelfware_check()` — for a covered/partial technique whose qualifying rules ALL declare a log source that maps (via ranking.py's `_categories_provided`/`_LOG_SOURCE_RULES` bridge, reused not duplicated) to a telemetry category absent from the customer's own Log Sources/Tooling sheets, emits one flagged entry (one matching rule clears it). Wired into `service.run_assessment_pipeline` as stage 5.7, gated on `"log_sources" in params.environment_lists.sheets_found` (no Log Sources sheet uploaded → no claim); each flagged technique adds ONE assumption line ("T1078 is covered by rule 'X', but its log source 'Okta' doesn't match anything in your Log Sources sheet — verify that telemetry is actually flowing."), rendered with zero changes by the existing UI Assumptions tab / PDF appendix / XLSX Assumptions sheet (all three iterate `summary.assumptions` generically — verified by code inspection). Never touches state/coverage/ranking. Not wired into `recompute_results` (Phase 10 manual-edit path), which by design freezes assumption text from the original run. 7 new goldens in `test_mitre_quality.py` + 1 new E2E in `test_mitre_api.py` asserting the assumption text appears. |
 | 14i | `75b58bf` | 08-03 | "What logs do I need?" per gap (plan's second, distinctly-titled §14h section — relabeled 14i here to avoid colliding with the already-shipped report-branding 14h above): new curated `data/telemetry_fields.json` (top 35 of 113 ATT&CK data-source components by technique-reference frequency, 83%/88% coverage at top 25/35 — `fields`/`where`/`gotcha` per component, hand-written, never runtime-LLM); pure `plain_language.telemetry_requirements()` + `telemetry_lines()` (curated entry or bare-component-name fallback for the long tail). Surfaced in exactly 3 places, no new UI area: explain endpoint `good.telemetry` rendered in the drawer's existing "What would good look like?" block (one compact line per component: fields, where, gotcha in muted text); XLSX "Log fields needed" column on Gaps & Recommendations (reuses existing bordered/wrapped styling helpers); PDF/HTML gap register names each gap's telemetry components under the detection sketch, with the full guidance in a single "Log fields reference" table after the register (review fix: printing the guidance per gap repeated 1.23 MB / ~680 pages on the 842-gap customer sample, since 487 techniques share "Process Creation"; the table is 35 rows / 19 KB and lives inside the register section so the per-tab `gaps` scope keeps it while `executive` still excludes it). Honesty boundary preserved throughout: wording is "your query needs X; your `<source>` should carry it" — never "your source is missing X" (this product never ingests raw logs, so field-level verification is never claimed). No coverage/scoring/pipeline change, no migration, no new settings; 62 no-data-source techniques keep their unchanged "bespoke detection engineering" verdict. Suite 803→809/7 (+6 new tests in `test_mitre_plain_language.py` + the extended XLSX structure golden); `tsc --noEmit` clean. |
+| A9 | (pending commit) | 08-03 | Accuracy-plan phase A9: report consolidation. PART 1 (XLSX) — merged "Technique Register", "Gaps & Recommendations", and "Roadmap" sheets (pure duplication: Roadmap was the same gap dicts re-bucketed, Gaps was a subset of the Register) into ONE "Technique Tracker" sheet: one row per applicable technique (covered rows leave gap-only columns blank), no interleaved section-header rows so auto-filter/sort works across the whole sheet, 19 columns ending in four blank customer-tracking columns (Owner/Status/Target date/Notes) so the sheet doubles as a working tracker. Scope pruning updated so both `coverage` and `gaps` per-tab downloads keep the Tracker. PART 2 (PDF) — split the old combined "gap register grouped by feasibility" block into a compact **Roadmap** section (prose + counts per bucket + a 4-column index table: Technique ID, Name, Priority, "details p. N" cross-ref via the existing Phase 14e `target-counter` pattern) followed by the **Gap register**, now the single, unchanged-content home of every gap's full narrative — reformatted from spaced-out `<div>` cards into one dense `<table>` (same text, less chrome) with a stable `id="g-{technique_id}"` anchor per row for the roadmap's cross-refs. Measured on a real 603-gap synthetic render (WeasyPrint, disposable container — no WeasyPrint locally): 116 pages before → 114 pages after; the dense-table reformat's per-gap savings were largely offset by the new Roadmap index table, so the net cut was modest (~2 pages), not the large share the motivating note anticipated — reported here rather than overstated. Report layer only: no coverage/ranking/pipeline change, no migration, no new settings. Suite 859→863/7 (+4 new tests: Tracker structure/formula-guard/scope-pruning, roadmap-index/register-dedup); `tsc --noEmit` clean. |
 
 ## 16. Optional feature work (plan §14 — not launch blockers)
 

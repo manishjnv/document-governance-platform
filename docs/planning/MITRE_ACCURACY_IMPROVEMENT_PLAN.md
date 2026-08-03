@@ -43,7 +43,7 @@ pasted into a fresh session. Check off phases here as they complete.
 | A6 | Customer template upgrade + optional health columns | ☑ |
 | A7 | Sentinel data-connector auto-import | ☑ |
 | A8 | Threat-profile expansion + region weighting | ☑ |
-| A9 | Report consolidation: XLSX Technique Tracker + PDF roadmap dedup | ☐ |
+| A9 | Report consolidation: XLSX Technique Tracker + PDF roadmap dedup | ☑ |
 
 Deliberately dropped: "covered"→"has detection" relabel (pure
 positioning — needs a user decision, not a build session; raise it when

@@ -100,11 +100,10 @@ last incident.
 ## Testing
 
 - Full backend suite: `cd apps/api && python -m pytest` — baseline is
-  **859 passed, 7 skipped** (measured 2026-08-03 after the MITRE accuracy
-  plan A1-A8 + the A7 kind-truncation hardening test, run solo on edgp_test;
-  if two sessions run the suite at once the shared edgp_test DB
-  deadlocks — see memory `edgp-test-single-runner-rule`; the
-  7th skip is the prod-only WeasyPrint PDF render test; the
+  **863 passed, 7 skipped** (measured 2026-08-03 after MITRE accuracy plan
+  A1-A9, run solo on edgp_test; if two sessions run the suite at once the
+  shared edgp_test DB deadlocks — see memory `edgp-test-single-runner-rule`;
+  the 7th skip is the prod-only WeasyPrint PDF render test; the
   long-stale "402/2" figure predated Jul-24 growth). Don't regress this;
   update this line when new tests land.
 - Frontend type-check: `cd apps/web && npx tsc --noEmit` — must be clean

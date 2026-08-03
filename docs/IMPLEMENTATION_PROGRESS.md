@@ -1074,6 +1074,26 @@ Session handoff: `docs/phases/summaries/` (see the dated MITRE accuracy
 plan handoff for the full per-phase table, A2/A5 metrics, and deploy
 smoke results).
 
+**MITRE accuracy plan, phase A9 (2026-08-03):** report consolidation.
+XLSX — merged "Technique Register", "Gaps & Recommendations", and
+"Roadmap" (pure duplication: Roadmap was the same gap dicts re-bucketed,
+Gaps a subset of the Register) into ONE "Technique Tracker" sheet: one
+row per applicable technique, covered rows leave gap-only columns blank,
+no interleaved section-header rows, plus four blank customer-tracking
+columns (Owner/Status/Target date/Notes) so it doubles as a working
+tracker; both `coverage` and `gaps` per-tab scopes keep it. PDF — split
+the combined gap-detail block into a compact **Roadmap** section (prose +
+counts + a 4-column index table with a `target-counter` "details p. N"
+cross-ref) and the **Gap register**, the single unchanged-content home of
+every gap's full narrative, reformatted into one dense table (same text,
+less card/badge chrome) with a stable per-gap anchor. Measured on a real
+603-gap synthetic render (disposable WeasyPrint container, no WeasyPrint
+locally): 116→114 pages — a modest cut, not the large one the motivating
+note anticipated; reported honestly rather than inflated. Report layer
+only, no coverage/ranking/pipeline change, no migration. 4 new tests;
+suite **863 passed / 7 skipped** (+4 over A8's 859); `tsc --noEmit`
+clean.
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)
