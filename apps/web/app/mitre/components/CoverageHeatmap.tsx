@@ -7,6 +7,13 @@ import { cn } from '@/lib/utils';
 import { DOMAIN_LABELS, STATE_META, STATE_PLAIN, Summary, TechniqueResult, orderedDomains } from '../lib';
 import type { DrillHandler } from './ExecutiveBand';
 
+// "PRE" and "None" are ATT&CK's environment-independent markers, not real
+// platforms — techniques carrying only those (e.g. Reconnaissance) apply to
+// every estate and are never hidden by the platform filter.
+const NON_PLATFORMS = new Set(['pre', 'none']);
+const realPlatforms = (t: TechniqueResult) =>
+  (t.platforms ?? []).filter((p) => !NON_PLATFORMS.has(p.toLowerCase()));
+
 /** Navigator-style tactic-column heatmap, plain CSS grid — no charting
  * dependency. Cells show "ID Name" (truncated — no extra area per TTP) and
  * click -> drawer for full detail. Hover context comes from ONE delegated
@@ -32,9 +39,12 @@ export function CoverageHeatmap({
   const [tip, setTip] = useState<{ x: number; y: number; text: string } | null>(null);
   const showTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Collapsible matrices + legend-as-filter (click a state to show only it).
+  // Collapsible matrices + legend-as-filter (click a state to show only it)
+  // + Navigator-style platform filter (click a platform chip to show only
+  // techniques that can run on it).
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [stateFilter, setStateFilter] = useState<Set<string>>(new Set());
+  const [platformFilter, setPlatformFilter] = useState<Set<string>>(new Set());
 
   const toggleCollapsed = (domainKey: string) =>
     setCollapsed((prev) => {
@@ -50,6 +60,53 @@ export function CoverageHeatmap({
       else next.add(state);
       return next;
     });
+  const togglePlatformFilter = (platform: string) =>
+    setPlatformFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(platform)) next.delete(platform);
+      else next.add(platform);
+      return next;
+    });
+
+  // Platform-agnostic techniques (no real platform tags) always match.
+  const matchesPlatform = (t: TechniqueResult) => {
+    if (platformFilter.size === 0) return true;
+    const plats = realPlatforms(t);
+    return plats.length === 0 || plats.some((p) => platformFilter.has(p));
+  };
+
+  const countShown = (list: TechniqueResult[]) => {
+    let covered = 0;
+    let applicable = 0;
+    for (const t of list) {
+      if (t.state === 'not_applicable') continue;
+      applicable += 1;
+      if (t.state === 'covered') covered += 1;
+    }
+    return {
+      covered,
+      applicable,
+      pct: applicable ? Math.round((100 * covered) / applicable) : 0,
+    };
+  };
+
+  // Per-platform coverage chips, biggest estates first — so a Windows+Linux
+  // customer sees their own platforms lead the row.
+  const platformStats = useMemo(() => {
+    const stats = new Map<string, { covered: number; applicable: number }>();
+    for (const t of techniques) {
+      if (t.state === 'not_applicable') continue;
+      for (const p of realPlatforms(t)) {
+        const s = stats.get(p) ?? { covered: 0, applicable: 0 };
+        s.applicable += 1;
+        if (t.state === 'covered') s.covered += 1;
+        stats.set(p, s);
+      }
+    }
+    return [...stats.entries()].sort(
+      (a, b) => b[1].applicable - a[1].applicable || a[0].localeCompare(b[0])
+    );
+  }, [techniques]);
 
   const showTip = (target: Element) => {
     const el = target.closest('[data-tip]') as HTMLElement | null;
@@ -94,6 +151,60 @@ export function CoverageHeatmap({
       onMouseOver={(e) => showTip(e.target as Element)}
       onMouseOut={hideTip}
     >
+      {/* Platform chips — Navigator-style lens: click to show only techniques
+          that can run on that platform. Percentages are per-platform coverage
+          (covered / applicable among techniques tagged with that platform). */}
+      {platformStats.length > 1 && (
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="text-muted-foreground">Runs on:</span>
+          {platformStats.map(([platform, s]) => {
+            const active = platformFilter.has(platform);
+            const dimmed = platformFilter.size > 0 && !active;
+            const pct = s.applicable ? Math.round((100 * s.covered) / s.applicable) : 0;
+            return (
+              <Tooltip key={platform} delayDuration={150}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => togglePlatformFilter(platform)}
+                    className={cn(
+                      'flex items-center gap-1 rounded border px-1.5 py-0.5 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      active ? 'border-primary/40 bg-muted font-medium' : 'border-transparent bg-muted/40',
+                      dimmed && 'opacity-40'
+                    )}
+                  >
+                    {platform}
+                    <span className="text-muted-foreground">{pct}%</span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs text-xs">
+                  {s.covered} of {s.applicable} applicable techniques that can run on{' '}
+                  {platform} are covered ({pct}%). Click to show only techniques that can
+                  run on {platform}.
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+          {platformFilter.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setPlatformFilter(new Set())}
+              className="text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              All platforms
+            </button>
+          )}
+        </div>
+      )}
+      {platformFilter.size > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Showing techniques that can run on {[...platformFilter].join(', ')} — counts
+          update to match. Platform-independent techniques (e.g. Reconnaissance) stay
+          visible.
+        </p>
+      )}
+
       {/* Legend — each state is also a filter: click to show only it. */}
       <div className="flex flex-wrap items-center gap-3 text-xs">
         {Object.entries(STATE_META).map(([state, meta]) => {
@@ -134,7 +245,14 @@ export function CoverageHeatmap({
         <span className="text-muted-foreground">Click any technique for details.</span>
       </div>
 
-      {activeDomains.map(([domainKey, domain]) => (
+      {activeDomains.map(([domainKey, domain]) => {
+        const domainShown =
+          platformFilter.size > 0
+            ? countShown(
+                techniques.filter((t) => t.domain === domainKey && matchesPlatform(t))
+              )
+            : null;
+        return (
         <section key={domainKey}>
           <h3 className="mb-2 flex items-center gap-1 text-sm font-semibold">
             <button
@@ -156,14 +274,19 @@ export function CoverageHeatmap({
                 onDrill(
                   `${DOMAIN_LABELS[domainKey] ?? domainKey} techniques`,
                   techniques.filter(
-                    (t) => t.domain === domainKey && t.state !== 'not_applicable'
+                    (t) =>
+                      t.domain === domainKey &&
+                      t.state !== 'not_applicable' &&
+                      matchesPlatform(t)
                   ),
                   { grouped: true }
                 )
               }
               className="font-normal text-muted-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              — {domain.covered}/{domain.applicable} covered ({domain.strict_pct}%)
+              {domainShown
+                ? `— ${domainShown.covered}/${domainShown.applicable} covered (${domainShown.pct}%) on selected platforms`
+                : `— ${domain.covered}/${domain.applicable} covered (${domain.strict_pct}%)`}
             </button>
           </h3>
           {!collapsed.has(domainKey) && (
@@ -175,7 +298,13 @@ export function CoverageHeatmap({
               }}
             >
               {domain.tactics.map((tactic) => {
-                const cells = (byDomainTactic.get(`${domainKey}:${tactic.id}`) ?? []).filter(
+                const inTactic = byDomainTactic.get(`${domainKey}:${tactic.id}`) ?? [];
+                // Platform filter narrows what counts; state filter only
+                // narrows what's drawn (matching the legend's behavior).
+                const platCells =
+                  platformFilter.size > 0 ? inTactic.filter(matchesPlatform) : inTactic;
+                const tacticShown = platformFilter.size > 0 ? countShown(platCells) : null;
+                const cells = platCells.filter(
                   (t) => stateFilter.size === 0 || stateFilter.has(t.state)
                 );
                 return (
@@ -195,14 +324,14 @@ export function CoverageHeatmap({
                         >
                           <div className="truncate text-xs font-semibold">{tactic.name}</div>
                           <div className="text-[10px] text-muted-foreground">
-                            {tactic.covered}/{tactic.applicable} covered
+                            {(tacticShown ?? tactic).covered}/{(tacticShown ?? tactic).applicable} covered
                           </div>
                         </button>
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs text-xs">
-                        {tactic.name}: {tactic.covered} covered, {tactic.partial} partial,{' '}
-                        {tactic.not_covered} not covered, {tactic.not_applicable} not applicable
-                        (strict {tactic.strict_pct}%). Click for the list.
+                        {tacticShown
+                          ? `${tactic.name}: ${tacticShown.covered} of ${tacticShown.applicable} applicable techniques covered (${tacticShown.pct}%) on the selected platforms. Click for the list.`
+                          : `${tactic.name}: ${tactic.covered} covered, ${tactic.partial} partial, ${tactic.not_covered} not covered, ${tactic.not_applicable} not applicable (strict ${tactic.strict_pct}%). Click for the list.`}
                       </TooltipContent>
                     </Tooltip>
     <div className="flex flex-col gap-1">
@@ -239,7 +368,8 @@ export function CoverageHeatmap({
           </div>
           )}
         </section>
-      ))}
+        );
+      })}
 
       {/* Rendered LAST: position:fixed takes it out of flow, and being the
           final child means mounting it never shifts the space-y-6 sibling
