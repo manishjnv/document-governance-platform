@@ -15,7 +15,6 @@ import io
 from app.mitre.report_common import (
     DOMAIN_LABELS,
     FEASIBILITY_LABELS,
-    STATE_LABELS,
     _MAPPING_STATUS_PLAIN_XLSX,
     _ordered_domains,
     _row_ref_sort_key,
@@ -50,14 +49,19 @@ _STATE_PLAIN_XLSX = {
 
 def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
                        branding: dict | None = None) -> bytes:
-    """The detailed gap register as a 9-sheet workbook (Phase 14c polish):
-    'Read Me' guide sheet first, colored state/priority/feasibility cells,
-    frozen headers + auto-filter + wrapped text everywhere, technique names
-    + plain-words 'Why' column, numerically sorted rule rows. Computed
-    numbers are untouched — styling and wording only. Phase 14h adds a
-    'Log fields needed' column on Gaps & Recommendations (curated per
-    data-source component via plain_language.telemetry_lines; blank for
-    techniques with no curated component).
+    """The detailed gap register as a workbook (Phase 14c polish, Phase A9
+    consolidation): 'Read Me' guide sheet first, colored state/priority/
+    feasibility cells, frozen headers + auto-filter + wrapped text
+    everywhere, technique names + plain-words 'Why' column, numerically
+    sorted rule rows. Computed numbers are untouched — styling and wording
+    only. Phase A9 merged the old 'Technique Register', 'Gaps &
+    Recommendations', and 'Roadmap' sheets (Roadmap was the same gap dicts
+    re-bucketed; Gaps was a subset of the Register — pure duplication) into
+    ONE 'Technique Tracker' sheet: one row per applicable technique, gap-only
+    columns blank for covered rows, plus blank Owner/Status/Target date/Notes
+    columns so it doubles as a working tracker. 'Log fields needed' is
+    curated per data-source component via plain_language.telemetry_lines;
+    blank for techniques with no curated component.
 
     branding: optional org overrides (display name/accent/watermark — plan
     §14h). Resolved here for a consistent shape across callers; workbook
@@ -137,10 +141,10 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
         ["What each sheet contains"],
         ["Summary", "The headline numbers with a plain-words explanation of each."],
         ["Coverage by Tactic", "Coverage per attack stage (tactic), per matrix."],
-        ["Technique Register", "Every technique: its state, why, and the rules mapped to it."],
+        ["Technique Tracker", "One row per applicable technique: state, why, priority, and — "
+         "for gaps — the recommendation, roadmap bucket, and blank Owner/Status/Target date/"
+         "Notes columns for you to fill in as you work the plan."],
         ["Use-Case Mappings", "Your rules, one per row, with how each was mapped."],
-        ["Gaps & Recommendations", "What's missing, grouped by how soon you could fix it."],
-        ["Roadmap", "The same gaps as a short/mid/long-term work plan."],
         ["Not Applicable", "Techniques that don't count toward your score, with reasons."],
         ["Assumptions", "What we had to assume — read before trusting the numbers."],
         [],
@@ -351,13 +355,11 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
         chart.set_categories(cats)
         ws_tactic.add_chart(chart, "K2")
 
-    # ------------------------------------------------------- Technique Register
-    rules_by_technique: dict = {}
+    # --------------------------------------------------------- Technique Tracker
     mapped_by_technique: dict = {}
     for uc in use_cases:
         for m in uc.get("mappings") or []:
             tid = m.get("technique_id")
-            rules_by_technique.setdefault(tid, []).append(uc.get("name", ""))
             mapped_by_technique.setdefault(tid, []).append(
                 {"name": uc.get("name"), "enabled": uc.get("enabled"),
                  "source": m.get("source"), "confidence": m.get("confidence")}
@@ -371,8 +373,13 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
         for t in index.tactics(domain)
     }
     confidence_covered = (params.get("thresholds") or {}).get("confidence_covered", 0.7)
+    gaps_by_id = {g.get("technique_id"): g for g in summary.get("gaps", [])}
+    _ROADMAP_BUCKET_VALUE = {"short": "Short", "mid": "Mid", "long": "Long"}
+    # Applicable = every state EXCEPT not_applicable (matches coverage.py's
+    # own "applicable" denominator) — N/A techniques stay in their own sheet.
+    applicable_results = [r for r in results if r.get("state") != "not_applicable"]
 
-    def register_row(r):
+    def tracker_row(r):
         tid = r.get("technique_id")
         mapped = mapped_by_technique.get(tid, [])
         why = plain_language.derive_why(
@@ -381,29 +388,58 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
             sub_states=plain_language.sub_states_for(r, mapped, state_by_id, index),
             confidence_covered=confidence_covered,
         )
+        gap = gaps_by_id.get(tid)  # None for covered rows — gap-only columns stay blank
+        tier = gap.get("tier") if gap else None
+        ranked = isinstance(tier, int) and tier <= 3
+        relevance = (gap or {}).get("threat_relevance") or []
+        telemetry_cell = (
+            "\n\n".join(plain_language.telemetry_lines(tid, index)) if gap else ""
+        )
+        recommendation = (gap_recs.get(tid) or gap.get("hint") or "") if gap else ""
         return [
             tid,
             (index.get(tid) or {}).get("name", ""),
-            DOMAIN_LABELS.get(r.get("domain"), r.get("domain")),
             ", ".join(tactic_names.get((r.get("domain"), t), t) for t in r.get("tactics", [])),
-            STATE_LABELS.get(r.get("state"), r.get("state")),
+            DOMAIN_LABELS.get(r.get("domain"), r.get("domain")),
             _STATE_PLAIN_XLSX.get(r.get("state"), ""),
             why,
-            len(r.get("use_case_refs", [])),
-            "; ".join(rules_by_technique.get(tid, [])),
+            r.get("strength"),
+            (tier if ranked else "Unranked") if gap else None,
+            ", ".join(relevance) if relevance else "",
+            "Yes" if (gap or {}).get("crown_jewel_relevant") else "",
+            FEASIBILITY_LABELS.get((gap or {}).get("feasibility"), "") if gap else "",
+            _ROADMAP_BUCKET_VALUE.get((gap or {}).get("feasibility"), "") if gap else "",
+            recommendation,
+            telemetry_cell,
+            (gap or {}).get("via") or "" if gap else "",
+            "", "", "", "",  # Owner, Status, Target date, Notes — blank tracking columns
         ]
 
-    ws_reg = sheet(
-        "Technique Register",
-        ["Technique", "Name", "Matrix", "Tactics", "State", "In plain words", "Why", "Mapped rules", "Rule names"],
-        [register_row(r) for r in results],
-        [12, 30, 10, 26, 12, 26, 70, 12, 50],
-        center_cols=(3, 5, 8),
+    ws_tracker = sheet(
+        "Technique Tracker",
+        ["Technique ID", "Name", "Tactic(s)", "Domain", "State", "Why", "Strength",
+         "Priority", "Threat match", "Crown jewel", "Feasibility", "Roadmap bucket",
+         "Recommendation", "Log fields needed", "Via", "Owner", "Status", "Target date", "Notes"],
+        [tracker_row(r) for r in applicable_results],
+        [12, 30, 22, 10, 22, 55, 10, 10, 22, 10, 22, 14, 55, 45, 22, 16, 14, 14, 30],
+        center_cols=(4, 7, 8, 10, 12),
     )
-    for i, r in enumerate(results, start=2):
+    for i, r in enumerate(applicable_results, start=2):
         color = _XLSX_STATE_FILLS.get(r.get("state"))
         if color:
-            ws_reg.cell(row=i, column=5).fill = fill(color)
+            ws_tracker.cell(row=i, column=5).fill = fill(color)
+        priority_cell = ws_tracker.cell(row=i, column=8)
+        if isinstance(priority_cell.value, int):
+            # numeric so the color scale below can rank it; displays as "P1"/"P2"/"P3"
+            priority_cell.number_format = '"P"0'
+    if applicable_results:
+        last_tracker_row = 1 + len(applicable_results)
+        ws_tracker.conditional_formatting.add(
+            f"H2:H{last_tracker_row}",
+            ColorScaleRule(start_type="min", start_color="F8696B",
+                          mid_type="percentile", mid_value=50, mid_color="FFEB84",
+                          end_type="max", end_color="63BE7B"),
+        )
 
     # -------------------------------------------------------- Use-Case Mappings
     sorted_ucs = sorted(use_cases, key=_row_ref_sort_key)
@@ -423,85 +459,6 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
         ],
         [10, 42, 9, 30, 22, 12, 12, 16, 60, 60],
         center_cols=(3, 6),
-    )
-
-    # --------------------------------------------- Gaps grouped by feasibility
-    ws_gaps = wb.create_sheet()
-    ws_gaps.title = "Gaps & Recommendations"
-    gap_headers = ["Rank", "Technique", "Name", "Priority", "State", "Log source to use",
-                   "Log fields needed", "Recommendation"]
-    ws_gaps.append(gap_headers)
-    for cell in ws_gaps[1]:
-        cell.font = bold
-        cell.border = cell_border
-    gaps = summary.get("gaps", [])
-    row_idx = 1
-    for bucket in ("short", "mid", "long"):
-        bucket_gaps = [g for g in gaps if g.get("feasibility") == bucket]
-        if not bucket_gaps:
-            continue
-        ws_gaps.append([f"{FEASIBILITY_LABELS[bucket]} — {len(bucket_gaps)} item"
-                        f"{'' if len(bucket_gaps) == 1 else 's'}"])
-        row_idx += 1
-        header_cell = ws_gaps.cell(row=row_idx, column=1)
-        header_cell.font = bold
-        for col in range(1, len(gap_headers) + 1):
-            ws_gaps.cell(row=row_idx, column=col).fill = fill(_XLSX_FEAS_FILLS[bucket])
-        for g in bucket_gaps:
-            tier = g.get("tier")
-            ranked = isinstance(tier, int) and tier <= 3
-            # Phase 14h: "what does my query actually need?" per data-source
-            # component — empty when the technique has no curated component.
-            telemetry_cell = "\n\n".join(
-                plain_language.telemetry_lines(g.get("technique_id"), index)
-            )
-            # Phase A4: crown-jewel relevance noted inline (no new column —
-            # keeps this sheet's structure stable across phases).
-            recommendation = gap_recs.get(g.get("technique_id")) or g.get("hint") or ""
-            if g.get("crown_jewel_relevant"):
-                recommendation = f"[Crown jewel] {recommendation}"
-            ws_gaps.append([_guard(v) for v in [
-                g.get("rank"), g.get("technique_id"), g.get("name"),
-                tier if ranked else "Unranked",
-                STATE_LABELS.get(g.get("state"), g.get("state")),
-                (f"Uses logs you already collect: {g.get('via')}" if bucket == "short"
-                 else f"Onboard from tooling you own: {g.get('via')}" if bucket == "mid" and g.get("via")
-                 else g.get("via") or "Needs a new log source"),
-                telemetry_cell,
-                recommendation,
-            ]])
-            row_idx += 1
-            if ranked:
-                # numeric so the 3-color scale below can rank it; displays as "P1"/"P2"/"P3"
-                ws_gaps.cell(row=row_idx, column=4).number_format = '"P"0'
-            state_color = _XLSX_STATE_FILLS.get(g.get("state"))
-            if state_color:
-                ws_gaps.cell(row=row_idx, column=5).fill = fill(state_color)
-    if row_idx > 1:
-        ws_gaps.conditional_formatting.add(
-            f"D2:D{row_idx}",
-            ColorScaleRule(start_type="min", start_color="F8696B",
-                          mid_type="percentile", mid_value=50, mid_color="FFEB84",
-                          end_type="max", end_color="63BE7B"),
-        )
-    for row in ws_gaps.iter_rows(min_row=2):
-        for cell in row:
-            cell.alignment = wrap_center if cell.column in (1, 4, 5) else wrap
-            cell.border = cell_border
-    ws_gaps.freeze_panes = "A2"
-    for i, width in enumerate([7, 12, 34, 12, 12, 34, 55, 70], start=1):
-        ws_gaps.column_dimensions[get_column_letter(i)].width = width
-
-    # ------------------------------------------------------------------ Roadmap
-    sheet(
-        "Roadmap",
-        ["Bucket", "Technique", "Name", "Action"],
-        [
-            [FEASIBILITY_LABELS[b], g.get("technique_id"), g.get("name"), g.get("hint")]
-            for b in ("short", "mid", "long")
-            for g in summary.get("roadmap", {}).get(b, [])
-        ],
-        [18, 12, 34, 70],
     )
 
     sheet(
@@ -537,10 +494,12 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
         )
 
     # Per-tab download: keep only that tab's sheets (built once, then pruned
-    # — cheapest way to guarantee identical content and styling).
+    # — cheapest way to guarantee identical content and styling). The
+    # Tracker sheet carries both coverage state and gap detail (Phase A9
+    # merge), so both scopes keep it.
     _SCOPE_SHEETS = {
-        "coverage": {"Coverage by Tactic", "Technique Register"},
-        "gaps": {"Gaps & Recommendations", "Roadmap"},
+        "coverage": {"Coverage by Tactic", "Technique Tracker"},
+        "gaps": {"Technique Tracker"},
         "assumptions": {"Not Applicable", "Assumptions", "How We Read Your Files"},
     }
     if scope in _SCOPE_SHEETS:
