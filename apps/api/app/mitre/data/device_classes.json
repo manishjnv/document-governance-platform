@@ -1,0 +1,106 @@
+{
+  "_comment": [
+    "Curated appliance/device-class -> expected primary telemetry category",
+    "for the Phase A10 'unmonitored-capability check' (the Infoblox",
+    "problem): a device whose main security value depends on a specific",
+    "log stream can sit in a customer's Assets or Security Tooling sheet",
+    "with that stream never declared in Log Sources -- silently useless",
+    "for detection. expected_category values are the SAME coarse telemetry",
+    "categories ranking.py's log-source/tooling bridge already uses",
+    "(endpoint/registry/network/identity/cloud/application/mobile/ot) --",
+    "enforced by test_mitre_quality.py against the real bridge category",
+    "set, never a fourth taxonomy. keywords match the SAME substring-over-",
+    "normalized-text discipline as ranking.py's _categories_provided (no",
+    "new normalizer). Seed set is deliberately small (precision over",
+    "recall, same discipline as keyword_aliases.json) -- 8 classes chosen",
+    "from real customer environment-workbook patterns seen in Acme-class",
+    "testing (2026-08-03) plus common appliance categories every mid-size",
+    "org's inventory tends to include.",
+    "telemetry_label is the plain-English log type used in both 'no X is",
+    "declared' and 'declaring/enabling X would...' sentence slots (see",
+    "quality.unmonitored_capability_check); capability is the one-line",
+    "plain-English reason the device's logs matter for detection."
+  ],
+  "classes": [
+    {
+      "id": "dns_appliance",
+      "label": "DNS appliance",
+      "keywords": ["dns appliance", "dns appliances", "infoblox", "bluecat"],
+      "expected_category": "network",
+      "telemetry_label": "DNS query logging",
+      "capability": "spotting attacks in DNS traffic"
+    },
+    {
+      "id": "edr",
+      "label": "EDR platform",
+      "keywords": [
+        "edr", "endpoint detection", "crowdstrike", "falcon", "sentinelone",
+        "sentinel one", "carbon black", "cortex xdr", "cybereason",
+        "trellix endpoint", "tanium"
+      ],
+      "expected_category": "endpoint",
+      "telemetry_label": "endpoint/process logging",
+      "capability": "catching malicious activity on your endpoints"
+    },
+    {
+      "id": "email_gateway",
+      "label": "Email security gateway",
+      "keywords": [
+        "email gateway", "email security gateway", "secure email gateway",
+        "proofpoint", "mimecast"
+      ],
+      "expected_category": "application",
+      "telemetry_label": "email gateway logging",
+      "capability": "filtering and logging malicious email"
+    },
+    {
+      "id": "firewall",
+      "label": "Firewall",
+      "keywords": [
+        "firewall", "next-gen firewall", "ngfw", "palo alto", "fortigate",
+        "fortinet", "checkpoint", "check point", "sonicwall"
+      ],
+      "expected_category": "network",
+      "telemetry_label": "firewall traffic logging",
+      "capability": "logging and blocking malicious network traffic"
+    },
+    {
+      "id": "idp",
+      "label": "Identity provider",
+      "keywords": [
+        "idp", "identity provider", "okta", "entra id", "azure ad",
+        "ping identity", "adfs", "onelogin"
+      ],
+      "expected_category": "identity",
+      "telemetry_label": "identity sign-in logging",
+      "capability": "tracking sign-ins and authentication activity"
+    },
+    {
+      "id": "backup",
+      "label": "Backup platform",
+      "keywords": ["backup", "rubrik", "veeam", "commvault", "cohesity"],
+      "expected_category": "application",
+      "telemetry_label": "backup audit logging",
+      "capability": "detecting tampering with your backups"
+    },
+    {
+      "id": "proxy",
+      "label": "Proxy / secure web gateway",
+      "keywords": [
+        "proxy", "secure web gateway", "web gateway", "zscaler", "netskope",
+        "bluecoat", "blue coat"
+      ],
+      "expected_category": "network",
+      "telemetry_label": "proxy/web traffic logging",
+      "capability": "logging outbound web traffic"
+    },
+    {
+      "id": "waf",
+      "label": "Web application firewall (WAF)",
+      "keywords": ["waf", "web application firewall"],
+      "expected_category": "application",
+      "telemetry_label": "WAF traffic logging",
+      "capability": "logging attacks against your web applications"
+    }
+  ]
+}

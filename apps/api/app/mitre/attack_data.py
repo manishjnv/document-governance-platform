@@ -102,6 +102,15 @@ def load_threat_profiles() -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def load_device_classes() -> dict:
+    """Curated appliance-class -> expected telemetry category map for the
+    Phase A10 unmonitored-capability check (quality.py). expected_category
+    values are validated against ranking.py's real bridge categories by
+    the test suite."""
+    path = DATA_DIR / "device_classes.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 DEFAULT = AttackIndex(
     json.loads((DATA_DIR / "attack.json").read_text(encoding="utf-8"))
 )

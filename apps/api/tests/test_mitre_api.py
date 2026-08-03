@@ -184,6 +184,16 @@ async def test_create_run_results_end_to_end(client, db_session):
     assert summary["narrative"]["generated_by"] == "template"
     assert summary["narrative"]["executive_summary"]
 
+    # Phase A10 piece 3: coverage-by-log-source grouping in the completed
+    # assessment's GET response (computed at read time, no pipeline change).
+    log_source_groups = {g["log_source"]: g for g in body["log_source_coverage"]}
+    assert log_source_groups["Sysmon"]["rule_count"] == 2  # PowerShell Encoded + Old defence tamper
+    assert {t["technique_id"] for t in log_source_groups["Sysmon"]["techniques"]} == {
+        "T1059.001", "T1685",  # T1562.001 remapped to its successor
+    }
+    assert log_source_groups["WinEventLog"]["rule_count"] == 1
+    assert "Other / unrecognized" in log_source_groups  # "Untagged anomaly" has no log source
+
     # listing shows the headline %
     listing = await client.get("/api/v1/mitre/assessments", headers=headers)
     assert listing.status_code == 200
@@ -204,6 +214,70 @@ async def test_create_run_results_end_to_end(client, db_session):
         f"/api/v1/mitre/assessments/{preview['assessment_id']}/run", headers=headers
     )
     assert rerun.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_unmonitored_capability_check_e2e(client, db_session):
+    """Phase A10 piece 4: an Infoblox DNS appliance in Assets with no DNS
+    log source declared surfaces the aggregated unmonitored-capability
+    assumption; the finding is silent without a Log Sources sheet."""
+    _, _, headers = await _make_user(db_session)
+    use_case_dump = _xlsx([
+        ["Use Case Name", "MITRE Technique(s)", "Detection Logic", "Description", "Log Source", "Status"],
+        ["PowerShell Encoded", "T1059.001", "process where ...", "", "Sysmon", "Enabled"],
+    ], sheet_name="Rules")
+    env_no_dns_source = _xlsx(
+        [["Platform"], ["Windows"], ["Infoblox DNS appliances"]],
+        sheet_name="Assets",
+        # Okta -> identity only (Sysmon would already cover "network" per
+        # ranking._LOG_SOURCE_RULES, silencing the very check under test).
+        extra_sheets=[("Log Sources", [["Source"], ["Okta"]])],
+    )
+
+    response = await client.post(
+        "/api/v1/mitre/assessments", headers=headers,
+        files={
+            "use_cases": ("rules.xlsx", use_case_dump, _XLSX_MIME),
+            "environment": ("environment.xlsx", env_no_dns_source, _XLSX_MIME),
+        },
+        data={"intake": "{}", "name": "Infoblox check"},
+    )
+    assert response.status_code == 201, response.text
+    body = await _run_and_wait(client, headers, response.json()["assessment_id"])
+    assert body["status"] == "completed", body.get("error_message")
+
+    assumptions = body["summary"]["assumptions"]
+    assert any(
+        "DNS appliance (Infoblox DNS appliances)" in a and "appears unmonitored" in a
+        for a in assumptions
+    )
+
+
+@pytest.mark.asyncio
+async def test_unmonitored_capability_check_silent_without_log_sources_sheet(client, db_session):
+    _, _, headers = await _make_user(db_session)
+    use_case_dump = _xlsx([
+        ["Use Case Name", "MITRE Technique(s)", "Detection Logic", "Description", "Log Source", "Status"],
+        ["PowerShell Encoded", "T1059.001", "process where ...", "", "Sysmon", "Enabled"],
+    ], sheet_name="Rules")
+    env_no_log_sources_sheet = _xlsx(
+        [["Platform"], ["Windows"], ["Infoblox DNS appliances"]], sheet_name="Assets",
+    )
+
+    response = await client.post(
+        "/api/v1/mitre/assessments", headers=headers,
+        files={
+            "use_cases": ("rules.xlsx", use_case_dump, _XLSX_MIME),
+            "environment": ("environment.xlsx", env_no_log_sources_sheet, _XLSX_MIME),
+        },
+        data={"intake": "{}", "name": "Infoblox no log sources sheet"},
+    )
+    assert response.status_code == 201, response.text
+    body = await _run_and_wait(client, headers, response.json()["assessment_id"])
+    assert body["status"] == "completed", body.get("error_message")
+
+    assumptions = body["summary"]["assumptions"]
+    assert not any("appears unmonitored" in a for a in assumptions)
 
 
 @pytest.mark.asyncio

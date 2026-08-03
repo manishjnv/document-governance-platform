@@ -25,7 +25,7 @@ match to confirm or deny — and degrades to this heuristic on any failure.
 
 from .attack_data import DEFAULT
 from .coverage import COVERED_CONFIDENCE, PARTIAL_CONFIDENCE
-from .ranking import _LOG_SOURCE_RULES, _categories_provided, component_category
+from .ranking import _LOG_SOURCE_RULES, _categories_provided, _norm, component_category
 
 import datetime as _dt
 
@@ -310,6 +310,74 @@ def telemetry_shelfware_check(results, use_cases, log_sources, tooling, *,
                 "missing_categories": missing,
             })
     return flagged
+
+
+def unmonitored_capability_check(assets, tooling, log_sources, gaps, *,
+                                  classes=None) -> list:
+    """Plan phase A10 piece 4 -- the "Infoblox problem": a device whose
+    main security value depends on one telemetry category can sit in the
+    customer's own Assets/Security Tooling sheets while that category is
+    never declared in Log Sources, silently useless for detection.
+
+    For each curated class in data/device_classes.json matched (by
+    keyword substring, same discipline as ranking.py's _categories_provided)
+    against an Assets or Security Tooling entry: if NONE of the customer's
+    declared Log Sources map (via ranking.py's category bridge, reused --
+    no second normalizer) to that class's expected_category, emit ONE
+    aggregated finding for the class (never per-gap). N is the count of
+    ranked gaps whose category equals the missing telemetry category
+    (those gaps are already mid/long feasibility precisely because the
+    category was never onboarded); a class with zero such gaps is skipped
+    -- nothing actionable to say, so stay silent rather than print "0
+    gaps". Caller gates on a Log Sources sheet actually having been
+    uploaded (no sheet -> no claim, never called at all in that case).
+
+    Returns [{"class_id", "label", "matched_entry", "telemetry_label",
+    "capability", "gap_count", "technique_ids", "message"}], one per
+    flagged class. Never mutates assets/tooling/log_sources/gaps.
+    """
+    if classes is None:
+        from .attack_data import load_device_classes
+        classes = load_device_classes()
+
+    provided = set(_categories_provided(list(log_sources or []), _LOG_SOURCE_RULES))
+    entries = list(assets or []) + list(tooling or [])
+    entries_norm = [(entry, _norm(entry)) for entry in entries]
+
+    findings = []
+    for cls in classes.get("classes", []):
+        matched_entry = None
+        for entry, entry_norm in entries_norm:
+            if any(kw in entry_norm for kw in cls["keywords"]):
+                matched_entry = entry
+                break
+        if matched_entry is None:
+            continue  # class not present in this environment -- nothing to say
+        if cls["expected_category"] in provided:
+            continue  # customer already declares that telemetry -- silent
+        category_gaps = [g for g in gaps or [] if g.get("category") == cls["expected_category"]]
+        if not category_gaps:
+            continue  # nothing actionable to lift -- stay silent, don't print "0 gaps"
+        top_ids = [g["technique_id"] for g in category_gaps[:5]]
+        gap_count = len(category_gaps)
+        findings.append({
+            "class_id": cls["id"],
+            "label": cls["label"],
+            "matched_entry": str(matched_entry),
+            "telemetry_label": cls["telemetry_label"],
+            "capability": cls["capability"],
+            "gap_count": gap_count,
+            "technique_ids": top_ids,
+            "message": (
+                f"Your inventory lists a {cls['label']} ({matched_entry}), but no "
+                f"{cls['telemetry_label']} is declared. Its main security value — "
+                f"{cls['capability']} — appears unmonitored. Declaring/enabling "
+                f"{cls['telemetry_label']} would move {gap_count} gap"
+                f"{'s' if gap_count != 1 else ''} closer to buildable "
+                f"(e.g. {', '.join(top_ids)})."
+            ),
+        })
+    return findings
 
 
 def apply_ai_ratings(results, ratings: dict) -> int:

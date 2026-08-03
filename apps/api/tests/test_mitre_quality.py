@@ -12,6 +12,7 @@ from app.mitre.quality import (
     quality_rollup,
     strength_bucket,
     telemetry_shelfware_check,
+    unmonitored_capability_check,
 )
 
 from tests.test_mitre_agents import _agent
@@ -325,3 +326,86 @@ def test_only_covered_and_partial_states_are_considered():
         results, use_cases, log_sources=["Okta"], tooling=[], index=_index()
     )
     assert flagged == []
+
+
+# --- Phase A10 piece 4: unmonitored-capability check (the "Infoblox problem") ---
+
+def _gap(technique_id, category):
+    return {"technique_id": technique_id, "category": category}
+
+
+def test_unmonitored_dns_appliance_flagged_when_no_dns_source_declared():
+    gaps = [_gap("T1071.004", "network"), _gap("T1590.002", "network")]
+    findings = unmonitored_capability_check(
+        assets=["Infoblox DNS appliances"], tooling=[], log_sources=["Okta"], gaps=gaps,
+    )
+    assert len(findings) == 1
+    finding = findings[0]
+    assert finding["class_id"] == "dns_appliance"
+    assert finding["matched_entry"] == "Infoblox DNS appliances"
+    assert finding["gap_count"] == 2
+    assert finding["technique_ids"] == ["T1071.004", "T1590.002"]
+    assert "DNS appliance (Infoblox DNS appliances)" in finding["message"]
+    assert "would move 2 gaps closer to buildable" in finding["message"]
+
+
+def test_unmonitored_dns_appliance_silent_when_dns_source_declared():
+    gaps = [_gap("T1071.004", "network")]
+    findings = unmonitored_capability_check(
+        assets=["Infoblox DNS appliances"], tooling=[],
+        log_sources=["Infoblox DNS query logs"], gaps=gaps,
+    )
+    assert findings == []
+
+
+def test_unmonitored_check_silent_when_class_not_present():
+    findings = unmonitored_capability_check(
+        assets=[], tooling=[], log_sources=[], gaps=[_gap("T1071.004", "network")],
+    )
+    assert findings == []
+
+
+def test_unmonitored_check_silent_when_no_actionable_gaps():
+    # DNS appliance present + category missing, but no gap needs "network"
+    # telemetry -- nothing to lift, so stay silent rather than say "0 gaps".
+    findings = unmonitored_capability_check(
+        assets=["Infoblox appliance"], tooling=[], log_sources=[],
+        gaps=[_gap("T1059.001", "endpoint")],
+    )
+    assert findings == []
+
+
+def test_unmonitored_check_matches_via_security_tooling_sheet_too():
+    findings = unmonitored_capability_check(
+        assets=[], tooling=["Rubrik backup platform"], log_sources=[],
+        gaps=[_gap("T1490", "application")],
+    )
+    assert len(findings) == 1
+    assert findings[0]["class_id"] == "backup"
+
+
+def test_unmonitored_check_one_finding_per_class_not_per_gap():
+    gaps = [_gap("T1071.004", "network"), _gap("T1590.002", "network"),
+            _gap("T1595", "network")]
+    findings = unmonitored_capability_check(
+        assets=["Infoblox DNS appliances"], tooling=[], log_sources=[], gaps=gaps,
+    )
+    assert len(findings) == 1  # aggregated, never one finding per gap
+    assert findings[0]["gap_count"] == 3
+
+
+def test_device_class_map_integrity():
+    from app.mitre.attack_data import load_device_classes
+    from app.mitre.ranking import _COMPONENT_CATEGORY_RULES
+
+    valid_categories = {category for category, _ in _COMPONENT_CATEGORY_RULES}
+    classes = load_device_classes()["classes"]
+    assert len(classes) >= 8
+    seen_ids = set()
+    for cls in classes:
+        assert cls["expected_category"] in valid_categories
+        assert cls["keywords"] and all(isinstance(k, str) and k for k in cls["keywords"])
+        assert cls["telemetry_label"]
+        assert cls["capability"]
+        assert cls["id"] not in seen_ids
+        seen_ids.add(cls["id"])

@@ -741,6 +741,27 @@ async def _run_pipeline_body(
                     + ", ".join(ranked["crown_jewel_unmatched"][:5])
                 )
 
+            # Stage 6.5 — unmonitored-capability check (plan phase A10
+            # piece 4, the "Infoblox problem"): a device whose main
+            # security value depends on one telemetry category can sit in
+            # your Assets/Security Tooling sheets while that category is
+            # never declared in Log Sources — silently useless for
+            # detection. Only surfaced when a Log Sources sheet was
+            # actually uploaded (no sheet -> no claim without data).
+            if "log_sources" in (env_lists.get("sheets_found") or {}):
+                asset_entries = [
+                    i["entry"] for i in (env_lists.get("interpretations") or [])
+                    if i.get("sheet") == "Assets"
+                ]
+                unmonitored = quality.unmonitored_capability_check(
+                    asset_entries,
+                    env_lists.get("tooling") or [],
+                    env_lists.get("log_sources") or [],
+                    ranked["gaps"],
+                )
+                for finding in unmonitored:
+                    coverage["assumptions"].append(finding["message"])
+
             # Stage 7 — narrative over COMPUTED data only; degrades to
             # template text so the assessment still completes.
             computed = {
