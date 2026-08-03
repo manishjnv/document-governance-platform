@@ -583,7 +583,21 @@ org-scoped KV table).
   register (Phase 14i pattern, unchanged — 487 techniques sharing
   "Process Creation" would otherwise repeat it per gap). Both blocks sit
   inside the per-tab `gaps` scope; `coverage` scope ends before the
-  roadmap heading; `executive` still drops both entirely.
+  roadmap heading; `executive` still drops both entirely. **Plan phase
+  A11 piece 3 (PDF flow):** hard `page-break-before` now survives ONLY at
+  genuine PART boundaries (cover→executive, executive→detailed [`#tactics`],
+  detailed→appendix [`#register`]) — the `#roadmap` heading (a
+  sub-section WITHIN "detailed", not a part boundary) lost its forced
+  break so tactics/heatmap/roadmap/register now flow continuously; the
+  trimmed executive-only cut (`scope=executive`) also strips its one
+  remaining break so cover + executive summary share pages instead of
+  stranding a near-empty page. `h2`/`h3` gained `page-break-after: avoid`
+  (no orphaned headings), `.tiles` gained `page-break-inside: avoid`, and
+  a new `thead { page-break-after: avoid; }` rule keeps a table's header
+  off the bottom of a page. Measured on a real ~89-gap synthetic render
+  (disposable WeasyPrint container): executive stayed 2 pages but page 1
+  now holds 2×+ the content (the previous forced break stranded page 1 at
+  only ~20 lines); full PDF 16→15 pages.
   → appendices (register with names,
   N/A grouped, assumptions, 14g how-we-read-your-files, rule mappings in
   numeric order with plain-words statuses, 500-row cap stated) → audit
@@ -595,8 +609,9 @@ org-scoped KV table).
   watermark (`position: fixed`), and document metadata (`<meta>` tags in
   `base.html`'s `<head>` — WeasyPrint maps these to the PDF's
   `/Author`/`/Subject`/`/Keywords`, `<title>` → `/Title`).
-- **XLSX** (`export.xlsx`, polished Phase 14c, further polished Phase 14h)
-  — sheets: **Read Me** (guide, colored legend cells, key numbers, "is
+- **XLSX** (`export.xlsx`, polished Phase 14c, further polished Phase 14h,
+  Phase A11 piece 1 uniform header fill) — sheets: **Read Me** (guide,
+  colored legend cells, key numbers, "is
   this % bad?" context, Phase 14h: `protection.sheet = True` —
   accidental-edit guard, no password), Summary (+What-it-means column,
   metadata rows), Coverage by Tactic (Phase 14h: `DataBarRule`
@@ -629,7 +644,28 @@ org-scoped KV table).
   `description` (org display name — openpyxl has no wired-up support for
   the docProps/app.xml "Company" extended property, confirmed by source
   inspection, so `description` carries that role instead). openpyxl-native
-  only throughout — xlsxwriter is intentionally not used.
+  only throughout — xlsxwriter is intentionally not used. **Plan phase
+  A11 piece 1:** every sheet's header row now shares ONE consistent
+  branded fill (`0057B8`) + white bold font via the shared `sheet()`
+  helper (audited: most sheets were bold-but-unfilled; Summary's own
+  "Metric/Value/What it means" and "Gap/Effort/Recommendation" mini-table
+  headers were bold-only too) — data-row fills (state/tier/feasibility)
+  unchanged.
+- **Downloadable templates** (`apps/web/public/templates/*.xlsx`) — plan
+  phase A11 piece 2 regenerated both files via a new committed generator,
+  `scripts/build_mitre_templates.py` (prefer re-running it over hand-
+  editing the .xlsx files): same branded header fill/font as the XLSX
+  report, thin all-borders on the header + example rows, ~100 pre-
+  formatted blank data rows per sheet so customer content lands in a
+  visible grid, sized column widths. Every cell VALUE stayed byte-
+  identical (verified by diffing the regenerated files cell-by-cell
+  against the prior git-tracked versions); the ingest round-trip tests
+  (`test_real_use_case_template_round_trips` /
+  `test_real_environment_template_round_trips`) are unchanged. Side fix:
+  the environment template's prose Read Me sheet had two swapped row
+  heights and one row with no explicit height (left over from an earlier
+  ad hoc `insert_rows()` edit in plan phase A10 piece 2) — the generator
+  now sets every row height explicitly.
 
 ---
 
@@ -716,19 +752,19 @@ overflow on every page (real-browser checked).
 
 ## 13. Testing
 
-Backend baseline **876 passed / 7 skipped** (measured 2026-08-03 after the
-MITRE accuracy plan A1-A10 — the 7th skip is the prod-only WeasyPrint PDF
+Backend baseline **879 passed / 7 skipped** (measured 2026-08-03 after the
+MITRE accuracy plan A1-A11 — the 7th skip is the prod-only WeasyPrint PDF
 render test; prod render verified live). Frontend: `tsc --noEmit` clean.
 
 | File | Covers |
 | --- | --- |
 | `test_mitre_applicability.py` | Domain gating, platform filter (+PRE/"None" exemptions), exclusion attribution + most-specific-wins, parent-exclusion inheritance, no-inventory behavior, deprecated reason, ID validation, real-dataset smoke, priorities-file IDs resolve `ok`. |
 | `test_mitre_coverage.py` | State thresholds (incl. exact 0.7 boundary), disabled policy param, enabled-None assumption, revoked-mapping remap, invalid-ID handling, sub-technique rollup, multi-tactic counting, golden strict/weighted %. |
-| `test_mitre_ingest.py` | Template + messy-header detection, csv, empty/over-cap/no-name-column 422s, environment workbook (sheets, platform normalization, ICS/mobile flags, missing-sheet assumptions); Phase A10: Photon OS/Infoblox/Rubrik platform-synonym goldens + "cisco ios" ordering regression + IoT/mainframe z/OS stay-unmapped pin. |
+| `test_mitre_ingest.py` | Template + messy-header detection, csv, empty/over-cap/no-name-column 422s, environment workbook (sheets, platform normalization, ICS/mobile flags, missing-sheet assumptions); Phase A10: Photon OS/Infoblox/Rubrik platform-synonym goldens + "cisco ios" ordering regression + IoT/mainframe z/OS stay-unmapped pin. Phase A11: `test_real_templates_have_branded_header_fill_and_bordered_grid` (header fill/font/border + blank-row count for both downloadable templates). |
 | `test_mitre_api.py` | Real-Postgres E2E create→run→poll→results with hand-computed states, org isolation, 409 double-run, settings RBAC+validation, stale-run guard, intake validation. LLM stubbed via an autouse fixture (a local key can never leak into tests). Phase A10: `log_source_coverage` grouping asserted in the main E2E; unmonitored-capability-check flagged/silent E2E goldens. |
 | `test_mitre_agents.py` | Tagging batch success/failure-degrade, garbage-JSON chain advance, invalid/revoked AI IDs, confidence floor, extraction mode, narrative AI+template paths, all-batches-fail+zero-tags → failed, keyword-tag FP regression pins. |
 | `test_mitre_ranking.py` | Feasibility buckets (onboarded/ownable/new/no-telemetry), tier ordering, state tie-break, covered/N-A exclusion, deterministic-layer-imports-no-AI guard. |
-| `test_mitre_report.py` | HTML escapes planted `<script>`, XLSX guard incl. real-workbook readback + Logic column, 409s, StreamingResponse content-type, compare golden + cross-org 404, `domains_brief`; Phase 14h: `test_xlsx_phase14h_polish` (data-bar/color-scale CF rule counts, native chart presence, numeric Priority + number_format, Read Me sheet protection, workbook core properties); Phase A9: `test_xlsx_tracker_structure` (merged Tracker sheet headers exact, one covered row with blank gap/tracking columns, one gap row fully populated incl. Threat match/Crown jewel/Roadmap bucket), `test_xlsx_tracker_formula_guard` (formula guard on the Recommendation column), `test_xlsx_scope_pruning` (coverage/gaps both keep the Tracker), `test_html_report_roadmap_index_and_register_dedup` (roadmap index has no duplicated narrative, register is the single home, one anchor per gap), `test_html_report_gaps_scope_keeps_roadmap_and_register`. Phase A10: `compute_log_source_coverage` grouping/normalization/unresolvable-id goldens, "Coverage by Log Source" sheet in the formula-injection-guard sheet-set assertion. |
+| `test_mitre_report.py` | HTML escapes planted `<script>`, XLSX guard incl. real-workbook readback + Logic column, 409s, StreamingResponse content-type, compare golden + cross-org 404, `domains_brief`; Phase 14h: `test_xlsx_phase14h_polish` (data-bar/color-scale CF rule counts, native chart presence, numeric Priority + number_format, Read Me sheet protection, workbook core properties); Phase A9: `test_xlsx_tracker_structure` (merged Tracker sheet headers exact, one covered row with blank gap/tracking columns, one gap row fully populated incl. Threat match/Crown jewel/Roadmap bucket), `test_xlsx_tracker_formula_guard` (formula guard on the Recommendation column), `test_xlsx_scope_pruning` (coverage/gaps both keep the Tracker), `test_html_report_roadmap_index_and_register_dedup` (roadmap index has no duplicated narrative, register is the single home, one anchor per gap), `test_html_report_gaps_scope_keeps_roadmap_and_register`. Phase A10: `compute_log_source_coverage` grouping/normalization/unresolvable-id goldens, "Coverage by Log Source" sheet in the formula-injection-guard sheet-set assertion. Phase A11: `test_xlsx_a11_uniform_header_fill` (branded fill+font on 7 sheets' headers plus Summary's mini-header), `test_html_report_page_break_audit` (exec/tactics/register keep the part-boundary break, roadmap doesn't), executive-scope test asserts no `page-break` class survives the trim. |
 | `test_mitre_navigator.py` | Golden single-domain layer (colors/comments/enabled/versions/legend), multi-domain stable order, gated-domain exclusion; endpoint json vs zip, viewer-readable, cross-org 404 + pending 409. |
 | `test_mitre_mapping_edit.py` | Phase 10 PATCH: manual provenance + inline recompute (states flip, counts.manual, assumption note, audit row), empty-list unmap, invalid/malformed/over-cap 422s, non-completed 409, cross-org 404 (both IDs) + viewer 403. |
 | `test_mitre_threat_profile.py` | Phase 11: every curated ID resolves `ok` + alias integrity, real-file lookup (Banking alias, unknown = no-op), within-tier lift golden, no-tier-jump golden, toggle-off keeps order but keeps annotation, intake threat_actors 422s (unknown/non-list/over-10). |
@@ -843,6 +879,7 @@ you're alone on `edgp_test`.
 | 14i | `75b58bf` | 08-03 | "What logs do I need?" per gap (plan's second, distinctly-titled §14h section — relabeled 14i here to avoid colliding with the already-shipped report-branding 14h above): new curated `data/telemetry_fields.json` (top 35 of 113 ATT&CK data-source components by technique-reference frequency, 83%/88% coverage at top 25/35 — `fields`/`where`/`gotcha` per component, hand-written, never runtime-LLM); pure `plain_language.telemetry_requirements()` + `telemetry_lines()` (curated entry or bare-component-name fallback for the long tail). Surfaced in exactly 3 places, no new UI area: explain endpoint `good.telemetry` rendered in the drawer's existing "What would good look like?" block (one compact line per component: fields, where, gotcha in muted text); XLSX "Log fields needed" column on Gaps & Recommendations (reuses existing bordered/wrapped styling helpers); PDF/HTML gap register names each gap's telemetry components under the detection sketch, with the full guidance in a single "Log fields reference" table after the register (review fix: printing the guidance per gap repeated 1.23 MB / ~680 pages on the 842-gap customer sample, since 487 techniques share "Process Creation"; the table is 35 rows / 19 KB and lives inside the register section so the per-tab `gaps` scope keeps it while `executive` still excludes it). Honesty boundary preserved throughout: wording is "your query needs X; your `<source>` should carry it" — never "your source is missing X" (this product never ingests raw logs, so field-level verification is never claimed). No coverage/scoring/pipeline change, no migration, no new settings; 62 no-data-source techniques keep their unchanged "bespoke detection engineering" verdict. Suite 803→809/7 (+6 new tests in `test_mitre_plain_language.py` + the extended XLSX structure golden); `tsc --noEmit` clean. |
 | A9 | (pending commit) | 08-03 | Accuracy-plan phase A9: report consolidation. PART 1 (XLSX) — merged "Technique Register", "Gaps & Recommendations", and "Roadmap" sheets (pure duplication: Roadmap was the same gap dicts re-bucketed, Gaps was a subset of the Register) into ONE "Technique Tracker" sheet: one row per applicable technique (covered rows leave gap-only columns blank), no interleaved section-header rows so auto-filter/sort works across the whole sheet, 19 columns ending in four blank customer-tracking columns (Owner/Status/Target date/Notes) so the sheet doubles as a working tracker. Scope pruning updated so both `coverage` and `gaps` per-tab downloads keep the Tracker. PART 2 (PDF) — split the old combined "gap register grouped by feasibility" block into a compact **Roadmap** section (prose + counts per bucket + a 4-column index table: Technique ID, Name, Priority, "details p. N" cross-ref via the existing Phase 14e `target-counter` pattern) followed by the **Gap register**, now the single, unchanged-content home of every gap's full narrative — reformatted from spaced-out `<div>` cards into one dense `<table>` (same text, less chrome) with a stable `id="g-{technique_id}"` anchor per row for the roadmap's cross-refs. Measured on a real 603-gap synthetic render (WeasyPrint, disposable container — no WeasyPrint locally): 116 pages before → 114 pages after; the dense-table reformat's per-gap savings were largely offset by the new Roadmap index table, so the net cut was modest (~2 pages), not the large share the motivating note anticipated — reported here rather than overstated. Report layer only: no coverage/ranking/pipeline change, no migration, no new settings. Suite 859→863/7 (+4 new tests: Tracker structure/formula-guard/scope-pruning, roadmap-index/register-dedup); `tsc --noEmit` clean. |
 | A10 | (pending commit) | 08-03 | Accuracy-plan phase A10: device-level truth, 4 pieces. PIECE 1 — `ingest._PLATFORM_RULES` gains photon os/photon→Linux, rubrik→Linux, infoblox/dns appliance(s)→Network Devices (deliberately no bare "dns"); IoT/mainframe z/OS stay unmapped on purpose (ATT&CK v19.1 has no such platform), pinned by regression test. PIECE 2 — one plain guidance line ("one log stream per row") added to the environment template's Read Me sheet (openpyxl edit, values-only addition) and the wizard's environment drop-zone; sheet names/headers byte-identical. PIECE 3 — new `report_common.compute_log_source_coverage()` groups detection rules by log_source (normalized via `ranking._norm`, reused not reimplemented); surfaced as `GET /assessments/{id}`'s `log_source_coverage` field (completed assessments only) driving a clickable log-source list in `UploadSummaryCard` → `RuleListPanel`, and a new "Coverage by Log Source" XLSX sheet (excluded from scoped downloads like Use-Case Mappings already is) — one function, two views, can't drift. PIECE 4 — new curated `data/device_classes.json` (8 appliance classes: DNS appliance, EDR, email gateway, firewall, IdP, backup, proxy, WAF → expected telemetry category + plain capability) backs `quality.unmonitored_capability_check()`: an Assets/Security-Tooling entry matching a class whose expected category has NO matching Log Sources entry emits one aggregated finding (N = ranked gaps in that category; silent if N=0 or no Log Sources sheet at all) — wired into the pipeline as "Stage 6.5" after ranking, message flows into the existing assumptions slot (UI tab/PDF appendix/XLSX sheet) plus a highlighted `UploadSummaryCard` line. No migration, no coverage/ranking-number change anywhere. Suite 863→876/7 (+13 new tests across `test_mitre_ingest.py`, `test_mitre_quality.py`, `test_mitre_report.py`, `test_mitre_api.py`); `tsc --noEmit` clean. |
+| A11 | (pending commit) | 08-03 | Accuracy-plan phase A11: report/template visual polish, 3 pieces, zero behavior change. PIECE 1 — every XLSX sheet's header row (report_xlsx.py's shared `sheet()` helper, plus Summary's own two mini-table headers) now shares ONE branded fill (`0057B8`) + white bold font; audited every sheet, most were bold-but-unfilled, made uniform not additive; data-row fills unchanged. PIECE 2 — new committed `scripts/build_mitre_templates.py` generator regenerates both downloadable templates: same branded header fill/font, thin all-borders on header + example rows, ~100 pre-formatted blank data rows per sheet, sized column widths; every cell VALUE verified byte-identical to what shipped before (diffed cell-by-cell against git HEAD); side-fixed a real row-height bug left over from A10 piece 2's ad hoc `insert_rows()` edit. PIECE 3 — PDF flow: removed the forced `page-break-before` from the `#roadmap` heading (a sub-section WITHIN the "detailed" part, not a part boundary) while keeping it on the true PART-boundary headings (`#exec`, `#tactics`, `#register`); the executive-only scope cut now also strips its remaining break so cover+executive flow together instead of stranding a near-empty page; added `page-break-after: avoid` on `h2`/`h3`/`thead` and `page-break-inside: avoid` on `.tiles` to stop orphaned headings/table headers. Measured on a real ~89-gap synthetic render via a disposable WeasyPrint Docker container (git-HEAD overlay for "before", working tree for "after"): executive PDF stayed 2 pages but page 1's content more than doubled (1101→2242 chars, 20→38 lines — the previous forced break had stranded page 1 at only ~20 lines right after the cover); full PDF 16→15 pages. Suite 876→879/7 (+3 new tests: `test_xlsx_a11_uniform_header_fill`, `test_real_templates_have_branded_header_fill_and_bordered_grid`, `test_html_report_page_break_audit`); `tsc --noEmit` clean. |
 
 ## 16. Optional feature work (plan §14 — not launch blockers)
 

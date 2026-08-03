@@ -1124,6 +1124,33 @@ assumptions slot every other cross-check uses plus a highlighted
 anywhere. 13 new tests across ingest/quality/report/api; suite **876
 passed / 7 skipped** (+13 over A9's 863); `tsc --noEmit` clean.
 
+**MITRE accuracy plan, phase A11 (2026-08-03):** report/template visual
+polish, 3 pieces, zero behavior change. XLSX header fills: every sheet's
+header row (the shared `sheet()` helper, plus Summary's own two
+mini-table headers) now shares ONE branded fill (`0057B8`) + white bold
+font — audited every sheet, most were bold-but-unfilled, made uniform
+not additive; data-row fills unchanged. Downloadable templates: new
+committed `scripts/build_mitre_templates.py` generator regenerates both
+files with the same branded header treatment, thin all-borders on header
++ example rows, ~100 pre-formatted blank data rows per sheet so entered
+content lands in a visible grid; every cell VALUE verified byte-identical
+to what shipped before (diffed cell-by-cell against git HEAD) — the
+ingest round-trip tests are unchanged. Side-fixed a real row-height bug
+left over from A10 piece 2's ad hoc `insert_rows()` edit. PDF flow:
+removed the forced page break from the roadmap heading (a sub-section
+WITHIN the "detailed" part, not a genuine part boundary) while keeping
+it at the true cover→executive→detailed→appendix boundaries; the
+executive-only PDF cut now also drops its remaining break so cover and
+executive summary flow together instead of stranding a near-empty page;
+added orphan-prevention CSS (`page-break-after: avoid` on headings/table
+headers, `page-break-inside: avoid` on the scorecard tiles). Measured on
+a real ~89-gap synthetic render via a disposable WeasyPrint Docker
+container: executive PDF stayed 2 pages but page 1's content more than
+doubled (1101→2242 characters — the old forced break had stranded page 1
+at only ~20 lines right after the cover); full PDF 16→15 pages. 3 new
+tests; suite **879 passed / 7 skipped** (+3 over A10's 876); `tsc
+--noEmit` clean.
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)
