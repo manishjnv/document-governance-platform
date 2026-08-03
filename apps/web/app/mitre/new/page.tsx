@@ -177,6 +177,10 @@ export default function NewMitreAssessmentPage() {
   const [scopeLabel, setScopeLabel] = useState('');
   const [preparedBy, setPreparedBy] = useState('');
   const [purposeNote, setPurposeNote] = useState('');
+  // Phase A12: customer/engagement label — scopes the trend block to
+  // same-customer runs. Manual for uploads; auto-derived server-side for
+  // Sentinel pulls (from the connection/workspace), so this is upload-only.
+  const [customer, setCustomer] = useState('');
   // Phase 11: curated threat-actor catalog + selection (optional intake)
   const [actorCatalog, setActorCatalog] = useState<
     { name: string; attack_id: string | null; note: string | null }[]
@@ -278,6 +282,7 @@ export default function NewMitreAssessmentPage() {
         formData.append('use_cases', useCaseFile as File);
         if (envFile) formData.append('environment', envFile);
         if (name.trim()) formData.append('name', name.trim());
+        if (customer.trim()) formData.append('customer', customer.trim());
         formData.append('intake', JSON.stringify(intake));
         res = await axios.post(
           `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments`,
@@ -587,6 +592,34 @@ export default function NewMitreAssessmentPage() {
                       ))}
                     </datalist>
                   </div>
+                </div>
+
+                {/* Phase A12: scopes the trend block to the same customer's
+                    runs. Manual for uploads; auto-derived from the Sentinel
+                    connection/workspace name for pulled assessments. */}
+                <div>
+                  <label htmlFor="mitre-customer" className="mb-1.5 block text-sm font-medium">
+                    Customer / engagement{' '}
+                    <span className="font-normal text-muted-foreground">(optional)</span>
+                  </label>
+                  {source === 'sentinel' ? (
+                    <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                      Auto-set from your Sentinel connection so scheduled re-runs group correctly.
+                    </p>
+                  ) : (
+                    <input
+                      id="mitre-customer"
+                      type="text"
+                      maxLength={200}
+                      value={customer}
+                      onChange={(e) => setCustomer(e.target.value)}
+                      placeholder="e.g. Acme Corp"
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                  )}
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Compares this run&apos;s trend only against the same customer&apos;s previous runs.
+                  </p>
                 </div>
 
                 {/* Phase 14d: optional project metadata — shown on the

@@ -26,6 +26,8 @@ export interface AssessmentListItem {
   archived?: boolean;
   /** Phase 14d/14f: project name from the intake, shown on list rows. */
   project_name?: string | null;
+  /** Phase A12: customer/engagement label — scopes trend comparisons. */
+  customer?: string | null;
 }
 
 /** Phase 13d: a saved SIEM connection + pull health (admin view). */

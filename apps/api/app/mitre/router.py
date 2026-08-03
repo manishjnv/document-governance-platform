@@ -50,6 +50,17 @@ ENVIRONMENT_FILE_TYPES = {"xlsx", "xls"}
 # Keep strong references to fire-and-forget tasks (asyncio only holds weak ones).
 _RUNNING_TASKS: set = set()
 
+_MAX_CUSTOMER_CHARS = 200
+
+
+def _sanitize_customer(value: Optional[str]) -> Optional[str]:
+    """Trim + cap (Phase A12 trend scoping key). Empty means "not set" — the
+    JSONB key is omitted rather than stored as ''."""
+    if not isinstance(value, str):
+        return None
+    cleaned = value.strip()[:_MAX_CUSTOMER_CHARS]
+    return cleaned or None
+
 
 def _resolve_file_type(upload: UploadFile, allowed: set) -> str:
     """MIME allowlist first (documents.py map), filename extension as the
@@ -196,6 +207,9 @@ async def create_assessment(
     environment: Optional[UploadFile] = File(None, description="Environment workbook (xlsx)"),
     intake: Optional[str] = Form(None, description="Intake JSON: industry/region/count_disabled_as_coverage/exclusions"),
     name: Optional[str] = Form(None, description="Assessment name (defaults to the dump filename)"),
+    customer: Optional[str] = Form(
+        None, description="Customer/engagement label — scopes the trend block to same-customer runs (Phase A12)"
+    ),
     current_user: TokenData = Depends(require_role("admin", "reviewer")),
     db: AsyncSession = Depends(get_db),
 ):
@@ -295,6 +309,9 @@ async def create_assessment(
         extraction_text=extraction_text,
         warnings=warnings,
         parse_assumptions=parse_assumptions,
+        extra_params=(
+            {"customer": clean} if (clean := _sanitize_customer(customer)) else None
+        ),
     )
 
 
@@ -562,6 +579,12 @@ async def _create_assessment_from_pull(
     pulled_at = datetime.now(timezone.utc)
     default_name = f"Sentinel pull {pulled_at.strftime('%Y-%m-%d %H:%M')}"
     config = config or {}
+    # Phase A12: auto-stamp the trend-scoping customer key — a saved
+    # connection's name (reused across scheduled re-runs) beats the raw
+    # workspace, so recurring pulls group naturally without user input.
+    customer_clean = _sanitize_customer(
+        connection.name if connection is not None else config.get("workspace")
+    )
 
     # Phase A7: best-effort auto-import of onboarded Sentinel data
     # connectors into Log Sources — only when the pull actually derived
@@ -621,6 +644,7 @@ async def _create_assessment_from_pull(
             f"({result['rule_count']} rules) rather than uploaded"
         ] + siem_assumptions,
         extra_params={
+            **({"customer": customer_clean} if customer_clean else {}),
             "siem": {
                 "platform": "sentinel",
                 "trigger": trigger,
@@ -1224,6 +1248,8 @@ async def list_assessments(
                 # Phase 14f: archive flag + 14d project name on list rows
                 "archived": bool((a.params or {}).get("archived")),
                 "project_name": ((a.params or {}).get("intake") or {}).get("project_name"),
+                # Phase A12: trend-scoping customer label, shown alongside the name
+                "customer": (a.params or {}).get("customer"),
                 # Phase 13d provenance chip: platform + trigger only
                 "siem": (
                     {"platform": siem.get("platform"), "trigger": siem.get("trigger")}
@@ -1813,6 +1839,9 @@ async def assessment_report(
     ]
     # Phase 14e: trend block — diff against the most recent completed run
     # before this one, when one exists (pure compare, no extra cost at scale).
+    # Phase A12: scoped to the same customer (NULL-safe — orgs with no
+    # customer set on either run still match, preserving pre-A12 behavior).
+    assessment_customer = (assessment.params or {}).get("customer")
     previous_result = await db.execute(
         select(MitreAssessment)
         .where(
@@ -1821,6 +1850,7 @@ async def assessment_report(
             & (MitreAssessment.assessment_id != assessment_id)
             & (MitreAssessment.completed_at < assessment.completed_at)
             & (MitreAssessment.deleted_at.is_(None))
+            & (MitreAssessment.params["customer"].astext.is_not_distinct_from(assessment_customer))
         )
         .order_by(MitreAssessment.completed_at.desc())
         .limit(1)

@@ -3,7 +3,7 @@ directly with stored summary/technique_results — no pipeline, no LLM."""
 
 import io
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -93,11 +93,15 @@ def _results(states: dict):
 
 
 async def _seed(db_session, org, user, *, status="completed", strict_pct=33.3,
-                results=None, uc_names=()):
+                 results=None, uc_names=(), name="Seeded assessment",
+                 customer=None, completed_at=None):
+    params = {"thresholds": {"confidence_covered": 0.7}, "models_used": {}}
+    if customer is not None:
+        params["customer"] = customer
     assessment = MitreAssessment(
         assessment_id=uuid.uuid4(),
         org_id=org.org_id,
-        name="Seeded assessment",
+        name=name,
         status=status,
         attack_version="19.1",
         summary=_summary(strict_pct) if status == "completed" else None,
@@ -105,10 +109,12 @@ async def _seed(db_session, org, user, *, status="completed", strict_pct=33.3,
         if results is not None
         else _results({"T1059.001": "covered", "T1003.001": "partial",
                        "T1112": "not_covered", "T1200": "not_applicable"}),
-        completed_at=datetime.now(timezone.utc) if status == "completed" else None,
+        completed_at=(
+            (completed_at or datetime.now(timezone.utc)) if status == "completed" else None
+        ),
         error_message="boom" if status == "failed" else None,
         created_by=user.user_id,
-        params={"thresholds": {"confidence_covered": 0.7}, "models_used": {}},
+        params=params,
     )
     db_session.add(assessment)
     for i, name in enumerate(uc_names, start=1):
@@ -568,6 +574,78 @@ async def test_report_endpoint_html_and_409(client, db_session):
         f"/api/v1/mitre/assessments/{pending.assessment_id}/report", headers=headers
     )
     assert res.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_trend_scopes_to_same_customer(client, db_session):
+    """Phase A12: the auto-picked trend baseline must be the most recent
+    completed run for the SAME customer, not just the same org."""
+    org, user, headers = await _make_user(db_session, role="viewer")
+    t0 = datetime.now(timezone.utc) - timedelta(days=2)
+
+    acme_1 = await _seed(
+        db_session, org, user, name="Acme Run 1", customer="Acme Corp",
+        completed_at=t0,
+    )
+    acme_2 = await _seed(
+        db_session, org, user, name="Acme Run 2", customer="Acme Corp",
+        completed_at=t0 + timedelta(days=1),
+    )
+
+    res = await client.get(
+        f"/api/v1/mitre/assessments/{acme_2.assessment_id}/report", headers=headers
+    )
+    assert res.status_code == 200
+    html = res.json()["data"]
+    assert "Trend vs your previous run" in html
+    assert "Acme Run 1" in html
+    assert acme_1.assessment_id  # baseline picked is acme_1, not some other org run
+
+
+@pytest.mark.asyncio
+async def test_trend_skips_cross_customer_run(client, db_session):
+    """A different customer's earlier run must NOT be picked as the
+    baseline — that would produce a nonsensical diff (real prod symptom)."""
+    org, user, headers = await _make_user(db_session, role="viewer")
+    t0 = datetime.now(timezone.utc) - timedelta(days=2)
+
+    await _seed(
+        db_session, org, user, name="Acme Run 1", customer="Acme Corp",
+        completed_at=t0,
+    )
+    globex_1 = await _seed(
+        db_session, org, user, name="Globex Run 1", customer="Globex Inc",
+        completed_at=t0 + timedelta(days=1),
+    )
+
+    res = await client.get(
+        f"/api/v1/mitre/assessments/{globex_1.assessment_id}/report", headers=headers
+    )
+    assert res.status_code == 200
+    html = res.json()["data"]
+    assert "Trend vs your previous run" not in html  # no prior Globex run exists
+
+
+@pytest.mark.asyncio
+async def test_trend_null_customer_still_matches_null(client, db_session):
+    """Orgs that never set a customer keep pre-A12 behavior: NULL is
+    NOT DISTINCT FROM NULL, so the plain most-recent-run pick still works."""
+    org, user, headers = await _make_user(db_session, role="viewer")
+    t0 = datetime.now(timezone.utc) - timedelta(days=2)
+
+    await _seed(db_session, org, user, name="No-customer Run 1", completed_at=t0)
+    run_2 = await _seed(
+        db_session, org, user, name="No-customer Run 2",
+        completed_at=t0 + timedelta(days=1),
+    )
+
+    res = await client.get(
+        f"/api/v1/mitre/assessments/{run_2.assessment_id}/report", headers=headers
+    )
+    assert res.status_code == 200
+    html = res.json()["data"]
+    assert "Trend vs your previous run" in html
+    assert "No-customer Run 1" in html
 
 
 @pytest.mark.asyncio

@@ -552,6 +552,26 @@ async def test_from_siem_creates_assessment_with_provenance(client, db_session, 
 
 
 @pytest.mark.asyncio
+async def test_from_siem_stamps_customer_from_workspace(client, db_session, monkeypatch):
+    """Phase A12: a token-at-trigger pull (no saved connection) stamps
+    params.customer from the workspace name so trend comparisons scope
+    correctly even without a saved connection."""
+    _fake_sentinel_fetch(monkeypatch, [(200, {"value": _RULES})])
+    _, _, headers = await _make_user(db_session)
+
+    res = await client.post(
+        "/api/v1/mitre/assessments/from-siem", headers=headers, json=_body()
+    )
+    assert res.status_code == 201, res.text
+    got = (
+        await client.get(
+            f"/api/v1/mitre/assessments/{res.json()['assessment_id']}", headers=headers
+        )
+    ).json()
+    assert got["params"]["customer"] == "prod-sentinel"
+
+
+@pytest.mark.asyncio
 async def test_from_siem_validation_and_authz(client, db_session, monkeypatch):
     _, _, headers = await _make_user(db_session)
     _, _, viewer = await _make_user(db_session, role="viewer")

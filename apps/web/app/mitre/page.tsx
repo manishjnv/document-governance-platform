@@ -122,7 +122,8 @@ export default function MitreListPage() {
         (!statusFilter || i.status === statusFilter) &&
         (!query ||
           i.name.toLowerCase().includes(query) ||
-          (i.project_name ?? '').toLowerCase().includes(query))
+          (i.project_name ?? '').toLowerCase().includes(query) ||
+          (i.customer ?? '').toLowerCase().includes(query))
     );
   }, [items, search, statusFilter, showArchived]);
 
@@ -170,8 +171,8 @@ export default function MitreListPage() {
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or project…"
-              aria-label="Search assessments by name or project"
+              placeholder="Search by name, customer, or project…"
+              aria-label="Search assessments by name, customer, or project"
               className="h-8 w-56 rounded-md border border-input bg-background px-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
             <select
@@ -299,8 +300,9 @@ export default function MitreListPage() {
                     ) : (
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold leading-snug">{item.name}</p>
-                        {(item.project_name || item.archived || item.siem) && (
+                        {(item.customer || item.project_name || item.archived || item.siem) && (
                           <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                            {item.customer && <span className="truncate font-medium">{item.customer}</span>}
                             {item.project_name && <span className="truncate">{item.project_name}</span>}
                             {item.siem && (
                               <span className="rounded-full border border-sky-200 bg-sky-100 px-1.5 py-0.5 font-medium text-sky-800">

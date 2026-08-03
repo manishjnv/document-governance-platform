@@ -260,6 +260,36 @@ async def test_from_connection_creates_assessment_with_provenance(
 
 
 @pytest.mark.asyncio
+async def test_from_connection_stamps_and_truncates_customer(
+    client, db_session, monkeypatch
+):
+    """Phase A12: a saved-connection pull stamps params.customer from the
+    connection's own name (so scheduled re-runs group naturally), capped
+    to 200 chars like every other attacker/user string in this module."""
+    _fake_sentinel_fetch(monkeypatch, [(200, {"value": _RULES})])
+    _, _, admin = await _make_user(db_session)
+    giant_name = "Acme " * 50  # 250 chars — under the connection's 255 cap,
+    # over the customer field's 200-char cap
+    created = (
+        await client.post(
+            "/api/v1/mitre/connections", headers=admin, json=_create_body(name=giant_name)
+        )
+    ).json()
+    cid = created["connection_id"]
+
+    res = await client.post(
+        f"/api/v1/mitre/assessments/from-connection/{cid}", headers=admin, json={}
+    )
+    assert res.status_code == 201, res.text
+    got = (
+        await client.get(
+            f"/api/v1/mitre/assessments/{res.json()['assessment_id']}", headers=admin
+        )
+    ).json()
+    assert got["params"]["customer"] == " ".join(giant_name.split())[:200]
+
+
+@pytest.mark.asyncio
 async def test_from_connection_rbac_and_cross_org(client, db_session, monkeypatch):
     _fake_sentinel_fetch(monkeypatch, [(200, {"value": _RULES})])
     org_a, _, admin_a = await _make_user(db_session)

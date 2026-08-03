@@ -46,7 +46,7 @@ pasted into a fresh session. Check off phases here as they complete.
 | A9 | Report consolidation: XLSX Technique Tracker + PDF roadmap dedup | ☑ |
 | A10 | Device-level truth: platform synonyms, per-stream guidance, coverage-by-log-source, unmonitored-capability check | ☑ |
 | A11 | Report/template visual polish: XLSX header fills, template borders, executive PDF flow | ☑ |
-| A12 | Scope auto-trend to the same customer (params JSONB, no migration) | ☐ |
+| A12 | Scope auto-trend to the same customer (params JSONB, no migration) | ☑ |
 
 Deliberately dropped: "covered"→"has detection" relabel (pure
 positioning — needs a user decision, not a build session; raise it when

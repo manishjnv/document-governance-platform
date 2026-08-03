@@ -1151,6 +1151,31 @@ at only ~20 lines right after the cover); full PDF 16→15 pages. 3 new
 tests; suite **879 passed / 7 skipped** (+3 over A10's 876); `tsc
 --noEmit` clean.
 
+**MITRE accuracy plan, phase A12 (2026-08-03):** scope the trend auto-pick
+to the same customer — migration-free (`params.customer` rides the
+existing JSONB). Real prod symptom fixed: the report's "Trend vs your
+previous run" block picked the org's most-recent completed run filtered
+only by `org_id`, so an org running assessments for multiple end
+customers got customer A diffed against customer B's last run
+("applicability changed: 292"-style garbage). New `_sanitize_customer()`
+(trim + 200-char cap, empty → key omitted) backs an optional `customer`
+Form field on `POST /assessments` and a new "Customer / engagement"
+wizard input (upload path only — hidden on the Sentinel tab, whose value
+is auto-derived instead). Sentinel/SIEM paths auto-stamp
+`params.customer` inside the single shared `_create_assessment_from_pull`
+(covers all 3 pull callers — token-at-trigger, saved-connection, and the
+scheduled worker) from the saved connection's name, or the raw workspace
+when there's no saved connection, so scheduled re-runs group naturally
+with zero user input. The trend query gained one NULL-safe `AND` clause
+(`IS NOT DISTINCT FROM`), so orgs that never set a customer keep the
+pre-A12 behavior unchanged. The explicit compare-by-id endpoint and the
+XLSX export (confirmed to never consume the auto-picked baseline) are
+untouched by design. List rows gain a `customer` field alongside the
+existing `project_name` chip. No migration, no new tables, no new
+dependencies. 5 new targeted tests (3 trend-scoping goldens, 1 workspace-
+derived stamp, 1 connection-name-derived stamp + truncation); suite
+**884 passed / 7 skipped** (+5 over A11's 879); `tsc --noEmit` clean.
+
 ---
 
 ## ⏳ Pending (not deferred — actual launch blockers)
