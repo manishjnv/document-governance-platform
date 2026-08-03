@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -112,7 +113,6 @@ export function GapsRoadmap({
 }) {
   const [showAll, setShowAll] = useState(false);
   const narrative = summary.narrative;
-  const gaps = showAll ? summary.gaps : summary.gaps.slice(0, INITIAL_ROWS);
   // Phase 12: partial gaps carry a detection-strength score (from
   // technique_results) — not covered gaps have nothing to score.
   const strengthById = new Map(
@@ -127,6 +127,56 @@ export function GapsRoadmap({
       .map((id) => domain?.tactics.find((t) => t.id === id)?.name ?? id)
       .join(', ');
   };
+
+  // Column sorting — plain state, rank stays the tiebreak so equal values
+  // keep the computed priority order. Missing values always sort last.
+  type SortKey = 'rank' | 'technique' | 'tactic' | 'tier' | 'strength' | 'feasibility';
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'rank', dir: 1 });
+  const toggleSort = (key: SortKey) =>
+    setSort((s) => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: 1 }));
+  const FEAS_ORDER: Record<string, number> = { short: 0, mid: 1, long: 2 };
+  const sortVal = (g: Gap): string | number | undefined => {
+    switch (sort.key) {
+      case 'rank':
+        return g.rank;
+      case 'technique':
+        return g.technique_id;
+      case 'tactic':
+        return tacticName(g);
+      case 'tier':
+        return g.tier ?? 9;
+      case 'strength':
+        return strengthById.get(g.technique_id);
+      case 'feasibility':
+        return FEAS_ORDER[g.feasibility] ?? 9;
+    }
+  };
+  const sortedGaps = [...summary.gaps].sort((a, b) => {
+    const va = sortVal(a);
+    const vb = sortVal(b);
+    if (va === undefined && vb === undefined) return a.rank - b.rank;
+    if (va === undefined) return 1;
+    if (vb === undefined) return -1;
+    const c =
+      typeof va === 'string'
+        ? va.localeCompare(vb as string)
+        : (va as number) - (vb as number);
+    return c !== 0 ? sort.dir * c : a.rank - b.rank;
+  });
+  const gaps = showAll ? sortedGaps : sortedGaps.slice(0, INITIAL_ROWS);
+
+  const SortIcon = ({ k }: { k: SortKey }) =>
+    sort.key === k ? (
+      sort.dir === 1 ? (
+        <ArrowUp size={11} aria-hidden="true" />
+      ) : (
+        <ArrowDown size={11} aria-hidden="true" />
+      )
+    ) : (
+      <ArrowUpDown size={11} aria-hidden="true" className="opacity-40" />
+    );
+  const sortBtnCls =
+    'inline-flex items-center gap-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
   return (
     <div className="space-y-6">
@@ -157,15 +207,31 @@ export function GapsRoadmap({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="h-8 w-8 px-2 text-[11px]">#</TableHead>
-              <TableHead className="h-8 px-2 text-[11px]">Technique</TableHead>
-              <TableHead className="hidden h-8 px-2 text-[11px] md:table-cell">Tactic</TableHead>
+              <TableHead className="h-8 w-8 px-2 text-[11px]">
+                <button type="button" onClick={() => toggleSort('rank')} title="Sort by rank" className={sortBtnCls}>
+                  # <SortIcon k="rank" />
+                </button>
+              </TableHead>
+              <TableHead className="h-8 px-2 text-[11px]">
+                <button type="button" onClick={() => toggleSort('technique')} title="Sort by technique ID" className={sortBtnCls}>
+                  Technique <SortIcon k="technique" />
+                </button>
+              </TableHead>
+              <TableHead className="hidden h-8 px-2 text-[11px] md:table-cell">
+                <button type="button" onClick={() => toggleSort('tactic')} title="Sort by tactic" className={sortBtnCls}>
+                  Tactic <SortIcon k="tactic" />
+                </button>
+              </TableHead>
               <TableHead className="h-8 px-2 text-[11px]">
                 <Tooltip delayDuration={150}>
                   <TooltipTrigger asChild>
-                    <span className="cursor-default underline decoration-dotted underline-offset-2">
-                      Priority
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('tier')}
+                      className={cn(sortBtnCls, 'underline decoration-dotted underline-offset-2')}
+                    >
+                      Priority <SortIcon k="tier" />
+                    </button>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs text-xs">
                     How commonly attackers use this technique in real intrusions,
@@ -178,9 +244,13 @@ export function GapsRoadmap({
               <TableHead className="hidden h-8 px-2 text-[11px] lg:table-cell">
                 <Tooltip delayDuration={150}>
                   <TooltipTrigger asChild>
-                    <span className="cursor-default underline decoration-dotted underline-offset-2">
-                      Strength
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('strength')}
+                      className={cn(sortBtnCls, 'underline decoration-dotted underline-offset-2')}
+                    >
+                      Strength <SortIcon k="strength" />
+                    </button>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs text-xs">{STRENGTH_TIP}</TooltipContent>
                 </Tooltip>
@@ -188,9 +258,13 @@ export function GapsRoadmap({
               <TableHead className="h-8 px-2 text-[11px]">
                 <Tooltip delayDuration={150}>
                   <TooltipTrigger asChild>
-                    <span className="cursor-default underline decoration-dotted underline-offset-2">
-                      Feasibility
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => toggleSort('feasibility')}
+                      className={cn(sortBtnCls, 'underline decoration-dotted underline-offset-2')}
+                    >
+                      Feasibility <SortIcon k="feasibility" />
+                    </button>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs text-xs">
                     How soon you could realistically build this detection: build
@@ -206,7 +280,7 @@ export function GapsRoadmap({
           <TableBody>
             {gaps.map((gap) => (
               <TableRow key={gap.technique_id}>
-                <TableCell className="px-2 py-1.5 text-[11px] text-muted-foreground">
+                <TableCell className="px-2 py-1.5 text-[11px] font-medium tabular-nums">
                   {gap.rank}
                 </TableCell>
                 <TableCell className="px-2 py-1.5">
