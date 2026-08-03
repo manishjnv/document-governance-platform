@@ -43,6 +43,7 @@ pasted into a fresh session. Check off phases here as they complete.
 | A6 | Customer template upgrade + optional health columns | ☑ |
 | A7 | Sentinel data-connector auto-import | ☑ |
 | A8 | Threat-profile expansion + region weighting | ☑ |
+| A9 | Report consolidation: XLSX Technique Tracker + PDF roadmap dedup | ☐ |
 
 Deliberately dropped: "covered"→"has detection" relabel (pure
 positioning — needs a user decision, not a build session; raise it when
@@ -341,4 +342,84 @@ resolve `ok`, every entry cites a public source in-file):
 Acceptance: suite green, all ids resolve ok (test-enforced), sources
 cited for 100% of new entries. Report: diff + entry-count table +
 changelog <200 words.
+```
+
+## Phase A9 — Report consolidation: XLSX Technique Tracker + PDF roadmap dedup
+
+Added 2026-08-03 after UI testing on the Acme sample (841 gaps). User
+decision: merge the three overlapping XLSX sheets into one working
+tracker; PDF keeps 100% of its content but stops repeating it (the
+Phase 14i print-once-reference-elsewhere pattern).
+
+```text
+Read CLAUDE.md, docs/planning/MITRE_MODULE_REFERENCE.md §11 (reports)
++ §13, apps/api/app/mitre/report_xlsx.py, report.py, report_common.py,
+templates/ (base/executive/detail), and the Ground rules of
+docs/planning/MITRE_ACCURACY_IMPROVEMENT_PLAN.md. Report layer ONLY:
+no coverage/ranking/pipeline change, no migration, no new settings.
+Backend baseline 859 passed / 7 skipped (858 + the A7-hardening
+regression test, commit 64b99e4); tsc clean.
+
+PART 1 — XLSX: replace the "Technique Register", "Gaps &
+Recommendations", and "Roadmap" sheets with ONE "Technique Tracker"
+sheet (Roadmap is the same gap dicts re-bucketed; Gaps is a subset of
+the Register — pure duplication today). One row per applicable
+technique (covered rows keep gap-only columns blank), NO interleaved
+section-header rows (they break sort/filter), auto-filter across the
+whole sheet, frozen header. Columns in order:
+  Technique ID | Name | Tactic(s) | Domain | State (plain words) |
+  Why (derive_why) | Strength | Priority (numeric with "P"0 format —
+  14h pattern) | Threat match | Crown jewel | Feasibility | Roadmap
+  bucket (Short/Mid/Long as a VALUE) | Recommendation (narrative
+  override else hint) | Log fields needed (telemetry_lines) | Via |
+  Owner | Status | Target date | Notes
+The last four are BLANK customer-tracking columns (that is the point
+of the merge — a working tracker). Keep: _guard on every attacker-
+influenced cell, ColorScaleRule on Priority, state fills, wrapped
+text. N/A, Assumptions, Summary, Coverage by Tactic, Use-Case
+Mappings, Read Me, How We Read Your Files sheets are UNCHANGED except
+the Read Me guide text, which must describe the new sheet. Update the
+scope pruning map in the export endpoint: scopes that previously kept
+Register/Gaps/Roadmap now keep the Tracker (check router.py +
+report_xlsx.py for how scope prunes sheets; gaps and coverage scopes
+both keep Tracker).
+
+PART 2 — PDF: keep ALL content, remove only repetition. The roadmap
+section currently re-renders full gap entries the register already
+printed. Keep the roadmap prose (short/mid/long narrative), bucket
+counts, and effort-to-impact projection; replace the re-listed gap
+entries with a compact per-bucket INDEX TABLE: Technique ID, Name,
+Priority, and a "details p. N" cross-reference into that gap's
+register entry — use the existing target-counter page-ref pattern
+from Phase 14e (executive.html "details p. N"); register entries
+need stable anchor ids if they lack them. The gap register itself is
+untouched (single home of per-gap detail). Executive scope output
+unchanged; the gaps tab scope keeps register + roadmap index. On the
+841-gap Acme-class sample this should cut a large share of pages —
+report the before/after page count from a real render.
+
+Tests (test_mitre_report.py): rewrite the XLSX structure goldens for
+the Tracker (headers exact, one covered row with blank gap columns +
+blank tracking columns, one gap row fully populated, sheet count,
+formula-guard readback on the new columns, scope pruning); PDF golden
+for the roadmap index table (IDs present, no duplicated recommendation
+text in the roadmap section, cross-ref markup present). Run the FULL
+backend suite alone on edgp_test (check pg_stat_activity first) +
+npx tsc --noEmit; expect 859+/7 — update the CLAUDE.md baseline line.
+
+Docs: MITRE_MODULE_REFERENCE.md §11 (both report descriptions) + §13
+test table + §15 history row; IMPLEMENTATION_PROGRESS.md; tick A9 in
+this plan's status table. Commit per logical unit (xlsx / pdf / docs).
+
+DEPLOY (authorized): push to master, standard VPS loop (docker compose
+-f docker-compose.vps.yml build + GIT_SHA up -d; no migration), then
+smoke on https://scopewise.assessiq.in: download full XLSX for the
+"Acme MITRE Assessment" — Tracker sheet present with tracking columns,
+the three old sheets gone, Read Me updated; download full PDF —
+roadmap section shows prose + index tables with page numbers, register
+intact; scoped exports (gaps XLSX + gaps PDF + executive PDF) all
+still 200. Touch ONLY scopewise-* containers.
+
+Report: per-part diff summary, before/after PDF page count, XLSX sheet
+list before/after, suite + tsc results, deploy SHA + smoke table.
 ```
