@@ -45,6 +45,9 @@ export function CoverageHeatmap({
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [stateFilter, setStateFilter] = useState<Set<string>>(new Set());
   const [platformFilter, setPlatformFilter] = useState<Set<string>>(new Set());
+  // Navigator-style sub-technique roll-up: hide subs, badge parents with
+  // "covered/applicable subs". Purely visual — header counts stay truthful.
+  const [hideSubs, setHideSubs] = useState(false);
 
   const toggleCollapsed = (domainKey: string) =>
     setCollapsed((prev) => {
@@ -89,6 +92,23 @@ export function CoverageHeatmap({
       pct: applicable ? Math.round((100 * covered) / applicable) : 0,
     };
   };
+
+  // parent technique id -> covered/applicable among its sub-techniques,
+  // for the badge shown when sub-techniques are collapsed.
+  const subStats = useMemo(() => {
+    const map = new Map<string, { covered: number; applicable: number }>();
+    for (const t of techniques) {
+      if (!t.technique_id.includes('.')) continue;
+      const parent = t.technique_id.split('.')[0];
+      const s = map.get(parent) ?? { covered: 0, applicable: 0 };
+      if (t.state !== 'not_applicable') {
+        s.applicable += 1;
+        if (t.state === 'covered') s.covered += 1;
+      }
+      map.set(parent, s);
+    }
+    return map;
+  }, [techniques]);
 
   // Per-platform coverage chips, biggest estates first — so a Windows+Linux
   // customer sees their own platforms lead the row.
@@ -242,6 +262,27 @@ export function CoverageHeatmap({
             Show all
           </button>
         )}
+        <Tooltip delayDuration={150}>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-pressed={hideSubs}
+              onClick={() => setHideSubs((v) => !v)}
+              className={cn(
+                'rounded border px-1.5 py-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                hideSubs
+                  ? 'border-primary/40 bg-muted font-medium'
+                  : 'border-transparent bg-muted/40'
+              )}
+            >
+              {hideSubs ? 'Sub-techniques hidden' : 'Hide sub-techniques'}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs text-xs">
+            Collapse the matrix to parent techniques only — each parent shows how many
+            of its sub-techniques are covered. Coverage counts don&apos;t change.
+          </TooltipContent>
+        </Tooltip>
         <span className="text-muted-foreground">Click any technique for details.</span>
       </div>
 
@@ -335,28 +376,43 @@ export function CoverageHeatmap({
                       </TooltipContent>
                     </Tooltip>
     <div className="flex flex-col gap-1">
-                      {cells.map((t) => {
+                      {(hideSubs
+                        ? cells.filter((t) => !t.technique_id.includes('.'))
+                        : cells
+                      ).map((t) => {
                         const meta = STATE_META[t.state] ?? STATE_META.not_applicable;
                         const detail =
                           t.state === 'not_applicable' && t.na_reason
                             ? t.na_reason
                             : STATE_PLAIN[t.state] ?? meta.label;
+                        const subs = hideSubs ? subStats.get(t.technique_id) : undefined;
+                        const subTip =
+                          subs && subs.applicable > 0
+                            ? ` ${subs.covered} of ${subs.applicable} sub-techniques covered (hidden).`
+                            : '';
                         return (
                           <button
                             key={t.technique_id}
                             type="button"
                             onClick={() => onSelectTechnique(t.technique_id)}
-                            data-tip={`${t.technique_id}${t.name ? ` — ${t.name}` : ''}\n${meta.label}: ${detail}. Click for details.`}
+                            data-tip={`${t.technique_id}${t.name ? ` — ${t.name}` : ''}\n${meta.label}: ${detail}.${subTip} Click for details.`}
                             onFocus={(e) => showTip(e.target as Element)}
                             onBlur={hideTip}
                             className={cn(
-                              'w-full truncate rounded px-1.5 py-1 text-left text-[11px] leading-tight transition-colors',
+                              'flex w-full items-center gap-1 rounded px-1.5 py-1 text-left text-[11px] leading-tight transition-colors',
                               meta.cell,
                               t.technique_id.includes('.') && 'ml-2 w-[calc(100%-0.5rem)]'
                             )}
                           >
-                            <span className="font-medium">{t.technique_id}</span>
-                            {t.name && <span className="opacity-85"> {t.name}</span>}
+                            <span className="min-w-0 flex-1 truncate">
+                              <span className="font-medium">{t.technique_id}</span>
+                              {t.name && <span className="opacity-85"> {t.name}</span>}
+                            </span>
+                            {subs && subs.applicable > 0 && (
+                              <span className="shrink-0 rounded bg-black/15 px-1 text-[10px] tabular-nums">
+                                {subs.covered}/{subs.applicable}
+                              </span>
+                            )}
                           </button>
                         );
                       })}
