@@ -97,6 +97,12 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
     # Clearly visible grid (the earlier pale blue read as "no border" in Excel)
     thin = Side(style="thin", color="8496AD")
     cell_border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    # Phase A11: ONE consistent branded header fill/font, audited and made
+    # uniform across every sheet (some previously had bold-but-unfilled
+    # headers, others only brand-filled their section-title bars).
+    BRAND = "0057B8"
+    white_bold = Font(bold=True, color="FFFFFF")
+    title_font = Font(bold=True, size=14, color="FFFFFF")
 
     def fill(color):
         return PatternFill(start_color=color, end_color=color, fill_type="solid")
@@ -107,7 +113,8 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
         ws.title = title
         ws.append([_guard(h) for h in headers])
         for cell in ws[1]:
-            cell.font = bold
+            cell.font = white_bold
+            cell.fill = fill(BRAND)
             if borders:
                 cell.border = cell_border
             if cell.column in center_cols:
@@ -176,11 +183,6 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
 
     # ------------------------- Summary (redesigned post-14: sectioned, ----
     # ------------------------- colored, with an executive summary) --------
-    from openpyxl.styles import Font as _Font
-
-    BRAND = "0057B8"
-    white_bold = _Font(bold=True, color="FFFFFF")
-    title_font = _Font(bold=True, size=14, color="FFFFFF")
 
     def _pct_fill_color(pct):
         value = float(pct or 0)
@@ -259,7 +261,8 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
 
     section("KEY NUMBERS")
     sum_row(["Metric", "Value", "What it means"],
-            fonts={1: bold, 2: bold, 3: bold}, center=(2,))
+            fills={1: BRAND, 2: BRAND, 3: BRAND},
+            fonts={1: white_bold, 2: white_bold, 3: white_bold}, center=(2,))
     r = sum_row(["Coverage %", overall.get("strict_pct"),
                  "Of the techniques that apply to your environment, the share "
                  "with at least one qualifying detection rule."], center=(2,))
@@ -295,7 +298,8 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
     if top_gaps:
         section("TOP 5 THINGS TO FIX FIRST")
         sum_row(["Gap", "Effort", "Recommendation"],
-                fonts={1: bold, 2: bold, 3: bold}, center=(2,))
+                fills={1: BRAND, 2: BRAND, 3: BRAND},
+                fonts={1: white_bold, 2: white_bold, 3: white_bold}, center=(2,))
         for g in top_gaps:
             r = sum_row([
                 f"#{g.get('rank')} {g.get('technique_id')} {g.get('name')}",

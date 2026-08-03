@@ -382,6 +382,32 @@ def test_xlsx_tracker_formula_guard():
 
 
 @pytest.mark.asyncio
+async def test_xlsx_a11_uniform_header_fill(db_session):
+    """Phase A11 piece 1: every sheet's header row shares ONE consistent
+    branded fill + white bold font (previously bold-but-unfilled on most
+    sheets; Summary's mini-table headers were bold-only too, only its
+    section-title bars were brand-filled)."""
+    org, user, _ = await _make_user(db_session)
+    assessment = await _seed(db_session, org, user)
+    wb = load_workbook(io.BytesIO(build_xlsx_export(assessment, [])))
+
+    brand_rgb, white_rgb = "000057B8", "00FFFFFF"
+    for name in (
+        "Read Me", "Coverage by Tactic", "Technique Tracker", "Use-Case Mappings",
+        "Coverage by Log Source", "Not Applicable", "Assumptions",
+    ):
+        header_cell = wb[name].cell(row=1, column=1)
+        assert header_cell.fill.fgColor.rgb == brand_rgb, name
+        assert header_cell.font.color.rgb == white_rgb, name
+
+    # Summary's mini-table headers get the same treatment (previously bold-only)
+    ws_sum = wb["Summary"]
+    metric_header = next(r for r in ws_sum.iter_rows() if r[0].value == "Metric")
+    assert metric_header[0].fill.fgColor.rgb == brand_rgb
+    assert metric_header[0].font.color.rgb == white_rgb
+
+
+@pytest.mark.asyncio
 async def test_xlsx_scope_pruning(db_session):
     """Phase A9: coverage and gaps per-tab downloads both keep the merged
     Tracker sheet (it now carries both roles); assumptions is unaffected."""
