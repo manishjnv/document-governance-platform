@@ -14,6 +14,16 @@ const NON_PLATFORMS = new Set(['pre', 'none']);
 const realPlatforms = (t: TechniqueResult) =>
   (t.platforms ?? []).filter((p) => !NON_PLATFORMS.has(p.toLowerCase()));
 
+// Navigator-style score gradient for covered cells: darker green = more
+// rules map here. One rule = coverage hanging on a single detection.
+const DEPTH_CELLS: [string, string][] = [
+  ['1 rule', 'bg-emerald-400/75 text-white hover:bg-emerald-500'],
+  ['2–3 rules', 'bg-emerald-500/85 text-white hover:bg-emerald-600'],
+  ['4+ rules', 'bg-emerald-700/90 text-white hover:bg-emerald-800'],
+];
+const depthCell = (ruleCount: number) =>
+  DEPTH_CELLS[ruleCount <= 1 ? 0 : ruleCount <= 3 ? 1 : 2][1];
+
 /** Navigator-style tactic-column heatmap, plain CSS grid — no charting
  * dependency. Cells show "ID Name" (truncated — no extra area per TTP) and
  * click -> drawer for full detail. Hover context comes from ONE delegated
@@ -243,12 +253,23 @@ export function CoverageHeatmap({
                     dimmed && 'opacity-40'
                   )}
                 >
-                  <span className={cn('h-3 w-3 rounded-sm', meta.cell.split(' ')[0])} />
+                  {state === 'covered' ? (
+                    <span className="flex h-3 w-[18px] overflow-hidden rounded-sm">
+                      {DEPTH_CELLS.map(([label, cls]) => (
+                        <span key={label} className={cn('flex-1', cls.split(' ')[0])} />
+                      ))}
+                    </span>
+                  ) : (
+                    <span className={cn('h-3 w-3 rounded-sm', meta.cell.split(' ')[0])} />
+                  )}
                   {meta.label}
                 </button>
               </TooltipTrigger>
               <TooltipContent className="max-w-xs text-xs">
-                {meta.tip} Click to show only these techniques.
+                {meta.tip}
+                {state === 'covered' &&
+                  ' Darker green = more rules detect it (1, 2–3, 4+); the lightest shade means coverage rests on a single rule.'}{' '}
+                Click to show only these techniques.
               </TooltipContent>
             </Tooltip>
           );
@@ -390,17 +411,22 @@ export function CoverageHeatmap({
                           subs && subs.applicable > 0
                             ? ` ${subs.covered} of ${subs.applicable} sub-techniques covered (hidden).`
                             : '';
+                        const ruleCount = t.use_case_refs.length;
+                        const depthTip =
+                          t.state === 'covered'
+                            ? ` ${ruleCount} rule${ruleCount === 1 ? '' : 's'} map${ruleCount === 1 ? 's' : ''} here.`
+                            : '';
                         return (
                           <button
                             key={t.technique_id}
                             type="button"
                             onClick={() => onSelectTechnique(t.technique_id)}
-                            data-tip={`${t.technique_id}${t.name ? ` — ${t.name}` : ''}\n${meta.label}: ${detail}.${subTip} Click for details.`}
+                            data-tip={`${t.technique_id}${t.name ? ` — ${t.name}` : ''}\n${meta.label}: ${detail}.${depthTip}${subTip} Click for details.`}
                             onFocus={(e) => showTip(e.target as Element)}
                             onBlur={hideTip}
                             className={cn(
                               'flex w-full items-center gap-1 rounded px-1.5 py-1 text-left text-[11px] leading-tight transition-colors',
-                              meta.cell,
+                              t.state === 'covered' ? depthCell(ruleCount) : meta.cell,
                               t.technique_id.includes('.') && 'ml-2 w-[calc(100%-0.5rem)]'
                             )}
                           >
