@@ -90,10 +90,31 @@ clean (no frontend changes this phase).
 
 ## Deploy
 
-Authorized per the phase's DEPLOY section. See the deploy commit's
-message / this session's final report message for the SHA and smoke
-table (VPS: `https://scopewise.assessiq.in`, containers `scopewise-*`
-only, no migration this phase).
+Authorized per the phase's DEPLOY section. Pushed `6af5a3c..e91e495` to
+`origin/master`. VPS (`assessiq-vps`, `/opt/scopewise`): `git pull`
+(fast-forward) → `docker compose -f docker-compose.vps.yml build api` →
+`GIT_SHA=e91e495 docker compose -f docker-compose.vps.yml up -d api`.
+Only `scopewise-api` recreated (worker/web/redis/postgres untouched, no
+migration this phase). Healthy within 30s.
+
+### Smoke test results (all pass, against the real "Acme MITRE
+Assessment", `0fe2d3e2-7d59-4385-abbe-7055c49130fa`)
+
+| Check | Result |
+| --- | --- |
+| `GET /mitre` | 200 |
+| `GET /api/v1/mitre/assessments` (unauth) | 401 |
+| `GET /api/v1/health` | 200 |
+| `export.xlsx` (full) | 200 — sheets: Read Me, Summary, Coverage by Tactic, **Technique Tracker**, Use-Case Mappings, Not Applicable, Assumptions, How We Read Your Files (the three old sheets gone); Tracker headers exact (19 cols); 911 data rows; Read Me mentions "Technique Tracker" |
+| `export.xlsx?scope=gaps` | 200 — sheets: `['Technique Tracker']` only |
+| `report?format=pdf` (full) | 200, valid `%PDF-` — **219 pages** on the real prod assessment; "Roadmap" and "Gap register" headings present, "details p." cross-ref markers present |
+| `report?format=pdf&scope=gaps` | 200 |
+| `report?format=pdf&scope=executive` | 200 |
+
+No new DB rows created for this smoke test (minted a JWT for the
+existing Acme-org admin user via `app.auth.create_access_token` run
+inside the live `scopewise-api` container — nothing written to the DB,
+nothing to clean up).
 
 ## Docs touched
 
