@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, FileSpreadsheet } from 'lucide-react';
-import { Assessment, Summary, UseCaseItem } from '../lib';
+import { Assessment, LogSourceCoverageGroup, Summary, UseCaseItem } from '../lib';
 
 /** Phase 14g: one parsed environment entry's evidence line. */
 interface EnvInterpretation {
@@ -27,6 +27,7 @@ export function UploadSummaryCard({
   onDrillRules: (title: string, rules: UseCaseItem[]) => void;
 }) {
   const [envOpen, setEnvOpen] = useState(false);
+  const [logSourceOpen, setLogSourceOpen] = useState(false);
   const params = (assessment.params ?? {}) as {
     environment?: {
       platforms?: string[];
@@ -52,6 +53,14 @@ export function UploadSummaryCard({
   const interpretations = lists.interpretations ?? [];
   const unmatchedNote = (params.parse_assumptions ?? []).find((a) =>
     a.startsWith('asset entries not mapped')
+  );
+  // Phase A10 piece 3: what each declared log source actually buys you.
+  const logSourceGroups: LogSourceCoverageGroup[] = assessment.log_source_coverage ?? [];
+  // Phase A10 piece 4: the "Infoblox problem" -- a device whose main
+  // security value depends on telemetry nobody declared. Same assumptions
+  // slot as everything else, just highlighted here by a stable prefix.
+  const unmonitoredFindings = (summary.assumptions ?? []).filter((a) =>
+    a.startsWith('Your inventory lists a ')
   );
 
   const splitChips: { key: string; label: string; status: string }[] = [
@@ -136,17 +145,67 @@ export function UploadSummaryCard({
               <p className="mt-1 text-xs text-muted-foreground">
                 Platforms: {(env.platforms ?? []).join(', ') || 'none detected'}
                 {' · '}
-                {(lists.log_sources ?? []).length} log source
-                {(lists.log_sources ?? []).length === 1 ? '' : 's'}
+                {logSourceGroups.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setLogSourceOpen((v) => !v)}
+                    aria-expanded={logSourceOpen}
+                    title="See what each log source actually detects for you"
+                    className="underline decoration-dotted underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {(lists.log_sources ?? []).length} log source
+                    {(lists.log_sources ?? []).length === 1 ? '' : 's'}
+                  </button>
+                ) : (
+                  <>
+                    {(lists.log_sources ?? []).length} log source
+                    {(lists.log_sources ?? []).length === 1 ? '' : 's'}
+                  </>
+                )}
                 {' · '}
                 {(lists.tooling ?? []).length} tooling
                 {' · '}
                 {(lists.crown_jewels ?? []).length} crown jewel
                 {(lists.crown_jewels ?? []).length === 1 ? '' : 's'}
               </p>
+              {logSourceOpen && logSourceGroups.length > 0 && (
+                <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                  {logSourceGroups.map((g) => (
+                    <li key={g.log_source}>
+                      <button
+                        type="button"
+                        title={`See the ${g.rule_count} rule${g.rule_count === 1 ? '' : 's'} using ${g.log_source}`}
+                        onClick={() =>
+                          onDrillRules(
+                            `What ${g.log_source} gives you: ${g.rule_count} rule${
+                              g.rule_count === 1 ? '' : 's'
+                            } alerting on ${g.techniques_covered} technique${
+                              g.techniques_covered === 1 ? '' : 's'
+                            }`,
+                            useCases.filter((uc) => g.row_refs.includes(uc.row_ref))
+                          )
+                        }
+                        className={chipCls}
+                      >
+                        {g.log_source}: {g.rule_count} rule{g.rule_count === 1 ? '' : 's'} → {g.techniques_covered}{' '}
+                        technique{g.techniques_covered === 1 ? '' : 's'}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
               {unmatchedNote && (
                 <p className="mt-1 text-xs text-amber-700">{unmatchedNote}</p>
               )}
+              {unmonitoredFindings.map((finding, i) => (
+                <p
+                  key={i}
+                  title="Declared devices whose main telemetry was never onboarded — no claim is made about anything not in your own sheets"
+                  className="mt-1 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800"
+                >
+                  {finding}
+                </p>
+              ))}
               {interpretations.length > 0 && (
                 <div className="mt-1.5">
                   <button

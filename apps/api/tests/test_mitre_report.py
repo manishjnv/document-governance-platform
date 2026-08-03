@@ -143,6 +143,56 @@ def test_formula_guard():
     assert _guard(None) is None
 
 
+# --- Phase A10 piece 3: coverage by log source ---
+
+def test_log_source_coverage_groups_by_normalized_log_source():
+    from app.mitre import attack_data
+    from app.mitre.report_common import OTHER_LOG_SOURCE, compute_log_source_coverage
+
+    use_cases = [
+        {"row_ref": "s:1", "log_source": "Sysmon",
+         "mappings": [{"technique_id": "T1059.001"}]},
+        {"row_ref": "s:2", "log_source": "sysmon",  # case variant -> same group
+         "mappings": [{"technique_id": "T1112"}]},
+        {"row_ref": "s:3", "log_source": "CloudTrail",
+         "mappings": [{"technique_id": "T1078"}]},
+        {"row_ref": "s:4", "log_source": None, "mappings": []},
+    ]
+    technique_results = _results(
+        {"T1059.001": "covered", "T1112": "partial", "T1078": "not_covered"}
+    )
+    groups = compute_log_source_coverage(use_cases, technique_results, attack_data.DEFAULT)
+    by_name = {g["log_source"]: g for g in groups}
+
+    assert by_name["Sysmon"]["rule_count"] == 2
+    assert by_name["Sysmon"]["techniques_covered"] == 2
+    assert {t["technique_id"] for t in by_name["Sysmon"]["techniques"]} == {
+        "T1059.001", "T1112",
+    }
+    assert "Execution" in by_name["Sysmon"]["tactics"]
+    assert by_name["Sysmon"]["row_refs"] == ["s:1", "s:2"]
+    assert by_name["CloudTrail"]["rule_count"] == 1
+
+    # rules with no log_source never get dropped
+    assert OTHER_LOG_SOURCE in by_name
+    assert by_name[OTHER_LOG_SOURCE]["rule_count"] == 1
+    # "Other" sorts last regardless of count
+    assert groups[-1]["log_source"] == OTHER_LOG_SOURCE
+
+
+def test_log_source_coverage_ignores_unresolvable_technique_ids():
+    from app.mitre import attack_data
+    from app.mitre.report_common import compute_log_source_coverage
+
+    use_cases = [
+        {"row_ref": "s:1", "log_source": "Sysmon",
+         "mappings": [{"technique_id": "T9999.999"}]},
+    ]
+    groups = compute_log_source_coverage(use_cases, [], attack_data.DEFAULT)
+    assert groups[0]["techniques"] == []
+    assert groups[0]["techniques_covered"] == 0
+
+
 @pytest.mark.asyncio
 async def test_html_report_escapes_untrusted_strings(db_session):
     org, user, _ = await _make_user(db_session)
@@ -219,7 +269,7 @@ async def test_xlsx_formula_injection_guard(db_session):
     wb = load_workbook(io.BytesIO(build_xlsx_export(assessment, use_cases)))
     assert set(wb.sheetnames) == {
         "Read Me", "Summary", "Coverage by Tactic", "Technique Tracker",
-        "Use-Case Mappings", "Not Applicable", "Assumptions",
+        "Use-Case Mappings", "Coverage by Log Source", "Not Applicable", "Assumptions",
     }
     assert wb.sheetnames[0] == "Read Me"                # Phase 14c guide sheet
     ws = wb["Use-Case Mappings"]

@@ -73,3 +73,75 @@ def resolve_branding(branding: dict | None) -> dict:
     if not isinstance(color, str) or not _HEX_COLOR_RE.match(color):
         merged["report_accent_color"] = DEFAULT_BRANDING["report_accent_color"]
     return merged
+
+
+# --- Phase A10 piece 3: coverage by log source ----------------------------
+
+OTHER_LOG_SOURCE = "Other / unrecognized"
+
+
+def compute_log_source_coverage(use_cases, technique_results, index) -> list:
+    """Deterministic read-time grouping (plan phase A10 piece 3): detection
+    rules grouped by their log_source, normalized through ranking.py's own
+    text normalizer (``ranking._norm`` — reused, never a second one) so
+    case/punctuation variants of the same source collapse into one group;
+    the group's display name is the first raw log_source text seen. Rules
+    with no log_source (or nothing recognizable) land in
+    ``OTHER_LOG_SOURCE`` — never dropped. No pipeline change: use_cases and
+    technique_results are the exact same stored data every other read-time
+    view (drill-downs, explain endpoint) already consumes.
+
+    Returns [{"log_source", "rule_count", "techniques_covered", "tactics",
+    "techniques": [{"technique_id", "name", "state"}], "row_refs": [...]}],
+    sorted by rule count (desc) then log source name, with
+    ``OTHER_LOG_SOURCE`` always last regardless of count. Pure; no AI.
+    """
+    from .ranking import _norm as _log_source_norm
+
+    results_by_id = {r.get("technique_id"): r for r in technique_results or []}
+    groups: dict = {}
+    for uc in use_cases or []:
+        raw = str(uc.get("log_source") or "").strip()
+        key = _log_source_norm(raw) if raw else ""
+        display = raw or OTHER_LOG_SOURCE
+        bucket = groups.setdefault(
+            key, {"display": display, "rule_count": 0, "technique_ids": set(), "row_refs": []}
+        )
+        bucket["rule_count"] += 1
+        if uc.get("row_ref"):
+            bucket["row_refs"].append(uc["row_ref"])
+        for mapping in uc.get("mappings") or []:
+            canonical, _status = index.resolve(
+                str(mapping.get("technique_id", "")).strip().upper()
+            )
+            if canonical:
+                bucket["technique_ids"].add(canonical)
+
+    rows = []
+    for bucket in groups.values():
+        techniques = []
+        tactics = set()
+        for tid in sorted(bucket["technique_ids"]):
+            result = results_by_id.get(tid)
+            tech = index.get(tid) or {}
+            techniques.append({
+                "technique_id": tid,
+                "name": tech.get("name", tid),
+                "state": result.get("state") if result else None,
+            })
+            if result:
+                tactic_names = {t["id"]: t["name"] for t in index.tactics(result.get("domain"))}
+                tactics.update(
+                    tactic_names[t] for t in (result.get("tactics") or []) if t in tactic_names
+                )
+        rows.append({
+            "log_source": bucket["display"],
+            "rule_count": bucket["rule_count"],
+            "techniques_covered": len(techniques),
+            "tactics": sorted(tactics),
+            "techniques": techniques,
+            "row_refs": bucket["row_refs"],
+        })
+
+    rows.sort(key=lambda r: (r["log_source"] == OTHER_LOG_SOURCE, -r["rule_count"], r["log_source"]))
+    return rows

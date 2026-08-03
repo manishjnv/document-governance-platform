@@ -157,6 +157,17 @@ export interface TechniqueResult {
   platforms?: string[];
 }
 
+/** Phase A10 piece 3: one "what does this log source buy you" group,
+ * computed at read time (report_common.compute_log_source_coverage). */
+export interface LogSourceCoverageGroup {
+  log_source: string;
+  rule_count: number;
+  techniques_covered: number;
+  tactics: string[];
+  techniques: { technique_id: string; name: string; state: string | null }[];
+  row_refs: string[];
+}
+
 export interface Assessment {
   assessment_id: string;
   name: string;
@@ -165,6 +176,8 @@ export interface Assessment {
   params: Record<string, unknown> | null;
   summary: Summary | null;
   technique_results: TechniqueResult[] | null;
+  /** Phase A10 piece 3: present only once the assessment has completed. */
+  log_source_coverage?: LogSourceCoverageGroup[] | null;
   error_message: string | null;
   created_at: string | null;
   completed_at: string | null;

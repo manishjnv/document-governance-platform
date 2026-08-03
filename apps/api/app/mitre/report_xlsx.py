@@ -18,6 +18,7 @@ from app.mitre.report_common import (
     _MAPPING_STATUS_PLAIN_XLSX,
     _ordered_domains,
     _row_ref_sort_key,
+    compute_log_source_coverage,
     resolve_branding,
 )
 
@@ -61,7 +62,11 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
     columns blank for covered rows, plus blank Owner/Status/Target date/Notes
     columns so it doubles as a working tracker. 'Log fields needed' is
     curated per data-source component via plain_language.telemetry_lines;
-    blank for techniques with no curated component.
+    blank for techniques with no curated component. Phase A10 piece 3 adds
+    'Coverage by Log Source' — one row per detection-rule log source
+    (report_common.compute_log_source_coverage, shared with the results-
+    page drill-down so the two views can't drift), excluded from scoped
+    downloads the same way 'Use-Case Mappings' already is.
 
     branding: optional org overrides (display name/accent/watermark — plan
     §14h). Resolved here for a consistent shape across callers; workbook
@@ -145,6 +150,8 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
          "for gaps — the recommendation, roadmap bucket, and blank Owner/Status/Target date/"
          "Notes columns for you to fill in as you work the plan."],
         ["Use-Case Mappings", "Your rules, one per row, with how each was mapped."],
+        ["Coverage by Log Source", "What each log source (e.g. Sysmon, CloudTrail) buys you: "
+         "how many rules use it and which techniques/attack stages those rules cover."],
         ["Not Applicable", "Techniques that don't count toward your score, with reasons."],
         ["Assumptions", "What we had to assume — read before trusting the numbers."],
         [],
@@ -459,6 +466,27 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
         ],
         [10, 42, 9, 30, 22, 12, 12, 16, 60, 60],
         center_cols=(3, 6),
+    )
+
+    # ------------------------------------------------------ Coverage by Log Source
+    # Phase A10 piece 3: "see what each device buys you" — deterministic
+    # read-time grouping, same function the results-page drill-down uses
+    # (report_common.compute_log_source_coverage), so the sheet and the UI
+    # can never drift apart.
+    log_source_groups = compute_log_source_coverage(
+        use_cases, assessment.technique_results or [], index
+    )
+    sheet(
+        "Coverage by Log Source",
+        ["Log source", "Rules", "Techniques covered", "Attack stages", "Techniques"],
+        [
+            [g["log_source"], g["rule_count"], g["techniques_covered"],
+             ", ".join(g["tactics"]),
+             ", ".join(f"{t['technique_id']} {t['name']}" for t in g["techniques"])]
+            for g in log_source_groups
+        ],
+        [28, 10, 18, 40, 70],
+        center_cols=(2, 3),
     )
 
     sheet(

@@ -30,6 +30,7 @@ from app.mitre.connectors.base import ConnectorConfigError, ConnectorError
 from app.mitre.connectors.egress import EgressError
 from app.models.mitre_connection import MitreConnection
 from app.mitre import report as mitre_report
+from app.mitre import report_common
 from app.models.mitre_assessment import MitreAssessment
 from app.models.mitre_file import MitreFile
 from app.models.mitre_use_case import MitreUseCase
@@ -1355,6 +1356,19 @@ async def get_assessment(
         for f in files_result.scalars().all()
     ]
 
+    # Phase A10 piece 3: "coverage by log source" grouping — computed at
+    # read time from the same stored data every other view uses (no
+    # pipeline change); only worth the extra query once the run is
+    # complete (polling while running never reaches this branch).
+    log_source_coverage = None
+    if assessment.status == "completed":
+        use_cases = await _load_use_case_dicts(
+            db, assessment_id, UUID(str(current_user.org_id))
+        )
+        log_source_coverage = report_common.compute_log_source_coverage(
+            use_cases, assessment.technique_results or [], attack_data.DEFAULT
+        )
+
     return {
         "files": files,
         "assessment_id": str(assessment.assessment_id),
@@ -1364,6 +1378,7 @@ async def get_assessment(
         "params": assessment.params,
         "summary": assessment.summary,
         "technique_results": technique_results,
+        "log_source_coverage": log_source_coverage,
         "error_message": assessment.error_message,
         "created_at": assessment.created_at.isoformat() if assessment.created_at else None,
         "completed_at": assessment.completed_at.isoformat() if assessment.completed_at else None,
