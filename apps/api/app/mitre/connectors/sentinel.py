@@ -277,7 +277,7 @@ def _pull_data_connectors(config: dict, auth_headers: dict) -> tuple:
         for connector in connectors[:MAX_CONNECTORS]:
             if not isinstance(connector, dict):
                 continue  # malformed entry -- skip, never crash
-            kind = str(connector.get("kind") or "").strip()
+            kind = str(connector.get("kind") or "").strip()[:200]
             if not kind:
                 continue
             source = _DATA_CONNECTOR_KIND_TO_SOURCE.get(kind)

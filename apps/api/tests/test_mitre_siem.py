@@ -411,6 +411,23 @@ def test_data_connector_malformed_entries_degrade_not_crash(monkeypatch):
     assert result["derived_log_sources"] == ["Office 365"]  # the one valid entry still mapped
 
 
+def test_data_connector_giant_kind_is_truncated(monkeypatch):
+    # Independent adversarial review finding (2026-08-03): an uncapped
+    # attacker-controlled `kind` flows into stored assumptions and can
+    # exceed Excel's 32,767-char cell limit, permanently breaking XLSX
+    # export for the assessment. Must be truncated like every other
+    # attacker string in the module.
+    giant = "K" * 50_000
+    _fake_sentinel_fetch(
+        monkeypatch,
+        [(200, {"value": _RULES})],
+        dc_pages=[(200, {"value": [{"kind": giant}, {"kind": "Office365"}]})],
+    )
+    result = sentinel.pull(sentinel.validate_config(_GOOD_CONFIG), "s")
+    assert result["derived_log_sources"] == ["Office 365"]
+    assert all(len(k) <= 200 for k in result["unmapped_connectors"])
+
+
 @pytest.mark.asyncio
 async def test_from_siem_auto_imports_log_sources_end_to_end(client, db_session, monkeypatch):
     _fake_sentinel_fetch(
