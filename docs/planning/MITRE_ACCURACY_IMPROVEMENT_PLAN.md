@@ -46,7 +46,7 @@ pasted into a fresh session. Check off phases here as they complete.
 | A9 | Report consolidation: XLSX Technique Tracker + PDF roadmap dedup | ☑ |
 | A10 | Device-level truth: platform synonyms, per-stream guidance, coverage-by-log-source, unmonitored-capability check | ☑ |
 | A11 | Report/template visual polish: XLSX header fills, template borders, executive PDF flow | ☑ |
-| A11 | Report/template visual polish: header fills, template borders, executive PDF flow | ☐ |
+| A12 | Scope auto-trend to the same customer (params JSONB, no migration) | ☐ |
 
 Deliberately dropped: "covered"→"has detection" relabel (pure
 positioning — needs a user decision, not a build session; raise it when
@@ -603,4 +603,74 @@ fills on every sheet). Touch ONLY scopewise-* containers.
 
 Report: per-piece diff summary, executive PDF page count before/after,
 suite + tsc results, deploy SHA, smoke table.
+```
+
+## Phase A12 — Scope auto-trend to the same customer
+
+Kickoff prompt for a fresh session (self-contained):
+
+```
+A12 — Scope MITRE auto-trend to the same customer
+
+Read docs/planning/MITRE_MODULE_REFERENCE.md and
+docs/planning/MITRE_ACCURACY_IMPROVEMENT_PLAN.md (status table) before
+touching anything under apps/api/app/mitre/ or apps/web/app/mitre/.
+
+PROBLEM (confirmed in code, 2026-08-03): The report's "Trend vs your
+previous run" block auto-picks the org's most recent completed
+assessment, filtered only by org_id — see the trend query in
+apps/api/app/mitre/router.py (~lines 1814-1838, "Phase 14e: trend
+block"). mitre_assessments (apps/api/app/models/mitre_assessment.py)
+has no customer/project field — only org_id + free-text name. For an
+org running assessments for multiple end customers, customer A's run
+gets diffed against customer B's last run, producing garbage like
+"applicability changed: 292" (real prod symptom, observed against
+"Acme MITRE Assessment"). Trend must only compare runs for the same
+customer.
+
+FIX SPEC (deliberately migration-free — do NOT add a column or
+migration):
+
+1. Storage: optional `customer` string (trim, cap ~200 chars,
+   empty -> absent) inside the existing params JSONB on
+   mitre_assessments.
+2. Intake: accept `customer` on the assessment-create API path and add
+   one optional text input ("Customer / engagement") on the
+   create/intake form in apps/web/app/mitre/. Show it in the
+   assessment list/detail where the name is shown, if trivial.
+3. Sentinel auto-import: stamp params["customer"] in
+   _create_assessment_from_pull (service + all 3 call sites incl.
+   scheduled pulls in tasks.py) from the connector/workspace name, so
+   scheduled re-runs group naturally.
+4. Trend query: add customer equality to the previous-run query in
+   router.py using NULL-safe semantics (IS NOT DISTINCT FROM;
+   SQLAlchemy is_not_distinct_from on params["customer"].astext) —
+   NULL matches NULL, so existing orgs with no customer set keep
+   today's behavior. When no prior run matches, the trend block is
+   already omitted (previous is None) — keep that.
+5. Unchanged: the explicit /assessments/{id}/compare/{other_id}
+   endpoint stays user-choice, no filter. The trend rendering in
+   apps/api/app/mitre/report.py (~line 299 trend_html) needs no
+   change. Check whether the compare block also feeds the XLSX report
+   and confirm nothing else consumes the auto-picked baseline.
+
+CONSTRAINTS:
+- No migration, no new tables/columns, no new dependencies.
+- Minimal targeted tests only (project rule): trend picks
+  same-customer baseline; NULL<->NULL still matches; cross-customer
+  run is skipped; customer is truncated/stamped on the sentinel path.
+- Backend baseline is 879 passed / 7 skipped
+  (cd apps/api && python -m pytest) — don't regress; update the
+  baseline line in CLAUDE.md if new tests land. Never run the suite
+  while another session is running it (shared edgp_test DB deadlocks —
+  check pg_stat_activity first).
+- Frontend: cd apps/web && npx tsc --noEmit must be clean.
+- Update the A-phase status table here (tick A12) and
+  docs/IMPLEMENTATION_PROGRESS.md at session end.
+- Do not commit/push/deploy until explicitly asked. Deployment, when
+  asked, follows the standard VPS loop in CLAUDE.md (no migration to
+  apply this time).
+
+Report: working code + tests green + a short summary of diffs per
+file.
 ```
