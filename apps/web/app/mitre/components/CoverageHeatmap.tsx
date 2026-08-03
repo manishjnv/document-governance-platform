@@ -2,6 +2,15 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { DOMAIN_LABELS, LogSourceCoverageGroup, STATE_META, STATE_PLAIN, Summary, TechniqueResult, ThreatGroup, orderedDomains } from '../lib';
@@ -87,6 +96,7 @@ export function CoverageHeatmap({
   // Log-source lens ("what does our EDR alone cover?"): filter to techniques
   // reached by rules from the selected log source(s). Keyed by display name.
   const [sourceFilter, setSourceFilter] = useState<Set<string>>(new Set());
+  const [sourceQuery, setSourceQuery] = useState('');
   const toggleSourceFilter = (source: string) =>
     setSourceFilter((prev) => {
       const next = new Set(prev);
@@ -127,6 +137,20 @@ export function CoverageHeatmap({
       [...sourceFilter].some((s) => sourceRowRefs.get(s)?.has(ref))
     );
   };
+  // Compact trigger for the lens dropdowns: label carries the selection so a
+  // closed menu never hides an active filter.
+  const lensLabel = (base: string, sel: Set<string>) =>
+    sel.size === 0
+      ? base
+      : `${base}: ${[...sel][0]}${sel.size > 1 ? ` +${sel.size - 1}` : ''}`;
+  const lensTriggerCls = (active: boolean) =>
+    cn(
+      'flex items-center gap-1 rounded border px-1.5 py-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+      active
+        ? 'border-primary/40 bg-muted font-medium'
+        : 'border-transparent bg-muted/40 hover:bg-muted'
+    );
+
   const matchesGroup = (t: TechniqueResult) =>
     !activeGroup || activeGroup.idSet.has(t.technique_id);
   const lensActive = platformFilter.size > 0 || sourceFilter.size > 0 || !!activeGroup;
@@ -226,140 +250,148 @@ export function CoverageHeatmap({
       onMouseOver={(e) => showTip(e.target as Element)}
       onMouseOut={hideTip}
     >
-      {/* Threat-group overlay — "how would we fare against APT29?" */}
-      {(threatGroups?.length ?? 0) > 0 && (
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <label htmlFor="threat-group-lens" className="text-muted-foreground">
-            Threat group:
-          </label>
-          <select
-            id="threat-group-lens"
-            value={groupId}
-            onChange={(e) => setGroupId(e.target.value)}
-            className="max-w-[260px] rounded border bg-background px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="">None — full matrix</option>
-            {(threatGroups ?? []).map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name} ({g.id})
-              </option>
-            ))}
-          </select>
-          {activeGroup &&
-            (() => {
-              const vs = countShown(
-                techniques.filter((t) => activeGroup.idSet.has(t.technique_id))
-              );
-              return (
-                <span>
-                  <span className="font-medium">
-                    {vs.covered}/{vs.applicable} of their techniques covered ({vs.pct}%)
-                  </span>
-                  {activeGroup.aliases.length > 0 && (
-                    <span className="text-muted-foreground">
-                      {' '}
-                      · aka {activeGroup.aliases.slice(0, 3).join(', ')}
-                    </span>
-                  )}
-                </span>
-              );
-            })()}
-        </div>
-      )}
-
-      {/* Platform chips — Navigator-style lens: click to show only techniques
-          that can run on that platform. Percentages are per-platform coverage
-          (covered / applicable among techniques tagged with that platform). */}
-      {platformStats.length > 1 && (
-        <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="text-muted-foreground">Runs on:</span>
-          {platformStats.map(([platform, s]) => {
-            const active = platformFilter.has(platform);
-            const dimmed = platformFilter.size > 0 && !active;
-            const pct = s.applicable ? Math.round((100 * s.covered) / s.applicable) : 0;
-            return (
-              <Tooltip key={platform} delayDuration={150}>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => togglePlatformFilter(platform)}
-                    className={cn(
-                      'flex items-center gap-1 rounded border px-1.5 py-0.5 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                      active ? 'border-primary/40 bg-muted font-medium' : 'border-transparent bg-muted/40',
-                      dimmed && 'opacity-40'
-                    )}
-                  >
-                    {platform}
-                    <span className="text-muted-foreground">{pct}%</span>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs text-xs">
-                  {s.covered} of {s.applicable} applicable techniques that can run on{' '}
-                  {platform} are covered ({pct}%). Click to show only techniques that can
-                  run on {platform}.
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
-          {platformFilter.size > 0 && (
-            <button
-              type="button"
-              onClick={() => setPlatformFilter(new Set())}
-              className="text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      {/* One compact filter bar: threat-group select + two multi-select
+          dropdown lenses. Per-item stats live inside the menus; the trigger
+          label always names the active selection. */}
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        {(threatGroups?.length ?? 0) > 0 && (
+          <>
+            <label htmlFor="threat-group-lens" className="text-muted-foreground">
+              Threat group:
+            </label>
+            <select
+              id="threat-group-lens"
+              value={groupId}
+              onChange={(e) => setGroupId(e.target.value)}
+              className="max-w-[260px] rounded border bg-background px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              All platforms
-            </button>
-          )}
-        </div>
-      )}
-      {/* Log-source chips — "what does this source alone buy you": click to
-          show only techniques reached by rules from that log source. */}
-      {(logSources?.length ?? 0) > 1 && (
-        <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="text-muted-foreground">Detected via:</span>
-          {(logSources ?? []).map((g) => {
-            const active = sourceFilter.has(g.log_source);
-            const dimmed = sourceFilter.size > 0 && !active;
-            return (
-              <Tooltip key={g.log_source} delayDuration={150}>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => toggleSourceFilter(g.log_source)}
-                    className={cn(
-                      'flex items-center gap-1 rounded border px-1.5 py-0.5 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                      active ? 'border-primary/40 bg-muted font-medium' : 'border-transparent bg-muted/40',
-                      dimmed && 'opacity-40'
-                    )}
+              <option value="">None — full matrix</option>
+              {(threatGroups ?? []).map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name} ({g.id})
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+        {platformStats.length > 1 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button" className={lensTriggerCls(platformFilter.size > 0)}>
+                {lensLabel('Runs on', platformFilter)}
+                <ChevronDown size={12} aria-hidden="true" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="max-h-80 w-64 overflow-y-auto">
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                Show only techniques that can run on… (% = coverage there)
+              </DropdownMenuLabel>
+              {platformFilter.size > 0 && (
+                <DropdownMenuItem
+                  className="text-xs"
+                  onSelect={() => setPlatformFilter(new Set())}
+                >
+                  Clear — all platforms
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              {platformStats.map(([platform, s]) => {
+                const pct = s.applicable
+                  ? Math.round((100 * s.covered) / s.applicable)
+                  : 0;
+                return (
+                  <DropdownMenuCheckboxItem
+                    key={platform}
+                    checked={platformFilter.has(platform)}
+                    onCheckedChange={() => togglePlatformFilter(platform)}
+                    onSelect={(e) => e.preventDefault()}
+                    className="text-xs"
                   >
-                    {g.log_source}
-                    <span className="text-muted-foreground">
+                    <span className="flex-1">{platform}</span>
+                    <span className="ml-2 tabular-nums text-muted-foreground">
+                      {s.covered}/{s.applicable} · {pct}%
+                    </span>
+                  </DropdownMenuCheckboxItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        {(logSources?.length ?? 0) > 1 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button" className={lensTriggerCls(sourceFilter.size > 0)}>
+                {lensLabel('Detected via', sourceFilter)}
+                <ChevronDown size={12} aria-hidden="true" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="max-h-80 w-72 overflow-y-auto">
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                Show only what a log source&apos;s rules detect
+              </DropdownMenuLabel>
+              {(logSources?.length ?? 0) > 12 && (
+                <div className="px-2 pb-1">
+                  <input
+                    value={sourceQuery}
+                    onChange={(e) => setSourceQuery(e.target.value)}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    placeholder="Search sources…"
+                    className="w-full rounded border bg-background px-1.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+              )}
+              {sourceFilter.size > 0 && (
+                <DropdownMenuItem
+                  className="text-xs"
+                  onSelect={() => setSourceFilter(new Set())}
+                >
+                  Clear — all sources
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              {(logSources ?? [])
+                .filter(
+                  (g) =>
+                    !sourceQuery ||
+                    g.log_source.toLowerCase().includes(sourceQuery.toLowerCase())
+                )
+                .map((g) => (
+                  <DropdownMenuCheckboxItem
+                    key={g.log_source}
+                    checked={sourceFilter.has(g.log_source)}
+                    onCheckedChange={() => toggleSourceFilter(g.log_source)}
+                    onSelect={(e) => e.preventDefault()}
+                    className="text-xs"
+                  >
+                    <span className="min-w-0 flex-1 truncate">{g.log_source}</span>
+                    <span className="ml-2 shrink-0 tabular-nums text-muted-foreground">
                       {g.rule_count} rule{g.rule_count === 1 ? '' : 's'}
                     </span>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs text-xs">
-                  {g.rule_count} detection rule{g.rule_count === 1 ? '' : 's'} use{' '}
-                  {g.log_source}, reaching {g.techniques_covered} technique
-                  {g.techniques_covered === 1 ? '' : 's'}. Click to show only what this
-                  log source detects.
-                </TooltipContent>
-              </Tooltip>
+                  </DropdownMenuCheckboxItem>
+                ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        {activeGroup &&
+          (() => {
+            const vs = countShown(
+              techniques.filter((t) => activeGroup.idSet.has(t.technique_id))
             );
-          })}
-          {sourceFilter.size > 0 && (
-            <button
-              type="button"
-              onClick={() => setSourceFilter(new Set())}
-              className="text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              All sources
-            </button>
-          )}
-        </div>
-      )}
+            return (
+              <span>
+                <span className="font-medium">
+                  {vs.covered}/{vs.applicable} of their techniques covered ({vs.pct}%)
+                </span>
+                {activeGroup.aliases.length > 0 && (
+                  <span className="text-muted-foreground">
+                    {' '}
+                    · aka {activeGroup.aliases.slice(0, 3).join(', ')}
+                  </span>
+                )}
+              </span>
+            );
+          })()}
+      </div>
       {lensActive && (
         <p className="text-xs text-muted-foreground">
           Showing techniques{' '}
