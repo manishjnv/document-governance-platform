@@ -1,5 +1,11 @@
+import logging
 import os
+
 from pydantic_settings import BaseSettings
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_JWT_SECRET = "your-super-secret-key"
 
 
 class Settings(BaseSettings):
@@ -24,7 +30,7 @@ class Settings(BaseSettings):
     api_log_level: str = "INFO"
 
     # JWT
-    jwt_secret_key: str = "your-super-secret-key"
+    jwt_secret_key: str = DEFAULT_JWT_SECRET
     jwt_algorithm: str = "HS256"
     jwt_expiration_hours: int = 24
     jwt_refresh_expiration_days: int = 7
@@ -97,3 +103,14 @@ class Settings(BaseSettings):
 
 # Create global settings instance
 settings = Settings()
+
+if settings.jwt_secret_key == DEFAULT_JWT_SECRET:
+    # Anyone who reads this well-known default from the public repo can
+    # forge valid access/refresh tokens for any user/org/role -- this must
+    # never be left in effect outside local dev. Warn loudly rather than
+    # hard-failing at import time: the test suite intentionally runs
+    # without a .env and relies on this default.
+    logger.warning(
+        "jwt_secret_key is the well-known default value -- set JWT_SECRET_KEY "
+        "in the environment before running anywhere tokens must be trusted."
+    )

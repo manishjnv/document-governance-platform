@@ -16,6 +16,16 @@ from app.config import settings
 
 EXEMPT_PATHS = {"/health"}
 
+# Caps unbounded growth of the per-key bucket dict -- an unauthenticated
+# caller rotating IPs (or a scanner hitting many distinct paths/hosts) would
+# otherwise create one TokenBucket entry per unique key forever, with no
+# eviction, for the lifetime of the process (memory-exhaustion DoS; same
+# class of bug fixed in app/core/login_lockout.py's MAX_TRACKED_EMAILS).
+# Plain dicts preserve insertion order in Python 3.7+, so evicting the
+# oldest-inserted entry is an O(1) `next(iter(...))` -- no LRU structure
+# needed.
+MAX_TRACKED_KEYS = 10_000
+
 
 class TokenBucket:
     """Classic token bucket: refills continuously at `rate` tokens/sec, caps
@@ -73,6 +83,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if bucket is None:
             bucket = TokenBucket(self.capacity, self.rate_per_sec)
             self.buckets[key] = bucket
+            if len(self.buckets) > MAX_TRACKED_KEYS:
+                self.buckets.pop(next(iter(self.buckets)))
 
         allowed, retry_after = bucket.take()
         if not allowed:
