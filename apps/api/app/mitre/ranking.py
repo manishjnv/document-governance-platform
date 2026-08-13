@@ -22,6 +22,7 @@ import re
 from datetime import date, datetime
 
 from .attack_data import DEFAULT, load_technique_priorities, load_threat_profiles
+from .ingest import _match_platform as _asset_platform, _norm as _asset_norm
 
 _FEASIBILITY_RANK = {"short": 0, "mid": 1, "long": 2}
 _STATE_RANK = {"not_covered": 0, "partial": 1}
@@ -93,6 +94,16 @@ _LOG_SOURCE_RULES = [
     # OT security monitoring provides the ICS-matrix components.
     (("claroty", "nozomi", "dragos", "scada", "industrial", "modbus",
       "ot telemetry", "ot network", "operational technology"), {"ot"}),
+    # Sentinel/Defender-native TABLE names — real Sentinel workbooks name
+    # sources by table ("Sentinel table - SecurityEvent"), which none of the
+    # product-name keywords above match (the 2026-08-13 VFQ review: the only
+    # endpoint provider it could name was an email table).
+    (("securityevent", "windowsevent", "wineventlog"),
+     {"endpoint", "identity", "registry"}),
+    (("deviceprocessevents", "devicefileevents", "deviceimageloadevents",
+      "deviceevents"), {"endpoint"}),
+    (("deviceregistryevents",), {"endpoint", "registry"}),
+    (("syslog",), {"endpoint"}),
 ]
 
 # Security-tooling names -> categories that tooling could be onboarded to provide.
@@ -160,6 +171,15 @@ def crown_jewel_hints(entries) -> tuple:
                 platforms |= hints.get("platforms", set())
                 categories |= hints.get("categories", set())
                 hit = True
+        # Fallback (2026-08-13): bridge through the SAME platform normalizer
+        # the Assets sheet uses, so real inventory phrasing like
+        # "IP Network: Fortinet (36 devices)" matches instead of landing in
+        # unmatched (28 of VFQ's 30 crown-jewel entries missed the curated
+        # rules above).
+        platform = _asset_platform(_asset_norm(entry))
+        if platform:
+            platforms.add(platform)
+            hit = True
         if not hit:
             unmatched.append(str(entry))
     return {"platforms": platforms, "categories": categories}, unmatched
@@ -237,11 +257,17 @@ def _feasibility(tech: dict, onboarded: dict, ownable: dict, log_source_health: 
     absent health data changes nothing (log_source_health defaults to {}).
     """
     log_source_health = log_source_health or {}
-    categories = []
+    counts: dict = {}
     for component in tech.get("data_sources") or []:
         category = component_category(component)
-        if category and category not in categories:
-            categories.append(category)
+        if category:
+            counts[category] = counts.get(category, 0) + 1
+    # Dominant category first: a technique whose components are mostly
+    # endpoint must not get its via/hint from a lone application-log
+    # component (2026-08-13 VFQ review: T1685.005 Clear Windows Event Logs
+    # was recommended on an email table). Ties keep component order.
+    first_seen = list(counts)
+    categories = sorted(counts, key=lambda c: (-counts[c], first_seen.index(c)))
     if not categories:
         return (
             "long", None, None,

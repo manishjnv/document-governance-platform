@@ -356,3 +356,34 @@ def test_log_source_health_absent_changes_nothing():
         index=_index(), priorities=_PRIORITIES, log_source_health={},
     )
     assert ranked_without["gaps"][0]["feasibility"] == ranked_with_empty["gaps"][0]["feasibility"] == "short"
+
+
+def test_feasibility_dominant_category_and_native_table_names():
+    """2026-08-13 VFQ review goldens: (a) the via source comes from the
+    technique's DOMINANT component category, not the first-listed one —
+    T1685.005's lone Application Log component must not outrank its two
+    endpoint components; (b) Sentinel-native table names (SecurityEvent)
+    provide categories."""
+    from app.mitre.ranking import technique_feasibility
+
+    tech = {"data_sources": ["Application Log Content", "File Deletion",
+                             "Process Creation"]}  # T1685.005 shape
+    bucket, via, category, _hint = technique_feasibility(
+        tech,
+        ["Sentinel table - EmailAttachmentInfo", "Sentinel table - SecurityEvent"],
+        [],
+    )
+    assert (bucket, category) == ("short", "endpoint")
+    assert via == "Sentinel table - SecurityEvent"
+
+
+def test_crown_jewel_hints_asset_normalizer_fallback():
+    """2026-08-13: real inventory phrasing bridges through the Assets-sheet
+    platform normalizer; generic entries still land in unmatched."""
+    hints, unmatched = crown_jewel_hints([
+        "IP Network: Fortinet (36 devices)",
+        "IT Infrastructure: RHEL (226 devices)",
+        "IT Infrastructure: Backup (11 devices)",
+    ])
+    assert {"Network Devices", "Linux"} <= hints["platforms"]
+    assert unmatched == ["IT Infrastructure: Backup (11 devices)"]
