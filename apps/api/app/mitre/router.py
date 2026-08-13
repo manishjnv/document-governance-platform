@@ -1943,6 +1943,38 @@ async def assessment_export_xlsx(
     )
 
 
+@router.get("/assessments/{assessment_id}/export.pptx", summary="Client briefing deck (PowerPoint)")
+async def assessment_export_pptx(
+    assessment_id: UUID,
+    current_user: TokenData = Depends(get_current_user),  # viewers may download (plan §15 Q1)
+    db: AsyncSession = Depends(get_db),
+):
+    """2026-08-14: presentation-ready briefing deck — cover, headline tiles,
+    coverage-by-tactic chart, detection quality, log sources, top fixes,
+    roadmap and next steps. Same stored-summary data as the PDF/XLSX; same
+    StreamingResponse pattern as export.xlsx."""
+    org_id = UUID(str(current_user.org_id))
+    assessment = await _completed_assessment(db, assessment_id, org_id)
+    use_cases = await _load_use_case_dicts(db, assessment_id, org_id)
+    settings = await service.get_mitre_settings(db, org_id)
+    branding = {
+        "report_display_name": settings["report_display_name"],
+        "report_accent_color": settings["report_accent_color"],
+        "report_watermark_text": settings["report_watermark_text"],
+    }
+    content = await run_in_threadpool(
+        mitre_report.build_pptx_export, assessment, use_cases, branding
+    )
+    filename = _sanitize_filename(assessment.name)[:80] or "assessment"
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}-briefing-deck.pptx"'
+        },
+    )
+
+
 @router.get("/assessments/{assessment_id}/navigator", summary="ATT&CK Navigator layer export (json/zip)")
 async def assessment_navigator_export(
     assessment_id: UUID,

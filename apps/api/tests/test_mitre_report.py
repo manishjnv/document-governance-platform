@@ -336,7 +336,8 @@ async def test_xlsx_tracker_structure(db_session):
     assert headers == [
         "Technique ID", "Name", "Tactic(s)", "Domain", "State", "Why", "Strength",
         "Priority", "Threat match", "Crown jewel", "Feasibility", "Roadmap bucket",
-        "Recommendation", "Log fields needed", "Via", "Owner", "Status",
+        "Recommendation", "Log fields needed",
+        "Reference KQL (illustrative — tune before use)", "Via", "Owner", "Status",
         "Target date", "Notes",
     ]
     # no interleaved section-header rows: every data row's first cell is a
@@ -367,9 +368,13 @@ async def test_xlsx_tracker_structure(db_session):
     assert gap_row[12].value == "Build a Sysmon registry detection."  # Recommendation
     assert "your query needs:" in gap_row[13].value      # Log fields needed
     assert "Windows Registry Key Modification" in gap_row[13].value
-    assert gap_row[14].value == "Sysmon"                # Via
+    # Reference KQL (2026-08-14): single-word via -> skeleton with the
+    # never-fires + false-positive discipline header
+    assert "REFERENCE ONLY" in gap_row[14].value
+    assert "Sysmon | take 10" in gap_row[14].value
+    assert gap_row[15].value == "Sysmon"                # Via
     # blank customer-tracking columns
-    for col in (15, 16, 17, 18):
+    for col in (16, 17, 18, 19):
         assert gap_row[col].value in (None, "")
 
     ucs = wb["Use-Case Mappings"]
@@ -416,7 +421,7 @@ async def test_xlsx_a11_uniform_header_fill(db_session):
     assessment = await _seed(db_session, org, user)
     wb = load_workbook(io.BytesIO(build_xlsx_export(assessment, [])))
 
-    brand_rgb, white_rgb = "000057B8", "00FFFFFF"
+    brand_rgb, white_rgb = "00341954", "00FFFFFF"  # 2026-08-14 purple restyle
     for name in (
         "Read Me", "Coverage by Tactic", "Technique Tracker", "Use-Case Mappings",
         "Coverage by Log Source", "Not Applicable", "Assumptions",
@@ -810,3 +815,36 @@ async def test_xlsx_summary_never_triggered_caveat(db_session):
     wb2 = load_workbook(io.BytesIO(build_xlsx_export(assessment, [uc])))
     texts2 = [str(c.value) for row in wb2["Summary"].iter_rows() for c in row if c.value]
     assert not any("Caveat: 'buildable now'" in t for t in texts2)
+
+
+@pytest.mark.asyncio
+async def test_pptx_builder_and_endpoint(client, db_session):
+    """2026-08-14: PPTX briefing deck — builder returns a valid deck from the
+    stored summary; endpoint streams it with the PowerPoint MIME type."""
+    org, user, headers = await _make_user(db_session)
+    assessment = await _seed(db_session, org, user)
+
+    from pptx import Presentation as PptxPresentation
+
+    from app.mitre.report import build_pptx_export
+
+    data = build_pptx_export(assessment, [])
+    assert data[:2] == b"PK"
+    deck = PptxPresentation(io.BytesIO(data))
+    assert len(deck.slides) >= 6
+    texts = " ".join(
+        sh.text_frame.text
+        for s in deck.slides for sh in s.shapes if sh.has_text_frame
+    )
+    assert "MITRE ATT&CK" in texts
+    assert "33.3%" in texts  # headline strict_pct from _summary()
+
+    res = await client.get(
+        f"/api/v1/mitre/assessments/{assessment.assessment_id}/export.pptx",
+        headers=headers,
+    )
+    assert res.status_code == 200
+    assert res.headers["content-type"].startswith(
+        "application/vnd.openxmlformats-officedocument.presentationml"
+    )
+    assert res.content[:2] == b"PK"

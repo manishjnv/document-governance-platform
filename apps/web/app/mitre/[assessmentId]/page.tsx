@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { useParams, useRouter } from 'next/navigation';
-import { FileDown, FileJson, FileSpreadsheet, History, Loader2, Play, Search as SearchIcon, Target } from 'lucide-react';
+import { FileDown, FileJson, FileSpreadsheet, History, Loader2, Play, Presentation, Search as SearchIcon, Target } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -275,6 +275,24 @@ export default function MitreResultsPage() {
       URL.revokeObjectURL(url);
     } catch (err: any) {
       setDownloadError(err.response?.data?.detail || 'Failed to download the PDF report');
+    }
+  };
+
+  const handleDownloadPptx = async () => {
+    setDownloadError('');
+    try {
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments/${assessmentId}/export.pptx`,
+        { headers: authHeaders(), responseType: 'blob' }
+      );
+      const url = URL.createObjectURL(res.data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${assessment?.name || 'assessment'}-briefing-deck.pptx`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setDownloadError(err.response?.data?.detail || 'Failed to download the PowerPoint deck');
     }
   };
 
@@ -565,6 +583,20 @@ export default function MitreResultsPage() {
                   <TooltipContent className="max-w-xs text-xs">
                     {completed
                       ? 'Full gap register as a spreadsheet — every technique, rule, gap and assumption.'
+                      : 'Available once the assessment completes.'}
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip delayDuration={150}>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button size="sm" variant="outline" onClick={handleDownloadPptx} disabled={!completed}>
+                        <Presentation size={14} className="mr-1" aria-hidden="true" /> PPT
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs text-xs">
+                    {completed
+                      ? 'A presentation-ready briefing deck: headline result, coverage chart, detection quality, top fixes and roadmap — for sharing with stakeholders.'
                       : 'Available once the assessment completes.'}
                   </TooltipContent>
                 </Tooltip>

@@ -50,6 +50,8 @@ openpyxl==3.1.2
 # support and now only handles the legacy format, which is exactly what's
 # needed here (openpyxl above covers .xlsx).
 xlrd==2.0.1
+# .pptx generation for the MITRE briefing-deck export (report_pptx.py).
+python-pptx==1.0.2
 
 # PDF report generation (app/scoring/report.py::ReportGenerator.generate_pdf_report).
 # Switched from xhtml2pdf -> WeasyPrint: xhtml2pdf (reportlab-based) has no

@@ -47,6 +47,55 @@ _STATE_PLAIN_XLSX = {
     "not_applicable": "Doesn't apply to this environment",
 }
 
+# ---------------------------------------------------------------------------
+# Reference KQL (2026-08-14, from the VFQ customer-deliverable review): an
+# illustrative per-table skeleton for each buildable gap, so detection
+# engineers see HOW to approach the query — with the two failure modes called
+# out up front (false positives from missing allowlists/thresholds; rules
+# that never fire because the table is empty). Deterministic; clearly
+# labelled reference-only; NOT a production rule.
+# ---------------------------------------------------------------------------
+_KQL_HEADER = (
+    "// REFERENCE ONLY - illustrative skeleton, not a production rule.\n"
+    "// 1) Confirm data first:  {table} | take 10   (a rule on an empty\n"
+    "//    table never fires). 2) Run in audit mode 1-2 weeks, baseline\n"
+    "//    normal volume. 3) Add allowlists for known-good accounts/hosts\n"
+    "//    BEFORE enabling alerts - thresholds beat single-event alerts.\n"
+)
+
+_KQL_TEMPLATES = {
+    "SecurityEvent": "SecurityEvent\n| where TimeGenerated > ago(1h)\n| where // <condition for {tid} {name} - e.g. EventID + fields>\n| summarize Count=count() by Computer, Account, bin(TimeGenerated, 15m)\n| where Count > 5 // tune from your baseline",
+    "Syslog": "Syslog\n| where TimeGenerated > ago(1h)\n| where Facility in ('auth','authpriv') // scope narrow first\n| where SyslogMessage has_any (/* markers for {tid} {name} */)\n| summarize Count=count() by HostName, bin(TimeGenerated, 15m)\n| where Count > 5",
+    "DeviceProcessEvents": "DeviceProcessEvents\n| where TimeGenerated > ago(1h)\n| where // <process/command-line condition for {tid} {name}>\n| project TimeGenerated, DeviceName, AccountName, FileName,\n          ProcessCommandLine, InitiatingProcessFileName\n// FP control: exclude software-deployment and admin-tool accounts",
+    "DeviceFileEvents": "DeviceFileEvents\n| where TimeGenerated > ago(1h)\n| where ActionType == 'FileCreated'\n| where // <path/extension/hash condition for {tid} {name}>\n| summarize Files=count() by DeviceName, InitiatingProcessAccountName, bin(TimeGenerated, 10m)\n| where Files > 10 // burst behaviour, not single files",
+    "DeviceNetworkEvents": "DeviceNetworkEvents\n| where TimeGenerated > ago(1h)\n| where RemoteIPType == 'Public'\n| where // <port/protocol/destination condition for {tid} {name}>\n| summarize Conns=count() by DeviceName, RemoteIP, RemotePort, bin(TimeGenerated, 15m)\n| where Conns > 20 // beaconing/burst threshold - baseline first",
+    "DeviceLogonEvents": "DeviceLogonEvents\n| where TimeGenerated > ago(1h)\n| where ActionType == 'LogonFailed'\n| summarize Failures=count(), Targets=dcount(DeviceName) by AccountName, bin(TimeGenerated, 15m)\n| where Failures > 20 or Targets > 5 // spray pattern for {tid} {name}",
+    "SigninLogs": "SigninLogs\n| where TimeGenerated > ago(1h)\n| where ResultType == 0 // successes - failures are a separate rule\n| where // <app / location / device condition for {tid} {name}>\n| summarize by UserPrincipalName, IPAddress, Location, AppDisplayName\n// FP control: suppress corporate egress IPs and travel-approved users",
+    "AuditLogs": "AuditLogs\n| where TimeGenerated > ago(1h)\n| where OperationName has_any (/* directory operations for {tid} {name} */)\n| project TimeGenerated, OperationName, InitiatedBy, TargetResources\n// FP control: exclude your IAM automation service principals",
+    "AzureActivity": "AzureActivity\n| where TimeGenerated > ago(1h)\n| where OperationNameValue has_any (/* operations for {tid} {name} */)\n| where ActivityStatusValue == 'Success'\n| project TimeGenerated, Caller, OperationNameValue, ResourceGroup\n// FP control: exclude IaC pipeline identities (alert if they act off-schedule)",
+    "AzureDiagnostics": "AzureDiagnostics\n| where TimeGenerated > ago(1h)\n| where Category == '<pick the one category you need>' // never query the whole table\n| where // <condition for {tid} {name}>\n| summarize Count=count() by Resource, bin(TimeGenerated, 15m)",
+    "CommonSecurityLog": "CommonSecurityLog\n| where TimeGenerated > ago(1h)\n| where // <vendor/activity/port/direction condition for {tid} {name}>\n| summarize Count=count() by SourceIP, DestinationIP, DestinationPort, bin(TimeGenerated, 15m)\n| where Count > 10",
+    "OfficeActivity": "OfficeActivity\n| where TimeGenerated > ago(1h)\n| where Operation has_any (/* operations for {tid} {name} */)\n| summarize Events=count() by UserId, Operation, bin(TimeGenerated, 15m)\n| where Events > 20 // bulk behaviour, not single clicks",
+    "EmailAttachmentInfo": "EmailAttachmentInfo\n| where TimeGenerated > ago(1h)\n| join kind=inner (EmailEvents | where TimeGenerated > ago(1h)) on NetworkMessageId\n| where // <file-type / sender condition for {tid} {name}>\n| project TimeGenerated, SenderFromAddress, RecipientEmailAddress, FileName, FileType, SHA256",
+}
+_KQL_GENERIC = (
+    "{table}\n| where TimeGenerated > ago(1h)\n| where // <condition for {tid} {name}>\n"
+    "| summarize Count=count() by bin(TimeGenerated, 15m)\n| where Count > 5 // tune from baseline"
+)
+
+
+def _reference_kql(tid, name, via):
+    """Illustrative KQL skeleton for a buildable gap, or None when the gap
+    has no named source (long-term / bespoke gaps)."""
+    table = str(via or "").replace("Sentinel table - ", "").strip()
+    if not table or " " in table:
+        # no via, or a prose/multi-word source name that isn't a KQL table
+        return None
+    template = _KQL_TEMPLATES.get(table, _KQL_GENERIC)
+    return _KQL_HEADER.format(table=table) + template.format(
+        table=table, tid=tid, name=str(name or "")[:40]
+    )
+
 
 def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
                        branding: dict | None = None) -> bytes:
@@ -80,7 +129,7 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
     from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
 
-    from app.mitre import attack_data, plain_language
+    from app.mitre import attack_data, plain_language, ranking
 
     summary = assessment.summary or {}
     params = assessment.params or {}
@@ -95,12 +144,15 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
     wrap = Alignment(wrap_text=True, vertical="top")
     wrap_center = Alignment(wrap_text=True, vertical="top", horizontal="center")
     # Clearly visible grid (the earlier pale blue read as "no border" in Excel)
-    thin = Side(style="thin", color="8496AD")
+    thin = Side(style="thin", color="B9AECB")
     cell_border = Border(left=thin, right=thin, top=thin, bottom=thin)
     # Phase A11: ONE consistent branded header fill/font, audited and made
-    # uniform across every sheet (some previously had bold-but-unfilled
-    # headers, others only brand-filled their section-title bars).
-    BRAND = "0057B8"
+    # uniform across every sheet. 2026-08-14 (VFQ customer-deliverable
+    # restyle): deep-purple headers + teal section bands + zebra data rows —
+    # the same palette the PPTX briefing deck (report_pptx.py) uses.
+    BRAND = "341954"
+    ACCENT = "00A98B"
+    ZEBRA = "F3F0F7"
     white_bold = Font(bold=True, color="FFFFFF")
     title_font = Font(bold=True, size=14, color="FFFFFF")
 
@@ -126,6 +178,8 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
                 cell.alignment = wrap_center if cell.column in center_cols else wrap
                 if borders:
                     cell.border = cell_border
+                if cell.row % 2 == 0:  # zebra rows (state/tier fills overwrite)
+                    cell.fill = fill(ZEBRA)
         ws.freeze_panes = "A2"
         if filters and rows:
             ws.auto_filter.ref = ws.dimensions
@@ -218,7 +272,7 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
     def section(title):
         sum_row([""])
         sum_row([title, "", ""], merge=True,
-                fills={1: BRAND, 2: BRAND, 3: BRAND}, fonts={1: white_bold})
+                fills={1: ACCENT, 2: ACCENT, 3: ACCENT}, fonts={1: white_bold})
 
     intake = params.get("intake") or {}
     sum_row(["MITRE ATT&CK Coverage Assessment", "", ""], merge=True,
@@ -416,9 +470,20 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
         tier = gap.get("tier") if gap else None
         ranked = isinstance(tier, int) and tier <= 3
         relevance = (gap or {}).get("threat_relevance") or []
-        telemetry_cell = (
-            "\n\n".join(plain_language.telemetry_lines(tid, index)) if gap else ""
-        )
+        telemetry_cell = ""
+        if gap:
+            lines = plain_language.telemetry_lines(tid, index)
+            # 2026-08-14 (VFQ review): lead with the component that matches
+            # the gap's chosen telemetry category, so the field guidance
+            # agrees with the recommended source instead of raw ATT&CK order.
+            category = gap.get("category")
+            if category:
+                lines = sorted(
+                    lines,
+                    key=lambda ln: 0 if ranking.component_category(
+                        ln.split(" — ")[0]) == category else 1,
+                )
+            telemetry_cell = "\n\n".join(lines)
         recommendation = (gap_recs.get(tid) or gap.get("hint") or "") if gap else ""
         return [
             tid,
@@ -435,6 +500,8 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
             _ROADMAP_BUCKET_VALUE.get((gap or {}).get("feasibility"), "") if gap else "",
             recommendation,
             telemetry_cell,
+            _reference_kql(tid, (index.get(tid) or {}).get("name"),
+                           (gap or {}).get("via")) if gap else "",
             (gap or {}).get("via") or "" if gap else "",
             "", "", "", "",  # Owner, Status, Target date, Notes — blank tracking columns
         ]
@@ -443,9 +510,11 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
         "Technique Tracker",
         ["Technique ID", "Name", "Tactic(s)", "Domain", "State", "Why", "Strength",
          "Priority", "Threat match", "Crown jewel", "Feasibility", "Roadmap bucket",
-         "Recommendation", "Log fields needed", "Via", "Owner", "Status", "Target date", "Notes"],
+         "Recommendation", "Log fields needed",
+         "Reference KQL (illustrative — tune before use)", "Via",
+         "Owner", "Status", "Target date", "Notes"],
         [tracker_row(r) for r in applicable_results],
-        [12, 30, 22, 10, 22, 55, 10, 10, 22, 10, 22, 14, 55, 45, 22, 16, 14, 14, 30],
+        [12, 30, 22, 10, 22, 55, 10, 10, 22, 10, 22, 14, 55, 45, 55, 22, 16, 14, 14, 30],
         center_cols=(4, 7, 8, 10, 12),
     )
     for i, r in enumerate(applicable_results, start=2):

@@ -47,6 +47,7 @@ from app.mitre.report_common import (
     resolve_branding,
 )
 from app.mitre.report_xlsx import build_xlsx_export, _guard  # noqa: F401 (re-exported for callers/tests)
+from app.mitre.report_pptx import build_pptx_export  # noqa: F401 (re-exported for callers/tests)
 from app.scoring.report import _esc  # house escaper, stored-XSS lesson baked in
 
 logger = logging.getLogger(__name__)
