@@ -831,13 +831,18 @@ async def test_pptx_builder_and_endpoint(client, db_session):
     data = build_pptx_export(assessment, [])
     assert data[:2] == b"PK"
     deck = PptxPresentation(io.BytesIO(data))
-    assert len(deck.slides) >= 6
+    # full 18-slide structure minus the data-gated ones this tiny seed lacks
+    # (quality doughnut, log sources) — agenda/dividers/scope/methodology/
+    # strengths/gaps/roadmap/next-steps must all be present
+    assert len(deck.slides) >= 14
     texts = " ".join(
         sh.text_frame.text
         for s in deck.slides for sh in s.shapes if sh.has_text_frame
     )
-    assert "MITRE ATT&CK" in texts
-    assert "33.3%" in texts  # headline strict_pct from _summary()
+    for marker in ("MITRE ATT&CK", "33.3%", "Agenda & What to Expect",
+                   "Scope & Inputs", "Methodology", "Key Gaps",
+                   "Improvement Roadmap", "Recommended Next Steps"):
+        assert marker in texts, marker
 
     res = await client.get(
         f"/api/v1/mitre/assessments/{assessment.assessment_id}/export.pptx",

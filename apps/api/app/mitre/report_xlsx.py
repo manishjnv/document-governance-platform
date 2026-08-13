@@ -455,7 +455,18 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
     _ROADMAP_BUCKET_VALUE = {"short": "Short", "mid": "Mid", "long": "Long"}
     # Applicable = every state EXCEPT not_applicable (matches coverage.py's
     # own "applicable" denominator) — N/A techniques stay in their own sheet.
-    applicable_results = [r for r in results if r.get("state") != "not_applicable"]
+    # 2026-08-14 (VFQ review): action-first ordering — gaps at the top in
+    # their ranked order, covered rows after, so the sheet reads as a work
+    # queue instead of a register (auto-filter still allows any re-sort).
+    _TRACKER_STATE_ORDER = {"not_covered": 0, "partial": 1, "covered": 2}
+    applicable_results = sorted(
+        (r for r in results if r.get("state") != "not_applicable"),
+        key=lambda r: (
+            _TRACKER_STATE_ORDER.get(r.get("state"), 3),
+            (gaps_by_id.get(r.get("technique_id")) or {}).get("rank") or 10 ** 6,
+            str(r.get("technique_id")),
+        ),
+    )
 
     def tracker_row(r):
         tid = r.get("technique_id")
