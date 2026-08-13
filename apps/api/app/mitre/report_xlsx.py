@@ -251,6 +251,19 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
         (f"• Roadmap: {roadmap_counts['short']} gaps buildable now with logs you "
          f"already collect · {roadmap_counts['mid']} need log onboarding first · "
          f"{roadmap_counts['long']} need a new capability.", None))
+    # 2026-08-13 VFQ review: "buildable now" only says the source is DECLARED
+    # onboarded — when many existing rules carry Last Triggered "never", the
+    # same sources demonstrably haven't produced detections yet.
+    never_count = sum(
+        1 for uc in use_cases
+        if str(uc.get("last_triggered") or "").strip().lower() == "never"
+    )
+    if never_count and roadmap_counts["short"]:
+        pointers.append(
+            (f"• Caveat: 'buildable now' means the log source is declared as "
+             f"onboarded — {never_count} of {len(use_cases)} rules found no "
+             "events when last validated (Last Triggered: never), so verify "
+             "source health before committing build dates.", italic))
     pointers.append(
         (f"• Is {overall.get('strict_pct')}% bad? Probably not: early SIEM "
          "programs typically start under 10% — the roadmap matters more than "

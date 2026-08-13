@@ -1811,6 +1811,7 @@ async def _load_use_case_dicts(db, assessment_id: UUID, org_id) -> list:
             "logic": uc.logic,
             "log_source": uc.log_source,
             "enabled": uc.enabled,
+            "last_triggered": uc.last_triggered,
             "mappings": uc.mappings or [],
             "mapping_status": uc.mapping_status,
         }

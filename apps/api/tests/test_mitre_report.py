@@ -791,3 +791,22 @@ async def test_list_includes_domains_brief(client, db_session):
     brief = res.json()[0]["domains_brief"]
     assert brief["enterprise"]["strict_pct"] == 33.3
     assert brief["enterprise"]["applicable"] == 3
+
+
+@pytest.mark.asyncio
+async def test_xlsx_summary_never_triggered_caveat(db_session):
+    """2026-08-13: rules with Last Triggered 'never' add a source-health
+    caveat under the roadmap bullet; without any, no caveat."""
+    org, user, _ = await _make_user(db_session)
+    assessment = await _seed(db_session, org, user)
+    uc = {"row_ref": "s:1", "name": "r1", "description": None, "logic": None,
+          "log_source": None, "enabled": True, "mappings": [],
+          "mapping_status": "customer_tagged"}
+    wb = load_workbook(io.BytesIO(build_xlsx_export(
+        assessment, [dict(uc, last_triggered="never"), dict(uc, row_ref="s:2")])))
+    texts = [str(c.value) for row in wb["Summary"].iter_rows() for c in row if c.value]
+    assert any("Caveat: 'buildable now'" in t and "1 of 2 rules" in t for t in texts)
+
+    wb2 = load_workbook(io.BytesIO(build_xlsx_export(assessment, [uc])))
+    texts2 = [str(c.value) for row in wb2["Summary"].iter_rows() for c in row if c.value]
+    assert not any("Caveat: 'buildable now'" in t for t in texts2)
