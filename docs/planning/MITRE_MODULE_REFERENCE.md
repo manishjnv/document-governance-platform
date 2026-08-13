@@ -19,12 +19,15 @@ the `edgp-test-single-runner-rule` memory for why runs from two sessions
 at once deadlock). Backend count after the accuracy-improvement plan
 (phases A1–A8, `docs/planning/MITRE_ACCURACY_IMPROVEMENT_PLAN.md`):
 **858 passed / 7 skipped** (+135 over the 723/7 gate, certified solo on
-`edgp_test` 2026-08-03); `npx tsc --noEmit` clean. Migration 036
+`edgp_test` 2026-08-03); current baseline after the full A1–A12 sweep +
+the 2026-08-03 coverage-tab lens features: **886 passed / 7 skipped**
+(CLAUDE.md is the canonical line); `npx tsc --noEmit` clean. Migration 036
 (`mitre_use_cases.severity`/`last_triggered`) applied to `edgp_dev` +
-`edgp_test` 2026-08-03. Prod state: **deployed through Phase 12** —
-`/opt/scopewise` at `436612a`; migrations 029–033 all applied to
-`scopewise_prod` (Phases 11–12 add none); A1–A8 deploy pending (see
-`docs/planning/MITRE_ACCURACY_IMPROVEMENT_PLAN.md` for status).
+`edgp_test` 2026-08-03. Prod state (refreshed 2026-08-13): **deployed
+through accuracy phase A12 + the coverage-tab Navigator lens features** —
+`/opt/scopewise` last verified at `0104419` (2026-08-03); migrations
+029–036 all applied to `scopewise_prod`; A1–A12 are all ☑ complete in
+`docs/planning/MITRE_ACCURACY_IMPROVEMENT_PLAN.md`.
 
 ---
 
@@ -576,8 +579,12 @@ org-scoped KV table).
   the same `target-counter` pattern) — followed by the **Gap register**,
   the single home of every gap's full narrative (14a why-phrase +
   detection sketch + via-log-source + AI recommendation with its badge +
-  the 14i "Log fields needed" pointer), rendered as one dense table (not
-  the old spaced-out cards) with a stable `id="g-{technique_id}"` anchor
+  the 14i "Log fields needed" pointer), rendered as one dense
+  **two-column** table — a Technique cell (rank · ID · name with the
+  state chip and P-tier/threat/crown-jewel flags stacked beneath) and a
+  Details cell keeping ~2/3 of the page width (`0104419`, 2026-08-03:
+  collapsed from five sparse columns; before that, spaced-out cards) —
+  with a stable `id="g-{technique_id}"` anchor
   per row so the roadmap's cross-refs resolve; the field guidance itself
   still prints ONCE in a "Log fields reference" table right after the
   register (Phase 14i pattern, unchanged — 487 techniques sharing
@@ -717,6 +724,21 @@ overflow on every page (real-browser checked).
   state) plus per-tab PDF/Excel download icons; the header offers
   **Exec PDF** (scope=executive) alongside Full PDF, and the Navigator
   tooltip states plainly it is a technical layer file, not a document.
+- **Coverage-tab Navigator lenses (2026-08-03 arc, commits `e000c10` →
+  `0104419`, deployed to prod the same day)** — the heatmap gained a
+  compact DropdownMenu filter bar (replacing the first-cut inline chip
+  arrays): a "Runs on" **platform lens** with tactic-level live counts,
+  a **log-source lens** ("what does our EDR cover?"), and a
+  **threat-group overlay** (APT lens; the on-page search also matches
+  group names — backed by the attack-group catalog whose tests bumped
+  the baseline 884→886). Platform and log-source dropdowns grow an
+  inline search box at ≥8 entries. Covered cells take
+  **detection-depth shading** (gradient by supporting-rule count, with
+  a mini-swatch in the legend), a **"Hide sub-techniques" toggle**
+  collapses the grid to parent techniques with rolled-up stats, and the
+  heatmap CSV download honors the active lens filters (contrast fixes
+  rode along, `052b632`). The **Gaps & Roadmap table headers are all
+  sortable** (`082bc3b`).
 - **`/mitre/new`** — single-page wizard: the plan-§2 privacy notice shown
   BEFORE any file; two drag-drop zones (client validation mirrors server
   rules); template download links; intake (industry/region selects,
@@ -752,9 +774,11 @@ overflow on every page (real-browser checked).
 
 ## 13. Testing
 
-Backend baseline **879 passed / 7 skipped** (measured 2026-08-03 after the
-MITRE accuracy plan A1-A11 — the 7th skip is the prod-only WeasyPrint PDF
-render test; prod render verified live). Frontend: `tsc --noEmit` clean.
+Backend baseline **886 passed / 7 skipped** (measured 2026-08-03 after
+the MITRE accuracy plan A1–A12 + the coverage-tab lens features, incl.
+the attack-group catalog tests — the 7th skip is the prod-only WeasyPrint
+PDF render test; prod render verified live). Frontend: `tsc --noEmit`
+clean.
 
 | File | Covers |
 | --- | --- |
