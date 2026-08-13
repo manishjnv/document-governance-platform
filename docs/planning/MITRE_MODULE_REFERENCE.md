@@ -19,9 +19,9 @@ the `edgp-test-single-runner-rule` memory for why runs from two sessions
 at once deadlock). Backend count after the accuracy-improvement plan
 (phases A1–A8, `docs/planning/MITRE_ACCURACY_IMPROVEMENT_PLAN.md`):
 **858 passed / 7 skipped** (+135 over the 723/7 gate, certified solo on
-`edgp_test` 2026-08-03); current baseline after the full A1–A12 sweep +
-the 2026-08-03 coverage-tab lens features: **886 passed / 7 skipped**
-(CLAUDE.md is the canonical line); `npx tsc --noEmit` clean. Migration 036
+`edgp_test` 2026-08-03); current baseline after the full A1–A12 sweep, the 2026-08-03 coverage-tab
+lens features, and the 2026-08-13 VFQ review fixes: **889 passed / 7
+skipped** (CLAUDE.md is the canonical line); `npx tsc --noEmit` clean. Migration 036
 (`mitre_use_cases.severity`/`last_triggered`) applied to `edgp_dev` +
 `edgp_test` 2026-08-03. Prod state (refreshed 2026-08-13): **deployed
 through accuracy phase A12 + the coverage-tab Navigator lens features** —
@@ -774,9 +774,10 @@ overflow on every page (real-browser checked).
 
 ## 13. Testing
 
-Backend baseline **886 passed / 7 skipped** (measured 2026-08-03 after
-the MITRE accuracy plan A1–A12 + the coverage-tab lens features, incl.
-the attack-group catalog tests — the 7th skip is the prod-only WeasyPrint
+Backend baseline **889 passed / 7 skipped** (measured 2026-08-13 after
+the MITRE accuracy plan A1–A12, the coverage-tab lens features, and the
+VFQ review fixes (feasibility dominance / CJ platform fallback / XLSX
+never-triggered caveat) — the 7th skip is the prod-only WeasyPrint
 PDF render test; prod render verified live). Frontend: `tsc --noEmit`
 clean.
 
