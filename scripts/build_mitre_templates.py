@@ -99,16 +99,16 @@ def build_use_case_template() -> Path:
         [38, 20, 48, 52, 14, 10, 14, 16],
         first=True,
     )
-    path = TEMPLATES_DIR / "scopewise-mitre-use-cases.xlsx"
+    path = TEMPLATES_DIR / "mitre-use-cases-template.xlsx"
     wb.save(path)
     return path
 
 
 # (text, bold, height) -- verbatim from the shipped Read Me sheet.
 _READ_ME_ROWS = [
-    ("ScopeWise MITRE Environment Workbook", True, 30),
+    ("MITRE Environment Workbook", True, 30),
     (None, False, 8),
-    ("This workbook is optional. Uploading it lets ScopeWise filter out "
+    ("This workbook is optional. Uploading it lets the assessment filter out "
      "techniques that don't apply to your environment and prioritize gaps "
      "by what you could realistically detect first. Skipping it still "
      "produces a coverage assessment -- just a conservative lower bound.",
@@ -141,7 +141,7 @@ _READ_ME_ROWS = [
      "-- it never changes a coverage percentage or a technique's status.",
      False, 30),
     (None, False, 8),
-    ("Honesty note: ScopeWise never ingests raw logs and never verifies a "
+    ("Honesty note: this assessment never ingests raw logs and never verifies a "
      "specific field is present in your data. Everything here is metadata "
      "you tell us about your environment -- if something looks off, it's "
      "worth double-checking your own inventory, not just trusting this "
@@ -195,7 +195,7 @@ def build_environment_template() -> Path:
         [30],
     )
 
-    path = TEMPLATES_DIR / "scopewise-mitre-environment.xlsx"
+    path = TEMPLATES_DIR / "mitre-environment-template.xlsx"
     wb.save(path)
     return path
 

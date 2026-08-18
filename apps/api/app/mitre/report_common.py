@@ -51,7 +51,9 @@ def _row_ref_sort_key(uc: dict):
 # as literal defaults here (not imported from service.py) so this leaf
 # module doesn't pull in the settings/pipeline import graph.
 DEFAULT_BRANDING = {
-    "report_display_name": "ScopeWise",
+    # Unbranded by default (2026-08-18 user request): generated reports
+    # carry no product name unless the org sets report_display_name.
+    "report_display_name": "",
     "report_accent_color": "#0057B8",
     "report_watermark_text": "",
 }

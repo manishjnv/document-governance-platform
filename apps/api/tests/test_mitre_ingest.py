@@ -446,7 +446,7 @@ def test_assets_cmdb_header_synonyms_recognized_as_header_row():
 # --- Phase A6 acceptance: the real shipped templates round-trip through ingest ---
 
 def test_real_use_case_template_round_trips():
-    content = (TEMPLATES_DIR / "scopewise-mitre-use-cases.xlsx").read_bytes()
+    content = (TEMPLATES_DIR / "mitre-use-cases-template.xlsx").read_bytes()
     parsed = parse_use_case_file(content, "xlsx")
     assert parsed["row_count"] >= 1
     assert {"name", "tags", "logic", "description", "log_source", "enabled",
@@ -455,7 +455,7 @@ def test_real_use_case_template_round_trips():
 
 
 def test_real_environment_template_round_trips():
-    content = (TEMPLATES_DIR / "scopewise-mitre-environment.xlsx").read_bytes()
+    content = (TEMPLATES_DIR / "mitre-environment-template.xlsx").read_bytes()
     parsed = parse_environment_file(content, "xlsx")
     assert set(parsed["sheets_found"]) == {"assets", "log_sources", "tooling", "crown_jewels"}
     assert parsed["log_sources"]
@@ -474,8 +474,8 @@ def test_real_templates_have_branded_header_fill_and_bordered_grid():
 
     brand_rgb, white_rgb = "000057B8", "00FFFFFF"
     for name, sheets in (
-        ("scopewise-mitre-use-cases.xlsx", ["Rules"]),
-        ("scopewise-mitre-environment.xlsx",
+        ("mitre-use-cases-template.xlsx", ["Rules"]),
+        ("mitre-environment-template.xlsx",
          ["Read Me", "Assets", "Log Sources", "Security Tooling", "Crown Jewels"]),
     ):
         wb = openpyxl.load_workbook(TEMPLATES_DIR / name)

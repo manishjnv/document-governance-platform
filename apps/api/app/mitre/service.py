@@ -63,7 +63,7 @@ SETTING_DEFAULTS = {
     # Phase 14h: report branding — org display name/accent/watermark for the
     # PDF/XLSX exports. Backend keys only (no admin UI, no logo upload); the
     # generic /mitre/settings GET/PATCH already exposes them.
-    "report_display_name": "ScopeWise",
+    "report_display_name": "",  # unbranded by default; org override only
     "report_accent_color": "#0057B8",
     "report_watermark_text": "",
 }
@@ -162,14 +162,19 @@ def build_mappings(tags: list[str]) -> tuple[list[dict], str, list[str]]:
             continue
         if status == "deprecated":
             notes.append(
-                f"tag '{tag}' resolves to a technique deprecated in ATT&CK "
-                f"v{index.version} — not counted"
+                f"tag '{tag}' refers to a technique MITRE no longer maintains "
+                f"(deprecated in ATT&CK v{index.version}) — listed for "
+                "reference, not counted"
             )
             continue
         if status == "remapped":
+            # customer-facing wording: "restructured", never "revoked"
+            successor = (index.get(canonical) or {}).get("name")
             notes.append(
-                f"tag '{tag}' is revoked in ATT&CK v{index.version} — "
-                f"remapped to {canonical}"
+                f"MITRE ATT&CK update: tag '{tag}' has been restructured and "
+                f"is now represented under "
+                f"{canonical}{f' ({successor})' if successor else ''} in "
+                f"ATT&CK v{index.version}"
             )
         if canonical not in seen:
             seen.add(canonical)

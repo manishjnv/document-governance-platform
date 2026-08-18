@@ -107,7 +107,10 @@ def test_unknown_enabled_treated_as_enabled_with_assumption():
 def test_revoked_mapping_remaps_to_successor():
     result = compute_coverage([_uc("s1:1", "T1998")], _EMPTY_APPL, index=_index())
     assert _state(result, "T1112")["state"] == "covered"
-    assert any("remapped to T1112" in a for a in result["assumptions"])
+    assert any(
+        "now represented under T1112" in a and "framework update" in a
+        for a in result["assumptions"]
+    )
     # revoked technique itself is not in the register
     assert not any(r["technique_id"] == "T1998" for r in result["techniques"])
 

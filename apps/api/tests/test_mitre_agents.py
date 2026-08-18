@@ -160,7 +160,7 @@ async def test_invalid_and_revoked_ai_ids_handled():
         {"technique_id": "T1112", "source": "ai", "confidence": 0.9, "rationale": "r"}
     ]
     assert any("3 invalid or deprecated" in a for a in result["assumptions"])
-    assert any("1 revoked" in a for a in result["assumptions"])
+    assert any("1 AI-suggested" in a and "restructured" in a for a in result["assumptions"])
 
 
 async def test_low_confidence_mapping_stays_unmapped():

@@ -368,7 +368,7 @@ async def test_settings_roundtrip_and_validation(client, db_session):
         "threat_weighting_enabled": True,  # Phase 11
         "crown_jewel_weighting_enabled": True,  # Phase A4
         "quality_ai_enabled": False,  # Phase 12
-        "report_display_name": "ScopeWise",  # Phase 14h
+        "report_display_name": "",  # Phase 14h; unbranded default 2026-08-18
         "report_accent_color": "#0057B8",  # Phase 14h
         "report_watermark_text": "",  # Phase 14h
     }
@@ -442,7 +442,7 @@ def test_build_mappings_valid_revoked_invalid_in_one_row():
     assert set(by_id) == {"T1059.001", remapped_id}  # deduped, remapped
     assert all(m["source"] == "customer" and m["confidence"] == 1.0 for m in mappings)
     assert any("T4242" in n and "not a valid" in n for n in notes)
-    assert any("T1562.001" in n and "revoked" in n for n in notes)
+    assert any("T1562.001" in n and "restructured" in n for n in notes)
 
     # tags present but none usable -> invalid; no tags at all -> unmapped
     assert build_mappings(["T4242"])[1] == "invalid"

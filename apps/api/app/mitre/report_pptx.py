@@ -111,9 +111,15 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
     threat_bits = [b for b in (
         intake.get("industry"), intake.get("region"),
         ", ".join(intake.get("threat_actors") or []) or None) if b]
-    footer_text = (
-        f"{intake.get('project_name') or assessment.name} · MITRE ATT&CK "
-        f"v{assessment.attack_version} · {display_name} · {completed}"
+    footer_text = " · ".join(
+        bit
+        for bit in (
+            intake.get("project_name") or assessment.name,
+            f"MITRE ATT&CK v{assessment.attack_version}",
+            display_name,  # empty when unbranded — dropped from the join
+            completed,
+        )
+        if bit
     )
 
     def rgb(hexc):
@@ -260,8 +266,9 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
     meta.append(P([R(f"MITRE ATT&CK v{assessment.attack_version} · {completed}",
                      color=_MUTED, size=11)]))
     text(s, 4.45, 3.15, 5.20, 1.90, meta)
-    text(s, 0.75, 2.55, 3.40, 0.50,
-         [P([R(display_name, bold=True, color="FFFFFF", size=13.5)])])
+    if display_name:
+        text(s, 0.75, 2.55, 3.40, 0.50,
+             [P([R(display_name, bold=True, color="FFFFFF", size=13.5)])])
     page_no += 1
 
     # ------------------------------------------------------------ 2 · agenda
@@ -875,8 +882,8 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
 
     cp = prs.core_properties
     cp.title = f"{assessment.name} — MITRE ATT&CK Coverage Assessment"
-    cp.author = display_name
-    cp.last_modified_by = display_name
+    cp.author = display_name or "MITRE ATT&CK Coverage Assessment"
+    cp.last_modified_by = display_name or ""
 
     buf = io.BytesIO()
     prs.save(buf)

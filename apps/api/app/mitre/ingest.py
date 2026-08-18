@@ -37,7 +37,7 @@ PDF_DOCX_MESSAGE = (
 )
 NO_NAME_COLUMN_MESSAGE = (
     "Could not detect a use-case name column in the uploaded file. Please "
-    "use the ScopeWise use-case template (columns: use-case name, MITRE "
+    "use the downloadable use-case template (columns: use-case name, MITRE "
     "technique tags, detection logic, description, log source, status)."
 )
 
@@ -683,7 +683,7 @@ def parse_environment_file(content: bytes, file_type: str) -> dict:
     if file_type not in ("xlsx", "xls"):
         raise IngestError(
             "The environment workbook must be an Excel file (.xlsx/.xls) — "
-            "use the ScopeWise environment template (sheets: Assets, Log "
+            "use the downloadable environment template (sheets: Assets, Log "
             "Sources, Security Tooling, Crown Jewels)."
         )
     if not content or not content.strip():

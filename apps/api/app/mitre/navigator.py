@@ -58,7 +58,7 @@ def build_navigator_layers(assessment) -> list:
                     },
                     "domain": DOMAIN_TO_NAVIGATOR[domain],
                     "description": (
-                        f"ScopeWise MITRE ATT&CK coverage assessment "
+                        f"MITRE ATT&CK coverage assessment "
                         f"'{assessment.name}' (ATT&CK v{assessment.attack_version}). "
                         "Green = covered, amber = partial, red = not covered, "
                         "grey/disabled = not applicable."

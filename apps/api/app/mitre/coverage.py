@@ -121,9 +121,15 @@ def compute_coverage(
                 )
                 continue
             if status == "remapped":
+                # customer-facing wording (2026-08-18 feedback): never say
+                # "revoked" — it reads like an error, not a framework update
+                successor = (index.get(canonical) or {}).get("name")
                 note(
-                    f"mapping {raw_id} on {row_ref} is revoked in ATT&CK "
-                    f"v{index.version} — remapped to {canonical}"
+                    f"MITRE ATT&CK update: {raw_id} (tagged on {row_ref}) has "
+                    f"been restructured and is now represented under "
+                    f"{canonical}{f' ({successor})' if successor else ''} in "
+                    f"ATT&CK v{index.version} — the detection counts toward "
+                    f"{canonical}; this is a framework update, not a gap"
                 )
             confidence = mapping.get("confidence")
             if confidence is None:

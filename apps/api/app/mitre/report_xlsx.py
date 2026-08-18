@@ -11,7 +11,9 @@ narrative output are all attacker-controlled.
 """
 
 import io
+import re
 
+from app.mitre import attack_data
 from app.mitre.report_common import (
     DOMAIN_LABELS,
     FEASIBILITY_LABELS,
@@ -30,6 +32,102 @@ def _guard(value):
     if isinstance(value, str) and value[:1] in ("=", "+", "-", "@"):
         return "'" + value
     return value
+
+
+# ---- Assumptions tab: plain-language presentation (2026-08-18) ------------
+# Deterministic (never LLM): each stored assumption string gets an Area and a
+# "what this means for you" sentence in human words, matched by substring.
+# Order matters twice — first match wins, and the sheet sorts by this order.
+_ASSUMPTION_AREAS = [
+    (("has been restructured",), "ATT&CK framework update",
+     "MITRE reorganized this technique in the current ATT&CK version. Your "
+     "detection still counts — it is simply shown under the new technique "
+     "ID. This is a framework update, not a detection or security gap."),
+    (("no longer maintains", "deprecated"), "ATT&CK framework update",
+     "MITRE retired this technique ID, so it is noted for reference and "
+     "left out of the score. A framework change, not a problem with the rule."),
+    (("not a valid ATT&CK",), "Data quality",
+     "This tag doesn't match any current ATT&CK technique, so it was left "
+     "out. Correct the tag in the source rule if the mapping matters."),
+    (("pulled read-only",), "Data source",
+     "The rules came straight from your SIEM over a read-only connection, "
+     "so the list reflects exactly what was live at pull time."),
+    (("auto-imported",), "Data source",
+     "Log sources were read from your SIEM's own connector inventory. "
+     "Upload an environment workbook if anything is missing."),
+    (("not recognized",), "Data source",
+     "These SIEM connectors aren't in the mapping table yet, so they were "
+     "not counted as log sources. They can be added to the environment "
+     "workbook by hand."),
+    (("AI-tagged", "AI-suggested", "confidence floor", "emitted by the AI",
+      "AI-extracted", "processed by the AI", "sections were scanned"),
+     "AI tagging",
+     "AI helped map or extract these rules; every number stays "
+     "deterministic. Worth spot-checking the flagged rows in the Use-Case "
+     "Mappings sheet before relying on them."),
+    (("disabled",), "Scoring policy",
+     "How disabled rules count toward coverage follows the policy chosen "
+     "at intake — re-run with the other policy to compare."),
+    (("scope exclusion",), "Scope",
+     "A scope exclusion you requested was applied (or could not be "
+     "matched). Excluded items never count against your score."),
+    (("inventory", "no recognizable", "platform filtering", "lower bound",
+      "platforms"), "Scope",
+     "Without a complete environment inventory the assessment cannot rule "
+     "techniques out, so the score reads lower than reality — never higher."),
+    (("Log Sources sheet",), "Data quality",
+     "A rule points at telemetry your inventory doesn't declare — either "
+     "the inventory sheet is incomplete or the rule may no longer be "
+     "receiving data."),
+    (("limit", "stopped at", "only the", "only its"), "Scope",
+     "The input was larger than the processing cap, so items beyond the "
+     "cap are not included in the numbers."),
+]
+_AREA_ORDER = {}
+for _probes, _area, _meaning in _ASSUMPTION_AREAS:
+    _AREA_ORDER.setdefault(_area, len(_AREA_ORDER))
+
+
+def _classify_assumption(text: str) -> tuple:
+    low = str(text).lower()
+    for probes, area, meaning in _ASSUMPTION_AREAS:
+        if any(p.lower() in low for p in probes):
+            return area, meaning
+    return "General", ""
+
+
+def _successor_name(tid: str) -> str:
+    info = attack_data.DEFAULT.get(tid) or {}
+    return f" ({info['name']})" if info.get("name") else ""
+
+
+def _rewrite_legacy_revoked(text: str) -> str:
+    """Assessments stored before 2026-08-18 carry 'revoked … remapped'
+    wording; rewrite at render time so old workbooks read customer-friendly
+    too (feedback: 'revoked' sounds like an error, not a framework update)."""
+    text = re.sub(
+        r"mapping (T\d{4}(?:\.\d{3})?) on (.+?) is revoked in ATT&CK "
+        r"v([\w.]+) — remapped to (T\d{4}(?:\.\d{3})?)",
+        lambda m: (
+            f"MITRE ATT&CK update: {m.group(1)} (tagged on {m.group(2)}) has "
+            f"been restructured and is now represented under "
+            f"{m.group(4)}{_successor_name(m.group(4))} in ATT&CK "
+            f"v{m.group(3)} — the detection counts toward {m.group(4)}; this "
+            "is a framework update, not a gap"
+        ),
+        text,
+    )
+    text = re.sub(
+        r"tag '([^']+)' is revoked in ATT&CK v([\w.]+) — "
+        r"remapped to (T\d{4}(?:\.\d{3})?)",
+        lambda m: (
+            f"MITRE ATT&CK update: tag '{m.group(1)}' has been restructured "
+            f"and is now represented under "
+            f"{m.group(3)}{_successor_name(m.group(3))} in ATT&CK v{m.group(2)}"
+        ),
+        text,
+    )
+    return text
 
 
 # Phase 14c: fill colors (ARGB-less hex; light fills, dark text stays legible)
@@ -214,7 +312,8 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
         ["Coverage by Log Source", "What each log source (e.g. Sysmon, CloudTrail) buys you: "
          "how many rules use it and which techniques/attack stages those rules cover."],
         ["Not Applicable", "Techniques that don't count toward your score, with reasons."],
-        ["Assumptions", "What we had to assume — read before trusting the numbers."],
+        ["Assumptions", "Context behind the numbers, in plain words — what shaped "
+         "them, what changed, and what (if anything) to do about it."],
         [],
         ["Color legend"],
         ["Covered", "A rule detects this technique."],
@@ -597,11 +696,18 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
         center_cols=(2,),
     )
 
+    assumption_rows = []
+    for a in summary.get("assumptions", []):
+        friendly = _rewrite_legacy_revoked(str(a))
+        area, meaning = _classify_assumption(friendly)
+        assumption_rows.append([area, friendly, meaning])
+    # stable sort groups related notes together, in the classifier's order
+    assumption_rows.sort(key=lambda r: _AREA_ORDER.get(r[0], len(_AREA_ORDER)))
     sheet(
         "Assumptions",
-        ["Assumption"],
-        [[a] for a in summary.get("assumptions", [])],
-        [110],
+        ["Area", "Assumption", "What this means for you"],
+        assumption_rows,
+        [24, 78, 62],
     )
 
     # Phase 14g: per-entry environment evidence trail (present for
@@ -636,8 +742,9 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
     # only docProps/core.xml fields are settable, so the org name goes in
     # description instead.
     wb.properties.title = f"MITRE ATT&CK Coverage Assessment — {assessment.name}"
-    wb.properties.creator = "ScopeWise"
-    wb.properties.description = f"Prepared for {branding['report_display_name']}"
+    wb.properties.creator = branding["report_display_name"] or "MITRE ATT&CK Coverage Assessment"
+    if branding["report_display_name"]:
+        wb.properties.description = f"Prepared for {branding['report_display_name']}"
 
     buf = io.BytesIO()
     wb.save(buf)

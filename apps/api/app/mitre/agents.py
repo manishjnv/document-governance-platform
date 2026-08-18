@@ -274,8 +274,9 @@ async def tag_untagged_rows(rows, *, index=None, agent=None) -> dict:
         )
     if stats["remapped_ids"]:
         assumptions.append(
-            f"{stats['remapped_ids']} revoked technique IDs from the AI were "
-            "remapped to their ATT&CK successors"
+            f"{stats['remapped_ids']} AI-suggested technique IDs referred to "
+            "older ATT&CK entries that have since been restructured — they "
+            "were updated to the current ATT&CK technique IDs"
         )
     return {
         "mappings_by_ref": mappings_by_ref,

@@ -618,14 +618,14 @@ export default function NewMitreAssessmentPage() {
                 </p>
                 <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs">
                   <a
-                    href="/templates/scopewise-mitre-use-cases.xlsx"
+                    href="/templates/mitre-use-cases-template.xlsx"
                     download
                     className="flex items-center gap-1 text-primary hover:underline"
                   >
                     <Download size={13} aria-hidden="true" /> Use-case template
                   </a>
                   <a
-                    href="/templates/scopewise-mitre-environment.xlsx"
+                    href="/templates/mitre-environment-template.xlsx"
                     download
                     className="flex items-center gap-1 text-primary hover:underline"
                   >

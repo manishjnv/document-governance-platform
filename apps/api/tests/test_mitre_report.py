@@ -479,7 +479,9 @@ async def test_xlsx_phase14h_polish(db_session):
     assert wb["Read Me"].protection.sheet is True
 
     assert assessment.name in wb.properties.title
-    assert wb.properties.creator == "ScopeWise"
+    # unbranded default (2026-08-18): creator carries the org override when
+    # set; no product name anywhere in the workbook properties
+    assert wb.properties.creator == "Acme Corp"
     assert "Acme Corp" in wb.properties.description
 
 
@@ -853,3 +855,30 @@ async def test_pptx_builder_and_endpoint(client, db_session):
         "application/vnd.openxmlformats-officedocument.presentationml"
     )
     assert res.content[:2] == b"PK"
+
+
+def test_assumptions_plain_language_helpers():
+    """2026-08-18: Assumptions tab — legacy 'revoked' wording rewritten to
+    customer-friendly 'restructured', and each note classified with a
+    plain-words meaning column."""
+    from app.mitre.report_xlsx import _classify_assumption, _rewrite_legacy_revoked
+
+    legacy = (
+        "mapping T1562.001 on row 7 is revoked in ATT&CK v19.1 — "
+        "remapped to T1685.003"
+    )
+    friendly = _rewrite_legacy_revoked(legacy)
+    assert "revoked" not in friendly
+    assert "restructured" in friendly and "T1685.003" in friendly
+    assert "framework update, not a gap" in friendly
+
+    area, meaning = _classify_assumption(friendly)
+    assert area == "ATT&CK framework update" and meaning
+
+    legacy_tag = "tag 'T1562.001' is revoked in ATT&CK v19.1 — remapped to T1685.003"
+    assert "revoked" not in _rewrite_legacy_revoked(legacy_tag)
+
+    assert _classify_assumption(
+        "12 rules were AI-tagged (confidence >= 0.6) — spot-check before use"
+    )[0] == "AI tagging"
+    assert _classify_assumption("a completely novel note")[0] == "General"
