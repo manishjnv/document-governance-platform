@@ -19,6 +19,7 @@ deterministic output for a given assessment.
 """
 
 import io
+import re
 
 from app.mitre.report_common import (
     DOMAIN_LABELS,
@@ -52,6 +53,15 @@ _GREY = "404040"
 _MUTED = "BBBDC2"
 _LILAC = "D8D2E4"
 _FONT = "Tenorite"  # MS cloud font; PowerPoint substitutes silently if absent
+
+# 2026-08-19 typography pass (user request): every number/percentage in a
+# plain run gets highlighted automatically, and body sizes step up half a
+# point. The lookbehind keeps technique IDs (T1112) and versions (v19.1)
+# out of it — their digits follow a letter.
+_NUM_RE = re.compile(r"(?<![A-Za-z0-9])\d[\d,\.]*\s?%|(?<![A-Za-z0-9.])\d[\d,]*")
+# plain-text colors eligible for auto-highlighting (branded/keyword runs
+# already carry their own emphasis)
+_PLAIN_COLORS = ("000000", "404040")
 
 
 def build_pptx_export(assessment, use_cases: list, branding: dict | None = None) -> bytes:
@@ -170,8 +180,23 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
         sh.shadow.inherit = False
         return sh
 
+    def _bump(size):
+        # body copy steps up half a point; tiny labels (mosaic cells,
+        # kill-chain strips) and headings keep their tuned sizes
+        return size + 0.5 if 7 <= size <= 10.5 else size
+
+    def _add_run(p, txt, size, bold, color):
+        r = p.add_run()
+        r.text = txt
+        f = r.font
+        f.name = _FONT
+        f.size = Pt(size)
+        f.bold = bold
+        f.color.rgb = rgb(color)
+
     def text(s, x, y, w, h, paras, anchor=MSO_ANCHOR.TOP):
-        """paras: [(runs, opts)] with runs [(txt, {bold,color,size})]."""
+        """paras: [(runs, opts)] with runs [(txt, {bold,color,size})].
+        Plain runs get their numbers/percentages auto-highlighted."""
         tb = s.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
         tf = tb.text_frame
         tf.word_wrap = True
@@ -183,13 +208,24 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
             if opts.get("space_after") is not None:
                 p.space_after = Pt(opts["space_after"])
             for txt, ro in runs:
-                r = p.add_run()
-                r.text = str(txt)
-                f = r.font
-                f.name = _FONT
-                f.size = Pt(ro.get("size", 9))
-                f.bold = ro.get("bold", False)
-                f.color.rgb = rgb(ro.get("color", "000000"))
+                txt = str(txt)
+                size = _bump(ro.get("size", 9))
+                bold = ro.get("bold", False)
+                color = ro.get("color", "000000")
+                if bold or color not in _PLAIN_COLORS:
+                    _add_run(p, txt, size, bold, color)
+                    continue
+                # auto-highlight numbers/percentages inside plain text
+                cursor = 0
+                for m in _NUM_RE.finditer(txt):
+                    if m.start() > cursor:
+                        _add_run(p, txt[cursor:m.start()], size, False, color)
+                    _add_run(p, m.group(0), size, True, _PURPLE)
+                    cursor = m.end()
+                if cursor < len(txt):
+                    _add_run(p, txt[cursor:], size, False, color)
+                if cursor == 0 and not txt:
+                    _add_run(p, txt, size, False, color)
         return tb
 
     def P(runs, **opts):
@@ -265,7 +301,9 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
                 for p in cell.text_frame.paragraphs:
                     for r in p.runs:
                         r.font.name = _FONT
-                        r.font.size = Pt(header_size if ri == 0 else body_size)
+                        r.font.size = Pt(
+                            _bump(header_size) if ri == 0 else _bump(body_size)
+                        )
                         if ri == 0:
                             r.font.bold = True
                             r.font.color.rgb = rgb("FFFFFF")

@@ -773,7 +773,7 @@ three screenshot-review polish rounds, machine-enforced human wording
 coverage overlay (MITRE ATT&CK Evaluations credit as a second labeled
 number across PDF/XLSX/PPTX/UI — `docs/planning/MITRE_TOOL_COVERAGE_PLAN.md`).
 Full narrative: `docs/phases/summaries/SESSION_HANDOFF_2026_08_18_REPORTS_SPLUNK_TOOL_COVERAGE.md`.
-Baseline moved 905→934/7 across the session.
+Baseline moved 905→935/7 across the session; tool-coverage attestation (T4) + provenance split + bulk attest UI + PPTX typography pass landed 2026-08-19 (commits 0732f8c..67534a5+).
 
 **MITRE Phase 14a COMPLETE (2026-08-02) — gap drill-down drawer (UX
 clarity for non-technical users):** first of six sub-phases in

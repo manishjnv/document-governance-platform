@@ -6,7 +6,7 @@ de-branding, the customer-friendly Assumptions rework, the six-piece PDF
 report uplift, the PPTX uplift + three rounds of screenshot-review
 polish, and the tool-native coverage overlay (design + T1 + T2). Plus the
 MGH customer-data verification that started it all. Suite baseline moved
-902→934 passed / 7 skipped across the session (CLAUDE.md is canonical).
+902→935 passed / 7 skipped across the session (CLAUDE.md is canonical).
 
 ## Commits (in order)
 
@@ -25,7 +25,12 @@ MGH customer-data verification that started it all. Suite baseline moved
 | `6a0067d` | Mosaic cells labeled with technique IDs (anonymous color bars carried no information) |
 | `d3ef87f` | Assumptions dedup: `condense_assumptions()` collapses per-rule repeats ("… — affects 12 rules"); all explainers cut to one sentence |
 | `8372323` | Tool-coverage overlay design plan + environment-template Security Tooling guidance (Notes column, canonical product names) |
-| (this commit) | Tool-coverage overlay T1+T2: curated `tool_coverage.json` (MITRE ATT&CK Evaluations), `compute_tool_overlay()` render-time engine, PDF board line + blue heatmap cells + gap-register notes, XLSX tracker column + Summary row, PPTX board line + blue mosaic + legend, UI strip + drawer credit card, 4 tests |
+| `a85000b` | Tool-coverage overlay T1+T2: curated `tool_coverage.json` (MITRE ATT&CK Evaluations), `compute_tool_overlay()` render-time engine, PDF board line + blue heatmap cells + gap-register notes, XLSX tracker column + Summary row, PPTX board line + blue mosaic + legend, UI strip + drawer credit card, 4 tests. **Incident:** the first version of this commit (`c642b6a`) accidentally swept untracked customer data (docs/sample/project/) into the public repo via `git add docs/` — fixed within ~2 minutes by soft-reset + force-push; the path is now gitignored. Lesson: stage docs files explicitly, never `git add docs/` wholesale |
+| `0732f8c` | Attestation flow (T4): POST tool-attest creates 'tool_attested' rule rows (migration 038 + ORM lockstep) + inline recompute — confirmed alert paths count in the REAL score; drawer per-tool attest buttons |
+| `f9de718` | Bulk attestation UI: 'Client confirmed — attest all N for <tool>' on the blue credit strip, confirmation dialog, 50-id chunking |
+| `9828461` | PPTX board slide: covered split by provenance — SIEM rules vs attested tools vs combined (covered_split in report_common) |
+| `67534a5` | Same split on UI (lib.coveredSplit line in the blue strip), PDF board tiles, XLSX Summary breakdown rows |
+| (final) | PPTX typography pass: auto-highlight of every number/percentage in plain runs (regex keeps T-IDs/versions plain), body fonts +0.5pt via the shared text()/style_table helpers |
 
 ## Also in this session (no separate commit)
 
