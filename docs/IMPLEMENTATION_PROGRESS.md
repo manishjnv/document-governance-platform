@@ -762,6 +762,19 @@ deploy), "Pull from Splunk" wizard tab. Sonnet adversarial sign-off
 ACCEPT (1 hardening applied: RecursionError → EgressError on hostile
 JSON). 15 new tests; **full suite 905 passed / 7 skipped**; `tsc` clean.
 
+**Reports overhaul + tool-coverage overlay COMPLETE (2026-08-18/19,
+deployed):** one session shipped report de-branding (unbranded default,
+templates renamed/regenerated), the 3-column plain-language Assumptions
+tab (+ render-time dedup of per-rule repeats), the six-piece PDF uplift
+(board page, Navigator heatmap, top-10 vs you, adversary + efficacy
+spotlights, closing page), the PPTX uplift with a hard 20-slide cap and
+three screenshot-review polish rounds, machine-enforced human wording
+(test_mitre_wording.py + AI-narrative leash), and the tool-native
+coverage overlay (MITRE ATT&CK Evaluations credit as a second labeled
+number across PDF/XLSX/PPTX/UI — `docs/planning/MITRE_TOOL_COVERAGE_PLAN.md`).
+Full narrative: `docs/phases/summaries/SESSION_HANDOFF_2026_08_18_REPORTS_SPLUNK_TOOL_COVERAGE.md`.
+Baseline moved 905→934/7 across the session.
+
 **MITRE Phase 14a COMPLETE (2026-08-02) — gap drill-down drawer (UX
 clarity for non-technical users):** first of six sub-phases in
 `docs/planning/MITRE_UX_CLARITY_PLAN.md` (kickoff prompts:

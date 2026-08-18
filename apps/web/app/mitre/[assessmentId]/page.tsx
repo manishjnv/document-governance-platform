@@ -694,6 +694,26 @@ export default function MitreResultsPage() {
                   onDrill={openDrill}
                 />
 
+                {assessment.tool_coverage &&
+                  assessment.tool_coverage.adjusted_pct !== null && (
+                    <div className="rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-sm dark:border-blue-900 dark:bg-blue-950/40">
+                      <span className="font-semibold text-blue-700 dark:text-blue-300">
+                        Including{' '}
+                        {assessment.tool_coverage.matched_tools
+                          .map((t) => t.label)
+                          .join(', ')}
+                        &apos;s MITRE-evaluated detections:{' '}
+                        {assessment.tool_coverage.adjusted_pct}%
+                      </span>{' '}
+                      <span className="text-muted-foreground">
+                        ({assessment.tool_coverage.extra_open_covered} open
+                        techniques those tools were evaluated against ·{' '}
+                        {assessment.tool_coverage.caveat} Source:
+                        evals.mitre.org)
+                      </span>
+                    </div>
+                  )}
+
                 <UploadSummaryCard
                   assessment={assessment}
                   summary={summary}
@@ -845,6 +865,7 @@ export default function MitreResultsPage() {
                   useCasesTruncated={useCasesTotal > useCases.length}
                   canEdit={userRole === 'admin' || userRole === 'reviewer'}
                   onEditMappings={handleEditMappings}
+                  toolCoverage={assessment.tool_coverage?.by_technique ?? null}
                 />
               </>
             )}

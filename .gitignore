@@ -67,3 +67,4 @@ apps/api/data/
 
 # claude-mem plugin context dump (internal session notes, not a deliverable)
 AGENTS.md
+docs/sample/project/

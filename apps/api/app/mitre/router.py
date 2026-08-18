@@ -1404,12 +1404,21 @@ async def get_assessment(
     # pipeline change); only worth the extra query once the run is
     # complete (polling while running never reaches this branch).
     log_source_coverage = None
+    tool_coverage = None
     if assessment.status == "completed":
         use_cases = await _load_use_case_dicts(
             db, assessment_id, UUID(str(current_user.org_id))
         )
         log_source_coverage = report_common.compute_log_source_coverage(
             use_cases, assessment.technique_results or [], attack_data.DEFAULT
+        )
+        # tool-native detection credit — computed at read time (pure lookup,
+        # MITRE_TOOL_COVERAGE_PLAN.md), so it lights up on old assessments too
+        tooling = ((assessment.params or {}).get("environment_lists") or {}).get(
+            "tooling"
+        ) or []
+        tool_coverage = report_common.compute_tool_overlay(
+            tooling, assessment.technique_results or []
         )
 
     return {
@@ -1422,6 +1431,7 @@ async def get_assessment(
         "summary": assessment.summary,
         "technique_results": technique_results,
         "log_source_coverage": log_source_coverage,
+        "tool_coverage": tool_coverage,
         "error_message": assessment.error_message,
         "created_at": assessment.created_at.isoformat() if assessment.created_at else None,
         "completed_at": assessment.completed_at.isoformat() if assessment.completed_at else None,

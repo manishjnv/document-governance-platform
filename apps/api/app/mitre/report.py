@@ -46,6 +46,7 @@ from app.mitre.report_common import (
     _row_ref_sort_key,
     adversary_spotlight,
     compute_moves,
+    compute_tool_overlay,
     resolve_branding,
     rule_health,
     top10_vs_you,
@@ -320,6 +321,24 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
             + "</p>"
         )
 
+    # --- tool-native detection credit (2026-08-19, tool-coverage plan) ---
+    # Computed at render time from declared Security Tooling x stored
+    # states; always a SECOND labeled number, never merged into strict_pct.
+    tool_overlay = compute_tool_overlay(
+        env_lists.get("tooling") or [], results
+    )
+    board_tool_html = ""
+    if tool_overlay and tool_overlay.get("adjusted_pct") is not None:
+        tool_names = ", ".join(t["label"] for t in tool_overlay["matched_tools"])
+        board_tool_html = (
+            f"<p>Including {_esc(tool_names)}'s MITRE-evaluated detections: "
+            f"<strong>{_esc(tool_overlay['adjusted_pct'])}%</strong> "
+            f"({_esc(tool_overlay['extra_open_covered'])} open techniques those "
+            "tools were evaluated against).<br>"
+            f"<span class='muted'>{_esc(tool_overlay['caveat'])} "
+            "Source: evals.mitre.org.</span></p>"
+        )
+
     # --- board page (2026-08-18 uplift): one-page "Where you stand" ------
     # Everything on this page is a stored number or a deterministic
     # derivation — the wording stays short and human (lint-enforced).
@@ -500,12 +519,15 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
     for key, d in _ordered_domains(domains):
         if d.get("applicable", 0) == 0:
             continue
+        tool_map = (tool_overlay or {}).get("by_technique") or {}
         columns = ""
         for t in d.get("tactics", []):
             cells = "".join(
-                f"<span class='hm-cell' style='background:"
-                f"{STATE_COLORS.get(r.get('state'), '#9ca3af')}'>"
-                f"{_esc(r.get('technique_id'))}</span>"
+                "<span class='hm-cell' style='background:"
+                + ("#3b82f6" if r.get("state") == "not_covered"
+                   and r.get("technique_id") in tool_map
+                   else STATE_COLORS.get(r.get("state"), "#9ca3af"))
+                + f"'>{_esc(r.get('technique_id'))}</span>"
                 for r in results
                 if r.get("domain") == key
                 and "." not in (r.get("technique_id") or "")
@@ -521,7 +543,10 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
             "in kill-chain order</h3>"
             "<p class='muted'>One cell per technique (parent level), one "
             "column per attack stage. Green a rule covers it · amber "
-            "partial · red no detection · grey not applicable.</p>"
+            "partial · red no detection"
+            + (" · blue no rule, but a declared tool was MITRE-evaluated "
+               "against it" if tool_overlay else "")
+            + " · grey not applicable.</p>"
             f"<div class='hm-grid'>{columns}</div>"
         )
 
@@ -603,6 +628,14 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
                 " — see the log-fields reference after this register.</span>"
             )
         details_bits.append(f"<span class='muted'>{_esc(via_line)}</span>")
+        tool_labels = (tool_overlay or {}).get("by_technique", {}).get(tid)
+        if tool_labels:
+            details_bits.append(
+                f"<span class='muted'><em>Tool credit:</em> "
+                f"{_esc(', '.join(tool_labels))} was MITRE-evaluated against "
+                "this technique — confirm the alert path in your SOC, or "
+                "build the SIEM rule anyway.</span>"
+            )
         if gap_recs.get(tid):
             details_bits.append(f"{ai_badge} {_esc(gap_recs.get(tid))}")
         else:
@@ -826,6 +859,7 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
         # 2026-08-18 uplift: board page, threat context, efficacy, closing.
         "board_gaps_html": board_gaps_html,
         "board_trend_tile": board_trend_tile,
+        "board_tool_html": board_tool_html,
         "moves_html": moves_html,
         "gap_count_esc": _esc(overall.get("not_covered")),
         "threat_context_html": threat_context_html,

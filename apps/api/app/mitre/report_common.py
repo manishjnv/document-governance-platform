@@ -75,6 +75,80 @@ def compute_moves(roadmap: dict, disabled_count: int, never_fired_count: int) ->
     return moves[:3]
 
 
+def compute_tool_overlay(tooling_entries: list, technique_results: list):
+    """Tool-native detection credit (MITRE_TOOL_COVERAGE_PLAN.md), computed
+    at read/render time — pure lookup over the declared Security Tooling
+    entries x stored technique states, so it applies to every existing
+    assessment with no pipeline or storage change.
+
+    Returns None when no declared tool matches the curated map. Otherwise:
+    {matched_tools: [{label, source, url}], unmatched: [entry, ...],
+     by_technique: {tid: [label, ...]},   # only open/partial techniques
+     extra_open_covered: int,             # not_covered but tool-evaluated
+     adjusted_pct: float|None,            # (covered + extra) / applicable
+     caveat: str}
+    Invariant: adjusted_pct is a SECOND labeled number — callers must never
+    replace the rule-based coverage figure with it."""
+    from app.mitre import attack_data
+
+    cfg = attack_data.load_tool_coverage()
+    tools_cfg = cfg.get("tools") or {}
+    core = cfg.get("core_evaluated_techniques") or []
+    matched_tools, unmatched, seen_labels = [], [], set()
+    tech_map: dict = {}
+    for entry in tooling_entries or []:
+        text = str(entry).strip()
+        low = text.lower()
+        hit = None
+        for key, tool in tools_cfg.items():
+            names = [key] + [str(s).lower() for s in tool.get("synonyms") or []]
+            if any(n and (n in low or low == n) for n in names):
+                hit = tool
+                break
+        if hit is None:
+            unmatched.append(text)
+            continue
+        label = hit["label"]
+        if label in seen_labels:
+            continue
+        seen_labels.add(label)
+        matched_tools.append(
+            {"label": label, "source": hit.get("source"), "url": hit.get("url")}
+        )
+        for tid in hit.get("techniques") or core:
+            canonical, status = attack_data.DEFAULT.resolve(str(tid))
+            if status in ("ok", "remapped"):
+                tech_map.setdefault(canonical, [])
+                if label not in tech_map[canonical]:
+                    tech_map[canonical].append(label)
+    if not matched_tools:
+        return None
+
+    by_technique: dict = {}
+    covered = applicable = extra = 0
+    for r in technique_results or []:
+        state = r.get("state")
+        if state in ("covered", "partial", "not_covered"):
+            applicable += 1
+        if state == "covered":
+            covered += 1
+        labels = tech_map.get(r.get("technique_id"))
+        if labels and state in ("partial", "not_covered"):
+            by_technique[r.get("technique_id")] = labels
+            if state == "not_covered":
+                extra += 1
+    return {
+        "matched_tools": matched_tools,
+        "unmatched": unmatched,
+        "by_technique": by_technique,
+        "extra_open_covered": extra,
+        "adjusted_pct": (
+            round(100 * (covered + extra) / applicable, 1) if applicable else None
+        ),
+        "caveat": cfg.get("caveat") or "",
+    }
+
+
 def top10_vs_you(state_by_id: dict, index) -> dict:
     """The curated most-prevalent-techniques list joined against this
     assessment's real states. rows: (rank, canonical_id, name, state|None)."""

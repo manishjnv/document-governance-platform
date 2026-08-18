@@ -21,6 +21,7 @@ from app.mitre.report_common import (
     _ordered_domains,
     _row_ref_sort_key,
     compute_log_source_coverage,
+    compute_tool_overlay,
     resolve_branding,
 )
 
@@ -265,6 +266,13 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
 
     summary = assessment.summary or {}
     params = assessment.params or {}
+    # tool-native detection credit (2026-08-19): render-time overlay,
+    # second labeled number only — never replaces the rule-based figures
+    tool_overlay = compute_tool_overlay(
+        ((params.get("environment_lists") or {}).get("tooling")) or [],
+        assessment.technique_results or [],
+    )
+    tool_map = (tool_overlay or {}).get("by_technique") or {}
     overall = summary.get("overall", {})
     narrative = summary.get("narrative", {})
     gap_recs = narrative.get("gap_recommendations", {})
@@ -473,6 +481,15 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
                  "Same, but half-covered techniques count as 0.5 instead of 0."],
                 center=(2,))
     ws_sum.cell(row=r, column=2).font = bold
+    if tool_overlay and tool_overlay.get("adjusted_pct") is not None:
+        tool_names = ", ".join(t["label"] for t in tool_overlay["matched_tools"])
+        r = sum_row([
+            "Incl. tool-evaluated detections %", tool_overlay["adjusted_pct"],
+            f"Adds the {tool_overlay['extra_open_covered']} open techniques "
+            f"your declared tools ({tool_names}) were evaluated against in "
+            f"MITRE ATT&CK Evaluations. {tool_overlay['caveat']}"],
+            center=(2,))
+        ws_sum.cell(row=r, column=2).font = bold
     for label, key, meaning in (
         ("Covered", "covered", "Techniques at least one enabled rule detects."),
         ("Partial", "partial", "Techniques reached only by a disabled rule, a "
@@ -647,6 +664,7 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
             _reference_kql(tid, (index.get(tid) or {}).get("name"),
                            (gap or {}).get("via")) if gap else "",
             (gap or {}).get("via") or "" if gap else "",
+            ", ".join(tool_map.get(tid) or []),  # tool credit (MITRE-evaluated)
             "", "", "", "",  # Owner, Status, Target date, Notes — blank tracking columns
         ]
 
@@ -656,9 +674,10 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
          "Priority", "Threat match", "Crown jewel", "Feasibility", "Roadmap bucket",
          "Recommendation", "Log fields needed",
          "Reference KQL (illustrative — tune before use)", "Via",
+         "Tool coverage (MITRE-evaluated)",
          "Owner", "Status", "Target date", "Notes"],
         [tracker_row(r) for r in applicable_results],
-        [12, 30, 22, 10, 22, 55, 10, 10, 22, 10, 22, 14, 55, 45, 55, 22, 16, 14, 14, 30],
+        [12, 30, 22, 10, 22, 55, 10, 10, 22, 10, 22, 14, 55, 45, 55, 22, 26, 16, 14, 14, 30],
         center_cols=(4, 7, 8, 10, 12),
     )
     for i, r in enumerate(applicable_results, start=2):

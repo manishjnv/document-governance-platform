@@ -170,6 +170,18 @@ export interface LogSourceCoverageGroup {
   row_refs: string[];
 }
 
+/** Tool-native detection credit (2026-08-19): computed at read time from
+ * declared Security Tooling x MITRE ATT&CK Evaluations data. Always a
+ * SECOND labeled number — never replaces the rule-based coverage. */
+export interface ToolCoverage {
+  matched_tools: { label: string; source?: string | null; url?: string | null }[];
+  unmatched: string[];
+  by_technique: Record<string, string[]>;
+  extra_open_covered: number;
+  adjusted_pct: number | null;
+  caveat: string;
+}
+
 /** One ATT&CK threat group from the pinned release's static catalog
  * (GET /mitre/attack/groups), for the coverage tab's threat-group overlay. */
 export interface ThreatGroup {
@@ -189,6 +201,9 @@ export interface Assessment {
   technique_results: TechniqueResult[] | null;
   /** Phase A10 piece 3: present only once the assessment has completed. */
   log_source_coverage?: LogSourceCoverageGroup[] | null;
+  /** 2026-08-19: tool-native detection credit; null when no declared tool
+   * matches the curated MITRE ATT&CK Evaluations map. */
+  tool_coverage?: ToolCoverage | null;
   error_message: string | null;
   created_at: string | null;
   completed_at: string | null;

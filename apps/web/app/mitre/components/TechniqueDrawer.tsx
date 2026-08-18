@@ -33,6 +33,7 @@ export function TechniqueDrawer({
   useCasesTruncated,
   canEdit,
   onEditMappings,
+  toolCoverage,
 }: {
   techniqueId: string | null;
   /** Phase 14a four-block explanation (null while loading / on fetch failure). */
@@ -44,6 +45,9 @@ export function TechniqueDrawer({
   useCasesTruncated: boolean;
   canEdit: boolean;
   onEditMappings: (useCaseId: string, techniqueIds: string[]) => Promise<void>;
+  /** 2026-08-19: tool-native detection credit map (technique id -> tool
+   * labels) — shows the MITRE-evaluated note on open/partial techniques. */
+  toolCoverage?: Record<string, string[]> | null;
 }) {
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState('');
@@ -148,6 +152,18 @@ export function TechniqueDrawer({
               <p className="mt-1 text-xs text-muted-foreground">
                 Detection strength: {technique.strength_rationale}
               </p>
+            )}
+
+            {(toolCoverage?.[technique.technique_id]?.length ?? 0) > 0 && (
+              <div className="mt-3 rounded-md border border-blue-300 bg-blue-50 p-3 text-sm dark:border-blue-900 dark:bg-blue-950/40">
+                <div className="mb-1 text-xs font-semibold text-blue-700 dark:text-blue-300">
+                  Tool credit — MITRE-evaluated
+                </div>
+                {toolCoverage![technique.technique_id].join(', ')} was evaluated
+                against this technique in MITRE ATT&amp;CK Evaluations
+                (evals.mitre.org). Confirm the alert path in your SOC, or build
+                the SIEM rule anyway — this never changes the coverage score.
+              </div>
             )}
 
             {technique.na_reason && !explain && (

@@ -126,6 +126,15 @@ def load_top_attacker_techniques() -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def load_tool_coverage() -> dict:
+    """Curated tool -> MITRE-evaluated technique credit (plan:
+    MITRE_TOOL_COVERAGE_PLAN.md). Only tools/techniques with a published
+    ATT&CK Evaluations round behind them; IDs test-enforced. Tools without
+    their own 'techniques' list inherit core_evaluated_techniques."""
+    path = DATA_DIR / "tool_coverage.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def load_device_classes() -> dict:
     """Curated appliance-class -> expected telemetry category map for the
     Phase A10 unmonitored-capability check (quality.py). expected_category

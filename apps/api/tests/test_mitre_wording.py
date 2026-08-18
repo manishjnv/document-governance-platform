@@ -33,6 +33,7 @@ _FILES = (
             "technique_plain_language.json",
             "tactic_lines.json",
             "telemetry_fields.json",
+            "tool_coverage.json",
             "top_attacker_techniques.json",
         )
     ]

@@ -25,6 +25,7 @@ from app.mitre.report_common import (
     adversary_spotlight,
     compute_log_source_coverage,
     compute_moves,
+    compute_tool_overlay,
     resolve_branding,
     rule_health,
     top10_vs_you,
@@ -131,6 +132,9 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
                      + len(roadmap.get("short") or [])) / applicable, 1)
         if applicable else None
     )
+    # tool-native detection credit (2026-08-19) — second labeled number only
+    tool_overlay = compute_tool_overlay(tooling, results)
+    tool_map = (tool_overlay or {}).get("by_technique") or {}
     threat_bits = [b for b in (
         intake.get("industry"), intake.get("region"),
         ", ".join(intake.get("threat_actors") or []) or None) if b]
@@ -392,6 +396,14 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
     text(s, 5.26, 2.94, 4.15, 2.02,
          move_paras or [P([R("Keep the rules tested and current.",
                              color=_GREY, size=9.5)])])
+    if tool_overlay and tool_overlay.get("adjusted_pct") is not None:
+        tool_names = ", ".join(t["label"] for t in tool_overlay["matched_tools"])
+        text(s, 0.45, 2.33, 9.10, 0.18, [
+            P([R("Including ", color=_GREY, size=8.5),
+               K(tool_names, 8.5),
+               R("'s MITRE-evaluated detections: ", color=_GREY, size=8.5),
+               K(f"{tool_overlay['adjusted_pct']}%", 9, _PURPLE),
+               R(f" — {tool_overlay['caveat']}", color=_GREY, size=8)])])
     text(s, 0.45, 5.06, 9.10, 0.22, [
         P([R("Context: early SIEM detection programs typically start under "
              "10% of ATT&CK — the roadmap matters more than the grade. "
@@ -643,8 +655,11 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
                  [P([R(f"{hit}/{len(cells)}", color=_GREY, size=6.5)])])
             for j, r in enumerate(cells):
                 state = r.get("state")
+                fill_color = mosaic_fill.get(state, "C9CBD1")
+                if state == "not_covered" and r.get("technique_id") in tool_map:
+                    fill_color = "2563EB"  # open, but tool MITRE-evaluated
                 cell = rect(s, x, 1.80 + j * (cell_h + 0.012), col_w - 0.07,
-                            cell_h, mosaic_fill.get(state, "C9CBD1"))
+                            cell_h, fill_color)
                 # label every cell with its technique ID — anonymous color
                 # bars carry no information (user feedback 2026-08-18); this
                 # is what the real ATT&CK Navigator does
@@ -670,13 +685,24 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
         text(s, legend_x, 4.93, 0.62, 0.18,
              [P([R("Legend:", bold=True, color=_PURPLE, size=8)])])
         legend_x += 0.68
-        for label, state, color, label_color in (
-            ("covered — a rule detects it", "covered", _GREEN, _GREEN_D),
-            ("partial", "partial", _AMBER, _AMBER_D),
-            ("open — no detection", "not_covered", _MAGENTA, _RED_D),
-            ("not applicable", "not_applicable", "C9CBD1", _GREY),
-        ):
-            n = sum(1 for r in parents if r.get("state") == state)
+        open_tool = sum(1 for r in parents if r.get("state") == "not_covered"
+                        and r.get("technique_id") in tool_map)
+        legend_items = [
+            ("covered — a rule detects it", _GREEN, _GREEN_D,
+             sum(1 for r in parents if r.get("state") == "covered")),
+            ("partial", _AMBER, _AMBER_D,
+             sum(1 for r in parents if r.get("state") == "partial")),
+            ("open — no detection", _MAGENTA, _RED_D,
+             sum(1 for r in parents if r.get("state") == "not_covered")
+             - open_tool),
+        ]
+        if open_tool:
+            legend_items.append(
+                ("open, tool MITRE-evaluated", "2563EB", "1D4ED8", open_tool))
+        legend_items.append(
+            ("not applicable", "C9CBD1", _GREY,
+             sum(1 for r in parents if r.get("state") == "not_applicable")))
+        for label, color, label_color, n in legend_items:
             rect(s, legend_x, 4.95, 0.13, 0.13, color)
             width = 0.28 + 0.062 * len(f"{n} {label}")
             text(s, legend_x + 0.18, 4.93, width, 0.18,

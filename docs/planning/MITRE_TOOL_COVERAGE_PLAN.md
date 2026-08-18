@@ -95,12 +95,22 @@ overlay (shipped ahead of the feature — names collected now work later).
 
 ## Phases
 
-- **T1 (backend core):** curated file + loader + matcher + overlay in the
-  pipeline + summary fields + tests. One session.
-- **T2 (surfaces):** app heatmap lens, PDF/PPTX/XLSX changes + caveats.
-  One session.
-- **T3 (template + docs):** ✅ template guidance shipped 2026-08-18;
-  reference-doc updates land with T1/T2.
+- **T1 (backend core): ✅ SHIPPED 2026-08-19** — with one deliberate
+  deviation from this plan: the overlay is computed at **render/read
+  time** (`report_common.compute_tool_overlay`, pure lookup over declared
+  tooling x stored states), NOT in the pipeline. Better than planned:
+  zero storage/pipeline change, and it lights up retroactively on every
+  existing assessment. Curated `data/tool_coverage.json` v1 uses a
+  conservative core evaluated-technique set shared across the six tools
+  (per-tool refinement to exact round results is a data-only change).
+- **T2 (surfaces): ✅ SHIPPED 2026-08-19** — PDF (board second number,
+  blue heatmap cells, per-gap "Tool credit" note), XLSX (Tracker "Tool
+  coverage (MITRE-evaluated)" column + Summary row), PPTX (board line,
+  blue mosaic cells + legend entry), app UI (blue strip under the
+  executive band + drawer credit card via GET assessment's computed
+  `tool_coverage` field). Deferred from this phase: gap-ranking demotion
+  of tool-covered gaps (ordering churn vs rank tests — revisit on ask).
+- **T3 (template + docs):** ✅ template guidance shipped 2026-08-18.
 
 ## Rejected
 

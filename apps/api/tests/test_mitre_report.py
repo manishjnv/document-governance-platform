@@ -337,7 +337,8 @@ async def test_xlsx_tracker_structure(db_session):
         "Technique ID", "Name", "Tactic(s)", "Domain", "State", "Why", "Strength",
         "Priority", "Threat match", "Crown jewel", "Feasibility", "Roadmap bucket",
         "Recommendation", "Log fields needed",
-        "Reference KQL (illustrative — tune before use)", "Via", "Owner", "Status",
+        "Reference KQL (illustrative — tune before use)", "Via",
+        "Tool coverage (MITRE-evaluated)", "Owner", "Status",
         "Target date", "Notes",
     ]
     # no interleaved section-header rows: every data row's first cell is a
