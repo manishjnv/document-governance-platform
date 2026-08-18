@@ -749,6 +749,19 @@ reviews REVISE→fixed→ACCEPT. 18 new tests; **full suite 781 passed /
 7 skipped**; `tsc` clean. Ops: worker env needs `SIEM_CRED_KEY` +
 `SMTP_*`; migrations 034–035 in all 3 DBs.
 
+**Splunk connector COMPLETE (2026-08-18, uncommitted — awaiting a
+reachable customer Splunk env for first live pull):** second SIEM
+platform (`connectors/splunk.py`) — Bearer-token, paginated saved-
+searches pull via the Splunk REST API, ES correlation-search annotations
+→ MITRE tags, canonical-CSV reuse of the create path. First customer-
+supplied hostname: strict FQDN + app regexes, egress `ALLOWED_PORTS`
+widened to {443, 8089} (management port), deny set unchanged. Platform-
+parameterized router/tasks/report strings, `PLATFORM_LABELS` in base,
+migration 037 platform CHECK (+ORM lockstep, applied dev+test; prod on
+deploy), "Pull from Splunk" wizard tab. Sonnet adversarial sign-off
+ACCEPT (1 hardening applied: RecursionError → EgressError on hostile
+JSON). 15 new tests; **full suite 905 passed / 7 skipped**; `tsc` clean.
+
 **MITRE Phase 14a COMPLETE (2026-08-02) — gap drill-down drawer (UX
 clarity for non-technical users):** first of six sub-phases in
 `docs/planning/MITRE_UX_CLARITY_PLAN.md` (kickoff prompts:

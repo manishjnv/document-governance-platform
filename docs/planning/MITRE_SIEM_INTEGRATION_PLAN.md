@@ -260,9 +260,16 @@ POST /api/v1/mitre/assessments/from-siem   (admin, reviewer)
 
 ## 6. Open items deliberately deferred
 
-- Splunk ES / Elastic connectors: after 13a proves the interface (each
-  is its own session; Splunk introduces the first customer-supplied
+- ~~Splunk ES~~ / Elastic connectors: after 13a proves the interface
+  (each is its own session; Splunk introduces the first customer-supplied
   hostname → the egress guard's full deny-set gets its first real use).
+  **Splunk shipped 2026-08-18** (`connectors/splunk.py`): saved-searches
+  pull, Bearer token, strict FQDN config + egress deny set, port limited
+  to 8089/443 (egress `ALLOWED_PORTS` — the one deliberate widening of
+  the "443 only" v1 posture, for Splunk's management port), migration
+  037. Built ahead of a reachable customer Splunk environment — first
+  live pull needs only a real host + token (Splunk Cloud: allowlist the
+  ScopeWise egress IP on the stack's management port).
 - KMS-grade key management: revisit if/when the app moves off the shared
   VPS; the plan's env-var key is explicitly a documented compromise.
 - Webhook/push-based sync, rule write-back, per-rule drift alerts: out
