@@ -642,8 +642,26 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
             text(s, x, 1.58, col_w - 0.05, 0.18,
                  [P([R(f"{hit}/{len(cells)}", color=_GREY, size=6.5)])])
             for j, r in enumerate(cells):
-                rect(s, x, 1.80 + j * (cell_h + 0.012), col_w - 0.07, cell_h,
-                     mosaic_fill.get(r.get("state"), "C9CBD1"))
+                state = r.get("state")
+                cell = rect(s, x, 1.80 + j * (cell_h + 0.012), col_w - 0.07,
+                            cell_h, mosaic_fill.get(state, "C9CBD1"))
+                # label every cell with its technique ID — anonymous color
+                # bars carry no information (user feedback 2026-08-18); this
+                # is what the real ATT&CK Navigator does
+                if cell_h >= 0.065:
+                    tf = cell.text_frame
+                    tf.word_wrap = False
+                    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+                    tf.margin_left = Inches(0.03)
+                    tf.margin_right = Inches(0.01)
+                    tf.margin_top = tf.margin_bottom = Inches(0)
+                    run = tf.paragraphs[0].add_run()
+                    run.text = r.get("technique_id") or ""
+                    run.font.name = _FONT
+                    run.font.size = Pt(5 if cell_h < 0.095 else 6.5)
+                    run.font.bold = True
+                    run.font.color.rgb = rgb(
+                        _GREY if state == "not_applicable" else "FFFFFF")
         # legend band with real counts (unique parents, not per-column dupes)
         parents = [r for r in results
                    if r.get("domain") == primary
