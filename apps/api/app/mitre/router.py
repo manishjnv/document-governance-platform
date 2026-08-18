@@ -859,16 +859,20 @@ async def create_connection(
     # collapse ALL whitespace incl. CRLF — the name reaches an email
     # Subject header in 13d (header-injection hardening)
     clean_name = " ".join(str(payload.get("name") or "").split())
+    short_label, _vendor = connectors.PLATFORM_LABELS.get(platform, (platform, platform))
     connection = MitreConnection(
         connection_id=connection_id,
         org_id=org_id,
-        name=(clean_name or f"Sentinel · {config['workspace']}")[:255],
+        name=(clean_name or f"{short_label} · {config.get('workspace') or config.get('host') or ''}")[:255],
         platform=platform,
         config=config,
         secret_ciphertext=ciphertext,
         key_version=key_version,
         created_by=UUID(str(current_user.user_id)),
     )
+    # Schedule may ride the create body too (same trio + rules as PATCH);
+    # absent keys read the fresh row's None defaults → auto-runs off.
+    _apply_schedule_fields(connection, payload)
     db.add(connection)
     await db.commit()
 
@@ -1267,9 +1271,14 @@ async def list_assessments(
                 "project_name": ((a.params or {}).get("intake") or {}).get("project_name"),
                 # Phase A12: trend-scoping customer label, shown alongside the name
                 "customer": (a.params or {}).get("customer"),
-                # Phase 13d provenance chip: platform + trigger only
+                # Phase 13d provenance chip: platform + trigger; connection_id
+                # lets the connections page group runs into a per-connection trend
                 "siem": (
-                    {"platform": siem.get("platform"), "trigger": siem.get("trigger")}
+                    {
+                        "platform": siem.get("platform"),
+                        "trigger": siem.get("trigger"),
+                        "connection_id": siem.get("connection_id"),
+                    }
                     if siem
                     else None
                 ),

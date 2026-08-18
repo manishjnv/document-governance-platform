@@ -111,7 +111,8 @@ async def test_list_carries_siem_brief_and_report_footer(client, db_session, mon
 
     listed = (await client.get("/api/v1/mitre/assessments", headers=headers)).json()
     row = next(r for r in listed if r["assessment_id"] == aid)
-    assert row["siem"] == {"platform": "sentinel", "trigger": "manual"}
+    # connection_id is None here — a token-at-trigger pull has no saved connection
+    assert row["siem"] == {"platform": "sentinel", "trigger": "manual", "connection_id": None}
 
     # report footer provenance (hand-complete so the builder accepts it)
     from app.models.mitre_assessment import MitreAssessment

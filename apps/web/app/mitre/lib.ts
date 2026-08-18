@@ -20,8 +20,9 @@ export interface AssessmentListItem {
   strict_pct: number | null;
   weighted_pct: number | null;
   domains_brief?: Record<string, DomainBrief>;
-  /** Phase 13d: present when the rules were pulled from a SIEM. */
-  siem?: { platform: string | null; trigger: string | null } | null;
+  /** Phase 13d: present when the rules were pulled from a SIEM;
+   * connection_id groups runs into a per-connection trend. */
+  siem?: { platform: string | null; trigger: string | null; connection_id?: string | null } | null;
   /** Phase 14f: soft archive flag (hidden from the default list). */
   archived?: boolean;
   /** Phase 14d/14f: project name from the intake, shown on list rows. */

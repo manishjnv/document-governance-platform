@@ -15,45 +15,7 @@ import {
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { AssessmentListItem, DOMAIN_LABELS, STATUS_META, fmtDate, orderedDomains } from './lib';
-
-/** Phase 14f: tiny inline SVG sparkline over completed runs' coverage %. */
-function CoverageSparkline({ items }: { items: AssessmentListItem[] }) {
-  const points = items
-    .filter((i) => i.status === 'completed' && i.strict_pct !== null && !i.archived)
-    .slice()
-    .reverse(); // list is newest-first; the trend reads left → right in time
-  if (points.length < 2) return null;
-  const max = Math.max(...points.map((p) => p.strict_pct as number), 1);
-  const w = 120;
-  const h = 28;
-  const step = w / (points.length - 1);
-  const path = points
-    .map(
-      (p, i) =>
-        `${i === 0 ? 'M' : 'L'}${(i * step).toFixed(1)},${(
-          h - 3 - ((p.strict_pct as number) / max) * (h - 6)
-        ).toFixed(1)}`
-    )
-    .join(' ');
-  const first = points[0].strict_pct;
-  const last = points[points.length - 1].strict_pct;
-  return (
-    <Tooltip delayDuration={150}>
-      <TooltipTrigger asChild>
-        <span className="flex cursor-default items-center gap-2 text-xs text-muted-foreground">
-          Your trend so far
-          <svg width={w} height={h} aria-hidden="true" className="overflow-visible">
-            <path d={path} fill="none" stroke="currentColor" strokeWidth="1.5" className="text-primary" />
-          </svg>
-          {first}% → {last}%
-        </span>
-      </TooltipTrigger>
-      <TooltipContent className="max-w-xs text-xs">
-        Coverage % across your {points.length} completed runs, oldest to newest.
-      </TooltipContent>
-    </Tooltip>
-  );
-}
+import { CoverageSparkline } from './components/CoverageSparkline';
 
 /** Plain-words helper line per non-completed status. */
 const STATUS_HELP: Record<string, string> = {
@@ -306,7 +268,8 @@ export default function MitreListPage() {
                             {item.project_name && <span className="truncate">{item.project_name}</span>}
                             {item.siem && (
                               <span className="rounded-full border border-sky-200 bg-sky-100 px-1.5 py-0.5 font-medium text-sky-800">
-                                Sentinel{item.siem.trigger === 'scheduled' ? ' · auto' : ''}
+                                {item.siem.platform === 'splunk' ? 'Splunk' : 'Sentinel'}
+                                {item.siem.trigger === 'scheduled' ? ' · auto' : ''}
                               </span>
                             )}
                             {item.archived && (

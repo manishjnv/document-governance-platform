@@ -201,6 +201,48 @@ async def test_crud_rbac_org_isolation_and_validation(client, db_session):
 
 
 @pytest.mark.asyncio
+async def test_create_splunk_connection_default_name(client, db_session):
+    """Regression: the default-name fallback used config['workspace'], which
+    only Sentinel configs have — a nameless Splunk create 500'd."""
+    _, _, headers = await _make_user(db_session)
+    res = await client.post(
+        "/api/v1/mitre/connections",
+        headers=headers,
+        json={
+            "platform": "splunk",
+            "config": {"host": "acme.splunkcloud.com"},
+            "secret": _SECRET,
+        },
+    )
+    assert res.status_code == 201, res.text
+    assert res.json()["name"] == "Splunk · acme.splunkcloud.com"
+
+
+@pytest.mark.asyncio
+async def test_create_connection_with_schedule(client, db_session):
+    """Schedule trio may ride the create body (same rules as PATCH)."""
+    _, _, headers = await _make_user(db_session)
+    res = await client.post(
+        "/api/v1/mitre/connections",
+        headers=headers,
+        json=_create_body(schedule_cadence="daily", schedule_hour_utc=6),
+    )
+    assert res.status_code == 201, res.text
+    body = res.json()
+    assert body["schedule_cadence"] == "daily"
+    assert body["schedule_hour_utc"] == 6
+    assert body["schedule_weekday"] is None
+
+    bad = await client.post(
+        "/api/v1/mitre/connections",
+        headers=headers,
+        json=_create_body(schedule_cadence="weekly", schedule_hour_utc=6),
+    )
+    assert bad.status_code == 422
+    assert "schedule_weekday" in bad.json()["detail"]
+
+
+@pytest.mark.asyncio
 async def test_vault_unconfigured_maps_to_503(client, db_session, monkeypatch):
     _, _, headers = await _make_user(db_session)
     monkeypatch.delenv("SIEM_CRED_KEY")
@@ -257,6 +299,11 @@ async def test_from_connection_creates_assessment_with_provenance(
     assert siem["connection_name"] == "Prod Sentinel"
     assert siem["trigger"] == "manual"
     assert _SECRET not in json.dumps(got)
+
+    # the list endpoint surfaces connection_id (per-connection trend grouping)
+    listed = (await client.get("/api/v1/mitre/assessments", headers=admin)).json()
+    row = next(x for x in listed if x["assessment_id"] == preview["assessment_id"])
+    assert row["siem"]["connection_id"] == cid
 
 
 @pytest.mark.asyncio
