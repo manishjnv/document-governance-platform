@@ -117,6 +117,7 @@ def adversary_spotlight(intake: dict, state_by_id: dict, index, tactic_order: li
         spot = {
             "title": chosen_actor
             + (f" ({actor.get('attack_id')})" if actor.get("attack_id") else ""),
+            "attack_id": actor.get("attack_id"),
             "sub": actor.get("note") or "",
             "tids": actor.get("techniques") or [],
             "source": "Technique list: MITRE ATT&CK Groups + the curated "
@@ -133,6 +134,7 @@ def adversary_spotlight(intake: dict, state_by_id: dict, index, tactic_order: li
         entry = industries_cfg[industry_key]
         spot = {
             "title": f"Attacks on {entry.get('label')}",
+            "attack_id": None,
             "sub": "The techniques most reported in attacks on your industry.",
             "tids": entry.get("techniques") or [],
             "source": f"Sources: {entry.get('sources')}",

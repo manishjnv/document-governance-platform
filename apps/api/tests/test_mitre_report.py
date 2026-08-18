@@ -842,7 +842,8 @@ async def test_pptx_builder_and_endpoint(client, db_session):
         for s in deck.slides for sh in s.shapes if sh.has_text_frame
     )
     for marker in ("MITRE ATT&CK", "33.3%", "Agenda & What to Expect",
-                   "Scope & Inputs", "Methodology", "Key Gaps",
+                   "Scope & Inputs", "Methodology",
+                   "What's Working · Where It's Open",  # merged 2026-08-18
                    "Improvement Roadmap", "Recommended Next Steps"):
         assert marker in texts, marker
 
@@ -959,5 +960,9 @@ async def test_pptx_uplift_slides(db_session):
         "The 10 Techniques Attackers Use Most",
         "Adversary Spotlight", "never saw raw logs",
         "takes you to about 66.7%",
+        "What's Working · Where It's Open",  # merged 3+3 slide
+        "In this section",  # divider bullets
     ):
         assert marker in texts, marker
+    # hard cap agreed 2026-08-18: the deck never exceeds 20 slides
+    assert len(prs.slides._sldIdLst) <= 20, len(prs.slides._sldIdLst)
