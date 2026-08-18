@@ -28,6 +28,143 @@ _MAPPING_STATUS_PLAIN_XLSX = {
 _DOMAIN_ORDER = ("enterprise", "ics", "mobile")
 
 
+# ---- 2026-08-18 uplift: data builders shared by the PDF AND the PPTX ------
+# (pure data, no markup — each format renders its own way, but the numbers
+# and derivations are computed exactly once, here)
+
+def rule_health(use_cases: list) -> tuple:
+    """(disabled_rules, never_fired_enabled_rules) from the export's own
+    Status / Last Triggered columns."""
+    disabled = [uc for uc in use_cases if uc.get("enabled") is False]
+    never_fired = [
+        uc for uc in use_cases
+        if uc.get("enabled")
+        and str(uc.get("last_triggered") or "").strip().lower()
+        in ("never", "never triggered")
+    ]
+    return disabled, never_fired
+
+
+def compute_moves(roadmap: dict, disabled_count: int, never_fired_count: int) -> list:
+    """The 'three moves' shown on the board and closing pages — plain
+    deterministic strings, priority order."""
+    moves = []
+    if disabled_count:
+        moves.append(
+            f"Review the {disabled_count} disabled rules — enabling the "
+            "right ones is the cheapest coverage you can buy."
+        )
+    short_gaps = roadmap.get("short") or []
+    if short_gaps:
+        g0 = short_gaps[0]
+        moves.append(
+            f"Build the {g0.get('technique_id')} ({g0.get('name')}) detection "
+            "first"
+            + (f" — it uses {g0.get('via')}, which you already collect."
+               if g0.get("via") else ".")
+        )
+    if never_fired_count:
+        moves.append(
+            f"Test the {never_fired_count} enabled rules that have never "
+            "fired — they count as coverage today, unproven."
+        )
+    for g in short_gaps[1:] + (roadmap.get("mid") or []):
+        if len(moves) >= 3:
+            break
+        moves.append(f"Then build {g.get('technique_id')} ({g.get('name')}).")
+    return moves[:3]
+
+
+def top10_vs_you(state_by_id: dict, index) -> dict:
+    """The curated most-prevalent-techniques list joined against this
+    assessment's real states. rows: (rank, canonical_id, name, state|None)."""
+    from app.mitre import attack_data
+
+    cfg = attack_data.load_top_attacker_techniques()
+    rows, covered, partial = [], 0, 0
+    for entry in cfg.get("techniques", []):
+        canonical, status = index.resolve(str(entry.get("id")))
+        state = state_by_id.get(canonical) if status in ("ok", "remapped") else None
+        if state == "covered":
+            covered += 1
+        elif state == "partial":
+            partial += 1
+        name = (index.get(canonical) or {}).get("name") or entry.get("name")
+        rows.append((entry.get("rank"), canonical or entry.get("id"), name, state))
+    return {
+        "source": cfg.get("source"), "year": cfg.get("year"),
+        "source_note": cfg.get("source_note"), "url": cfg.get("url"),
+        "rows": rows, "covered": covered, "partial": partial,
+    }
+
+
+def adversary_spotlight(intake: dict, state_by_id: dict, index, tactic_order: list):
+    """Chosen threat actor (or industry profile) joined against real states.
+    Returns None when intake names neither, or nothing in the profile is in
+    scope. strip: (tactic_name, covered_count, in_scope_count) in kill-chain
+    order."""
+    from app.mitre import attack_data
+
+    profiles = attack_data.load_threat_profiles()
+    actors_cfg = profiles.get("actors") or {}
+    industries_cfg = profiles.get("industries") or {}
+    aliases = profiles.get("industry_aliases") or {}
+    chosen_actor = next(
+        (a for a in (intake.get("threat_actors") or []) if a in actors_cfg), None
+    )
+    if chosen_actor:
+        actor = actors_cfg[chosen_actor]
+        spot = {
+            "title": chosen_actor
+            + (f" ({actor.get('attack_id')})" if actor.get("attack_id") else ""),
+            "sub": actor.get("note") or "",
+            "tids": actor.get("techniques") or [],
+            "source": "Technique list: MITRE ATT&CK Groups + the curated "
+                      "threat profiles shipped with this product (public "
+                      "reporting cited in-file)",
+        }
+    else:
+        industry_key = aliases.get(
+            (intake.get("industry") or "").strip().lower(),
+            (intake.get("industry") or "").strip().lower(),
+        )
+        if industry_key not in industries_cfg:
+            return None
+        entry = industries_cfg[industry_key]
+        spot = {
+            "title": f"Attacks on {entry.get('label')}",
+            "sub": "The techniques most reported in attacks on your industry.",
+            "tids": entry.get("techniques") or [],
+            "source": f"Sources: {entry.get('sources')}",
+        }
+
+    resolved = []
+    for tid in spot["tids"]:
+        canonical, status = index.resolve(str(tid))
+        if status in ("ok", "remapped") and canonical not in resolved:
+            resolved.append(canonical)
+    detected = [t for t in resolved if state_by_id.get(t) == "covered"]
+    partial_hits = [t for t in resolved if state_by_id.get(t) == "partial"]
+    blind = [t for t in resolved if state_by_id.get(t) == "not_covered"]
+    in_scope = len(detected) + len(partial_hits) + len(blind)
+    if not in_scope:
+        return None
+    strip = []
+    for t in tactic_order:
+        relevant = [
+            tid for tid in resolved
+            if t.get("id") in ((index.get(tid) or {}).get("tactics") or [])
+            and state_by_id.get(tid) in ("covered", "partial", "not_covered")
+        ]
+        if relevant:
+            hit = sum(1 for tid in relevant if state_by_id.get(tid) == "covered")
+            strip.append((t.get("name"), hit, len(relevant)))
+    return {
+        **spot, "detected": detected, "partial_hits": partial_hits,
+        "blind": blind, "in_scope": in_scope, "strip": strip,
+    }
+
+
 def _ordered_domains(domains: dict):
     return sorted(
         (domains or {}).items(),

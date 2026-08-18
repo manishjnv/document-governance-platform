@@ -931,3 +931,33 @@ async def test_report_uplift_gated_sections_appear_with_data(db_session):
     assert "id='adversary'" in html
     assert "Attacks on Financial Services" in html
     assert "kc-strip" in html
+
+
+@pytest.mark.asyncio
+async def test_pptx_uplift_slides(db_session):
+    """2026-08-18 uplift on the deck: board slide, ATT&CK mosaic, top-10
+    table, adversary spotlight (industry-gated), closing projection +
+    honesty line — same shared data builders as the PDF."""
+    from pptx import Presentation
+    from app.mitre.report import build_pptx_export
+
+    org, user, _ = await _make_user(db_session)
+    assessment = await _seed(db_session, org, user)
+    assessment.params = {
+        **assessment.params,
+        "intake": {"industry": "financial services"},
+    }
+    data = build_pptx_export(assessment, [])
+    prs = Presentation(io.BytesIO(data))
+    texts = "\n".join(
+        shape.text_frame.text
+        for s in prs.slides for shape in s.shapes if shape.has_text_frame
+    )
+    for marker in (
+        "Where You Stand", "The 3 moves to make",
+        "Your Coverage on the ATT&CK Board",
+        "The 10 Techniques Attackers Use Most",
+        "Adversary Spotlight", "never saw raw logs",
+        "takes you to about 66.7%",
+    ):
+        assert marker in texts, marker

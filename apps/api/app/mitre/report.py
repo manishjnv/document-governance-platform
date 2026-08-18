@@ -44,7 +44,11 @@ from app.mitre.report_common import (
     _MAPPING_STATUS_PLAIN_XLSX,
     _ordered_domains,
     _row_ref_sort_key,
+    adversary_spotlight,
+    compute_moves,
     resolve_branding,
+    rule_health,
+    top10_vs_you,
 )
 from app.mitre.report_xlsx import build_xlsx_export, _guard  # noqa: F401 (re-exported for callers/tests)
 from app.mitre.report_pptx import build_pptx_export  # noqa: F401 (re-exported for callers/tests)
@@ -319,41 +323,12 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
     # --- board page (2026-08-18 uplift): one-page "Where you stand" ------
     # Everything on this page is a stored number or a deterministic
     # derivation — the wording stays short and human (lint-enforced).
-    disabled_rules = [uc for uc in use_cases if uc.get("enabled") is False]
-    never_fired = [
-        uc for uc in use_cases
-        if uc.get("enabled")
-        and str(uc.get("last_triggered") or "").strip().lower()
-        in ("never", "never triggered")
-    ]
+    # Data builders shared with the PPTX deck (report_common) so both
+    # formats always show identical numbers.
+    disabled_rules, never_fired = rule_health(use_cases)
     short_gaps = roadmap.get("short", [])
-
-    moves = []
-    if disabled_rules:
-        moves.append(
-            f"Review the {len(disabled_rules)} disabled rules — enabling the "
-            "right ones is the cheapest coverage you can buy."
-        )
-    if short_gaps:
-        g0 = short_gaps[0]
-        moves.append(
-            f"Build the {g0.get('technique_id')} ({g0.get('name')}) detection "
-            "first"
-            + (f" — it uses {g0.get('via')}, which you already collect."
-               if g0.get("via") else ".")
-        )
-    if never_fired:
-        moves.append(
-            f"Test the {len(never_fired)} enabled rules that have never fired "
-            "— they count as coverage today, unproven."
-        )
-    for g in short_gaps[1:] + (roadmap.get("mid") or []):
-        if len(moves) >= 3:
-            break
-        moves.append(
-            f"Then build {g.get('technique_id')} ({g.get('name')})."
-        )
-    moves_html = "".join(f"<li>{_esc(m)}</li>" for m in moves[:3]) or (
+    moves = compute_moves(roadmap, len(disabled_rules), len(never_fired))
+    moves_html = "".join(f"<li>{_esc(m)}</li>" for m in moves) or (
         "<li>No open gaps — keep the rules tested and current.</li>"
     )
 
@@ -388,121 +363,67 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
         )
 
     # --- threat context (2026-08-18 uplift): top-10 vs you + adversary ---
-    top_cfg = attack_data.load_top_attacker_techniques()
-    top_rows, top_covered, top_partial = "", 0, 0
-    for entry in top_cfg.get("techniques", []):
-        canonical, res_status = index.resolve(str(entry.get("id")))
-        state = state_by_id.get(canonical) if res_status in ("ok", "remapped") else None
-        if state == "covered":
-            top_covered += 1
-        elif state == "partial":
-            top_partial += 1
-        shown_name = (index.get(canonical) or {}).get("name") or entry.get("name")
+    top10 = top10_vs_you(state_by_id, index)
+    top_rows = ""
+    for rank, tid, name, state in top10["rows"]:
         state_cell = (
             _state_chip(state) if state else "<span class='muted'>Not assessed</span>"
         )
         top_rows += (
-            f"<tr><td class='num'>{_esc(entry.get('rank'))}</td>"
-            f"<td><strong>{_esc(canonical or entry.get('id'))}</strong> {_esc(shown_name)}</td>"
+            f"<tr><td class='num'>{_esc(rank)}</td>"
+            f"<td><strong>{_esc(tid)}</strong> {_esc(name)}</td>"
             f"<td>{state_cell}</td></tr>"
         )
     top10_html = (
         "<h2 id='top10'>The 10 techniques attackers use most — vs you</h2>"
-        f"<p class='verdict'>You fully cover {top_covered} of the 10"
-        + (f", {top_partial} partially" if top_partial else "")
+        f"<p class='verdict'>You fully cover {top10['covered']} of the 10"
+        + (f", {top10['partial']} partially" if top10["partial"] else "")
         + ".</p>"
         "<table class='compact'><thead><tr><th style='width:28px'>#</th>"
         "<th>Technique</th><th style='width:110px'>Your coverage</th></tr></thead>"
         f"<tbody>{top_rows}</tbody></table>"
-        f"<p class='muted'>Source: {_esc(top_cfg.get('source'))} "
-        f"{_esc(top_cfg.get('year'))} — {_esc(top_cfg.get('source_note'))}. "
+        f"<p class='muted'>Source: {_esc(top10.get('source'))} "
+        f"{_esc(top10.get('year'))} — {_esc(top10.get('source_note'))}. "
         "Your states come from this assessment's rule set.</p>"
     ) if top_rows else ""
 
     adversary_html = ""
-    profiles = attack_data.load_threat_profiles()
-    actors_cfg = profiles.get("actors") or {}
-    industries_cfg = profiles.get("industries") or {}
-    aliases = profiles.get("industry_aliases") or {}
-    chosen_actor = next(
-        (a for a in (intake.get("threat_actors") or []) if a in actors_cfg), None
+    spot = adversary_spotlight(
+        intake, state_by_id, index,
+        (domains.get("enterprise") or {}).get("tactics") or [],
     )
-    spot = None
-    if chosen_actor:
-        actor = actors_cfg[chosen_actor]
-        spot = {
-            "title": chosen_actor
-            + (f" ({actor.get('attack_id')})" if actor.get("attack_id") else ""),
-            "sub": actor.get("note") or "",
-            "tids": actor.get("techniques") or [],
-            "source": "Technique list: MITRE ATT&CK Groups + the curated "
-                      "threat profiles shipped with this product (public "
-                      "reporting cited in-file)",
-        }
-    else:
-        industry_key = aliases.get(
-            (intake.get("industry") or "").strip().lower(),
-            (intake.get("industry") or "").strip().lower(),
-        )
-        if industry_key in industries_cfg:
-            entry = industries_cfg[industry_key]
-            spot = {
-                "title": f"Attacks on {entry.get('label')}",
-                "sub": "The techniques most reported in attacks on your industry.",
-                "tids": entry.get("techniques") or [],
-                "source": f"Sources: {entry.get('sources')}",
-            }
     if spot:
-        resolved = []
-        for tid in spot["tids"]:
-            canonical, res_status = index.resolve(str(tid))
-            if res_status in ("ok", "remapped") and canonical not in resolved:
-                resolved.append(canonical)
-        detected = [t for t in resolved if state_by_id.get(t) == "covered"]
-        partial_hits = [t for t in resolved if state_by_id.get(t) == "partial"]
-        blind = [t for t in resolved if state_by_id.get(t) == "not_covered"]
-        in_scope = len(detected) + len(partial_hits) + len(blind)
-        if in_scope:
-            tactic_order = (domains.get("enterprise") or {}).get("tactics") or []
-            strip_cells = ""
-            for t in tactic_order:
-                relevant = [
-                    tid for tid in resolved
-                    if t.get("id") in ((index.get(tid) or {}).get("tactics") or [])
-                    and state_by_id.get(tid) in ("covered", "partial", "not_covered")
-                ]
-                if not relevant:
-                    continue
-                hit = sum(1 for tid in relevant if state_by_id.get(tid) == "covered")
-                color = (
-                    "#10b981" if hit == len(relevant)
-                    else ("#f59e0b" if hit else "#f43f5e")
-                )
-                strip_cells += (
-                    f"<div class='kc-cell' style='border-top:4px solid {color}'>"
-                    f"<span class='kc-tac'>{_esc(t.get('name'))}</span>"
-                    f"<span class='kc-count'>{hit}/{len(relevant)}</span></div>"
-                )
-            blind_chips = " ".join(
-                f"<span class='cell' style='background:#f43f5e'>{_esc(t)} "
-                f"{_esc((index.get(t) or {}).get('name', ''))}</span>"
-                for t in blind[:12]
-            ) + (f" <span class='muted'>+{len(blind) - 12} more</span>" if len(blind) > 12 else "")
-            adversary_html = (
-                "<h2 id='adversary'>Adversary spotlight</h2>"
-                f"<p><strong>{_esc(spot['title'])}</strong>"
-                + (f" — <span class='muted'>{_esc(spot['sub'])}</span>" if spot["sub"] else "")
-                + "</p>"
-                f"<p class='verdict'>Of the {in_scope} profile techniques that "
-                f"apply to you, your rules would detect {len(detected)}"
-                + (f" ({len(partial_hits)} partially)" if partial_hits else "")
-                + ".</p>"
-                f"<div class='kc-strip'>{strip_cells}</div>"
-                + (f"<p style='margin-top:6px'><strong>Blind spots:</strong> {blind_chips}</p>"
-                   if blind else "<p><strong>No blind spots in this profile.</strong></p>")
-                + f"<p class='muted'>{_esc(spot['source'])}. "
-                "Coverage states come from your own rule set in this assessment.</p>"
+        strip_cells = ""
+        for tactic_name, hit, total in spot["strip"]:
+            color = (
+                "#10b981" if hit == total else ("#f59e0b" if hit else "#f43f5e")
             )
+            strip_cells += (
+                f"<div class='kc-cell' style='border-top:4px solid {color}'>"
+                f"<span class='kc-tac'>{_esc(tactic_name)}</span>"
+                f"<span class='kc-count'>{hit}/{total}</span></div>"
+            )
+        blind = spot["blind"]
+        blind_chips = " ".join(
+            f"<span class='cell' style='background:#f43f5e'>{_esc(t)} "
+            f"{_esc((index.get(t) or {}).get('name', ''))}</span>"
+            for t in blind[:12]
+        ) + (f" <span class='muted'>+{len(blind) - 12} more</span>" if len(blind) > 12 else "")
+        adversary_html = (
+            "<h2 id='adversary'>Adversary spotlight</h2>"
+            f"<p><strong>{_esc(spot['title'])}</strong>"
+            + (f" — <span class='muted'>{_esc(spot['sub'])}</span>" if spot["sub"] else "")
+            + "</p>"
+            f"<p class='verdict'>Of the {spot['in_scope']} profile techniques that "
+            f"apply to you, your rules would detect {len(spot['detected'])}"
+            + (f" ({len(spot['partial_hits'])} partially)" if spot["partial_hits"] else "")
+            + ".</p>"
+            f"<div class='kc-strip'>{strip_cells}</div>"
+            + (f"<p style='margin-top:6px'><strong>Blind spots:</strong> {blind_chips}</p>"
+               if blind else "<p><strong>No blind spots in this profile.</strong></p>")
+            + f"<p class='muted'>{_esc(spot['source'])}. "
+            "Coverage states come from your own rule set in this assessment.</p>"
+        )
     threat_context_html = ""
     if adversary_html or top10_html:
         threat_context_html = adversary_html + top10_html

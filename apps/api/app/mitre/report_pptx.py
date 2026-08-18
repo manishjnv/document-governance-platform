@@ -1,9 +1,12 @@
 """MITRE assessment PPTX briefing-deck builder (2026-08-14, from the VFQ
 customer-deliverable review; expanded same day to the full 18-slide
-structure of the manually-built VFQ client deck): a client-presentation deck
-in the same design system as the XLSX export (deep purple / teal / magenta,
-card-with-accent-bar layout, highlighted keywords, section dividers with
-giant numbers).
+structure of the manually-built VFQ client deck; 2026-08-18 uplift adds the
+board slide, the ATT&CK mosaic, top-10-vs-you, the data-gated adversary
+spotlight, and the closing projection — same shared report_common data
+builders as the PDF, so both formats always show identical numbers): a
+client-presentation deck in the same design system as the XLSX export
+(deep purple / teal / magenta, card-with-accent-bar layout, highlighted
+keywords, section dividers with giant numbers).
 
 Same invariants as every other report surface: numbers come ONLY from the
 stored summary/technique_results JSONB — never recomputed here; the only LLM
@@ -19,8 +22,12 @@ import io
 
 from app.mitre.report_common import (
     DOMAIN_LABELS,
+    adversary_spotlight,
     compute_log_source_coverage,
+    compute_moves,
     resolve_branding,
+    rule_health,
+    top10_vs_you,
 )
 
 # palette — mirrors report_xlsx's BRAND/ACCENT plus the deck-only tones
@@ -108,6 +115,22 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
     tactics_ranked = sorted(tactics, key=lambda t: t.get("strict_pct") or 0)
     cj_gaps = sum(1 for g in gaps if g.get("crown_jewel_relevant"))
     threat_gaps = sum(1 for g in gaps if g.get("threat_relevance"))
+    # 2026-08-18 uplift: shared data builders (report_common) — the PDF and
+    # this deck derive board moves / top-10 / adversary numbers identically.
+    results = assessment.technique_results or []
+    state_by_id = {r.get("technique_id"): r.get("state") for r in results}
+    disabled_rules_b, never_fired_b = rule_health(use_cases)
+    moves = compute_moves(roadmap, len(disabled_rules_b), len(never_fired_b))
+    top10 = top10_vs_you(state_by_id, attack_data.DEFAULT)
+    spot = adversary_spotlight(
+        intake, state_by_id, attack_data.DEFAULT,
+        (domains.get("enterprise") or {}).get("tactics") or [],
+    )
+    projected = (
+        round(100 * ((overall.get("covered") or 0)
+                     + len(roadmap.get("short") or [])) / applicable, 1)
+        if applicable else None
+    )
     threat_bits = [b for b in (
         intake.get("industry"), intake.get("region"),
         ", ".join(intake.get("threat_actors") or []) or None) if b]
@@ -314,7 +337,53 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
                   R(f" — {trust_share}% of rules carry your own ATT&CK tags, kept "
                     "verbatim. Fully repeatable: re-run any time to trend.", size=9)])])
 
-    # ------------------------------------------------- 3 · divider 01
+    # ------------------------------------------- 3 · where you stand
+    # (2026-08-18 uplift — the board slide: verdict, top-3 gaps, 3 moves;
+    # same shared data builders as the PDF board page)
+    s = slide()
+    chrome(s, f"Where You Stand — {strict_pct}% Covered",
+           "The one-slide version — every number computed from your own "
+           "rule set")
+    board_tiles = [
+        (str(overall.get("covered") or 0), "techniques covered", _TEAL),
+        (str(overall.get("partial") or 0), "partially covered", _AMBER),
+        (str(overall.get("not_covered") or 0), "gaps — no detection today", _MAGENTA),
+        (str(len(roadmap.get("short") or [])),
+         "gaps buildable on logs you already collect", _LAVENDER),
+    ]
+    for i, (big, label, color) in enumerate(board_tiles):
+        stat_tile(s, 0.45 + i * 2.32, 1.25, 2.17, 1.05, big, label, color)
+    gap_paras = []
+    for g in gaps[:3]:
+        relevance = g.get("threat_relevance") or []
+        why = (
+            "Used by " + ", ".join(relevance) if relevance
+            else ("among the most-used techniques in real intrusions"
+                  if g.get("tier", 4) <= 2 else "common attacker behavior")
+        )
+        if g.get("crown_jewel_relevant"):
+            why += " · crown jewel"
+        gap_paras.append(P([K(f"{g.get('technique_id')} {g.get('name')}",
+                              9.5, _MAGENTA)], space_after=1))
+        gap_paras.append(P([R(why, color=_GREY, size=8.5)], space_after=6))
+    card(s, 0.45, 2.55, 4.45, 2.50, _MAGENTA)
+    text(s, 0.61, 2.63, 4.15, 0.26,
+         [P([R("The 3 gaps that matter most", bold=True, color=_PURPLE, size=11)])])
+    text(s, 0.61, 2.94, 4.15, 2.02,
+         gap_paras or [P([R("No gaps.", color=_GREY, size=9.5)])])
+    move_paras = [
+        P([R(f"{i}.  ", bold=True, color=_GREEN, size=9.5), R(m, size=9.5)],
+          space_after=7)
+        for i, m in enumerate(moves, 1)
+    ]
+    card(s, 5.10, 2.55, 4.45, 2.50, _TEAL)
+    text(s, 5.26, 2.63, 4.15, 0.26,
+         [P([R("The 3 moves to make", bold=True, color=_PURPLE, size=11)])])
+    text(s, 5.26, 2.94, 4.15, 2.02,
+         move_paras or [P([R("Keep the rules tested and current.",
+                             color=_GREY, size=9.5)])])
+
+    # ------------------------------------------------- 4 · divider 01
     divider("01", "Assessment Overview",
             "What was assessed, the data behind every number, and the rules of "
             "the scoring model.")
@@ -527,6 +596,42 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
                   [P([K(f"{biggest.get('name')}", 8.5),
                       R(f" holds the most open techniques ({biggest.get('not_covered')}) "
                         "— the roadmap front-loads the ranked ones.", size=8.5)])])
+
+    # ------------------------------------- 8b · ATT&CK board mosaic
+    # (2026-08-18 uplift — the Navigator-style poster: one colored cell per
+    # parent technique, one column per tactic, kill-chain order)
+    mosaic_tactics = []
+    for t in (domains.get(primary, {}).get("tactics") or []) if primary else []:
+        cells = sorted(
+            (r for r in results
+             if r.get("domain") == primary
+             and "." not in (r.get("technique_id") or "")
+             and t.get("id") in (r.get("tactics") or [])),
+            key=lambda r: r.get("technique_id") or "",
+        )
+        if cells:
+            mosaic_tactics.append((t, cells))
+    if mosaic_tactics:
+        s = slide()
+        chrome(s, "Your Coverage on the ATT&CK Board",
+               f"{DOMAIN_LABELS.get(primary, primary)} matrix, parent "
+               "techniques — green covered · amber partial · red open · "
+               "grey not applicable")
+        mosaic_fill = {"covered": _GREEN, "partial": _AMBER,
+                       "not_covered": _MAGENTA, "not_applicable": "C9CBD1"}
+        col_w = 9.10 / len(mosaic_tactics)
+        longest = max(len(cells) for _, cells in mosaic_tactics)
+        cell_h = min(0.11, max(0.045, 3.25 / longest - 0.012))
+        for i, (t, cells) in enumerate(mosaic_tactics):
+            x = 0.45 + i * col_w
+            text(s, x, 1.20, col_w - 0.05, 0.40,
+                 [P([R(t.get("name"), bold=True, color=_PURPLE, size=6.5)])])
+            hit = sum(1 for r in cells if r.get("state") == "covered")
+            text(s, x, 1.58, col_w - 0.05, 0.18,
+                 [P([R(f"{hit}/{len(cells)}", color=_GREY, size=6.5)])])
+            for j, r in enumerate(cells):
+                rect(s, x, 1.80 + j * (cell_h + 0.012), col_w - 0.07, cell_h,
+                     mosaic_fill.get(r.get("state"), "C9CBD1"))
 
     # ---------------------------------------------- 9 · detection quality
     if quality.get("scored"):
@@ -746,6 +851,90 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
                "evidence behind it")
         six_cards(s, gap_cards)
 
+    # -------------------------------------------- 13b · top 10 vs you
+    # (2026-08-18 uplift — a named public list, never invented data;
+    # source + year printed on the slide)
+    if top10.get("rows"):
+        s = slide()
+        chrome(s, "The 10 Techniques Attackers Use Most — vs You",
+               f"{top10.get('source')} {top10.get('year')} — "
+               f"{top10.get('source_note')}")
+        state_text = {"covered": "Covered", "partial": "Partial",
+                      "not_covered": "Not covered",
+                      "not_applicable": "Not applicable"}
+        rows = [("#", "Technique", "Your coverage")]
+        for rank, tid, name, state in top10["rows"]:
+            rows.append((str(rank), f"{name} ({tid})",
+                         state_text.get(state, "Not assessed")))
+        tbl = s.shapes.add_table(len(rows), 3, Inches(0.45), Inches(1.25),
+                                 Inches(5.90), Inches(3.85)).table
+        for ri, row in enumerate(rows):
+            for ci, val in enumerate(row):
+                tbl.cell(ri, ci).text = str(val)
+        style_table(tbl, [0.45, 3.60, 1.85], header_size=9.5, body_size=8.5)
+        verdict_color = {"Covered": _GREEN_D, "Partial": _AMBER_D,
+                         "Not covered": _RED_D}
+        for ri in range(1, len(rows)):
+            for p in tbl.cell(ri, 2).text_frame.paragraphs:
+                for run in p.runs:
+                    run.font.bold = True
+                    run.font.color.rgb = rgb(
+                        verdict_color.get(rows[ri][2], _GREY))
+        info_card(s, 6.50, 1.25, 3.05, 1.45, _TEAL, _MINT,
+                  f"{top10['covered']} of 10 fully covered", _GREEN_D,
+                  [P([R("Plus ", size=9), K(str(top10["partial"]), 9, _AMBER),
+                      R(" partially covered. These are the techniques real "
+                        "intrusions run on — every red row is worth a build "
+                        "slot.", size=9)])])
+        info_card(s, 6.50, 2.87, 3.05, 1.45, _LAVENDER, _CARD,
+                  "Where this list comes from", _PURPLE,
+                  [P([R("A published industry report, refreshed yearly — "
+                        "not our estimate. Your states come from this "
+                        "assessment's own rule set.", size=9)])])
+
+    # -------------------------------------------- 13c · adversary spotlight
+    # (2026-08-18 uplift — data-gated: needs an intake actor or industry)
+    if spot:
+        s = slide()
+        chrome(s, f"Adversary Spotlight — {spot['title']}",
+               spot["sub"] or "Profile techniques vs your real coverage")
+        text(s, 0.45, 1.22, 9.10, 0.35, [
+            P([R(f"Of the {spot['in_scope']} profile techniques that apply "
+                 f"to you, your rules would detect ", size=12.5),
+               K(str(len(spot["detected"])), 13, _GREEN),
+               (R(f" ({len(spot['partial_hits'])} partially).", size=12.5)
+                if spot["partial_hits"] else R(".", size=12.5))])])
+        if spot["strip"]:
+            seg_w = 9.10 / len(spot["strip"])
+            for i, (tac_name, hit, total) in enumerate(spot["strip"]):
+                x = 0.45 + i * seg_w
+                color = (_GREEN if hit == total else
+                         (_AMBER if hit else _MAGENTA))
+                rect(s, x, 1.80, seg_w - 0.06, 1.05, _CARD)
+                rect(s, x, 1.80, seg_w - 0.06, 0.07, color)
+                text(s, x + 0.05, 1.94, seg_w - 0.16, 0.40,
+                     [P([R(tac_name, bold=True, color=_PURPLE, size=6.5)])])
+                text(s, x + 0.05, 2.36, seg_w - 0.16, 0.40,
+                     [P([R(f"{hit}/{total}", bold=True, color=color, size=14)])])
+        blind = spot["blind"]
+        if blind:
+            from app.mitre import attack_data as _ad
+            blind_line = " · ".join(
+                f"{t} {(_ad.DEFAULT.get(t) or {}).get('name', '')}".strip()
+                for t in blind[:8]
+            ) + (f"  (+{len(blind) - 8} more)" if len(blind) > 8 else "")
+            info_card(s, 0.45, 3.10, 9.10, 1.05, _MAGENTA, _ROSEBG,
+                      "Blind spots — this profile walks through them today",
+                      _RED_D, [P([K(blind_line, 9, _MAGENTA)])])
+        else:
+            info_card(s, 0.45, 3.10, 9.10, 1.05, _TEAL, _MINT,
+                      "No blind spots in this profile", _GREEN_D,
+                      [P([R("Every in-scope technique this profile uses has "
+                            "at least a partial detection.", size=9)])])
+        text(s, 0.45, 4.30, 9.10, 0.60,
+             [P([R(f"{spot['source']}. Coverage states come from your own "
+                   "rule set in this assessment.", color=_GREY, size=8)])])
+
     # ----------------------------------------------------- 14 · top fixes
     if gaps:
         top5 = gaps[:5]
@@ -872,13 +1061,26 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
     rect(s, 0, 0, 10.0, 5.625, _PURPLE)
     rect(s, -1.60, 1.40, 6.00, 6.00, _PURPLE2, MSO_SHAPE.OVAL)
     rect(s, 7.10, -1.20, 5.50, 5.50, _MAGENTA, MSO_SHAPE.OVAL)
-    text(s, 0.90, 2.00, 8.20, 1.00,
+    text(s, 0.90, 1.70, 8.20, 1.00,
          [P([R("Thank you · Q&A", bold=True, color="FFFFFF", size=34)])])
-    text(s, 0.90, 3.10, 8.20, 1.10, [
+    closing_paras = []
+    if projected is not None and roadmap.get("short"):
+        # the "next 90 days" verdict — same computed projection as the PDF
+        closing_paras.append(
+            P([R(f"{strict_pct}% today — closing the "
+                 f"{len(roadmap['short'])} short-term gaps takes you to "
+                 f"about {projected}%.", bold=True, color="FFFFFF", size=15)],
+              space_after=8))
+    closing_paras += [
         P([R(footer_text, bold=True, color=_TEAL, size=13)]),
         P([R("Full detail: the spreadsheet technique tracker, the PDF report "
-             "and the ATT&CK Navigator layers.", color=_LILAC, size=11)]),
-    ])
+             "and the ATT&CK Navigator layers.", color=_LILAC, size=11)],
+          space_after=10),
+        P([R("This assessment reads what your rules and inventory declare — "
+             "it never saw raw logs. Validate before you rely on it.",
+             color=_LILAC, size=9)]),
+    ]
+    text(s, 0.90, 2.80, 8.30, 2.30, closing_paras)
 
     cp = prs.core_properties
     cp.title = f"{assessment.name} — MITRE ATT&CK Coverage Assessment"
