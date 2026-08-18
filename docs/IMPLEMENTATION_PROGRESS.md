@@ -762,6 +762,28 @@ deploy), "Pull from Splunk" wizard tab. Sonnet adversarial sign-off
 ACCEPT (1 hardening applied: RecursionError → EgressError on hostile
 JSON). 15 new tests; **full suite 905 passed / 7 skipped**; `tsc` clean.
 
+**VFQ engagement + report-export productization COMPLETE (2026-08-13/14,
+deployed; documented retroactively 2026-08-19):** first real-customer
+run (Vodafone Qatar SOC via Wipro MDR — 371 Sentinel rules, 28.7%
+coverage, 193/673; customer files gitignored under `docs/sample/project/`,
+public repo). Review of the generated deliverables found and fixed three
+accuracy defects at the source: feasibility via picked by raw component
+order + Sentinel-native table names missing from the log-source vocab
+(the "T1685.005 on EmailAttachmentInfo" bug), crown-jewel matching
+missing real inventory phrasing (now falls back to the Assets-sheet
+platform normalizer), and the roadmap over-promising against never-fired
+rules (XLSX caveat with the real count). Then productized the hand-built
+deliverables: **PPTX briefing-deck export** (`report_pptx.py` +
+`GET /assessments/{id}/export.pptx` + PPT button; 18-slide structure with
+derived What's-Working/Key-Gaps evidence cards, python-pptx dep), XLSX
+purple/teal restyle with gaps-first tracker sort, **Reference KQL column**
+(per-table skeletons with FP/never-fires discipline header), and
+fields-source alignment. ATT&CK v19.1 reconciliation verified exact
+(site 222+475=697 Enterprise = 673 applicable + 24 platform-N/A).
+Baseline 886→890/7 across the session; prod org `002c42da…` has
+`quality_ai_enabled=true` (direct prod DB write, user-requested). Full
+narrative: `docs/phases/summaries/SESSION_HANDOFF_2026_08_14_VFQ_ENGAGEMENT_REPORT_EXPORTS.md`.
+
 **Reports overhaul + tool-coverage overlay COMPLETE (2026-08-18/19,
 deployed):** one session shipped report de-branding (unbranded default,
 templates renamed/regenerated), the 3-column plain-language Assumptions
