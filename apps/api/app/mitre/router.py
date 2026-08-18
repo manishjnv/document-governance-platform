@@ -536,6 +536,13 @@ async def create_assessment_from_siem(
         del secret  # best-effort: no lingering reference in this frame
 
 
+# non-secret config keys stamped into params.siem.workspace_ref per platform
+_SIEM_REF_KEYS = {
+    "sentinel": ("subscription_id", "resource_group", "workspace"),
+    "splunk": ("host", "port", "app"),
+}
+
+
 async def _create_assessment_from_pull(
     db,
     current_user,
@@ -587,13 +594,18 @@ async def _create_assessment_from_pull(
         "exclusions": intake_data.get("exclusions", []),
     }
     pulled_at = datetime.now(timezone.utc)
-    default_name = f"Sentinel pull {pulled_at.strftime('%Y-%m-%d %H:%M')}"
+    short_label, vendor_label = connectors.PLATFORM_LABELS.get(
+        platform, (platform, platform)
+    )
+    default_name = f"{short_label} pull {pulled_at.strftime('%Y-%m-%d %H:%M')}"
     config = config or {}
     # Phase A12: auto-stamp the trend-scoping customer key — a saved
     # connection's name (reused across scheduled re-runs) beats the raw
-    # workspace, so recurring pulls group naturally without user input.
+    # workspace/host, so recurring pulls group naturally without user input.
     customer_clean = _sanitize_customer(
-        connection.name if connection is not None else config.get("workspace")
+        connection.name
+        if connection is not None
+        else config.get("workspace") or config.get("host")
     )
 
     # Phase A7: best-effort auto-import of onboarded Sentinel data
@@ -637,7 +649,7 @@ async def _create_assessment_from_pull(
         files_to_store=[
             (
                 "use_cases",
-                f"sentinel-pull-{pulled_at.strftime('%Y%m%dT%H%M%SZ')}.csv",
+                f"{platform}-pull-{pulled_at.strftime('%Y%m%dT%H%M%SZ')}.csv",
                 "csv",
                 result["csv_bytes"],
                 parsed["row_count"],
@@ -650,20 +662,22 @@ async def _create_assessment_from_pull(
         extraction_text=None,
         warnings=list(parsed["warnings"]) + result["warnings"],
         parse_assumptions=[
-            f"rules were pulled read-only from Microsoft Sentinel "
+            f"rules were pulled read-only from {vendor_label} "
             f"({result['rule_count']} rules) rather than uploaded"
         ] + siem_assumptions,
         extra_params={
             **({"customer": customer_clean} if customer_clean else {}),
             "siem": {
-                "platform": "sentinel",
+                "platform": platform,
                 "trigger": trigger,
                 "pulled_at": pulled_at.isoformat(),
                 "rule_count": result["rule_count"],
-                # non-secret workspace reference only — never the secret
+                # non-secret workspace/host reference only — never the secret
                 "workspace_ref": {
                     k: str(config.get(k) or "")
-                    for k in ("subscription_id", "resource_group", "workspace")
+                    for k in _SIEM_REF_KEYS.get(
+                        platform, ("subscription_id", "resource_group", "workspace")
+                    )
                 },
                 "stats": result["stats"],
                 **(
@@ -677,7 +691,7 @@ async def _create_assessment_from_pull(
             }
         },
     )
-    response["siem"] = {"platform": "sentinel", "rule_count": result["rule_count"]}
+    response["siem"] = {"platform": platform, "rule_count": result["rule_count"]}
     return response
 
 
@@ -793,15 +807,8 @@ def _decrypt_or_error(connection: MitreConnection) -> str:
 
 def _validated_platform_config(payload: dict) -> tuple:
     platform = str(payload.get("platform") or "")
-    if platform != "sentinel":
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Unknown SIEM platform {platform[:30]!r}. Supported: sentinel",
-        )
-    from app.mitre.connectors import sentinel
-
     try:
-        return platform, sentinel.validate_config(payload.get("config"))
+        return platform, connectors.validate_config(platform, payload.get("config"))
     except ConnectorConfigError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)

@@ -29,16 +29,36 @@ class ConnectorError(Exception):
     rate limits…) with an actionable, secret-free message (HTTP 502)."""
 
 
-PLATFORMS = ("sentinel",)
+PLATFORMS = ("sentinel", "splunk")
+
+# (short name for auto-generated titles, full vendor name for prose)
+PLATFORM_LABELS = {
+    "sentinel": ("Sentinel", "Microsoft Sentinel"),
+    "splunk": ("Splunk", "Splunk"),
+}
+
+
+def _module(platform: str):
+    if platform == "sentinel":
+        from . import sentinel
+
+        return sentinel
+    if platform == "splunk":
+        from . import splunk
+
+        return splunk
+    raise ConnectorConfigError(
+        f"Unknown SIEM platform {str(platform)[:30]!r}. Supported: {', '.join(PLATFORMS)}"
+    )
+
+
+def validate_config(platform: str, config: dict) -> dict:
+    """Validate/normalize config without pulling (saved-connection CRUD)."""
+    return _module(platform).validate_config(config)
 
 
 def pull_rules(platform: str, config: dict, secret: str) -> dict:
     """Validate config and run the named connector. Blocking (called via
     run_in_threadpool from the router)."""
-    if platform == "sentinel":
-        from . import sentinel
-
-        return sentinel.pull(sentinel.validate_config(config), secret)
-    raise ConnectorConfigError(
-        f"Unknown SIEM platform {str(platform)[:30]!r}. Supported: {', '.join(PLATFORMS)}"
-    )
+    module = _module(platform)
+    return module.pull(module.validate_config(config), secret)

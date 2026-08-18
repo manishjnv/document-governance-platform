@@ -570,12 +570,17 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
     if siem:
         # Phase 13d provenance: which SIEM, manual vs scheduled, when.
         # Non-secret fields only (workspace_ref never holds credentials).
+        from .connectors.base import PLATFORM_LABELS
+
+        platform = siem.get("platform") or "sentinel"
+        vendor = PLATFORM_LABELS.get(platform, (None, platform))[1]
         source_bits = [
-            "source: Microsoft Sentinel pull",
+            _esc(f"source: {vendor} pull"),
             _esc(siem.get("trigger") or "manual"),
         ]
-        if (siem.get("workspace_ref") or {}).get("workspace"):
-            source_bits.append(_esc(siem["workspace_ref"]["workspace"]))
+        ref = siem.get("workspace_ref") or {}
+        if ref.get("workspace") or ref.get("host"):
+            source_bits.append(_esc(ref.get("workspace") or ref.get("host")))
         if siem.get("connection_name"):
             source_bits.append(_esc(siem["connection_name"]))
         if siem.get("pulled_at"):

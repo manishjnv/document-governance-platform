@@ -205,15 +205,24 @@ async def _notify_admins_if_failing(db, connection) -> int:
             )
         )
     ).scalars().all()
-    workspace = (connection.config or {}).get("workspace", "")
+    from app.mitre.connectors.base import PLATFORM_LABELS
+
+    config = connection.config or {}
+    ref = config.get("workspace") or config.get("host") or ""
+    vendor = PLATFORM_LABELS.get(connection.platform, (None, connection.platform))[1]
+    permission_hint = (
+        "the service principal needs 'Microsoft Sentinel Reader'"
+        if connection.platform == "sentinel"
+        else "the token must be valid and allowed to list saved searches"
+    )
     body = (
         f"Scheduled SIEM pulls for the connection '{connection.name}' "
-        f"(Microsoft Sentinel, workspace {workspace}) have now failed "
+        f"({vendor}, {ref}) have now failed "
         f"{_NOTIFY_AT_STREAK} times in a row.\n\n"
         f"Most recent error: {health['last_error'] or 'unknown'}\n\n"
         "Runs will keep being attempted on schedule. Fix the credentials or "
-        "permissions (the service principal needs 'Microsoft Sentinel "
-        "Reader'), or pause the schedule from the connection settings. The "
+        f"permissions ({permission_hint}), or pause the schedule from the "
+        "connection settings. The "
         "next successful pull resets this notice.\n\n"
         "— ScopeWise (automated notice; you won't be emailed again for this "
         "failure streak)"

@@ -95,8 +95,8 @@ class _FakeResponse:
 
 def _fake_conn_class(responses, seen):
     class _FakeConn:
-        def __init__(self, host, pinned_ip):
-            seen.append({"host": host, "pinned_ip": pinned_ip})
+        def __init__(self, host, pinned_ip, port=443):
+            seen.append({"host": host, "pinned_ip": pinned_ip, "port": port})
             self._response = responses.pop(0)
 
         def request(self, method, path, body=None, headers=None):
@@ -113,7 +113,7 @@ def _fake_conn_class(responses, seen):
 
 def _patched_fetch(monkeypatch, responses):
     seen = []
-    monkeypatch.setattr(egress, "_validated_ip", lambda host: "8.8.8.8")
+    monkeypatch.setattr(egress, "_validated_ip", lambda host, port=443: "8.8.8.8")
     monkeypatch.setattr(
         egress, "_PinnedHTTPSConnection", _fake_conn_class(responses, seen)
     )
@@ -334,7 +334,7 @@ def test_pull_follows_next_link_within_allowlist(monkeypatch):
 
 def test_unknown_platform_rejected():
     with pytest.raises(ConnectorConfigError, match="Unknown SIEM platform"):
-        connectors_base.pull_rules("splunk", {}, "s")
+        connectors_base.pull_rules("qradar", {}, "s")
 
 
 # ---------------------------------------------------------------------------

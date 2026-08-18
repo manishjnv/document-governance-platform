@@ -186,8 +186,8 @@ export default function NewMitreAssessmentPage() {
     { name: string; attack_id: string | null; note: string | null }[]
   >([]);
   const [threatActors, setThreatActors] = useState<string[]>([]);
-  // Phase 13a: rule source — upload a file, or pull from Microsoft Sentinel
-  const [source, setSource] = useState<'upload' | 'sentinel'>('upload');
+  // Phase 13a: rule source — upload a file, or pull from a SIEM
+  const [source, setSource] = useState<'upload' | 'sentinel' | 'splunk'>('upload');
   const [siem, setSiem] = useState({
     tenant_id: '',
     client_id: '',
@@ -195,6 +195,7 @@ export default function NewMitreAssessmentPage() {
     resource_group: '',
     workspace: '',
   });
+  const [splunk, setSplunk] = useState({ host: '', port: '8089', app: '' });
   const [siemSecret, setSiemSecret] = useState('');
 
   useEffect(() => {
@@ -228,6 +229,10 @@ export default function NewMitreAssessmentPage() {
         setError('Please fill in every Sentinel connection field, including the client secret');
         return;
       }
+    }
+    if (source === 'splunk' && (!splunk.host.trim() || !siemSecret.trim())) {
+      setError('Please fill in the Splunk host and the auth token');
+      return;
     }
     const cleanExclusions = exclusions.filter((x) => x.target.trim() || x.reason.trim());
     if (cleanExclusions.some((x) => !x.target.trim() || !x.reason.trim())) {
@@ -277,6 +282,25 @@ export default function NewMitreAssessmentPage() {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setSiemSecret('');
+      } else if (source === 'splunk') {
+        // Same token-at-trigger contract as Sentinel — the auth token
+        // rides this one request and is never stored anywhere.
+        res = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments/from-siem`,
+          {
+            platform: 'splunk',
+            config: {
+              host: splunk.host.trim(),
+              port: Number(splunk.port) || 8089,
+              ...(splunk.app.trim() ? { app: splunk.app.trim() } : {}),
+            },
+            secret: siemSecret,
+            ...(name.trim() ? { name: name.trim() } : {}),
+            intake,
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setSiemSecret('');
       } else {
         const formData = new FormData();
         formData.append('use_cases', useCaseFile as File);
@@ -298,7 +322,7 @@ export default function NewMitreAssessmentPage() {
       setPreview(res.data);
     } catch (err: any) {
       if (err.response?.status === 401) router.push('/login');
-      else setError(err.response?.data?.detail || (source === 'sentinel' ? 'Sentinel pull failed' : 'Upload failed'));
+      else setError(err.response?.data?.detail || (source === 'upload' ? 'Upload failed' : 'SIEM pull failed'));
     } finally {
       setSubmitting(false);
     }
@@ -409,6 +433,7 @@ export default function NewMitreAssessmentPage() {
                 [
                   ['upload', 'Upload a file'],
                   ['sentinel', 'Pull from Microsoft Sentinel'],
+                  ['splunk', 'Pull from Splunk'],
                 ] as const
               ).map(([key, label]) => (
                 <button
@@ -486,7 +511,83 @@ export default function NewMitreAssessmentPage() {
               </Card>
             )}
 
-            <Card className={source === 'sentinel' ? 'hidden' : undefined}>
+            {source === 'splunk' && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Splunk connection</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Read-only pull of your saved searches via the Splunk REST API.
+                    The management port (usually 8089) must be reachable from ScopeWise —
+                    for Splunk Cloud that means allowlisting our IP on the stack. The auth
+                    token is used once for this pull and is{' '}
+                    <span className="font-medium">never stored</span>.
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor="splunk-host" className="mb-1.5 block text-sm font-medium">
+                        Host <span className="font-normal text-muted-foreground">(e.g. acme.splunkcloud.com)</span>
+                      </label>
+                      <input
+                        id="splunk-host"
+                        type="text"
+                        value={splunk.host}
+                        onChange={(e) => setSplunk((prev) => ({ ...prev, host: e.target.value }))}
+                        autoComplete="off"
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="splunk-port" className="mb-1.5 block text-sm font-medium">
+                        Management port
+                      </label>
+                      <input
+                        id="splunk-port"
+                        type="text"
+                        inputMode="numeric"
+                        value={splunk.port}
+                        onChange={(e) => setSplunk((prev) => ({ ...prev, port: e.target.value }))}
+                        autoComplete="off"
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="splunk-app" className="mb-1.5 block text-sm font-medium">
+                        App <span className="font-normal text-muted-foreground">(optional — all apps if empty)</span>
+                      </label>
+                      <input
+                        id="splunk-app"
+                        type="text"
+                        value={splunk.app}
+                        onChange={(e) => setSplunk((prev) => ({ ...prev, app: e.target.value }))}
+                        autoComplete="off"
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="splunk-token" className="mb-1.5 block text-sm font-medium">
+                        Auth token <span className="font-normal text-muted-foreground">(never stored)</span>
+                      </label>
+                      <input
+                        id="splunk-token"
+                        type="password"
+                        value={siemSecret}
+                        onChange={(e) => setSiemSecret(e.target.value)}
+                        autoComplete="off"
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    This path doesn&apos;t take an environment workbook yet, so the whole
+                    ATT&amp;CK matrix set is assessed — the score reads lower than reality.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            <Card className={source !== 'upload' ? 'hidden' : undefined}>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Your files</CardTitle>
               </CardHeader>
@@ -595,16 +696,16 @@ export default function NewMitreAssessmentPage() {
                 </div>
 
                 {/* Phase A12: scopes the trend block to the same customer's
-                    runs. Manual for uploads; auto-derived from the Sentinel
-                    connection/workspace name for pulled assessments. */}
+                    runs. Manual for uploads; auto-derived from the SIEM
+                    connection/workspace/host name for pulled assessments. */}
                 <div>
                   <label htmlFor="mitre-customer" className="mb-1.5 block text-sm font-medium">
                     Customer / engagement{' '}
                     <span className="font-normal text-muted-foreground">(optional)</span>
                   </label>
-                  {source === 'sentinel' ? (
+                  {source !== 'upload' ? (
                     <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                      Auto-set from your Sentinel connection so scheduled re-runs group correctly.
+                      Auto-set from your SIEM connection so scheduled re-runs group correctly.
                     </p>
                   ) : (
                     <input

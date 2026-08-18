@@ -134,7 +134,9 @@ export default function SiemConnectionsPage() {
                   <TableCell>
                     <div className="text-sm font-medium">{c.name}</div>
                     <div className="text-xs text-muted-foreground">
-                      Sentinel · {c.config.workspace}
+                      {c.platform === 'splunk'
+                        ? `Splunk · ${c.config.host ?? ''}`
+                        : `Sentinel · ${c.config.workspace ?? ''}`}
                     </div>
                   </TableCell>
                   <TableCell className="text-xs">{scheduleLabel(c)}</TableCell>

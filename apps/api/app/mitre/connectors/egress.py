@@ -13,7 +13,9 @@ properties, in order of importance:
   TCP connection goes to the validated IP while TLS SNI + certificate
   verification still run against the original hostname. Rejecting at
   connect time, not parse time, closes the DNS-rebinding TOCTOU.
-- **https/443 only** — scheme and port are not parameters.
+- **https only; port limited to 443 or 8089** — the scheme is not a
+  parameter, and the only non-443 port is Splunk's management port
+  (`ALLOWED_PORTS`); arbitrary ports stay refused.
 - **Redirects are errors** (the Azure APIs never need them; a 3xx from
   a pinned host is suspicious by definition).
 - **Caps**: connect/read timeouts, a total per-request deadline (slow
@@ -43,20 +45,21 @@ MAX_RESPONSE_BYTES = 20 * 1024 * 1024
 MAX_ATTEMPTS = 3              # retries only for 429/502/503/504
 RETRY_AFTER_CAP = 10          # seconds we are willing to honor per wait
 _CHUNK = 65536
+ALLOWED_PORTS = frozenset({443, 8089})  # 8089 = Splunk management port
 
 
 class EgressError(Exception):
     """Transport-level failure with a user-safe, secret-free message."""
 
 
-def _validated_ip(host: str) -> str:
+def _validated_ip(host: str, port: int = 443) -> str:
     """Resolve `host` and return one publicly-routable IP, or raise.
 
     ALL resolved addresses must be global unicast — if even one is
     private/reserved, the host is refused outright (a rebinding name
     that mixes public and private answers must not win by racing)."""
     try:
-        infos = socket.getaddrinfo(host, 443, proto=socket.IPPROTO_TCP)
+        infos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
     except OSError:
         raise EgressError(f"could not resolve {host} — check network/DNS")
     if not infos:
@@ -80,14 +83,14 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
     """HTTPS connection whose TCP socket goes to a pre-validated IP while
     SNI + certificate verification still use the real hostname."""
 
-    def __init__(self, host: str, pinned_ip: str):
-        super().__init__(host, 443, timeout=CONNECT_TIMEOUT)
+    def __init__(self, host: str, pinned_ip: str, port: int = 443):
+        super().__init__(host, port, timeout=CONNECT_TIMEOUT)
         self._pinned_ip = pinned_ip
         self._pin_context = ssl.create_default_context()
 
     def connect(self):  # noqa: D102 — pinned override, see class docstring
         raw = socket.create_connection(
-            (self._pinned_ip, 443), timeout=CONNECT_TIMEOUT
+            (self._pinned_ip, self.port), timeout=CONNECT_TIMEOUT
         )
         self.sock = self._pin_context.wrap_socket(raw, server_hostname=self.host)
 
@@ -114,24 +117,28 @@ def fetch_json(
     method: str = "GET",
     headers: dict = None,
     body: bytes = None,
+    port: int = 443,
 ) -> tuple:
     """One guarded HTTPS request. Returns (status_code, parsed_json_dict).
 
-    Raises EgressError for: host not allowlisted, non-public resolution,
-    network/TLS failure, redirect, oversize/slow response, unparseable
-    JSON, or retries exhausted on 429/5xx. 4xx statuses are RETURNED
-    (the connector maps them to actionable messages)."""
+    Raises EgressError for: host not allowlisted, port not in
+    ALLOWED_PORTS, non-public resolution, network/TLS failure, redirect,
+    oversize/slow response, unparseable JSON, or retries exhausted on
+    429/5xx. 4xx statuses are RETURNED (the connector maps them to
+    actionable messages)."""
     host = str(host or "").strip().lower()
     if host not in allowed_hosts:
         # allowlists are hardcoded per connector; hitting this means a bug
         # or a hostile nextLink — never connect.
         raise EgressError("refusing to contact a host outside the connector allowlist")
+    if port not in ALLOWED_PORTS:
+        raise EgressError("refusing to contact a port outside the connector allowlist")
 
-    pinned_ip = _validated_ip(host)
+    pinned_ip = _validated_ip(host, port)
     last_status = None
     for attempt in range(1, MAX_ATTEMPTS + 1):
         deadline = time.monotonic() + TOTAL_DEADLINE
-        conn = _PinnedHTTPSConnection(host, pinned_ip)
+        conn = _PinnedHTTPSConnection(host, pinned_ip, port)
         try:
             conn.request(method, path, body=body, headers=headers or {})
             response = conn.getresponse()
@@ -165,7 +172,10 @@ def fetch_json(
 
         try:
             parsed = json.loads(payload.decode("utf-8")) if payload else {}
-        except (ValueError, UnicodeDecodeError):
+        # RecursionError: a hostile server (hosts are customer-supplied since
+        # the Splunk connector) can nest JSON deeply within the size cap —
+        # keep the secret-free EgressError contract instead of a raw 500.
+        except (ValueError, UnicodeDecodeError, RecursionError):
             raise EgressError(f"{host} returned a response that is not valid JSON")
         if not isinstance(parsed, dict):
             raise EgressError(f"{host} returned an unexpected response shape")

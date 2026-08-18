@@ -22,10 +22,10 @@ from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 class MitreConnection(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "mitre_connections"
     __table_args__ = (
-        # keep in lockstep with migrations 034/035 (the 5th migration sync
-        # point — a create_all-bootstrapped DB gets THESE constraints)
+        # keep in lockstep with migrations 034/035/037 (the 5th migration
+        # sync point — a create_all-bootstrapped DB gets THESE constraints)
         CheckConstraint(
-            "platform IN ('sentinel')",
+            "platform IN ('sentinel', 'splunk')",
             name="ck_mitre_connections_platform",
         ),
         CheckConstraint(
