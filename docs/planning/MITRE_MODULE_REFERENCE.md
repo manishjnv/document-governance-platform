@@ -109,7 +109,7 @@ in-app results with a Navigator-style heatmap, executive+detailed PDF, an
 | `apps/api/migrations/032_mitre_use_case_logic.sql` | Adds `mitre_use_cases.logic` TEXT (Phase 7). |
 | `apps/api/app/models/mitre_{assessment,file,use_case}.py` | ORM models (FK columns only, no relationships — so no existing model file changes). Registered in `app/models/__init__.py`. |
 | `apps/web/app/mitre/` | Frontend section: `lib.ts` (types + display metadata), `page.tsx` (list), `new/page.tsx` (wizard), `[assessmentId]/page.tsx` (results), `components/` (ExecutiveBand, CoverageHeatmap, TechniqueDrawer, GapsRoadmap, AssumptionsNA, CompareView, StateBadge — all props-only panels). |
-| `apps/web/public/templates/scopewise-mitre-{use-cases,environment}.xlsx` | Downloadable templates, header/sheet names verified against `ingest.py`'s synonym lists. |
+| `apps/web/public/templates/mitre-{use-cases,environment}-template.xlsx` | Downloadable templates (renamed + de-branded 2026-08-18), header/sheet names verified against `ingest.py`'s synonym lists. |
 | `apps/api/tests/test_mitre_*.py` | 7 test files (§13). |
 | `docs/planning/MITRE_ASSESSMENT_PLAN.md` | Original design + decisions (locked 2026-08-01). |
 | `docs/planning/PROMPT_ENGINEERING_GUIDE.md` | "2026-08-01 — MITRE module prompts" section: rationale for both prompts. MITRE prompts are documented THERE, not mirrored to `prompts/` (its generator covers only the 6 review personas). |
