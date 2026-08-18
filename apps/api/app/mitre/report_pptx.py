@@ -1066,58 +1066,96 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
         if aliases:
             subtitle += f"  ·  Also known as: {', '.join(aliases[:4])}"
         chrome(s, f"Adversary Spotlight — {spot['title']}", subtitle)
-        text(s, 0.45, 1.22, 9.10, 0.35, [
-            P([R(f"Of the {spot['in_scope']} profile techniques that apply "
-                 f"to you, your rules would detect ", size=12.5),
+        text(s, 0.45, 1.20, 9.10, 0.30, [
+            P([R("Of the ", size=12),
+               K(f"{spot['in_scope']} profile techniques", 12.5),
+               R(" that apply to you, your rules would detect ", size=12),
                K(str(len(spot["detected"])), 13, _GREEN),
-               (R(f" ({len(spot['partial_hits'])} partially).", size=12.5)
-                if spot["partial_hits"] else R(".", size=12.5))])])
+               (R(" (", size=12) if spot["partial_hits"] else R(".", size=12))]
+              + ([K(f"{len(spot['partial_hits'])} partially", 12, _AMBER),
+                  R(").", size=12)] if spot["partial_hits"] else []))])
+        # kill-chain strip (compact)
         if spot["strip"]:
             seg_w = 9.10 / len(spot["strip"])
             for i, (tac_name, hit, total) in enumerate(spot["strip"]):
                 x = 0.45 + i * seg_w
                 color = (_GREEN if hit == total else
                          (_AMBER if hit else _MAGENTA))
-                rect(s, x, 1.80, seg_w - 0.06, 1.05, _CARD)
-                rect(s, x, 1.80, seg_w - 0.06, 0.07, color)
-                text(s, x + 0.05, 1.94, seg_w - 0.16, 0.40,
+                rect(s, x, 1.58, seg_w - 0.06, 0.78, _CARD)
+                rect(s, x, 1.58, seg_w - 0.06, 0.06, color)
+                text(s, x + 0.06, 1.68, seg_w - 0.16, 0.30,
                      [P([R(tac_name, bold=True, color=_PURPLE, size=6.5)])])
-                text(s, x + 0.05, 2.36, seg_w - 0.16, 0.40,
-                     [P([R(f"{hit}/{total}", bold=True, color=color, size=14)])])
+                text(s, x + 0.06, 1.99, seg_w - 0.16, 0.32,
+                     [P([R(f"{hit}/{total}", bold=True, color=color, size=13)])])
+        # technique-by-technique table: the data behind the strip — every
+        # profile technique with its stage, your state, and YOUR rule count
+        rules_for: dict = {}
+        for uc in use_cases:
+            for m in (uc.get("mappings") or []):
+                tid_m = m.get("technique_id")
+                rules_for[tid_m] = rules_for.get(tid_m, 0) + 1
+        ta_names = {t.get("id"): t.get("name")
+                    for t in (domains.get("enterprise") or {}).get("tactics") or []}
+        state_text = {"covered": "Covered", "partial": "Partial",
+                      "not_covered": "Not covered"}
+        ordered = spot["blind"] + spot["partial_hits"] + spot["detected"]
+        shown_tids = ordered[:6]
+        rows = [("Technique this adversary uses", "Attack stage(s)",
+                 "Your coverage", "Your rules")]
+        for tid in shown_tids:
+            info = attack_data.DEFAULT.get(tid) or {}
+            stage = ", ".join(
+                ta_names.get(x, x) for x in (info.get("tactics") or [])[:2])
+            rows.append((f"{tid} — {info.get('name', '')}", stage,
+                         state_text.get(state_by_id.get(tid), "—"),
+                         str(rules_for.get(tid, 0))))
+        tbl = s.shapes.add_table(len(rows), 4, Inches(0.45), Inches(2.50),
+                                 Inches(9.10), Inches(0.28 * len(rows))).table
+        for ri, row in enumerate(rows):
+            for ci, val in enumerate(row):
+                tbl.cell(ri, ci).text = str(val)
+        style_table(tbl, [4.30, 2.20, 1.40, 1.20], header_size=9, body_size=8.5)
+        cov_color = {"Covered": _GREEN_D, "Partial": _AMBER_D,
+                     "Not covered": _RED_D}
+        for ri in range(1, len(rows)):
+            for p in tbl.cell(ri, 2).text_frame.paragraphs:
+                for run in p.runs:
+                    run.font.bold = True
+                    run.font.color.rgb = rgb(cov_color.get(rows[ri][2], _GREY))
+        more_note = (f" (+{len(ordered) - 6} more in the tracker)"
+                     if len(ordered) > 6 else "")
         blind = spot["blind"]
         if blind:
-            blind_line = " · ".join(
-                f"{t} {(attack_data.DEFAULT.get(t) or {}).get('name', '')}".strip()
-                for t in blind[:8]
-            ) + (f"  (+{len(blind) - 8} more)" if len(blind) > 8 else "")
-            info_card(s, 0.45, 3.05, 9.10, 0.95, _MAGENTA, _ROSEBG,
-                      "Blind spots — this profile walks through them today",
-                      _RED_D, [P([K(blind_line, 9, _MAGENTA)])])
             short_tids = {g.get("technique_id") for g in roadmap.get("short") or []}
             quick = len(set(blind) & short_tids)
-            action = (
-                [K(f"{quick} of these blind spots", 9),
-                 R(" are buildable now on logs you already collect — they're "
-                   "ranked in the tracker's short-term bucket.", size=9)]
+            action_runs = (
+                [K(f"{len(blind)} blind spots", 9, _MAGENTA),
+                 R(" — this profile walks through them today. ", size=9),
+                 K(f"{quick} are buildable now", 9),
+                 R(" on logs you already collect (short-term bucket)"
+                   + more_note + ".  ", size=9)]
                 if quick else
-                [R("None are quick builds — they sit in the mid/long roadmap "
-                   "buckets, so plan the telemetry deliberately.", size=9)]
+                [K(f"{len(blind)} blind spots", 9, _MAGENTA),
+                 R(" — none are quick builds; they sit in the mid/long "
+                   "buckets, so plan the telemetry deliberately"
+                   + more_note + ".  ", size=9)]
             )
-            info_card(s, 0.45, 4.14, 9.10, 0.82, _TEAL, _MINT,
-                      "What to do", _GREEN_D, [P(action)])
+            card_bar, card_fill, card_head, head_color = (
+                _MAGENTA, _ROSEBG, "What to do", _RED_D)
         else:
-            info_card(s, 0.45, 3.05, 9.10, 0.95, _TEAL, _MINT,
-                      "No blind spots in this profile", _GREEN_D,
-                      [P([R("Every in-scope technique this profile uses has "
-                            "at least a partial detection.", size=9)])])
-            info_card(s, 0.45, 4.14, 9.10, 0.82, _LAVENDER, _CARD,
-                      "Keep it that way", _PURPLE,
-                      [P([R("Re-run after rule changes — a single disabled "
-                            "rule can reopen a lane through this profile.",
-                            size=9)])])
-        text(s, 0.45, 5.06, 9.10, 0.22,
-             [P([R(f"{spot['source']}. Coverage states come from your own "
-                   "rule set in this assessment.", color=_GREY, size=7.5)])])
+            action_runs = [
+                R("Every in-scope technique has a detection — the rule count "
+                  "column shows how deep each one is. ", size=9),
+                K("Re-run after rule changes", 9),
+                R(" — a single disabled rule can reopen a lane"
+                  + more_note + ".  ", size=9)]
+            card_bar, card_fill, card_head, head_color = (
+                _TEAL, _MINT, "No blind spots — keep it that way", _GREEN_D)
+        info_card(s, 0.45, 2.60 + 0.28 * len(rows), 9.10, 0.68,
+                  card_bar, card_fill, card_head, head_color,
+                  [P(action_runs
+                     + [R(f"{spot['source']}. States come from your own "
+                          "rule set.", color=_GREY, size=7.5)])])
 
     # ----------------------------------------------------- 14 · top fixes
     if gaps:
@@ -1170,21 +1208,41 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
          [K("no undeclared blind spots", 8.5, _MAGENTA),
           R(" — everything watched or accepted in writing.", size=8.5)]),
     ]
+    _EMPTY_BUCKET = {
+        "short": "Nothing lands here — no open gap is buildable on "
+                 "currently-onboarded logs.",
+        "mid": "Nothing lands here — every gap is either buildable now or "
+               "needs a brand-new telemetry capability.",
+        "long": "Nothing lands here — no gap needs a telemetry capability "
+                "you don't already have a path to.",
+    }
+    _VIA_LABELS = {"short": "Sources ready", "mid": "Onboard first",
+                   "long": "New capability"}
     for i, (head, bar, fillc, hc, items, desc, outcome) in enumerate(buckets):
         x = 0.45 + i * 3.10
+        bucket_key = ("short", "mid", "long")[i]
         card(s, x, 1.25, 2.95, 2.55, bar, fillc)
         text(s, x + 0.15, 1.33, 2.65, 0.26,
              [P([R(f"{head}  ·  {len(items)}", bold=True, color=hc, size=11)])])
         paras = [P([R(desc, color=_GREY, size=8.5)], space_after=5)]
+        if not items:
+            paras.append(P([R(_EMPTY_BUCKET[bucket_key], color=_GREY,
+                              size=8.5)], space_after=5))
         for g in items[:3]:
             paras.append(P([R(f"{g.get('technique_id')} ", bold=True,
                               color=_PURPLE, size=8.5),
                             R(str(g.get("name"))[:34], size=8.5)], space_after=2))
         if len(items) > 3:
             paras.append(P([R(f"+ {len(items) - 3} more in the tracker",
-                              color=_GREY, size=8)], space_after=5))
-        else:
-            paras.append(P([R("", size=8)], space_after=5))
+                              color=_GREY, size=8)], space_after=4))
+        # which telemetry this bucket rides on — distinct 'via' values
+        vias = list(dict.fromkeys(
+            str(g.get("via")) for g in items if g.get("via")))
+        if vias:
+            shown_vias = ", ".join(vias[:3]) + (" …" if len(vias) > 3 else "")
+            paras.append(P([R(f"{_VIA_LABELS[bucket_key]}: ", bold=True,
+                              color=hc, size=8.5),
+                            K(shown_vias, 8.5)], space_after=4))
         paras.append(P([R("Outcome: ", bold=True, color=hc, size=8.5)] + outcome))
         text(s, x + 0.15, 1.66, 2.65, 2.05, paras)
     if never_count:
@@ -1198,20 +1256,35 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
                         "recent events), then commit dates.", size=9)])])
     else:
         # 2026-08-18 fill pass: this band sat empty without the caveat —
-        # the computed payoff line earns the space instead
-        payoff = (
-            [K(f"~{projected}% coverage", 9),
-             R(f" (from {strict_pct}%) once the NOW bucket is done — "
-               "computed, not promised. ", size=9)]
-            if projected is not None and roadmap.get("short") else
-            [R("Coverage holds — the work is proving what exists fires. ",
-               size=9)]
-        )
+        # the computed payoff plus HOW it is reached, in one strip
+        short_items_r = roadmap.get("short") or []
+        payoff_paras = []
+        if projected is not None and short_items_r:
+            payoff_paras.append(P([
+                K(f"~{projected}% coverage", 9.5),
+                R(f" (from {strict_pct}%) once the NOW bucket's "
+                  f"{len(short_items_r)} detections are built — computed "
+                  "from your own numbers, not promised.", size=9.5)],
+                space_after=3))
+            how_bits = " · ".join(
+                f"{g.get('technique_id')}"
+                + (f" on {g.get('via')}" if g.get("via") else "")
+                for g in short_items_r[:3])
+            payoff_paras.append(P([
+                R("How: ", bold=True, color=_GREEN_D, size=9),
+                R("build in ranked order, starting ", size=9),
+                K(how_bits, 9),
+                R(f"{' …' if len(short_items_r) > 3 else ''} — all on logs "
+                  "already onboarded, then re-run to bank the new baseline.",
+                  size=9)]))
+        else:
+            payoff_paras.append(P([
+                R("Coverage holds — the work is proving what exists fires. "
+                  "Re-run quarterly against this baseline — same math, "
+                  "comparable every time.", size=9.5)]))
         info_card(s, 0.45, 4.00, 9.10, 1.00, _TEAL, _MINT,
-                  "What finishing the NOW bucket earns", _GREEN_D,
-                  [P(payoff + [
-                      R("Re-run quarterly against this baseline — same math, "
-                        "comparable every time.", size=9)])])
+                  "What finishing the NOW bucket earns — and how", _GREEN_D,
+                  payoff_paras)
 
     # ----------------------------------------------------- 17 · next steps
     s = slide()
@@ -1220,44 +1293,94 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
     steps = []
     if never_count:
         steps.append(("Validate the silent rules",
-                      f"{never_count} rules found no events when last validated — "
-                      "replay test data or trigger drills.",
+                      [K(f"{never_count} rules", 8.5, _MAGENTA),
+                       R(" found no events when last validated — replay test "
+                         "data or run trigger drills. Zero engineering; flips "
+                         "moderate quality scores toward strong on the next "
+                         "run.", size=8.5)],
                       _TEAL, "Effort: low", "Impact: very high"))
     if gaps:
+        top_g = gaps[0]
         steps.append((f"Build the top {min(5, len(gaps))} detections",
-                      "Highest-priority gaps, ranked for you — start with the "
-                      "short-term bucket.", _TEAL, "Effort: low", "Impact: high"))
+                      [R("Ranked for you, short-term bucket first — start "
+                         "with ", size=8.5),
+                       K(f"#{top_g.get('rank')} {top_g.get('technique_id')} "
+                         f"{top_g.get('name')}", 8.5),
+                       R(". Logic sketches and log fields are in the "
+                         "tracker.", size=8.5)],
+                      _TEAL, "Effort: low", "Impact: high"))
     if unmapped:
         steps.append(("Map or retire the unmapped rules",
-                      f"{unmapped} rules map to no ATT&CK technique and count "
-                      "toward nothing.", _LAVENDER, "Effort: low", "Impact: medium"))
+                      [K(f"{unmapped} rules", 8.5, _MAGENTA),
+                       R(" map to no ATT&CK technique and count toward "
+                         "nothing — map them in the rule editor or retire "
+                         "them; both beat silent shelfware.", size=8.5)],
+                      _LAVENDER, "Effort: low", "Impact: medium"))
     if zero_groups:
-        steps.append((f"Decide on {len(zero_groups)} unread log source group(s)",
-                      "Write rules for them or consciously accept (and document) "
-                      "the blind spot.", _LAVENDER, "Effort: medium", "Impact: high"))
+        steps.append((f"Decide on {len(zero_groups)} unread log sources",
+                      [K(f"{len(zero_groups)} source group(s)", 8.5, _MAGENTA),
+                       R(" ship logs no rule reads — write rules for them or "
+                         "consciously accept (and document) the blind spot.",
+                         size=8.5)],
+                      _LAVENDER, "Effort: medium", "Impact: high"))
     if roadmap.get("long"):
         steps.append(("Plan new telemetry deliberately",
-                      f"{len(roadmap['long'])} gap(s) need a capability you don't "
-                      "collect today — bundle into one onboarding plan.",
+                      [K(f"{len(roadmap['long'])} gap(s)", 8.5, _MAGENTA),
+                       R(" need a capability you don't collect today — "
+                         "bundle them into one onboarding plan instead of "
+                         "ad-hoc connector work.", size=8.5)],
                       _MAGENTA, "Effort: medium", "Impact: high"))
+    if tactics_ranked:
+        worst_t = tactics_ranked[0]
+        steps.append((f"Lift the weakest stage: {worst_t.get('name')}",
+                      [K(f"{worst_t.get('strict_pct')}% covered · "
+                         f"{worst_t.get('not_covered')} techniques open",
+                         8.5, _MAGENTA),
+                       R(" — filter the tracker to this stage and work the "
+                         "ranked gaps top-down.", size=8.5)],
+                      _MAGENTA, "Effort: medium", "Impact: high"))
+    if top10.get("rows"):
+        t10_open = sum(1 for _, _, _, st in top10["rows"]
+                       if st == "not_covered")
+        if t10_open:
+            steps.append(("Close the headline gaps",
+                          [K(f"{t10_open} of the 10 most-used attacker "
+                             "techniques", 8.5, _MAGENTA),
+                           R(" are open — the most defensible build order "
+                             "there is; every one is ranked in the tracker.",
+                             size=8.5)],
+                          _MAGENTA, "Effort: low", "Impact: high"))
+    if groups:
+        g0 = groups[0]
+        steps.append((f"Protect the workhorse: {g0.get('log_source')}",
+                      [K(f"{g0.get('rule_count')} rules · "
+                         f"{g0.get('techniques_covered')} techniques", 8.5),
+                       R(" ride this one source — add pipeline health "
+                         "monitoring (parsing, freshness) before anything "
+                         "breaks quietly.", size=8.5)],
+                      _LAVENDER, "Effort: low", "Impact: medium"))
     steps.append(("Assign owners and dates",
-                  "Every tracker row has blank Owner / Status / Target-date "
-                  "columns — fill them as the work is claimed.",
+                  [R("Every tracker row has blank ", size=8.5),
+                   K("Owner / Status / Target-date", 8.5),
+                   R(" columns — fill them as the work is claimed so the "
+                     "plan survives the meeting.", size=8.5)],
                   _LAVENDER, "Effort: low", "Impact: keeps momentum"))
     steps.append(("Re-run to trend",
-                  f"Re-assess quarterly against this {strict_pct}% baseline — "
-                  "same method, same math, comparable every time.",
+                  [R("Re-assess quarterly against this ", size=8.5),
+                   K(f"{strict_pct}% baseline", 8.5),
+                   R(" — same method, same math, comparable every time; the "
+                     "delta becomes your progress report.", size=8.5)],
                   _MAGENTA, "Effort: low", "Impact: high — trend view"))
-    for i, (head, sub, color, eff, imp) in enumerate(steps[:6]):
+    for i, (head, body_runs, color, eff, imp) in enumerate(steps[:6]):
         x = 0.45 if i < 3 else 5.08
         y = 1.25 + (i % 3) * 1.32
-        card(s, x, y, 4.50, 1.20, color)
+        card(s, x, y, 4.50, 1.24, color)
         text(s, x + 0.15, y + 0.10, 0.55, 0.60,
              [P([R(str(i + 1), bold=True, color=color, size=24)])])
-        text(s, x + 0.72, y + 0.10, 3.65, 0.30,
+        text(s, x + 0.72, y + 0.08, 3.65, 0.28,
              [P([R(head, bold=True, color=_PURPLE, size=10.5)])])
-        text(s, x + 0.72, y + 0.42, 3.65, 0.48, [P([R(sub, color=_GREY, size=8.5)])])
-        text(s, x + 0.72, y + 0.92, 3.65, 0.24,
+        text(s, x + 0.72, y + 0.36, 3.65, 0.60, [P(body_runs)])
+        text(s, x + 0.72, y + 0.98, 3.65, 0.22,
              [P([K(eff, 8.5, _GREEN_D), R("   ·   ", color=_GREY, size=8.5),
                  K(imp, 8.5, _PURPLE)])])
 
