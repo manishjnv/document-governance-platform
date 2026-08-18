@@ -289,12 +289,13 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
     if display_name:
         text(s, 0.75, 2.55, 3.40, 0.50,
              [P([R(display_name, bold=True, color="FFFFFF", size=13.5)])])
-    # at-a-glance strip under the teal rule (fills the old brand spot)
-    text(s, 0.75, 3.35, 3.40, 1.80, [
-        P([R(f"{strict_pct}%", bold=True, color=_TEAL, size=26)]),
-        P([R("technique coverage", color=_LILAC, size=9.5)], space_after=8),
-        P([R(f"{total_rules} rules · {gap_total} gaps · "
-             f"{len(log_sources)} log sources", color=_LILAC, size=10)]),
+    # classification stamp — no result numbers on the cover (user feedback
+    # 2026-08-18: the verdict starts on the board slide, not page 1)
+    text(s, 0.75, 3.35, 3.40, 1.40, [
+        P([R("CONFIDENTIAL", bold=True, color=_TEAL, size=13)], space_after=5),
+        P([R("Prepared for internal distribution. Full detail in the "
+             "accompanying workbook, PDF report and Navigator layers.",
+             color=_LILAC, size=9.5)]),
     ])
     page_no += 1
 
@@ -401,12 +402,7 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
     divider("01", "Assessment Overview",
             "What was assessed, the data behind every number, and the rules of "
             "the scoring model.",
-            [f"Scope & inputs — {total_rules} rules, {len(log_sources)} log "
-             f"sources, {len(platforms)} platforms",
-             "Methodology — 5 deterministic steps, AI phrases words, never "
-             "numbers",
-             f"{overall.get('not_applicable') or 0} techniques excluded with "
-             "written reasons"])
+            ["Scope & inputs", "Methodology", "Scope exclusions"])
 
     # ------------------------------------------------- 4 · scope & inputs
     s = slide()
@@ -435,9 +431,20 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
                            R(f" — Last-Triggered health data for the rules "
                              f"({never_count} marked never fired)", size=9)],
                           space_after=5))
+    thresholds = params.get("thresholds") or {}
+    received.append(P([K("Scoring policy", 9),
+                       R(" — disabled rules "
+                         + ("count toward coverage"
+                            if thresholds.get("count_disabled_as_coverage")
+                            else "do not count toward coverage")
+                         + ", per your intake choice", size=9)], space_after=5))
     received.append(P([R("Platforms: ", bold=True, color=_PURPLE, size=9),
                        R(", ".join(platforms[:10]) + (" …" if len(platforms) > 10 else ""),
-                         size=9)]))
+                         size=9)], space_after=5))
+    received.append(P([R("Row-by-row parsing evidence: the workbook's ",
+                         color=_GREY, size=8.5),
+                       R("How We Read Your Files", bold=True, color=_PURPLE, size=8.5),
+                       R(" sheet.", color=_GREY, size=8.5)]))
     info_card(s, 0.45, 2.50, 4.45, 2.55, _TEAL, _CARD, "What we received", _PURPLE, received)
     decisions = [
         P([K(f"{len([d for d in domains if domains[d].get('applicable')])} "
@@ -504,28 +511,34 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
         card(s, x, 1.25, 1.74, 1.55, color)
         text(s, x + 0.14, 1.33, 1.48, 0.26, [P([R(head, bold=True, color=color, size=10.5)])])
         text(s, x + 0.14, 1.62, 1.48, 1.10, bodyp)
-    info_card(s, 0.45, 3.05, 4.45, 1.00, _TEAL, _MINT, "Deterministic by design", _GREEN_D,
+    info_card(s, 0.45, 3.05, 4.45, 1.02, _TEAL, _MINT, "Deterministic by design", _GREEN_D,
               [P([R("Run it twice, get the ", size=9), K("same numbers", 9),
-                  R(". AI only phrases recommendations — every figure traces to a "
-                    "rule you own.", size=9)])])
-    info_card(s, 5.10, 3.05, 4.45, 1.00, _LAVENDER, _CARD, "Fully auditable", _PURPLE,
+                  R(". Same rules + same pinned ATT&CK dataset in, same result "
+                    "out — nothing is sampled or estimated, so runs are "
+                    "comparable over time.", size=9)])])
+    info_card(s, 5.10, 3.05, 4.45, 1.02, _LAVENDER, _CARD, "Fully auditable", _PURPLE,
               [P([R("Every technique links to its ", size=9),
                   K("exact supporting rules", 9),
                   R(" with mapping source and confidence — drill down from any "
-                    "number in the spreadsheet register.", size=9)])])
+                    "number in the spreadsheet register. No black-box claims.",
+                    size=9)])])
     if threat_bits:
-        text(s, 0.45, 4.25, 9.10, 0.70, [
-            P([R("Threat context applied: ", bold=True, color=_PURPLE, size=9.5),
-               K(" · ".join(str(b) for b in threat_bits), 9.5),
-               R(f" — {threat_gaps} gaps match your declared threat profile and "
-                 "are lifted up the priority list.", size=9.5)])])
+        info_card(s, 0.45, 4.22, 4.45, 0.92, _TEAL, _MINT,
+                  "Threat context applied", _GREEN_D,
+                  [P([K(" · ".join(str(b) for b in threat_bits), 9),
+                      R(f" — {threat_gaps} gaps match your declared profile "
+                        "and are lifted up the priority list.", size=9)])])
     else:
-        info_card(s, 0.45, 4.20, 9.10, 0.85, _LAVENDER, _CARD,
+        info_card(s, 0.45, 4.22, 4.45, 0.92, _LAVENDER, _CARD,
                   "No threat profile declared", _PURPLE,
                   [P([R("Declare your ", size=9), K("industry and threat actors", 9),
                       R(" at intake and the next run orders gaps by who "
-                        "actually targets you — same numbers, sharper "
-                        "priorities.", size=9)])])
+                        "actually targets you.", size=9)])])
+    info_card(s, 5.10, 4.22, 4.45, 0.92, _MAGENTA, _ROSEBG,
+              "Where AI is allowed", _RED_D,
+              [P([R("Tagging untagged rules (confidence-floored, flagged for "
+                    "review) and phrasing recommendations. ", size=9),
+                  K("Never a number.", 9, _MAGENTA)])])
 
     # ------------------------------------------------- 6 · divider 02
     # (the former standalone "Headline Result" slide is gone — 2026-08-18
@@ -534,13 +547,8 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
     divider("02", "Coverage Results",
             "The headline score, coverage per attack stage, detection quality, "
             "and what each log source buys you.",
-            [f"Coverage by attack stage — {DOMAIN_LABELS.get(primary, primary)} "
-             "matrix" if primary else "Coverage by attack stage",
-             "Your coverage on the ATT&CK board — one cell per technique",
-             f"Detection quality — average strength "
-             f"{quality.get('avg_strength')}/100" if quality.get("scored")
-             else "Detection quality — coverage is not confidence",
-             f"What each of your {len(groups)} log source groups buys you"])
+            ["Coverage by attack stage", "The ATT&CK board",
+             "Detection quality", "Log-source value"])
 
     # -------------------------------------------- 8 · coverage by tactic
     if tactics:
@@ -554,7 +562,15 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
         gf = s.shapes.add_chart(XL_CHART_TYPE.BAR_CLUSTERED, Inches(0.45),
                                 Inches(1.25), Inches(5.85), Inches(3.85), cd)
         ch = gf.chart
-        ch.has_title = False
+        ch.has_title = True
+        title_tf = ch.chart_title.text_frame
+        title_tf.text = (f"Covered techniques per attack stage (%) — "
+                         f"{DOMAIN_LABELS.get(primary, primary)} matrix")
+        title_run = title_tf.paragraphs[0].runs[0]
+        title_run.font.size = Pt(10.5)
+        title_run.font.bold = True
+        title_run.font.name = _FONT
+        title_run.font.color.rgb = rgb(_PURPLE)
         ch.has_legend = False
         ser = ch.series[0]
         ser.format.fill.solid()
@@ -565,23 +581,30 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
         plot.data_labels.font.size = Pt(8)
         plot.data_labels.font.name = _FONT
         plot.data_labels.font.color.rgb = rgb(_PURPLE)
-        plot.data_labels.number_format = "0.0"
+        plot.data_labels.number_format = '0.0"%"'
         plot.data_labels.number_format_is_linked = False
         ch.category_axis.tick_labels.font.size = Pt(8.5)
         ch.category_axis.tick_labels.font.name = _FONT
         ch.value_axis.visible = False
         ch.value_axis.has_major_gridlines = False
         worst, best = tactics_ranked[:2], tactics_ranked[-2:][::-1]
-        info_card(s, 6.50, 1.25, 3.05, 1.30, _TEAL, _MINT, "Strongest stages", _GREEN_D,
-                  [P([K(f"{t.get('name')} {t.get('strict_pct')}%", 8.5),
-                      R(f" — {t.get('covered')} of {t.get('applicable')} "
-                        "techniques", size=8.5)], space_after=3) for t in best])
-        info_card(s, 6.50, 2.72, 3.05, 1.30, _MAGENTA, _ROSEBG, "Weakest stages", _RED_D,
-                  [P([K(f"{t.get('name')} {t.get('strict_pct')}%", 8.5, _MAGENTA),
-                      R(f" — {t.get('not_covered')} techniques open", size=8.5)],
-                     space_after=3) for t in worst])
+        best_paras = [P([K(f"{t.get('name')} {t.get('strict_pct')}%", 8.5),
+                         R(f" — {t.get('covered')} of {t.get('applicable')} "
+                           "techniques", size=8.5)], space_after=3) for t in best]
+        best_paras.append(P([R("Keep these maintained — they anchor the story "
+                               "that detection works here.",
+                               color=_GREY, size=8)]))
+        info_card(s, 6.50, 1.25, 3.05, 1.42, _TEAL, _MINT,
+                  "Strongest stages", _GREEN_D, best_paras)
+        worst_paras = [P([K(f"{t.get('name')} {t.get('strict_pct')}%", 8.5, _MAGENTA),
+                          R(f" — {t.get('not_covered')} techniques open", size=8.5)],
+                         space_after=3) for t in worst]
+        worst_paras.append(P([R("Start here — these stages give an attacker "
+                                "the freest run today.", color=_GREY, size=8)]))
+        info_card(s, 6.50, 2.82, 3.05, 1.42, _MAGENTA, _ROSEBG,
+                  "Weakest stages", _RED_D, worst_paras)
         biggest = max(tactics, key=lambda t: t.get("not_covered") or 0)
-        info_card(s, 6.50, 4.19, 3.05, 0.91, _LAVENDER, _CARD, "Where the work is", _PURPLE,
+        info_card(s, 6.50, 4.39, 3.05, 0.80, _LAVENDER, _CARD, "Where the work is", _PURPLE,
                   [P([K(f"{biggest.get('name')}", 8.5),
                       R(f" holds the most open techniques ({biggest.get('not_covered')}) "
                         "— the roadmap front-loads the ranked ones.", size=8.5)])])
@@ -626,19 +649,27 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
                    if r.get("domain") == primary
                    and "." not in (r.get("technique_id") or "")]
         legend_x = 0.45
-        for label, state, color in (
-            ("covered", "covered", _GREEN), ("partial", "partial", _AMBER),
-            ("open", "not_covered", _MAGENTA),
-            ("not applicable", "not_applicable", "C9CBD1"),
+        text(s, legend_x, 4.93, 0.62, 0.18,
+             [P([R("Legend:", bold=True, color=_PURPLE, size=8)])])
+        legend_x += 0.68
+        for label, state, color, label_color in (
+            ("covered — a rule detects it", "covered", _GREEN, _GREEN_D),
+            ("partial", "partial", _AMBER, _AMBER_D),
+            ("open — no detection", "not_covered", _MAGENTA, _RED_D),
+            ("not applicable", "not_applicable", "C9CBD1", _GREY),
         ):
             n = sum(1 for r in parents if r.get("state") == state)
-            rect(s, legend_x, 4.99, 0.14, 0.14, color)
-            text(s, legend_x + 0.19, 4.96, 1.30, 0.20,
-                 [P([R(f"{n} {label}", color=_GREY, size=8)])])
-            legend_x += 1.55
-        text(s, legend_x + 0.10, 4.96, 9.55 - legend_x - 0.10, 0.24,
-             [P([R("Sub-techniques count in the score; parent view shown — "
-                   "full grid in the Navigator export.", color=_GREY, size=8)])])
+            rect(s, legend_x, 4.95, 0.13, 0.13, color)
+            width = 0.28 + 0.062 * len(f"{n} {label}")
+            text(s, legend_x + 0.18, 4.93, width, 0.18,
+                 [P([R(f"{n} {label}", bold=True, color=label_color, size=8)])])
+            legend_x += width + 0.28
+        text(s, 0.45, 5.13, 9.10, 0.15,
+             [P([R("How to read: each block is one technique at that attack "
+                   "stage — a tall red column is a stage an attacker walks "
+                   "through unseen. Sub-techniques count in the score; the "
+                   "full grid is in the Navigator export.",
+                   color=_GREY, size=7.5)])])
 
     # ---------------------------------------------- 9 · detection quality
     if quality.get("scored"):
@@ -654,7 +685,15 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
         gf = s.shapes.add_chart(XL_CHART_TYPE.DOUGHNUT, Inches(0.45), Inches(1.30),
                                 Inches(3.55), Inches(3.30), cd)
         ch = gf.chart
-        ch.has_title = False
+        ch.has_title = True
+        title_tf = ch.chart_title.text_frame
+        title_tf.text = (f"Detection strength — "
+                         f"{quality.get('scored')} techniques scored")
+        title_run = title_tf.paragraphs[0].runs[0]
+        title_run.font.size = Pt(10.5)
+        title_run.font.bold = True
+        title_run.font.name = _FONT
+        title_run.font.color.rgb = rgb(_PURPLE)
         ch.has_legend = True
         ch.legend.position = XL_LEGEND_POSITION.BOTTOM
         ch.legend.include_in_layout = False
@@ -683,11 +722,19 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
                   f"{quality.get('strong', 0)} strong", _GREEN_D,
                   [P([R("Backed by enabled rules whose ", size=9),
                       K("provenance, logic and telemetry all line up", 9),
-                      R(" — your most trustworthy detections.", size=9)])])
+                      R(" — your most trustworthy detections.", size=9)],
+                     space_after=3),
+                   P([R("What to do: ", bold=True, color=_GREY, size=8.5),
+                      R("nothing to build — re-validate quarterly so they "
+                        "stay strong.", size=8.5)])])
         mod_body = [P([R("Reasonable rules with an open question — ", size=9),
                        K("unproven firing, partial telemetry match, or "
                          "AI-suggested mapping", 9, _AMBER),
-                       R(f". That is {mod_share}% of everything scored.", size=9)])]
+                       R(f". That is {mod_share}% of everything scored.", size=9)],
+                     space_after=3),
+                    P([R("What to do: ", bold=True, color=_GREY, size=8.5),
+                       R("prove firing with a trigger drill — most flip to "
+                         "strong with zero rule edits.", size=8.5)])]
         info_card(s, 4.35, 2.60, 5.20, 1.16, _AMBER, _CARD,
                   f"{quality.get('moderate', 0)} moderate — and why", _AMBER_D, mod_body)
         needle = [P([R("Average strength today: ", size=9),
@@ -703,6 +750,10 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
             needle[0][0].extend([
                 R("Prove the moderate rules fire (trigger drills / replay) to "
                   "move them to strong without new engineering.", size=9)])
+        if quality.get("weak"):
+            needle.append(P([R(f"{quality.get('weak')} weak detections need "
+                               "a rule rewrite — validation alone won't lift "
+                               "them.", color=_GREY, size=8.5)]))
         info_card(s, 4.35, 3.90, 5.20, 1.16, _MAGENTA, _ROSEBG,
                   "How to move the needle", _RED_D, needle)
 
@@ -722,14 +773,20 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
         for ri, row in enumerate(rows):
             for ci, val in enumerate(row):
                 tbl.cell(ri, ci).text = str(val)
-        style_table(tbl, [2.10, 0.65, 0.95, 1.90], header_size=9, body_size=8)
+        # column widths sized to real content: source names and counts are
+        # short, the attack-stages list is the long one (user feedback)
+        style_table(tbl, [1.45, 0.55, 0.85, 2.75], header_size=9, body_size=8)
         best_g = top[0] if top else None
         if best_g:
             info_card(s, 6.30, 1.25, 3.25, 1.30, _TEAL, _MINT, "Your workhorse", _GREEN_D,
                       [P([K(str(best_g.get("log_source")), 8.5),
                           R(f" powers {best_g.get('rule_count')} rules covering "
                             f"{best_g.get('techniques_covered')} techniques — "
-                            "protect this pipeline first.", size=8.5)])])
+                            "protect this pipeline first.", size=8.5)],
+                         space_after=3),
+                       P([R("Health-monitor it: parsing, normalization, event "
+                           "freshness — losing it drops the most coverage.",
+                           color=_GREY, size=8)])])
         if zero_groups:
             worst_names = ", ".join(str(g.get("log_source")) for g in zero_groups[:3])
             info_card(s, 6.30, 2.72, 3.25, 1.30, _MAGENTA, _ROSEBG,
@@ -739,6 +796,14 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
                           R(worst_names, bold=True, size=8.5),
                           R(") — map them properly or consciously accept, and "
                             "document, the gap.", size=8.5)])])
+        else:
+            info_card(s, 6.30, 2.72, 3.25, 1.30, _TEAL, _MINT,
+                      "Every source earns its keep", _GREEN_D,
+                      [P([R(f"All {len(groups)} source groups cover at least "
+                            "one technique — no telemetry is paying rent for "
+                            "nothing today. Keep it that way when onboarding "
+                            "new sources: rule first, connector second.",
+                            size=8.5)])])
         info_card(s, 6.30, 4.19, 3.25, 0.91, _LAVENDER, _CARD, "Action", _PURPLE,
                   [P([R("The spreadsheet's ", size=8.5),
                       K("Coverage by Log Source", 8.5),
@@ -746,14 +811,13 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
                         size=8.5)])])
 
     # ------------------------------------------------- 11 · divider 03
+    section3 = ["Working vs open", "Top 10 attacker techniques vs you"]
+    if spot:
+        section3.append("Adversary spotlight")
+    section3.append("Priority fixes")
     divider("03", "Strengths, Gaps & Insights",
             "What the rule base genuinely does well — and where an attacker "
-            "meets no resistance today.",
-            ["Working vs open — the evidence, side by side",
-             f"The 10 most-used attacker techniques — {top10['covered']} "
-             "covered",
-             f"Top {min(5, len(gaps))} fixes to start with"
-             if gaps else "No open gaps to rank"])
+            "meets no resistance today.", section3)
 
     # ------------------------------------------------ 12 · what's working
     strengths = []
@@ -1084,7 +1148,8 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
     # ------------------------------------------------- 15 · divider 04
     divider("04", "Roadmap & Way Forward",
             "Sequenced by effort and dependency: prove what exists, build "
-            "what's missing, then extend scope.")
+            "what's missing, then extend scope.",
+            ["Phased roadmap", "Expected payoff", "Owned next steps"])
 
     # -------------------------------------------------------- 16 · roadmap
     s = slide()
