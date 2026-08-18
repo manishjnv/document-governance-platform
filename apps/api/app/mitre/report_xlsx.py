@@ -22,6 +22,7 @@ from app.mitre.report_common import (
     _row_ref_sort_key,
     compute_log_source_coverage,
     compute_tool_overlay,
+    covered_split,
     resolve_branding,
 )
 
@@ -501,6 +502,22 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
         r = sum_row([label, overall.get(key), meaning], center=(2,))
         ws_sum.cell(row=r, column=2).fill = fill(_XLSX_STATE_FILLS[key])
         ws_sum.cell(row=r, column=2).font = bold
+    # 2026-08-19: covered split by provenance — only shown once attested
+    # tool rows exist, so pre-attestation workbooks stay unchanged
+    rule_cov, tool_cov = covered_split(assessment.technique_results or [])
+    if tool_cov:
+        applicable_n = overall.get("applicable") or 0
+
+        def _split_pct(n):
+            return round(100 * n / applicable_n, 1) if applicable_n else 0
+
+        sum_row(["   of covered: by SIEM rules", rule_cov,
+                 f"{_split_pct(rule_cov)}% of applicable — detections that "
+                 "live in your SIEM."], center=(2,))
+        sum_row(["   of covered: via attested tools", tool_cov,
+                 f"{_split_pct(tool_cov)}% — tool-attested rows "
+                 "(MITRE-evaluated; alert path confirmed by you)."],
+                center=(2,))
     sum_row(["Applicable techniques", overall.get("applicable"),
              "The denominator: techniques that apply to your environment."],
             center=(2,))

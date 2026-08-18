@@ -4,8 +4,12 @@
 of the {{ overall_applicable_esc }} attacker techniques that apply to your
 environment are covered by a detection rule.</p>
 <div class="tiles">
-  <div class="tile"><b style="color:#10b981">{{ overall_covered_esc }}</b>covered</div>
-  <div class="tile"><b style="color:#f59e0b">{{ overall_partial_esc }}</b>partially covered</div>
+  <div class="tile"><b style="color:#10b981">{{ rule_covered_esc }}</b>covered by your
+  SIEM rules ({{ rule_covered_pct_esc }}%)</div>
+  <div class="tile"><b style="color:#2563eb">{{ tool_covered_esc }}</b>covered via
+  attested tools ({{ tool_covered_pct_esc }}%)</div>
+  <div class="tile"><b>{{ overall_covered_esc }}</b>combined covered
+  ({{ overall_strict_pct_esc }}%) · {{ overall_partial_esc }} partial</div>
   <div class="tile"><b style="color:#f43f5e">{{ gap_count_esc }}</b>gaps</div>
 {{ board_trend_tile }}
 </div>

@@ -47,6 +47,7 @@ from app.mitre.report_common import (
     adversary_spotlight,
     compute_moves,
     compute_tool_overlay,
+    covered_split,
     resolve_branding,
     rule_health,
     top10_vs_you,
@@ -806,6 +807,15 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
             )
         )
 
+    # covered split by provenance (2026-08-19): SIEM rules vs attested tools
+    rule_covered, tool_covered = covered_split(results)
+
+    def _split_pct(n):
+        return (
+            round(100 * n / (overall.get("applicable") or 0), 1)
+            if overall.get("applicable") else 0
+        )
+
     # --- closing page (2026-08-18 uplift): "Your next 90 days" ----------
     closing_verdict = f"{_esc(overall.get('strict_pct'))}% today."
     if projected is not None and short_gaps:
@@ -860,6 +870,11 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
         "board_gaps_html": board_gaps_html,
         "board_trend_tile": board_trend_tile,
         "board_tool_html": board_tool_html,
+        # 2026-08-19: covered split by provenance (SIEM rules vs attested tools)
+        "rule_covered_esc": _esc(rule_covered),
+        "rule_covered_pct_esc": _esc(_split_pct(rule_covered)),
+        "tool_covered_esc": _esc(tool_covered),
+        "tool_covered_pct_esc": _esc(_split_pct(tool_covered)),
         "moves_html": moves_html,
         "gap_count_esc": _esc(overall.get("not_covered")),
         "threat_context_html": threat_context_html,

@@ -17,6 +17,7 @@ import {
   TechniqueResult,
   ThreatGroup,
   UseCaseItem,
+  coveredSplit,
   fmtDate,
 } from '../lib';
 import { DrillDownPanel } from '../components/DrillDownPanel';
@@ -740,6 +741,24 @@ export default function MitreResultsPage() {
                         {assessment.tool_coverage.caveat} Source:
                         evals.mitre.org)
                       </span>
+                      {(() => {
+                        const split = coveredSplit(techniques);
+                        const applicable = summary.overall.applicable || 0;
+                        const pct = (n: number) =>
+                          applicable ? ((100 * n) / applicable).toFixed(1) : '0';
+                        return split.tools > 0 ? (
+                          <div className="mt-1 text-muted-foreground">
+                            Combined covered {summary.overall.covered} ={' '}
+                            <span className="font-medium text-foreground">
+                              {split.rules} by SIEM rules ({pct(split.rules)}%)
+                            </span>{' '}
+                            +{' '}
+                            <span className="font-medium text-blue-700 dark:text-blue-300">
+                              {split.tools} via attested tools ({pct(split.tools)}%)
+                            </span>
+                          </div>
+                        ) : null;
+                      })()}
                       {(userRole === 'admin' || userRole === 'reviewer') && (
                         <div className="mt-2 flex flex-wrap gap-2">
                           {assessment.tool_coverage.matched_tools.map((t) => {

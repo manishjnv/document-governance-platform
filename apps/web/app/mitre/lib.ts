@@ -170,6 +170,28 @@ export interface LogSourceCoverageGroup {
   row_refs: string[];
 }
 
+/** 2026-08-19: split the covered count by provenance. A covered technique
+ * counts as tool-attested when ALL of its supporting rules are attestation
+ * rows (row_ref "attest:N") — any real SIEM rule keeps it rule-covered.
+ * Mirrors report_common.covered_split so UI and reports always agree. */
+export function coveredSplit(techniques: TechniqueResult[]): {
+  rules: number;
+  tools: number;
+} {
+  let rules = 0;
+  let tools = 0;
+  for (const t of techniques) {
+    if (t.state !== 'covered') continue;
+    const refs = t.use_case_refs ?? [];
+    if (refs.length > 0 && refs.every((r) => String(r).startsWith('attest:'))) {
+      tools += 1;
+    } else {
+      rules += 1;
+    }
+  }
+  return { rules, tools };
+}
+
 /** Tool-native detection credit (2026-08-19): computed at read time from
  * declared Security Tooling x MITRE ATT&CK Evaluations data. Always a
  * SECOND labeled number — never replaces the rule-based coverage. */
