@@ -26,6 +26,7 @@ from app.mitre.report_common import (
     compute_log_source_coverage,
     compute_moves,
     compute_tool_overlay,
+    covered_split,
     resolve_branding,
     rule_health,
     top10_vs_you,
@@ -356,14 +357,25 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
     s = slide()
     chrome(s, f"Where You Stand — {strict_pct}% Covered",
            f"{overall.get('covered')} of {applicable} applicable techniques "
-           f"covered · weighted {overall.get('weighted_pct')}% — every number "
-           "computed from your own rule set")
+           f"covered · {overall.get('partial') or 0} partial · weighted "
+           f"{overall.get('weighted_pct')}% — every number computed from "
+           "your own rule set")
+    # split the covered count by provenance (2026-08-19 user request):
+    # SIEM rules vs attested tools, each with its own count + %, plus the
+    # combined headline — all from the same stored results
+    rule_cov, tool_cov = covered_split(results)
+
+    def _pct(n):
+        return round(100 * n / applicable, 1) if applicable else 0
+
     board_tiles = [
-        (str(overall.get("covered") or 0), "techniques covered", _TEAL),
-        (str(overall.get("partial") or 0), "partially covered", _AMBER),
+        (str(rule_cov), f"covered by your SIEM rules ({_pct(rule_cov)}%)", _TEAL),
+        (str(tool_cov),
+         f"covered via attested tools ({_pct(tool_cov)}%) — MITRE-evaluated, "
+         "alert path confirmed", "2563EB"),
+        (str(overall.get("covered") or 0),
+         f"combined covered — the headline {strict_pct}%", _PURPLE),
         (str(overall.get("not_covered") or 0), "gaps — no detection today", _MAGENTA),
-        (str(len(roadmap.get("short") or [])),
-         "gaps buildable on logs you already collect", _LAVENDER),
     ]
     for i, (big, label, color) in enumerate(board_tiles):
         stat_tile(s, 0.45 + i * 2.32, 1.25, 2.17, 1.05, big, label, color)

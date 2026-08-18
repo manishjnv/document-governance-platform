@@ -76,6 +76,23 @@ def compute_moves(roadmap: dict, disabled_count: int, never_fired_count: int) ->
     return moves[:3]
 
 
+def covered_split(technique_results: list) -> tuple:
+    """(rule_covered, tool_attested_covered) among covered techniques. A
+    covered technique counts as tool-attested when ALL of its supporting
+    rules are attestation rows (row_ref 'attest:N') — any real SIEM rule
+    on it keeps it in the rule-covered count."""
+    rule_n = tool_n = 0
+    for r in technique_results or []:
+        if r.get("state") != "covered":
+            continue
+        refs = r.get("use_case_refs") or []
+        if refs and all(str(x).startswith("attest:") for x in refs):
+            tool_n += 1
+        else:
+            rule_n += 1
+    return rule_n, tool_n
+
+
 def compute_tool_overlay(tooling_entries: list, technique_results: list):
     """Tool-native detection credit (MITRE_TOOL_COVERAGE_PLAN.md), computed
     at read/render time — pure lookup over the declared Security Tooling
