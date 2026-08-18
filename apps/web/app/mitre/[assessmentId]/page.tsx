@@ -62,6 +62,8 @@ export default function MitreResultsPage() {
   const [pastRuns, setPastRuns] = useState<AssessmentListItem[] | null>(null);
   const [runsOpen, setRunsOpen] = useState(false);
   const [runError, setRunError] = useState('');
+  const [bulkAttesting, setBulkAttesting] = useState<string | null>(null);
+  const [bulkAttestError, setBulkAttestError] = useState('');
   const [downloadError, setDownloadError] = useState('');
   const [compareOptions, setCompareOptions] = useState<AssessmentListItem[] | null>(null);
   const [compareWith, setCompareWith] = useState('');
@@ -199,21 +201,29 @@ export default function MitreResultsPage() {
 
   // 2026-08-19: tool-coverage attestation — creates a tool-attested rule
   // row server-side and recomputes coverage, then refetches everything.
-  const handleAttest = useCallback(
-    async (techniqueId: string, tool: string) => {
-      try {
-        await axios.post(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments/${assessmentId}/tool-attest`,
-          { tool, technique_ids: [techniqueId] },
-          { headers: authHeaders() }
-        );
-      } catch (err: any) {
-        throw new Error(err.response?.data?.detail || 'Could not save the attestation');
+  const attestIds = useCallback(
+    async (tool: string, techniqueIds: string[]) => {
+      // endpoint caps 50 ids per call — chunk larger confirmations
+      for (let i = 0; i < techniqueIds.length; i += 50) {
+        try {
+          await axios.post(
+            `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments/${assessmentId}/tool-attest`,
+            { tool, technique_ids: techniqueIds.slice(i, i + 50) },
+            { headers: authHeaders() }
+          );
+        } catch (err: any) {
+          throw new Error(err.response?.data?.detail || 'Could not save the attestation');
+        }
       }
       await Promise.all([load(), loadUseCases()]);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [assessmentId, load, loadUseCases]
+  );
+
+  const handleAttest = useCallback(
+    (techniqueId: string, tool: string) => attestIds(tool, [techniqueId]),
+    [attestIds]
   );
 
   // Phase 14f: past-run switcher — completed runs (archived included, so
@@ -730,6 +740,53 @@ export default function MitreResultsPage() {
                         {assessment.tool_coverage.caveat} Source:
                         evals.mitre.org)
                       </span>
+                      {(userRole === 'admin' || userRole === 'reviewer') && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {assessment.tool_coverage.matched_tools.map((t) => {
+                            const credited = Object.entries(
+                              assessment.tool_coverage!.by_technique
+                            )
+                              .filter(([, labels]) => labels.includes(t.label))
+                              .map(([tid]) => tid);
+                            if (credited.length === 0) return null;
+                            return (
+                              <button
+                                key={t.label}
+                                type="button"
+                                disabled={bulkAttesting !== null}
+                                onClick={async () => {
+                                  const ok = window.confirm(
+                                    `Attest all ${credited.length} credited techniques for ${t.label}?\n\n` +
+                                      `This records that your SOC receives and monitors ${t.label}'s alerts ` +
+                                      `for these techniques, creates one auditable tool-attested rule per ` +
+                                      `technique in your name, and recomputes the coverage score.`
+                                  );
+                                  if (!ok) return;
+                                  setBulkAttesting(t.label);
+                                  setBulkAttestError('');
+                                  try {
+                                    await attestIds(t.label, credited);
+                                  } catch (err) {
+                                    setBulkAttestError(
+                                      err instanceof Error ? err.message : 'Attestation failed'
+                                    );
+                                  } finally {
+                                    setBulkAttesting(null);
+                                  }
+                                }}
+                                className="rounded-md border border-blue-400 bg-white px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:bg-transparent dark:text-blue-300 dark:hover:bg-blue-900/40"
+                              >
+                                {bulkAttesting === t.label
+                                  ? 'Attesting…'
+                                  : `Client confirmed — attest all ${credited.length} for ${t.label}`}
+                              </button>
+                            );
+                          })}
+                          {bulkAttestError && (
+                            <p className="text-xs text-destructive">{bulkAttestError}</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
 
