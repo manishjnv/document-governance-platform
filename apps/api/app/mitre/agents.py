@@ -19,6 +19,7 @@ deterministic template text. Neither ever fails the assessment by itself.
 import asyncio
 import json
 import logging
+import re
 
 from app.ai.agent import ReviewAgent, _CONFIDENCE_CALIBRATION
 
@@ -502,6 +503,25 @@ def _narrative_valid(candidate) -> bool:
     )
 
 
+# 2026-08-18 (user requirement): client-facing text must read human-typed.
+# AI narrative that trips these tells degrades to the template narrative —
+# same banned list the wording lint test enforces on curated strings.
+_AI_TELL_RE = re.compile(
+    r"\bleverag\w*\b|\brobust\b|\bholistic\b|\bseamless\w*\b|\butiliz\w*\b"
+    r"|\bfurthermore\b|\bmoreover\b|\bdelve\b|\bcutting-edge\b"
+    r"|\bstate-of-the-art\b|\bbest-in-class\b|it is important to note"
+    r"|in today'?s|overall security posture|this highlights",
+    re.IGNORECASE,
+)
+
+
+def _sounds_ai(candidate: dict) -> bool:
+    texts = [candidate.get("executive_summary") or ""]
+    texts += [str(v) for v in (candidate.get("gap_recommendations") or {}).values()]
+    texts += [str(v) for v in (candidate.get("roadmap_prose") or {}).values()]
+    return any(_AI_TELL_RE.search(t) for t in texts)
+
+
 async def generate_narrative(computed: dict, *, agent=None) -> dict:
     """One LLM call over the computed JSON; degrades to template text.
 
@@ -514,6 +534,12 @@ async def generate_narrative(computed: dict, *, agent=None) -> dict:
             agent, json.dumps(computed, ensure_ascii=False), "narrative"
         )
     except Exception:  # noqa: BLE001
+        result = None
+    if result is not None and _narrative_valid(result) and _sounds_ai(result):
+        logger.warning(
+            "MitreNarrativeAgent output tripped the AI-tell wording check — "
+            "degrading to template narrative"
+        )
         result = None
     if result is not None and _narrative_valid(result):
         narrative = {

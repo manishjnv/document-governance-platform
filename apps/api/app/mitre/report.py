@@ -316,6 +316,233 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
             + "</p>"
         )
 
+    # --- board page (2026-08-18 uplift): one-page "Where you stand" ------
+    # Everything on this page is a stored number or a deterministic
+    # derivation — the wording stays short and human (lint-enforced).
+    disabled_rules = [uc for uc in use_cases if uc.get("enabled") is False]
+    never_fired = [
+        uc for uc in use_cases
+        if uc.get("enabled")
+        and str(uc.get("last_triggered") or "").strip().lower()
+        in ("never", "never triggered")
+    ]
+    short_gaps = roadmap.get("short", [])
+
+    moves = []
+    if disabled_rules:
+        moves.append(
+            f"Review the {len(disabled_rules)} disabled rules — enabling the "
+            "right ones is the cheapest coverage you can buy."
+        )
+    if short_gaps:
+        g0 = short_gaps[0]
+        moves.append(
+            f"Build the {g0.get('technique_id')} ({g0.get('name')}) detection "
+            "first"
+            + (f" — it uses {g0.get('via')}, which you already collect."
+               if g0.get("via") else ".")
+        )
+    if never_fired:
+        moves.append(
+            f"Test the {len(never_fired)} enabled rules that have never fired "
+            "— they count as coverage today, unproven."
+        )
+    for g in short_gaps[1:] + (roadmap.get("mid") or []):
+        if len(moves) >= 3:
+            break
+        moves.append(
+            f"Then build {g.get('technique_id')} ({g.get('name')})."
+        )
+    moves_html = "".join(f"<li>{_esc(m)}</li>" for m in moves[:3]) or (
+        "<li>No open gaps — keep the rules tested and current.</li>"
+    )
+
+    board_gap_rows = ""
+    for g in gaps[:3]:
+        relevance = g.get("threat_relevance") or []
+        why = (
+            "Used by " + ", ".join(relevance) if relevance
+            else ("Among the most-used techniques in real intrusions"
+                  if g.get("tier", 4) <= 2 else "Common attacker behavior")
+        )
+        if g.get("crown_jewel_relevant"):
+            why += " · touches a crown-jewel asset"
+        board_gap_rows += (
+            f"<tr><td><strong>{_esc(g.get('technique_id'))}</strong> "
+            f"{_esc(g.get('name'))}</td><td>{_esc(why)}</td></tr>"
+        )
+    board_gaps_html = (
+        "<table class='compact'><thead><tr><th>Gap</th><th>Why it matters</th>"
+        f"</tr></thead><tbody>{board_gap_rows}</tbody></table>"
+        if board_gap_rows else "<p class='muted'>No gaps.</p>"
+    )
+    board_trend_tile = ""
+    if compare:
+        delta = (compare.get("overall_delta") or {}).get("strict_pct")
+        arrow = "▲" if (delta or 0) > 0 else ("▼" if (delta or 0) < 0 else "•")
+        color = "#10b981" if (delta or 0) > 0 else ("#f43f5e" if (delta or 0) < 0 else "#6b7280")
+        board_trend_tile = (
+            f"<div class='tile'><b style='color:{color}'>{arrow} "
+            f"{_esc(abs(delta) if delta is not None else 0)}</b>"
+            "points vs previous run</div>"
+        )
+
+    # --- threat context (2026-08-18 uplift): top-10 vs you + adversary ---
+    top_cfg = attack_data.load_top_attacker_techniques()
+    top_rows, top_covered, top_partial = "", 0, 0
+    for entry in top_cfg.get("techniques", []):
+        canonical, res_status = index.resolve(str(entry.get("id")))
+        state = state_by_id.get(canonical) if res_status in ("ok", "remapped") else None
+        if state == "covered":
+            top_covered += 1
+        elif state == "partial":
+            top_partial += 1
+        shown_name = (index.get(canonical) or {}).get("name") or entry.get("name")
+        top_rows += (
+            f"<tr><td class='num'>{_esc(entry.get('rank'))}</td>"
+            f"<td><strong>{_esc(canonical or entry.get('id'))}</strong> {_esc(shown_name)}</td>"
+            f"<td>{_state_chip(state) if state else '<span class=\"muted\">Not assessed</span>'}</td></tr>"
+        )
+    top10_html = (
+        "<h2 id='top10'>The 10 techniques attackers use most — vs you</h2>"
+        f"<p class='verdict'>You fully cover {top_covered} of the 10"
+        + (f", {top_partial} partially" if top_partial else "")
+        + ".</p>"
+        "<table class='compact'><thead><tr><th style='width:28px'>#</th>"
+        "<th>Technique</th><th style='width:110px'>Your coverage</th></tr></thead>"
+        f"<tbody>{top_rows}</tbody></table>"
+        f"<p class='muted'>Source: {_esc(top_cfg.get('source'))} "
+        f"{_esc(top_cfg.get('year'))} — {_esc(top_cfg.get('source_note'))}. "
+        "Your states come from this assessment's rule set.</p>"
+    ) if top_rows else ""
+
+    adversary_html = ""
+    profiles = attack_data.load_threat_profiles()
+    actors_cfg = profiles.get("actors") or {}
+    industries_cfg = profiles.get("industries") or {}
+    aliases = profiles.get("industry_aliases") or {}
+    chosen_actor = next(
+        (a for a in (intake.get("threat_actors") or []) if a in actors_cfg), None
+    )
+    spot = None
+    if chosen_actor:
+        actor = actors_cfg[chosen_actor]
+        spot = {
+            "title": chosen_actor
+            + (f" ({actor.get('attack_id')})" if actor.get("attack_id") else ""),
+            "sub": actor.get("note") or "",
+            "tids": actor.get("techniques") or [],
+            "source": "Technique list: MITRE ATT&CK Groups + the curated "
+                      "threat profiles shipped with this product (public "
+                      "reporting cited in-file)",
+        }
+    else:
+        industry_key = aliases.get(
+            (intake.get("industry") or "").strip().lower(),
+            (intake.get("industry") or "").strip().lower(),
+        )
+        if industry_key in industries_cfg:
+            entry = industries_cfg[industry_key]
+            spot = {
+                "title": f"Attacks on {entry.get('label')}",
+                "sub": "The techniques most reported in attacks on your industry.",
+                "tids": entry.get("techniques") or [],
+                "source": f"Sources: {entry.get('sources')}",
+            }
+    if spot:
+        resolved = []
+        for tid in spot["tids"]:
+            canonical, res_status = index.resolve(str(tid))
+            if res_status in ("ok", "remapped") and canonical not in resolved:
+                resolved.append(canonical)
+        detected = [t for t in resolved if state_by_id.get(t) == "covered"]
+        partial_hits = [t for t in resolved if state_by_id.get(t) == "partial"]
+        blind = [t for t in resolved if state_by_id.get(t) == "not_covered"]
+        in_scope = len(detected) + len(partial_hits) + len(blind)
+        if in_scope:
+            tactic_order = (domains.get("enterprise") or {}).get("tactics") or []
+            strip_cells = ""
+            for t in tactic_order:
+                relevant = [
+                    tid for tid in resolved
+                    if t.get("id") in ((index.get(tid) or {}).get("tactics") or [])
+                    and state_by_id.get(tid) in ("covered", "partial", "not_covered")
+                ]
+                if not relevant:
+                    continue
+                hit = sum(1 for tid in relevant if state_by_id.get(tid) == "covered")
+                color = (
+                    "#10b981" if hit == len(relevant)
+                    else ("#f59e0b" if hit else "#f43f5e")
+                )
+                strip_cells += (
+                    f"<div class='kc-cell' style='border-top:4px solid {color}'>"
+                    f"<span class='kc-tac'>{_esc(t.get('name'))}</span>"
+                    f"<span class='kc-count'>{hit}/{len(relevant)}</span></div>"
+                )
+            blind_chips = " ".join(
+                f"<span class='cell' style='background:#f43f5e'>{_esc(t)} "
+                f"{_esc((index.get(t) or {}).get('name', ''))}</span>"
+                for t in blind[:12]
+            ) + (f" <span class='muted'>+{len(blind) - 12} more</span>" if len(blind) > 12 else "")
+            adversary_html = (
+                "<h2 id='adversary'>Adversary spotlight</h2>"
+                f"<p><strong>{_esc(spot['title'])}</strong>"
+                + (f" — <span class='muted'>{_esc(spot['sub'])}</span>" if spot["sub"] else "")
+                + "</p>"
+                f"<p class='verdict'>Of the {in_scope} profile techniques that "
+                f"apply to you, your rules would detect {len(detected)}"
+                + (f" ({len(partial_hits)} partially)" if partial_hits else "")
+                + ".</p>"
+                f"<div class='kc-strip'>{strip_cells}</div>"
+                + (f"<p style='margin-top:6px'><strong>Blind spots:</strong> {blind_chips}</p>"
+                   if blind else "<p><strong>No blind spots in this profile.</strong></p>")
+                + f"<p class='muted'>{_esc(spot['source'])}. "
+                "Coverage states come from your own rule set in this assessment.</p>"
+            )
+    threat_context_html = ""
+    if adversary_html or top10_html:
+        threat_context_html = adversary_html + top10_html
+
+    # --- efficacy spotlight (2026-08-18 uplift) --------------------------
+    # Only renders when the customer's export carries the evidence
+    # (disabled flags / Last Triggered) — no data, no page.
+    efficacy_html = ""
+    if never_fired or disabled_rules:
+        nf_rows = "".join(
+            f"<tr><td>{_esc(uc.get('name'))}</td>"
+            f"<td>{_esc(uc.get('log_source') or '')}</td>"
+            f"<td>{_esc(', '.join(m.get('technique_id', '') for m in (uc.get('mappings') or [])) or '—')}</td></tr>"
+            for uc in never_fired[:10]
+        )
+        nf_table = (
+            "<table class='compact'><thead><tr><th>Rule</th><th>Log source</th>"
+            "<th>Techniques it claims</th></tr></thead>"
+            f"<tbody>{nf_rows}</tbody></table>"
+            + (f"<p class='muted'>Showing 10 of {len(never_fired)} — the full "
+               "list is in the XLSX Technique Tracker.</p>"
+               if len(never_fired) > 10 else "")
+        ) if never_fired else ""
+        efficacy_html = (
+            "<h2 id='efficacy'>Coverage you haven't proven</h2>"
+            "<p class='verdict'>"
+            + _esc(
+                (f"{len(never_fired)} enabled rules have never fired. " if never_fired else "")
+                + (f"{len(disabled_rules)} rules are disabled. " if disabled_rules else "")
+                + "Both count in the numbers above — test them before you rely on them."
+            )
+            + "</p>"
+            "<div class='tiles'>"
+            + (f"<div class='tile'><b>{len(never_fired)}</b>enabled, never fired</div>" if never_fired else "")
+            + (f"<div class='tile'><b>{len(disabled_rules)}</b>disabled rules</div>" if disabled_rules else "")
+            + f"<div class='tile'><b>{_esc(total_rules)}</b>rules in scope</div>"
+            "</div>"
+            + nf_table
+            + "<p class='muted'>Fired/disabled facts come from your own "
+            "export's Status and Last Triggered columns — this assessment "
+            "never reads your live SIEM.</p>"
+        )
+
     # --- detailed: stacked tactic bars + one-liners ----------------------
     tactic_sections = ""
     for key, d in _ordered_domains(domains):
@@ -341,20 +568,37 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
             f"<tbody>{rows}</tbody></table>"
         )
 
-    # --- detailed: mini parent-level heatmap grids -----------------------
+    # --- detailed: Navigator-style heatmap, parent techniques grouped ---
+    # into per-tactic columns in kill-chain order (2026-08-18 uplift —
+    # replaces the old flat cell soup; a technique in several tactics
+    # appears in each of its columns, same as the ATT&CK Navigator).
     heatmap_sections = ""
     for key, d in _ordered_domains(domains):
         if d.get("applicable", 0) == 0:
             continue
-        cells = "".join(
-            f"<span class='cell' style='background:{STATE_COLORS.get(r.get('state'), '#9ca3af')}' "
-            f"title='{_esc(r.get('technique_id'))}'>{_esc(r.get('technique_id'))}</span>"
-            for r in results
-            if r.get("domain") == key and "." not in (r.get("technique_id") or "")
-        )
+        columns = ""
+        for t in d.get("tactics", []):
+            cells = "".join(
+                f"<span class='hm-cell' style='background:"
+                f"{STATE_COLORS.get(r.get('state'), '#9ca3af')}'>"
+                f"{_esc(r.get('technique_id'))}</span>"
+                for r in results
+                if r.get("domain") == key
+                and "." not in (r.get("technique_id") or "")
+                and t.get("id") in (r.get("tactics") or [])
+            )
+            if cells:
+                columns += (
+                    f"<div class='hm-col'><div class='hm-tac'>"
+                    f"{_esc(t.get('name'))}</div>{cells}</div>"
+                )
         heatmap_sections += (
-            f"<h3>{_esc(DOMAIN_LABELS.get(key, key))} — technique map (parent level)</h3>"
-            f"<div class='heatmap'>{cells}</div>"
+            f"<h3>{_esc(DOMAIN_LABELS.get(key, key))} — technique map, "
+            "in kill-chain order</h3>"
+            "<p class='muted'>One cell per technique (parent level), one "
+            "column per attack stage. Green a rule covers it · amber "
+            "partial · red no detection · grey not applicable.</p>"
+            f"<div class='hm-grid'>{columns}</div>"
         )
 
     # --- detailed: roadmap — compact per-bucket index into the register --
@@ -486,7 +730,12 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
         f"<td class='num'>{len(r.get('use_case_refs', []))}</td></tr>"
         for r in results
     )
-    assumptions_html = "".join(f"<li>{_esc(a)}</li>" for a in assumptions)
+    # legacy "revoked" wording rewritten at render time, same as the XLSX
+    from app.mitre.report_xlsx import _rewrite_legacy_revoked
+
+    assumptions_html = "".join(
+        f"<li>{_esc(_rewrite_legacy_revoked(str(a)))}</li>" for a in assumptions
+    )
     # Space optimization: one row per distinct REASON with its techniques
     # listed — 37 identical "deprecated" rows collapse into one.
     na_sections = ""
@@ -596,6 +845,14 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
             )
         )
 
+    # --- closing page (2026-08-18 uplift): "Your next 90 days" ----------
+    closing_verdict = f"{_esc(overall.get('strict_pct'))}% today."
+    if projected is not None and short_gaps:
+        closing_verdict += (
+            f" Closing the {len(short_gaps)} short-term gaps takes you to "
+            f"about {_esc(projected)}%."
+        )
+
     context = {
         "page_title": f"MITRE ATT&amp;CK Coverage Assessment — {_esc(assessment.name)}",
         "logo_data_uri": LOGO_DATA_URI,
@@ -638,6 +895,19 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
         "appendix_note": appendix_note,
         "uc_rows": uc_rows,
         "footer_line": ' · '.join(footer_bits),
+        # 2026-08-18 uplift: board page, threat context, efficacy, closing.
+        "board_gaps_html": board_gaps_html,
+        "board_trend_tile": board_trend_tile,
+        "moves_html": moves_html,
+        "gap_count_esc": _esc(overall.get("not_covered")),
+        "threat_context_html": threat_context_html,
+        "efficacy_html": efficacy_html,
+        "closing_verdict": closing_verdict,
+        "assessment_id_esc": _esc(str(assessment.assessment_id)),
+        "total_rules_esc": _esc(total_rules),
+        "prepared_by_esc": _esc(intake.get("prepared_by") or ""),
+        "toc_adversary_li": '<li><a href="#adversary">Adversary spotlight</a></li>' if adversary_html else '',
+        "toc_efficacy_li": '<li><a href="#efficacy">Coverage you haven\'t proven</a></li>' if efficacy_html else '',
     }
     html = _JINJA_ENV.get_template("report.html").render(**context)
 

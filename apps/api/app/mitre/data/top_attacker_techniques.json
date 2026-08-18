@@ -1,0 +1,19 @@
+{
+  "_comment": "Most-prevalent attacker techniques from a named public report — feeds the PDF 'Top 10 vs you' table. Every ID must resolve against the pinned attack.json (test-enforced in test_mitre_wording.py). Refresh once per source release (~March) and update source/year. NEVER invent entries: this file exists so the report only ever cites real published data.",
+  "source": "Red Canary Threat Detection Report",
+  "year": 2025,
+  "source_note": "the most prevalent MITRE ATT&CK techniques in confirmed threats across the Red Canary customer base",
+  "url": "https://redcanary.com/threat-detection-report/techniques/",
+  "techniques": [
+    {"rank": 1, "id": "T1078.004", "name": "Valid Accounts: Cloud Accounts"},
+    {"rank": 2, "id": "T1059.001", "name": "PowerShell"},
+    {"rank": 3, "id": "T1059.003", "name": "Windows Command Shell"},
+    {"rank": 4, "id": "T1530", "name": "Data from Cloud Storage"},
+    {"rank": 5, "id": "T1105", "name": "Ingress Tool Transfer"},
+    {"rank": 6, "id": "T1114.003", "name": "Email Forwarding Rule"},
+    {"rank": 7, "id": "T1047", "name": "Windows Management Instrumentation"},
+    {"rank": 8, "id": "T1204.004", "name": "User Execution: Malicious Copy and Paste"},
+    {"rank": 9, "id": "T1564.008", "name": "Email Hiding Rules"},
+    {"rank": 10, "id": "T1027", "name": "Obfuscated Files or Information"}
+  ]
+}

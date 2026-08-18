@@ -117,6 +117,15 @@ def load_threat_profiles() -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def load_top_attacker_techniques() -> dict:
+    """Curated most-prevalent-techniques list from a named public report
+    (source/year printed on the PDF page that uses it). IDs validated
+    against attack.json by the test suite — this file only ever cites real
+    published data, never invented benchmarks."""
+    path = DATA_DIR / "top_attacker_techniques.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def load_device_classes() -> dict:
     """Curated appliance-class -> expected telemetry category map for the
     Phase A10 unmonitored-capability check (quality.py). expected_category

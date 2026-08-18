@@ -1,0 +1,14 @@
+<!-- ======================= CLOSING PAGE ============================ -->
+<h2 id="closing" class="page-break">Your next 90 days</h2>
+<p class="board-verdict">{{ closing_verdict }}</p>
+<h3>Three moves</h3>
+<ol class="moves">{{ moves_html }}</ol>
+<p>Re-run this assessment when the changes land — the numbers above are the
+before picture.</p>
+<div class="honesty">This assessment reads what your rules and inventory
+declare. It never saw raw logs and never verified a field exists in your
+data — spot-check before you rely on it.</div>
+<p class="muted closing-strip">Assessment {{ assessment_id_esc }} ·
+ATT&amp;CK v{{ attack_version_esc }} · {{ total_rules_esc }} rules ·
+completed {{ completed_esc }}{% if prepared_by_esc %} · prepared by
+{{ prepared_by_esc }}{% endif %}</p>

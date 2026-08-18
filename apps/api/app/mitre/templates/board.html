@@ -1,0 +1,18 @@
+<!-- ====================== BOARD PAGE (one page) ==================== -->
+<h2 id="board" class="page-break">Where you stand</h2>
+<p class="board-verdict"><span class="headline">{{ overall_strict_pct_esc }}%</span>
+of the {{ overall_applicable_esc }} attacker techniques that apply to your
+environment are covered by a detection rule.</p>
+<div class="tiles">
+  <div class="tile"><b style="color:#10b981">{{ overall_covered_esc }}</b>covered</div>
+  <div class="tile"><b style="color:#f59e0b">{{ overall_partial_esc }}</b>partially covered</div>
+  <div class="tile"><b style="color:#f43f5e">{{ gap_count_esc }}</b>gaps</div>
+{{ board_trend_tile }}
+</div>
+<h3>The 3 gaps that matter most</h3>
+{{ board_gaps_html }}
+<h3>The 3 moves to make</h3>
+<ol class="moves">{{ moves_html }}</ol>
+<p class="muted">Every number on this page comes from your own rule set,
+scored against MITRE ATT&amp;CK v{{ attack_version_esc }}. The rest of this
+report is the evidence.</p>

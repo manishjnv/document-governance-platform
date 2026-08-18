@@ -882,3 +882,52 @@ def test_assumptions_plain_language_helpers():
         "12 rules were AI-tagged (confidence >= 0.6) — spot-check before use"
     )[0] == "AI tagging"
     assert _classify_assumption("a completely novel note")[0] == "General"
+
+
+@pytest.mark.asyncio
+async def test_report_uplift_sections(db_session):
+    """2026-08-18 uplift: board page, top-10 table, kill-chain heatmap,
+    closing page — all present; efficacy and adversary sections stay
+    data-gated (absent without their evidence)."""
+    org, user, _ = await _make_user(db_session)
+    assessment = await _seed(db_session, org, user)
+    html = build_html_report(assessment, [])
+
+    for marker in (
+        'id="board"', "Where you stand",
+        'id="closing"', "Your next 90 days", "never saw raw logs",
+        "id='top10'", "vs you",
+        "hm-grid",  # Navigator-style tactic columns
+    ):
+        assert marker in html, marker
+    # closing verdict: stored number + the computed short-term projection
+    assert "33.3% today." in html
+    assert "takes you to about 66.7%" in html
+    # no last-triggered/disabled evidence and no intake industry/actor
+    assert "id='efficacy'" not in html
+    assert "id='adversary'" not in html
+    # top-10 verdict counts only real states (T1059.001 covered in the seed)
+    assert "You fully cover 1 of the 10" in html
+
+
+@pytest.mark.asyncio
+async def test_report_uplift_gated_sections_appear_with_data(db_session):
+    org, user, _ = await _make_user(db_session)
+    assessment = await _seed(db_session, org, user)
+    assessment.params = {
+        **assessment.params,
+        "intake": {"industry": "financial services"},
+    }
+    use_cases = [
+        {"row_ref": "s:1", "name": "Old rule", "enabled": True,
+         "last_triggered": "never", "log_source": "Sysmon",
+         "mappings": [{"technique_id": "T1059.001"}]},
+        {"row_ref": "s:2", "name": "Off rule", "enabled": False,
+         "mappings": []},
+    ]
+    html = build_html_report(assessment, use_cases)
+    assert "id='efficacy'" in html
+    assert "1 enabled rules have never fired" in html
+    assert "id='adversary'" in html
+    assert "Attacks on Financial Services" in html
+    assert "kc-strip" in html
