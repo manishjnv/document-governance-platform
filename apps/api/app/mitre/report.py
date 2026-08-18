@@ -398,10 +398,13 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
         elif state == "partial":
             top_partial += 1
         shown_name = (index.get(canonical) or {}).get("name") or entry.get("name")
+        state_cell = (
+            _state_chip(state) if state else "<span class='muted'>Not assessed</span>"
+        )
         top_rows += (
             f"<tr><td class='num'>{_esc(entry.get('rank'))}</td>"
             f"<td><strong>{_esc(canonical or entry.get('id'))}</strong> {_esc(shown_name)}</td>"
-            f"<td>{_state_chip(state) if state else '<span class=\"muted\">Not assessed</span>'}</td></tr>"
+            f"<td>{state_cell}</td></tr>"
         )
     top10_html = (
         "<h2 id='top10'>The 10 techniques attackers use most — vs you</h2>"
