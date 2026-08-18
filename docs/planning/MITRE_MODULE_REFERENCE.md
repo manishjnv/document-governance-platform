@@ -112,6 +112,7 @@ in-app results with a Navigator-style heatmap, executive+detailed PDF, an
 | `apps/web/public/templates/mitre-{use-cases,environment}-template.xlsx` | Downloadable templates (renamed + de-branded 2026-08-18), header/sheet names verified against `ingest.py`'s synonym lists. |
 | `apps/api/tests/test_mitre_*.py` | 7 test files (§13). |
 | `docs/planning/MITRE_ASSESSMENT_PLAN.md` | Original design + decisions (locked 2026-08-01). |
+| `docs/planning/MITRE_TOOL_COVERAGE_PLAN.md` | Tool-native coverage overlay design (2026-08-18, T1/T2 pending; template guidance shipped) — answers the "our EDR covers that TTP" objection with MITRE ATT&CK Evaluations data as a separate labeled overlay, never merged into the rule-based score. |
 | `docs/planning/PROMPT_ENGINEERING_GUIDE.md` | "2026-08-01 — MITRE module prompts" section: rationale for both prompts. MITRE prompts are documented THERE, not mirrored to `prompts/` (its generator covers only the 6 review personas). |
 | `docs/phases/summaries/SESSION_HANDOFF_2026_08_01_MITRE_PHASE_0_1.md` | Per-phase build handoffs with deviations and gotchas. |
 

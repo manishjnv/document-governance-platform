@@ -132,9 +132,12 @@ _READ_ME_ROWS = [
      'type as its own row in Log Sources -- e.g. "Infoblox - DNS logs" and '
      '"Infoblox - SSH logs" -- so each stream gets credited separately.',
      False, 30),
-    ('Security Tooling -- products you own but may not have onboarded for '
-     'logging yet. Used for the next-tier "onboard this, then detect" '
-     "gaps.", False, 30),
+    ('Security Tooling -- every security product you run (EDR, email, '
+     'identity, network), one per row, using the precise product name '
+     '(e.g. "CrowdStrike Falcon", "Microsoft Defender for Endpoint"). '
+     'Used two ways: "onboard this, then detect" roadmap tiers today, and '
+     "tool-native detection credit (from MITRE ATT&CK Evaluations results) "
+     "as that feature lands -- exact names make both work.", False, 44),
     ("Crown Jewels -- free text describing your most critical assets (e.g. "
      '"customer database", "payment gateway"). Used only to nudge the '
      "order gaps are shown in when they're relevant to what you described "
@@ -185,9 +188,14 @@ def build_environment_template() -> Path:
         [30, 12, 18, 18, 18],
     )
     _data_sheet(
-        wb, "Security Tooling", ["Tool"],
-        [["CrowdStrike Falcon EDR"], ["Proofpoint Email Security"]],
-        [30],
+        wb, "Security Tooling", ["Tool", "Notes (optional)"],
+        [
+            ["CrowdStrike Falcon", "EDR on all workstations + servers"],
+            ["Microsoft Defender for Endpoint", "servers only"],
+            ["Proofpoint Email Security", ""],
+            ["Okta", "workforce identity"],
+        ],
+        [34, 34],
     )
     _data_sheet(
         wb, "Crown Jewels", ["Asset"],
