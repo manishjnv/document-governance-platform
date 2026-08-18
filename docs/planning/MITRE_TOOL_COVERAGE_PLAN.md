@@ -111,6 +111,20 @@ overlay (shipped ahead of the feature — names collected now work later).
   `tool_coverage` field). Deferred from this phase: gap-ranking demotion
   of tool-covered gaps (ordering churn vs rank tests — revisit on ask).
 - **T3 (template + docs):** ✅ template guidance shipped 2026-08-18.
+- **T4 (attestation): ✅ SHIPPED 2026-08-19** — the honest bridge from
+  credit to score. `POST /assessments/{id}/tool-attest` (admin/reviewer):
+  validates the tool is matched and each technique currently carries its
+  credit, then creates one enabled rule row per technique
+  (`mapping_status='tool_attested'`, mapping source `manual` @ 1.0,
+  log_source = the tool, description stamps who attested + when + the
+  evaluation basis) and recomputes coverage inline (same engine as the
+  Phase 10 mapping edit). Migration 038 widens the mapping_status CHECK
+  (+ ORM lockstep). UI: the drawer's credit card gains a "We monitor
+  <tool>'s alerts — count as covered" button per tool. Once covered, the
+  credit disappears and re-attesting is refused — the score owns it.
+  Trust model: the customer attests, so the claim is theirs (same as
+  their own ATT&CK tags); the rule row is auditable and lists as
+  "Tool-attested — alert path confirmed" everywhere.
 
 ## Rejected
 

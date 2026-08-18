@@ -1800,6 +1800,154 @@ async def edit_use_case_mappings(
     }
 
 
+_MAX_ATTEST_IDS = 50
+
+
+@router.post(
+    "/assessments/{assessment_id}/tool-attest",
+    summary="Attest a tool's alert path — count its MITRE-evaluated techniques as covered",
+)
+async def attest_tool_coverage(
+    assessment_id: UUID,
+    payload: dict = Body(...),
+    current_user: TokenData = Depends(require_role("admin", "reviewer")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Tool-coverage attestation (MITRE_TOOL_COVERAGE_PLAN.md): body =
+    {"tool": "<matched tool label>", "technique_ids": [...]}. Every id must
+    currently carry that tool's MITRE-evaluated credit (open/partial state).
+    Creates one enabled rule row per technique (mapping_status =
+    'tool_attested', mapping source 'manual' @ 1.0, log_source = the tool)
+    and recomputes coverage inline — the customer attests the alert path,
+    so the claim is theirs, same trust model as their own ATT&CK tags."""
+    org_id = UUID(str(current_user.org_id))
+    tool = str(payload.get("tool") or "").strip()
+    ids = payload.get("technique_ids")
+    if not tool or not isinstance(ids, list) or not ids or not all(
+        isinstance(t, str) for t in ids
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="tool and technique_ids (non-empty list of strings) are required",
+        )
+    if len(ids) > _MAX_ATTEST_IDS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"attest at most {_MAX_ATTEST_IDS} techniques per call",
+        )
+
+    # Row lock: serializes with mapping edits so the recompute sees a
+    # consistent full row set (same pattern as edit_use_case_mappings).
+    result = await db.execute(
+        select(MitreAssessment)
+        .where(
+            (MitreAssessment.assessment_id == assessment_id)
+            & (MitreAssessment.org_id == org_id)
+            & (MitreAssessment.deleted_at.is_(None))
+        )
+        .with_for_update()
+    )
+    assessment = result.scalar_one_or_none()
+    if assessment is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found"
+        )
+    if assessment.status != "completed":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Attestation is available once the assessment has completed",
+        )
+
+    overlay = report_common.compute_tool_overlay(
+        ((assessment.params or {}).get("environment_lists") or {}).get("tooling")
+        or [],
+        assessment.technique_results or [],
+    )
+    matched_labels = [t["label"] for t in (overlay or {}).get("matched_tools", [])]
+    if not overlay or tool not in matched_labels:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"{tool[:60]!r} is not among this assessment's matched security tools",
+        )
+    not_credited = [
+        t for t in ids if tool not in (overlay["by_technique"].get(t) or [])
+    ]
+    if not_credited:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"not currently carrying {tool}'s MITRE-evaluated credit: "
+                + ", ".join(t[:20] for t in not_credited[:10])
+            ),
+        )
+
+    rows = await db.execute(
+        select(MitreUseCase)
+        .where(
+            (MitreUseCase.assessment_id == assessment_id)
+            & (MitreUseCase.org_id == org_id)
+            & (MitreUseCase.deleted_at.is_(None))
+        )
+        .order_by(MitreUseCase.row_ref)
+    )
+    all_rows = list(rows.scalars().all())
+    existing = {
+        (uc.log_source, (uc.mappings or [{}])[0].get("technique_id"))
+        for uc in all_rows
+        if uc.mapping_status == "tool_attested"
+    }
+    attest_n = sum(1 for uc in all_rows if uc.mapping_status == "tool_attested")
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    tool_source = next(
+        (t.get("source") for t in overlay["matched_tools"] if t["label"] == tool),
+        "MITRE ATT&CK Evaluations",
+    )
+    created = []
+    for tid in dict.fromkeys(ids):
+        if (tool, tid) in existing:
+            continue
+        attest_n += 1
+        tech_name = (attack_data.DEFAULT.get(tid) or {}).get("name", "")
+        use_case = MitreUseCase(
+            assessment_id=assessment_id,
+            org_id=org_id,
+            row_ref=f"attest:{attest_n}",
+            name=f"{tool} native detection — {tid} {tech_name}".strip(),
+            description=(
+                f"Alert path attested by {current_user.email} on {stamp}: "
+                f"alerts from {tool} for this technique are received and "
+                f"monitored by the SOC. Basis: {tool_source}."
+            ),
+            enabled=True,
+            log_source=tool,
+            mappings=[{"technique_id": tid, "source": "manual", "confidence": 1.0}],
+            mapping_status="tool_attested",
+        )
+        db.add(use_case)
+        all_rows.append(use_case)
+        created.append(tid)
+
+    if created:
+        service.recompute_results(assessment, all_rows)
+        await db.commit()
+        await log_action(
+            db,
+            org_id=org_id,
+            user_id=UUID(str(current_user.user_id)),
+            action="mitre.tool_attested",
+            resource_type="mitre_assessment",
+            resource_id=assessment_id,
+        )
+        await db.commit()
+        await invalidate_cache(f"cache:*:{org_id}:*")
+
+    return {
+        "attested": created,
+        "already_attested": [t for t in ids if t not in created],
+        "overall": (assessment.summary or {}).get("overall"),
+    }
+
+
 async def _completed_assessment(db, assessment_id: UUID, org_id) -> MitreAssessment:
     assessment = await _get_assessment(db, assessment_id, org_id)
     if assessment.status != "completed":

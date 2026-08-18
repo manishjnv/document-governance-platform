@@ -22,10 +22,10 @@ class MitreUseCase(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "mitre_use_cases"
     __table_args__ = (
         CheckConstraint(
-            # keep in lockstep with migration 033 (the 5th migration sync
-            # point — a create_all-bootstrapped DB gets THIS constraint)
+            # keep in lockstep with migrations 033/038 (the 5th migration
+            # sync point — a create_all-bootstrapped DB gets THIS constraint)
             "mapping_status IN ('customer_tagged', 'keyword_tagged', "
-            "'ai_tagged', 'manual', 'unmapped', 'invalid')",
+            "'ai_tagged', 'manual', 'tool_attested', 'unmapped', 'invalid')",
             name="ck_mitre_use_cases_mapping_status",
         ),
     )

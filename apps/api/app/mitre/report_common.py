@@ -20,6 +20,7 @@ _MAPPING_STATUS_PLAIN_XLSX = {
     "keyword_tagged": "Matched by tool/technique keyword (no AI)",
     "ai_tagged": "AI-suggested — verify",
     "manual": "Edited by a reviewer",
+    "tool_attested": "Tool-attested — alert path confirmed",
     "unmapped": "Could not be mapped",
     "invalid": "Tags were invalid — treated as untagged",
 }

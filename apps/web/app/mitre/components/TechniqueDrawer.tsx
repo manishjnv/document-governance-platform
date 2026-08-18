@@ -34,6 +34,7 @@ export function TechniqueDrawer({
   canEdit,
   onEditMappings,
   toolCoverage,
+  onAttest,
 }: {
   techniqueId: string | null;
   /** Phase 14a four-block explanation (null while loading / on fetch failure). */
@@ -48,10 +49,15 @@ export function TechniqueDrawer({
   /** 2026-08-19: tool-native detection credit map (technique id -> tool
    * labels) — shows the MITRE-evaluated note on open/partial techniques. */
   toolCoverage?: Record<string, string[]> | null;
+  /** Attest the tool's alert path: counts this technique as covered via a
+   * generated tool-attested rule row (admin/reviewer only). */
+  onAttest?: (techniqueId: string, tool: string) => Promise<void>;
 }) {
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState('');
   const [addRuleId, setAddRuleId] = useState('');
+  const [attesting, setAttesting] = useState<string | null>(null);
+  const [attestError, setAttestError] = useState('');
   const resize = useSheetResize();
 
   const technique = techniques.find((t) => t.technique_id === techniqueId) ?? null;
@@ -161,8 +167,40 @@ export function TechniqueDrawer({
                 </div>
                 {toolCoverage![technique.technique_id].join(', ')} was evaluated
                 against this technique in MITRE ATT&amp;CK Evaluations
-                (evals.mitre.org). Confirm the alert path in your SOC, or build
-                the SIEM rule anyway — this never changes the coverage score.
+                (evals.mitre.org). Credit alone never changes the coverage
+                score — attesting the alert path does.
+                {canEdit && onAttest && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {toolCoverage![technique.technique_id].map((tool) => (
+                      <button
+                        key={tool}
+                        type="button"
+                        disabled={attesting !== null}
+                        onClick={async () => {
+                          setAttestError('');
+                          setAttesting(tool);
+                          try {
+                            await onAttest(technique.technique_id, tool);
+                          } catch (err) {
+                            setAttestError(
+                              err instanceof Error ? err.message : 'Attestation failed'
+                            );
+                          } finally {
+                            setAttesting(null);
+                          }
+                        }}
+                        className="rounded-md border border-blue-400 bg-white px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:bg-transparent dark:text-blue-300 dark:hover:bg-blue-900/40"
+                      >
+                        {attesting === tool
+                          ? 'Attesting…'
+                          : `We monitor ${tool}'s alerts — count as covered`}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {attestError && (
+                  <p className="mt-1 text-xs text-destructive">{attestError}</p>
+                )}
               </div>
             )}
 

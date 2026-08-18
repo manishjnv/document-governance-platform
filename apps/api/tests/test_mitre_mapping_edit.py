@@ -198,3 +198,60 @@ async def test_authz(client, db_session):
         json=body,
     )
     assert spoof.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_tool_attest_creates_row_and_recomputes(client, db_session):
+    """2026-08-19 tool-coverage attestation: confirming a matched tool's
+    alert path creates a tool_attested rule row and the technique flips to
+    covered in the recomputed results; a non-credited technique is 422; a
+    now-covered technique can't be attested again."""
+    _, _, headers = await _make_user(db_session)
+    aid = await _completed_assessment(client, db_session, headers)
+    assessment = await db_session.get(MitreAssessment, uuid.UUID(aid))
+    assessment.params = {
+        **(assessment.params or {}),
+        "environment_lists": {"tooling": ["CrowdStrike Falcon"],
+                              "log_sources": [], "crown_jewels": []},
+    }
+    assessment.technique_results = [
+        {"technique_id": "T1112", "domain": "enterprise", "tactics": ["TA0002"],
+         "state": "not_covered", "na_reason": None, "use_case_refs": []},
+    ]
+    await db_session.commit()
+
+    res = await client.post(
+        f"/api/v1/mitre/assessments/{aid}/tool-attest",
+        headers=headers,
+        json={"tool": "CrowdStrike Falcon", "technique_ids": ["T1566"]},
+    )
+    assert res.status_code == 422  # phishing isn't credited to the EDR set
+
+    res = await client.post(
+        f"/api/v1/mitre/assessments/{aid}/tool-attest",
+        headers=headers,
+        json={"tool": "CrowdStrike Falcon", "technique_ids": ["T1112"]},
+    )
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["attested"] == ["T1112"]
+    assert body["overall"]["covered"] >= 1
+
+    ucs = await _use_cases_by_name(client, aid, headers)
+    row = next(uc for name, uc in ucs.items() if "T1112" in name)
+    assert row["mapping_status"] == "tool_attested"
+    assert row["log_source"] == "CrowdStrike Falcon"
+
+    detail = await client.get(f"/api/v1/mitre/assessments/{aid}", headers=headers)
+    states = {r["technique_id"]: r["state"]
+              for r in detail.json()["technique_results"]}
+    assert states.get("T1112") == "covered"
+
+    # covered techniques carry no credit any more — re-attesting is a 422,
+    # which is the point: the score now owns it
+    res = await client.post(
+        f"/api/v1/mitre/assessments/{aid}/tool-attest",
+        headers=headers,
+        json={"tool": "CrowdStrike Falcon", "technique_ids": ["T1112"]},
+    )
+    assert res.status_code == 422

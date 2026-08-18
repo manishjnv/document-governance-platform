@@ -402,6 +402,7 @@ export const MAPPING_STATUS_PLAIN: Record<string, string> = {
   keyword_tagged: 'Matched by rule keyword',
   ai_tagged: 'AI-mapped — verify',
   manual: 'Edited by reviewer',
+  tool_attested: 'Tool-attested — alert path confirmed',
   unmapped: 'Not mapped to any technique',
   invalid: 'Tags invalid — treated as untagged',
 };

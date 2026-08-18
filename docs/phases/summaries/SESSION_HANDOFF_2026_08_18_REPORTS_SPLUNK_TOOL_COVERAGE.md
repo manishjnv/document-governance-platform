@@ -60,7 +60,7 @@ MGH customer-data verification that started it all. Suite baseline moved
 
 ## Ops notes
 
-- Migration 037 applied to edgp_dev, edgp_test, scopewise_prod.
+- Migrations 037 + 038 applied to edgp_dev, edgp_test, scopewise_prod.
 - Prod image is **Python 3.11** (dev 3.14) — run the in-container compile
   smoke after every deploy touching Python.
 - Splunk connector awaits a reachable customer Splunk host + token
@@ -70,6 +70,7 @@ MGH customer-data verification that started it all. Suite baseline moved
 
 ## Open / next
 
+- Attestation flow (T4) shipped 2026-08-19 — see plan doc.
 - Tool-coverage: ranking demotion of tool-covered gaps deliberately
   deferred (ordering change would churn rank tests) — noted in plan.
 - Client asked (MGH): option 1 = export their EDR's 90-day unique

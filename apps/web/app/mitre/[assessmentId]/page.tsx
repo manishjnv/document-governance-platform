@@ -197,6 +197,25 @@ export default function MitreResultsPage() {
     [assessmentId, load, loadUseCases]
   );
 
+  // 2026-08-19: tool-coverage attestation — creates a tool-attested rule
+  // row server-side and recomputes coverage, then refetches everything.
+  const handleAttest = useCallback(
+    async (techniqueId: string, tool: string) => {
+      try {
+        await axios.post(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/assessments/${assessmentId}/tool-attest`,
+          { tool, technique_ids: [techniqueId] },
+          { headers: authHeaders() }
+        );
+      } catch (err: any) {
+        throw new Error(err.response?.data?.detail || 'Could not save the attestation');
+      }
+      await Promise.all([load(), loadUseCases()]);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [assessmentId, load, loadUseCases]
+  );
+
   // Phase 14f: past-run switcher — completed runs (archived included, so
   // history stays reachable) loaded once the assessment completes.
   useEffect(() => {
@@ -866,6 +885,7 @@ export default function MitreResultsPage() {
                   canEdit={userRole === 'admin' || userRole === 'reviewer'}
                   onEditMappings={handleEditMappings}
                   toolCoverage={assessment.tool_coverage?.by_technique ?? null}
+                  onAttest={handleAttest}
                 />
               </>
             )}
