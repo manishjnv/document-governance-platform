@@ -797,6 +797,28 @@ number across PDF/XLSX/PPTX/UI — `docs/planning/MITRE_TOOL_COVERAGE_PLAN.md`).
 Full narrative: `docs/phases/summaries/SESSION_HANDOFF_2026_08_18_REPORTS_SPLUNK_TOOL_COVERAGE.md`.
 Baseline moved 905→935/7 across the session; tool-coverage attestation (T4) + provenance split + bulk attest UI + PPTX typography pass landed 2026-08-19 (commits 0732f8c..67534a5+).
 
+**SIEM connections self-service UI + per-connection trend COMPLETE
+(2026-08-19, uncommitted):** started as a "build a Sentinel connector"
+feasibility check — finding: the Sentinel connector already shipped
+2026-08-02 (Phase 13a) and Splunk mirrors it, so the real gaps were UI +
+trend. Shipped: full create/edit/delete/schedule form on
+`apps/web/app/mitre/connections/page.tsx` (was read-only "via the API
+for now"), Pull-now button (from-connection → run → navigate), a
+Coverage-trend column per connection (sparkline + latest % + delta,
+grouped by the newly-surfaced `siem.connection_id` on the list
+endpoint), `CoverageSparkline` extracted to
+`components/CoverageSparkline.tsx`, schedule trio accepted on
+`POST /connections`, and two bug fixes (nameless Splunk connection
+create 500'd on `config['workspace']`; list-page chip hardcoded
+"Sentinel" for Splunk pulls). No migration needed. Baseline 935→937/7.
+Content Hub / Marketplace route: evaluated + market-researched
+(`docs/planning/SENTINEL_CONTENT_HUB_EVALUATION.md`), then planned as a
+free funnel add-on — build plan
+`docs/planning/SENTINEL_CONTENT_HUB_ADDON_PLAN.md`, kickoff prompt
+`docs/phases/prompts/SENTINEL_CONTENT_HUB_ADDON_PROMPT.md` (Phase A
+workbook v0 can start any time; Partner Center enrollment is the
+user-owned long pole).
+
 **MITRE Phase 14a COMPLETE (2026-08-02) — gap drill-down drawer (UX
 clarity for non-technical users):** first of six sub-phases in
 `docs/planning/MITRE_UX_CLARITY_PLAN.md` (kickoff prompts:
