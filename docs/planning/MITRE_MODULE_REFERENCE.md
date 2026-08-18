@@ -567,6 +567,19 @@ router endpoints fetch org settings and pass it through. No new endpoints,
 no admin UI, no DB migration (`mitre_settings` is already a generic
 org-scoped KV table).
 
+- **2026-08-18 PDF uplift** (`docs/planning/PDF_REPORT_UPLIFT_PLAN.md` —
+  read it for the user's three hard rules: real data only, data-rich,
+  human wording): board page ("Where you stand", own page after cover, kept
+  in `scope=executive`), Navigator-style heatmap (per-tactic flex columns,
+  replaces the flat cell grid), "Top 10 techniques vs you" table (curated
+  `data/top_attacker_techniques.json`, Red Canary TDR 2025, IDs
+  test-resolved — refresh yearly), adversary spotlight (intake actor or
+  industry profile × real states, kill-chain strip, data-gated), efficacy
+  spotlight (never-fired/disabled rules, data-gated), closing page ("Your
+  next 90 days": computed projection + 3 deterministic moves + honesty box).
+  Wording enforced by `tests/test_mitre_wording.py` (banned AI-tell
+  phrases) and an `agents.py` leash — AI narrative that trips the tells
+  degrades to template narrative.
 - **PDF** (`report?format=pdf`, rebuilt Phase 14e) — cover (project
   metadata, upload summary, headline + plain subtitle, methodology, TOC
   with real page numbers via `target-counter`) → executive section (≤2
