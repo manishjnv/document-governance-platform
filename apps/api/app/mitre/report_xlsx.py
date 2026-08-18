@@ -39,49 +39,39 @@ def _guard(value):
 # "what this means for you" sentence in human words, matched by substring.
 # Order matters twice — first match wins, and the sheet sorts by this order.
 _ASSUMPTION_AREAS = [
-    (("has been restructured",), "ATT&CK framework update",
-     "MITRE reorganized this technique in the current ATT&CK version. Your "
-     "detection still counts — it is simply shown under the new technique "
-     "ID. This is a framework update, not a detection or security gap."),
+    (("has been restructured", "→"), "ATT&CK framework update",
+     "MITRE renumbered it — your detection still counts under the new ID. "
+     "Not a gap."),
     (("no longer maintains", "deprecated"), "ATT&CK framework update",
-     "MITRE retired this technique ID, so it is noted for reference and "
-     "left out of the score. A framework change, not a problem with the rule."),
+     "MITRE retired this ID — noted for reference, not scored."),
     (("not a valid ATT&CK",), "Data quality",
-     "This tag doesn't match any current ATT&CK technique, so it was left "
-     "out. Correct the tag in the source rule if the mapping matters."),
+     "No matching ATT&CK technique — fix the tag in the source rule if it "
+     "matters."),
     (("pulled read-only",), "Data source",
-     "The rules came straight from your SIEM over a read-only connection, "
-     "so the list reflects exactly what was live at pull time."),
+     "Rules came straight from your SIEM, exactly as live at pull time."),
     (("auto-imported",), "Data source",
-     "Log sources were read from your SIEM's own connector inventory. "
-     "Upload an environment workbook if anything is missing."),
+     "Log sources read from your SIEM's connector inventory."),
     (("not recognized",), "Data source",
-     "These SIEM connectors aren't in the mapping table yet, so they were "
-     "not counted as log sources. They can be added to the environment "
-     "workbook by hand."),
+     "Unrecognized connectors — add them to the environment workbook by "
+     "hand."),
     (("AI-tagged", "AI-suggested", "confidence floor", "emitted by the AI",
       "AI-extracted", "processed by the AI", "sections were scanned"),
      "AI tagging",
-     "AI helped map or extract these rules; every number stays "
-     "deterministic. Worth spot-checking the flagged rows in the Use-Case "
-     "Mappings sheet before relying on them."),
+     "AI helped map these — spot-check the flagged rows in Use-Case "
+     "Mappings."),
     (("disabled",), "Scoring policy",
-     "How disabled rules count toward coverage follows the policy chosen "
-     "at intake — re-run with the other policy to compare."),
+     "Follows the disabled-rules policy you chose at intake."),
     (("scope exclusion",), "Scope",
-     "A scope exclusion you requested was applied (or could not be "
-     "matched). Excluded items never count against your score."),
+     "Applied as requested — excluded items never count against the score."),
     (("inventory", "no recognizable", "platform filtering", "lower bound",
       "platforms"), "Scope",
-     "Without a complete environment inventory the assessment cannot rule "
-     "techniques out, so the score reads lower than reality — never higher."),
+     "Without a full inventory the score reads lower than reality, never "
+     "higher."),
     (("Log Sources sheet",), "Data quality",
-     "A rule points at telemetry your inventory doesn't declare — either "
-     "the inventory sheet is incomplete or the rule may no longer be "
-     "receiving data."),
+     "Rule telemetry not in your inventory — sheet incomplete or rule "
+     "stale."),
     (("limit", "stopped at", "only the", "only its"), "Scope",
-     "The input was larger than the processing cap, so items beyond the "
-     "cap are not included in the numbers."),
+     "Input exceeded the processing cap — items beyond it aren't counted."),
 ]
 _AREA_ORDER = {}
 for _probes, _area, _meaning in _ASSUMPTION_AREAS:
@@ -99,6 +89,50 @@ def _classify_assumption(text: str) -> tuple:
 def _successor_name(tid: str) -> str:
     info = attack_data.DEFAULT.get(tid) or {}
     return f" ({info['name']})" if info.get("name") else ""
+
+
+# row-ref prefixes ("Rules:4: …") and per-rule repeats of the same fact —
+# collapsed at render time into one line with an affected-rules count
+# (2026-08-18 user feedback: the tab repeated one framework update per rule)
+_REF_PREFIX_RE = re.compile(r"^([A-Za-z][\w ]*:\d+):\s*(.+)$", re.S)
+_RESTRUCTURE_RE = re.compile(
+    r"MITRE ATT&CK update: (?:tag ')?(T\d{4}(?:\.\d{3})?)'?"
+    r"(?: \(tagged on [^)]+\))? has been restructured and is now represented "
+    r"under (T\d{4}(?:\.\d{3})?)( \([^)]+\))? in ATT&CK v([\w.]+).*",
+    re.S,
+)
+
+
+def condense_assumptions(assumptions: list) -> list:
+    """One line per distinct fact. Same-tag restructure notes across many
+    rules become 'ATT&CK update: A → B (name), vX — affects N rules'; any
+    other note repeated per rule keeps its first wording plus the count."""
+    seen: dict = {}
+    for raw in assumptions:
+        text = str(raw)
+        prefix = _REF_PREFIX_RE.match(text)
+        body = prefix.group(2) if prefix else text
+        restructure = _RESTRUCTURE_RE.match(body)
+        if restructure:
+            old, new, name, ver = restructure.groups()
+            key = ("restructured", old, new)
+            short = f"MITRE ATT&CK update: {old} → {new}{name or ''}, v{ver}"
+        else:
+            key = ("plain", body)
+            short = body
+        entry = seen.setdefault(
+            key, {"n": 0, "text": short,
+                  "ref": prefix.group(1) if prefix else None})
+        entry["n"] += 1
+    out = []
+    for entry in seen.values():
+        text = entry["text"]
+        if entry["n"] > 1:
+            text += f" — affects {entry['n']} rules"
+        elif entry["ref"]:
+            text += f" ({entry['ref']})"
+        out.append(text)
+    return out
 
 
 def _rewrite_legacy_revoked(text: str) -> str:
@@ -696,9 +730,11 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
         center_cols=(2,),
     )
 
+    condensed = condense_assumptions(
+        [_rewrite_legacy_revoked(str(a)) for a in summary.get("assumptions", [])]
+    )
     assumption_rows = []
-    for a in summary.get("assumptions", []):
-        friendly = _rewrite_legacy_revoked(str(a))
+    for friendly in condensed:
         area, meaning = _classify_assumption(friendly)
         assumption_rows.append([area, friendly, meaning])
     # stable sort groups related notes together, in the classifier's order

@@ -966,3 +966,28 @@ async def test_pptx_uplift_slides(db_session):
         assert marker in texts, marker
     # hard cap agreed 2026-08-18: the deck never exceeds 20 slides
     assert len(prs.slides._sldIdLst) <= 20, len(prs.slides._sldIdLst)
+
+
+def test_condense_assumptions_collapses_per_rule_repeats():
+    """2026-08-18: one line per distinct fact — 'Rules:N:' prefixed repeats
+    of the same framework update collapse into an arrow line with a count."""
+    from app.mitre.report_xlsx import condense_assumptions
+
+    raw = [
+        "Rules:4: MITRE ATT&CK update: tag 'T1562.001' has been restructured "
+        "and is now represented under T1685 (Disable or Modify Tools) in ATT&CK v19.1",
+        "Rules:5: MITRE ATT&CK update: tag 'T1562.001' has been restructured "
+        "and is now represented under T1685 (Disable or Modify Tools) in ATT&CK v19.1",
+        "Rules:7: MITRE ATT&CK update: tag 'T1562.008' has been restructured "
+        "and is now represented under T1685.002 (Disable or Modify Cloud Log) in ATT&CK v19.1",
+        "Rules:9: tag 'T4242' is not a valid ATT&CK v19.1 technique",
+        "no environment workbook provided",
+    ]
+    out = condense_assumptions(raw)
+    assert len(out) == 4
+    assert out[0] == ("MITRE ATT&CK update: T1562.001 → T1685 "
+                      "(Disable or Modify Tools), v19.1 — affects 2 rules")
+    assert out[1] == ("MITRE ATT&CK update: T1562.008 → T1685.002 "
+                      "(Disable or Modify Cloud Log), v19.1 (Rules:7)")
+    assert out[2] == "tag 'T4242' is not a valid ATT&CK v19.1 technique (Rules:9)"
+    assert out[3] == "no environment workbook provided"

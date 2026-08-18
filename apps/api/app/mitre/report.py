@@ -654,11 +654,15 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
         f"<td class='num'>{len(r.get('use_case_refs', []))}</td></tr>"
         for r in results
     )
-    # legacy "revoked" wording rewritten at render time, same as the XLSX
-    from app.mitre.report_xlsx import _rewrite_legacy_revoked
+    # legacy "revoked" wording rewritten + per-rule repeats collapsed at
+    # render time, same as the XLSX Assumptions tab
+    from app.mitre.report_xlsx import _rewrite_legacy_revoked, condense_assumptions
 
     assumptions_html = "".join(
-        f"<li>{_esc(_rewrite_legacy_revoked(str(a)))}</li>" for a in assumptions
+        f"<li>{_esc(a)}</li>"
+        for a in condense_assumptions(
+            [_rewrite_legacy_revoked(str(a)) for a in assumptions]
+        )
     )
     # Space optimization: one row per distinct REASON with its techniques
     # listed — 37 identical "deprecated" rows collapse into one.
