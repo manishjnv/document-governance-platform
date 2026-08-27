@@ -100,8 +100,8 @@ last incident.
 ## Testing
 
 - Full backend suite: `cd apps/api && python -m pytest` — baseline is
-  **937 passed, 7 skipped** (measured 2026-08-19 after the SIEM connections
-  self-service UI + per-connection trend, run solo on edgp_test; if two sessions run the suite at once the
+  **941 passed, 7 skipped** (measured 2026-08-20 after the RCA #21
+  feasibility source-suitability gate, run solo on edgp_test; if two sessions run the suite at once the
   shared edgp_test DB deadlocks — see memory `edgp-test-single-runner-rule`;
   the 7th skip is the prod-only WeasyPrint PDF render test; the
   long-stale "402/2" figure predated Jul-24 growth). Don't regress this;

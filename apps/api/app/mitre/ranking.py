@@ -237,15 +237,47 @@ def component_category(component_name: str):
 
 
 def _categories_provided(entries, rules) -> dict:
-    """{category: first entry name that provides it} over customer rows."""
+    """{category: [entry names that provide it, in customer row order]}."""
     provided = {}
     for entry in entries or []:
         entry_norm = _norm(entry)
         for keywords, categories in rules:
             if any(kw in entry_norm for kw in keywords):
                 for category in categories:
-                    provided.setdefault(category, str(entry))
+                    sources = provided.setdefault(category, [])
+                    if str(entry) not in sources:
+                        sources.append(str(entry))
     return provided
+
+
+# Cloud IdP/SSO-class sources see authentication to the IdP itself and to
+# apps federated behind it — never host-level logons (RDP, SSH, console)
+# or any OS telemetry. They may satisfy "identity" only for techniques
+# that can occur on an IdP-visible platform (2026-08-20 client review,
+# RCA #21: Okta was recommended as the source for T1021.001 RDP, a
+# Windows-only technique Okta can never observe). Domain/host identity
+# sources (Active Directory, domain controller, Kerberos, LDAP, RADIUS)
+# are deliberately NOT listed — DC security logs do see host logons.
+_IDP_SOURCE_KEYWORDS = (
+    "okta", "entra", "azure ad", "idp", "sso", "duo", "adfs", "onelogin",
+    "jumpcloud", "keycloak", "ping identity", "ping federate", "mfa",
+    "identity provider",
+)
+_IDP_VISIBLE_PLATFORMS = {
+    "Identity Provider", "SaaS", "IaaS", "Office 365", "Office Suite",
+}
+
+
+def _source_sees_technique(source: str, category: str, tech: dict) -> bool:
+    """False only for the one known-blind pairing: an IdP/SSO-class source
+    offered as the identity telemetry for a technique that cannot occur on
+    an IdP-visible platform. Everything else is allowed."""
+    if category != "identity":
+        return True
+    source_norm = _norm(source)
+    if not any(kw in source_norm for kw in _IDP_SOURCE_KEYWORDS):
+        return True
+    return bool(set(tech.get("platforms") or []) & _IDP_VISIBLE_PLATFORMS)
 
 
 def _feasibility(tech: dict, onboarded: dict, ownable: dict, log_source_health: dict = None):
@@ -274,33 +306,48 @@ def _feasibility(tech: dict, onboarded: dict, ownable: dict, log_source_health: 
             "ATT&CK lists no standard telemetry for this technique — needs "
             "bespoke detection engineering",
         )
+    # Suitability gate (2026-08-20, RCA #21): a source only counts for a
+    # category if it can actually observe this technique — an IdP must not
+    # be named the identity source for a host-only technique. Unsuitable
+    # sources fall through to the next candidate, category, or bucket.
     for category in categories:
-        if category in onboarded:
-            source = onboarded[category]
+        sources = [
+            s for s in onboarded.get(category, [])
+            if _source_sees_technique(s, category, tech)
+        ]
+        if not sources:
+            continue
+        unhealthy = None
+        for source in sources:
             health = log_source_health.get(source)
-            if health and (health.get("normalized") is False or _is_stale_last_event(health.get("last_event_seen"))):
-                reasons = []
+            reasons = []
+            if health:
                 if health.get("normalized") is False:
                     reasons.append("not normalized")
                 if _is_stale_last_event(health.get("last_event_seen")):
                     reasons.append("no recent events seen")
+            if not reasons:
+                return (
+                    "short", source, category,
+                    f"telemetry already onboarded ({source} covers "
+                    f"{category}) — build the detection now",
+                )
+            if unhealthy is None:
+                unhealthy = (source, reasons)
+        source, reasons = unhealthy
+        return (
+            "mid", source, category,
+            f"{source} covers {category} but is {' and '.join(reasons)} — "
+            "fix the pipeline before relying on this detection",
+        )
+    for category in categories:
+        for source in ownable.get(category, []):
+            if _source_sees_technique(source, category, tech):
                 return (
                     "mid", source, category,
-                    f"{source} covers {category} but is {' and '.join(reasons)} — "
-                    "fix the pipeline before relying on this detection",
+                    f"onboard {category} telemetry from {source} first, "
+                    "then build the detection",
                 )
-            return (
-                "short", source, category,
-                f"telemetry already onboarded ({source} covers "
-                f"{category}) — build the detection now",
-            )
-    for category in categories:
-        if category in ownable:
-            return (
-                "mid", ownable[category], category,
-                f"onboard {category} telemetry from {ownable[category]} first, "
-                "then build the detection",
-            )
     return (
         "long", None, categories[0],
         f"requires a new telemetry capability ({', '.join(categories)})",

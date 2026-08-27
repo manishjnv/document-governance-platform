@@ -139,6 +139,7 @@ Hard rules:
 - Plain, simple English. Short sentences. No unexplained jargon — write "techniques we cannot detect yet because no log source covers them", never "telemetry-gap-induced detection debt".
 - NEVER introduce, change, round, or recompute any number. You may repeat a number exactly as it appears in the input. All figures in the report are printed from the computed data — your text explains, it does not calculate.
 - Do not invent facts, threat actors, tools, or log sources that are not in the input.
+- Each gap names its recommended log source ("via"). Recommend building on that source. Never claim a source can see telemetry it cannot collect: an identity provider (Okta, Entra ID) sees only sign-ins to itself and its federated apps — never host processes, RDP sessions, command lines, or OS event logs. If a gap's telemetry is host-level and the via source is an identity provider, recommend the correct host telemetry (EDR or Windows event collection) instead of forcing the via.
 - Be direct about weaknesses. This is an internal working document, not marketing.
 
 Provide your response as a JSON object with this structure:

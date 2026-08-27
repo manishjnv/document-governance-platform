@@ -492,3 +492,63 @@ keep chronological.)*
   trust it as HTML and never flatten it to escaped text. When a
   rendering bug is found in one consumer of a backend field, grep for
   every other consumer of that field before closing the fix.
+
+### 21. MITRE gap report recommended "Okta-based detection" for RDP — client caught it (2026-08-20)
+
+- **Symptom:** In a client-delivered XLSX gap report, the P1 row for
+  T1021.001 (Remote Desktop Protocol, a Windows-only technique) said
+  "Create an Okta-based detection for anomalous RDP sessions". The
+  client replied that Okta only sees IdP sign-ins (IP/user-agent at
+  most) — never RDP logons, Sysmon, or process telemetry — and
+  questioned whether any of the recommendations were doable. Two
+  aggravators in the same sheet: (a) the "Log fields needed" column
+  printed source-agnostic Windows/Sysmon event-ID guidance next to
+  each recommendation with nothing saying it was source-agnostic, so
+  even valid CrowdStrike-based recs looked contradictory; (b) the
+  Reference KQL printed the via name verbatim as a SIEM table
+  (`crowdstrike | take 10`, `okta |`) — queries that fail on line 1,
+  including the header's own "confirm data first" step.
+- **Root cause:** `app/mitre/ranking.py::_feasibility` mapped ATT&CK
+  data components to coarse telemetry categories and picked the
+  dominant category's first onboarded source with **no check that the
+  source can observe the technique's platform**. T1021.001's
+  components are Logon Session Creation + Metadata (both "identity"),
+  Network Connection (network), Process Creation (endpoint) — so
+  "identity" dominated, and the customer's only identity-category
+  source was Okta. The category bridge collapsed host identity
+  telemetry (Windows 4624 on the target box) and cloud-IdP telemetry
+  into one bucket. Same defect *class* as the 2026-08-13 fix
+  (dominant-category selection, T1685.005 recommended on an email
+  table): that fix stopped cross-category mistakes; this one is a
+  platform mismatch *within* a category. The AI narrative agent then
+  faithfully phrased the bad `via` into the recommendation — the LLM
+  was downstream of the bug, not the bug.
+- **Fix (`app/mitre/ranking.py`):** `_categories_provided` now keeps
+  **all** matching sources per category (row order) instead of the
+  first, and `_feasibility` applies a suitability gate
+  (`_source_sees_technique`): an IdP/SSO-class source (curated keyword
+  list — Okta/Entra/SSO/Duo/…; deliberately excludes AD/domain
+  controller/Kerberos, which DO see host logons) can satisfy
+  "identity" only for techniques with an IdP-visible platform
+  (Identity Provider/SaaS/IaaS/Office). Unsuitable sources fall
+  through to the next source, category, or feasibility bucket — for
+  the client's environment T1021.001 now lands on CrowdStrike
+  (endpoint), short-term. The gate applies to the ownable-tooling
+  (mid-term) path too. Defense in depth: `agents.py` narrative prompt
+  now forbids claiming a source can see telemetry it cannot collect;
+  `report_xlsx.py` prints unknown via names as
+  `<your_X_table>` placeholders instead of fake KQL tables, and
+  prefixes the "Log fields needed" cell with a how-to-read line naming
+  the recommended source. Regression goldens in
+  `tests/test_mitre_ranking.py` (4 new) + updated KQL golden in
+  `tests/test_mitre_report.py`.
+- **Prevention:** any bridge from "customer owns X" to "X can detect
+  technique T" must check *visibility*, not just category overlap — a
+  source category is not a capability claim. When adding a log-source
+  keyword rule, ask "for which platforms is this source blind?" and
+  encode the blindness. Client-facing generated text that names a
+  concrete product must be traceable to a deterministic field that was
+  platform-checked. Never print a product name in a position where the
+  syntax claims it is something else (a KQL table); use an explicit
+  placeholder. When one generated column is source-specific and a
+  neighbouring column is source-agnostic, say so in the sheet itself.

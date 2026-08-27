@@ -1,6 +1,6 @@
 # EDGP Implementation Progress
 
-**Last Updated:** 2026-08-01 09:30 GMT+5:30
+**Last Updated:** 2026-08-20 15:40 GMT+5:30
 **Current Phase:** Phase 1-2 core product complete + deployed live; pre-launch fix plan Steps 1-2 done, Step 3 pending SME. Document Lifecycle & Multi-Project plan (Projects/Versioning/Fix-verification) — all three phases implemented, deployed, mandatory-project + fuzzy name matching added on top. Auth is now seamless Google Sign-In + email-OTP only (no password anywhere in the real UI; unrecognized emails auto-create an account). New file types (.doc/.xlsx/.xls/.csv) supported. Enterprise SEO strategy written, a live Cloudflare misconfiguration blocking all AI crawlers was found and fixed, and **SEO Phase 1 (Foundation) is implemented and deployed live** (real marketing homepage/product/pricing/about/contact/sitemap/schema -- only GSC/GA4/Lighthouse remain, blocked on dashboard access). Full detail: `docs/phases/summaries/SESSION_HANDOFF_2026_07_20_LIFECYCLE_SSO_SEO.md`.
 
 > Previous version of this doc (dated 07-17 02:00, showing "14% overall") was
@@ -10,6 +10,19 @@
 ---
 
 ## ✅ Done
+
+**MITRE feasibility source-suitability gate (2026-08-20, RCA #21):**
+a client review caught "Okta-based detection for RDP" in a delivered
+gap report — `ranking.py` now platform-gates IdP/SSO-class sources out
+of the "identity" category for host-only techniques (all candidate
+sources per category are considered, unsuitable ones fall through);
+`report_xlsx.py` renders unknown via names as `<your_X_table>` KQL
+placeholders (never fake tables) and prefixes "Log fields needed" with
+a how-to-read line; narrative agent prompt forbids claiming a source
+can see telemetry it cannot collect. 4 new ranking goldens. **Ops
+note:** exports render from the STORED summary — existing assessments
+(incl. the client's) keep the bad via/recommendations until re-run;
+re-run before any re-export. Full RCA: `docs/RCA_LOG.md` #21.
 
 **Foundation, Auth, DB (Phase 1):** monorepo, Docker, FastAPI + Next.js
 skeletons, JWT auth (login/logout/refresh/me/password-reset/signup),

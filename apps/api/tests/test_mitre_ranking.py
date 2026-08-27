@@ -5,12 +5,12 @@ from app.mitre.attack_data import AttackIndex
 from app.mitre.ranking import rank_gaps
 
 
-def _t(tid, data_sources=(), tactics=("TA0002",)):
+def _t(tid, data_sources=(), tactics=("TA0002",), platforms=("Windows",)):
     return {
         "id": tid,
         "name": f"name-{tid}",
         "tactics": list(tactics),
-        "platforms": ["Windows"],
+        "platforms": list(platforms),
         "data_sources": list(data_sources),
         "is_subtechnique": "." in tid,
         "parent_id": tid.split(".")[0] if "." in tid else None,
@@ -166,19 +166,20 @@ def test_component_category_phase6_golden():
     assert component_category("Domain Registration") is None
 
 
-def _single_tech_index(data_sources):
+def _single_tech_index(data_sources, platforms=("Windows",)):
     return AttackIndex({
         "version": "19.1",
         "domains": {"enterprise": {"tactics": [], "techniques": [
-            _t("T9999", data_sources=data_sources)
+            _t("T9999", data_sources=data_sources, platforms=platforms)
         ]}},
     })
 
 
-def _bucket(data_sources, log_sources=(), tooling=()):
+def _bucket(data_sources, log_sources=(), tooling=(), platforms=("Windows",)):
     ranked = rank_gaps(
         [_result("T9999", "not_covered")], list(log_sources), list(tooling),
-        index=_single_tech_index(data_sources), priorities={"techniques": []},
+        index=_single_tech_index(data_sources, platforms=platforms),
+        priorities={"techniques": []},
     )
     gap = ranked["gaps"][0]
     return gap["feasibility"], gap["via"]
@@ -203,6 +204,48 @@ def test_ot_technique_buckets_by_ot_monitoring():
 def test_new_vendor_names_map_to_endpoint():
     feasibility, via = _bucket(["Process Creation"], log_sources=["Tanium"])
     assert (feasibility, via) == ("short", "Tanium")
+
+
+def test_idp_source_never_satisfies_identity_for_host_technique():
+    """2026-08-20 client-review golden (RCA #21): T1021.001 RDP is
+    Windows-only with identity-dominant components — an IdP (Okta) must
+    never be its recommended source; RDP logons never reach an IdP."""
+    rdp_components = ["Logon Session Creation", "Logon Session Metadata",
+                      "Network Connection Creation", "Process Creation"]
+    # With an EDR also onboarded, the via must fall through to it.
+    feasibility, via = _bucket(rdp_components, log_sources=["Okta", "CrowdStrike"])
+    assert (feasibility, via) == ("short", "CrowdStrike")
+    # Okta alone: nothing suitable onboarded or ownable -> long, never
+    # "short via Okta".
+    feasibility, via = _bucket(rdp_components, log_sources=["Okta"])
+    assert feasibility == "long"
+    assert via is None
+
+
+def test_idp_gate_applies_to_ownable_tooling_too():
+    # Owning Okta must not yield "onboard identity telemetry from Okta"
+    # for a host-only technique either.
+    feasibility, _ = _bucket(
+        ["Logon Session Creation", "Logon Session Metadata"], tooling=["Okta"])
+    assert feasibility == "long"
+
+
+def test_idp_source_still_serves_idp_visible_techniques():
+    # A technique that can occur on IdP-visible platforms keeps Okta.
+    feasibility, via = _bucket(
+        ["Logon Session Creation", "User Account Authentication"],
+        log_sources=["Okta"],
+        platforms=("Identity Provider", "SaaS", "Windows"),
+    )
+    assert (feasibility, via) == ("short", "Okta")
+
+
+def test_domain_identity_sources_unaffected_by_idp_gate():
+    # AD/DC security logs DO see host logons — not IdP-class, not gated.
+    feasibility, via = _bucket(
+        ["Logon Session Creation", "Logon Session Metadata"],
+        log_sources=["Active Directory security logs"])
+    assert (feasibility, via) == ("short", "Active Directory security logs")
 
 
 def test_substring_safety_no_fake_ot_or_identity():
