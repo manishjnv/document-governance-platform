@@ -56,11 +56,12 @@ _ASSUMPTION_AREAS = [
     (("not recognized",), "Data source",
      "Unrecognized connectors — add them to the environment workbook by "
      "hand."),
-    (("AI-tagged", "AI-suggested", "confidence floor", "emitted by the AI",
-      "AI-extracted", "processed by the AI", "sections were scanned"),
-     "AI tagging",
-     "AI helped map these — spot-check the flagged rows in Use-Case "
-     "Mappings."),
+    (("auto-tagged", "suggested by automated analysis", "confidence floor",
+      "emitted by automated analysis", "extracted automatically",
+      "processed automatically", "sections were scanned"),
+     "Automated tagging",
+     "Automated analysis helped map these — spot-check the flagged rows in "
+     "Use-Case Mappings."),
     (("disabled",), "Scoring policy",
      "Follows the disabled-rules policy you chose at intake."),
     (("scope exclusion",), "Scope",
@@ -105,13 +106,39 @@ _RESTRUCTURE_RE = re.compile(
 )
 
 
+# Client-facing reports never say "AI" (2026-08-27 requirement): stored
+# assumption strings are rewritten at render time — deterministic, ordered
+# most-specific first, with a word-boundary fallback for stragglers.
+_AI_REWRITES = [
+    ("AI-tagged", "auto-tagged"),
+    ("AI-suggested", "suggested by automated analysis"),
+    ("AI-assessed", "assessed by automated analysis"),
+    ("AI-generated", "generated automatically"),
+    ("AI-extracted", "extracted automatically"),
+    ("AI-written", "generated automatically"),
+    ("sent to AI tagging", "sent to automated tagging"),
+    ("emitted by the AI", "emitted by automated analysis"),
+    ("processed by the AI", "processed automatically"),
+    ("AI tagging", "automated tagging"),
+    ("the AI", "automated analysis"),
+]
+_AI_WORD_RE = re.compile(r"\bAI\b")
+
+
+def neutralize_ai(text: str) -> str:
+    out = str(text)
+    for old, new in _AI_REWRITES:
+        out = out.replace(old, new)
+    return _AI_WORD_RE.sub("automated analysis", out)
+
+
 def condense_assumptions(assumptions: list) -> list:
     """One line per distinct fact. Same-tag restructure notes across many
     rules become 'ATT&CK update: A → B (name), vX — affects N rules'; any
     other note repeated per rule keeps its first wording plus the count."""
     seen: dict = {}
     for raw in assumptions:
-        text = str(raw)
+        text = neutralize_ai(str(raw))
         prefix = _REF_PREFIX_RE.match(text)
         body = prefix.group(2) if prefix else text
         restructure = _RESTRUCTURE_RE.match(body)
@@ -226,6 +253,12 @@ def _reference_kql(tid, name, via):
         # no via, or a prose/multi-word source name that isn't a KQL table
         return None
     template = _KQL_TEMPLATES.get(table, _KQL_GENERIC)
+    if table not in _KQL_TEMPLATES:
+        # A product/source name ("CrowdStrike", "okta") is not a real SIEM
+        # table — printed as one it yields a query that fails on line 1,
+        # including the header's own "confirm data first" check (2026-08-20
+        # client review, RCA #21). Mark it as the placeholder it really is.
+        table = f"<your_{table}_table>"
     return _KQL_HEADER.format(table=table) + template.format(
         table=table, tid=tid, name=str(name or "")[:40]
     )
@@ -341,9 +374,9 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
          "Ranked by priority in the 'Technique Tracker' sheet — start at the top."],
         [f"Rules analyzed: {(summary.get('counts') or {}).get('use_cases', len(use_cases))}",
          "Your uploaded detection rules — see 'Use-Case Mappings' for what each one maps to."],
-        [f"Is {strict_pct}% bad? Probably not: early SIEM detection programs typically "
+        [f"Context for {strict_pct}%: early SIEM detection programs typically "
          "start under 10%, because ATT&CK counts every known attacker technique. "
-         "The roadmap matters more than the grade."],
+         "The priority is executing the roadmap."],
         [],
         ["What each sheet contains"],
         ["Summary", "The headline numbers with a plain-words explanation of each."],
@@ -461,9 +494,9 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
              "events when last validated (Last Triggered: never), so verify "
              "source health before committing build dates.", italic))
     pointers.append(
-        (f"• Is {overall.get('strict_pct')}% bad? Probably not: early SIEM "
-         "programs typically start under 10% — the roadmap matters more than "
-         "the grade.", italic))
+        (f"• Context for {overall.get('strict_pct')}%: early SIEM "
+         "programs typically start under 10% — the priority is executing "
+         "the roadmap.", italic))
     for text, font in pointers:
         sum_row([text, "", ""], merge=True, height=26,
                 fonts={1: font} if font else None)
@@ -515,8 +548,8 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
                  f"{_split_pct(rule_cov)}% of applicable — detections that "
                  "live in your SIEM."], center=(2,))
         sum_row(["   of covered: via attested tools", tool_cov,
-                 f"{_split_pct(tool_cov)}% — tool-attested rows "
-                 "(MITRE-evaluated; alert path confirmed by you)."],
+                 f"{_split_pct(tool_cov)}% — client-attested tool coverage "
+                 "(alert path confirmed by your team)."],
                 center=(2,))
     sum_row(["Applicable techniques", overall.get("applicable"),
              "The denominator: techniques that apply to your environment."],
@@ -556,9 +589,12 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
             sum_row([label, intake[key], meaning])
     sum_row(["ATT&CK version", assessment.attack_version,
              "The MITRE ATT&CK release the assessment is pinned to."])
-    sum_row(["Narrative", narrative.get("generated_by", ""),
-             "Whether recommendation wording was AI-written or standard template "
-             "text (numbers are computed either way)."])
+    sum_row(["Narrative",
+             {"ai": "automated", "template": "standard template"}.get(
+                 narrative.get("generated_by", ""),
+                 narrative.get("generated_by", "")),
+             "Whether recommendation wording was generated automatically or "
+             "from standard template text (numbers are computed either way)."])
     sum_row(["Thresholds", str(params.get("thresholds", {})),
              "The confidence cut-offs used to count a mapping as coverage."])
     ws_sum.freeze_panes = "A2"
@@ -661,6 +697,18 @@ def build_xlsx_export(assessment, use_cases: list, scope: str = "full",
                     key=lambda ln: 0 if ranking.component_category(
                         ln.split(" — ")[0]) == category else 1,
                 )
+            # 2026-08-20 (client review, RCA #21): say explicitly that the
+            # blocks are source-agnostic field guidance, or a reader pairs
+            # "CrowdStrike recommendation" with "Sysmon/4688 caveats" and
+            # concludes the recommendation is impossible.
+            via = gap.get("via")
+            if via and lines:
+                lines = [
+                    f"How to read this: each block lists every standard "
+                    f"source that can supply those fields. Build on your "
+                    f"recommended source ({via}); the per-source caveats "
+                    f"apply only to the source you actually use."
+                ] + lines
             telemetry_cell = "\n\n".join(lines)
         recommendation = (gap_recs.get(tid) or gap.get("hint") or "") if gap else ""
         return [

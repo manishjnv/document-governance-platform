@@ -204,7 +204,7 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
     confidence_covered = (params.get("thresholds") or {}).get("confidence_covered", 0.7)
     gap_recs = narrative.get("gap_recommendations", {})
     ai_badge = (
-        "<span class='badge ai'>AI-written text</span>"
+        "<span class='badge ai'>Auto-written text</span>"
         if narrative.get("generated_by") == "ai"
         else "<span class='badge'>Standard text</span>"
     )
@@ -228,7 +228,7 @@ def build_html_report(assessment, use_cases: list, compare=None, files=None,
     upload_bits = [
         (f"Detection rules: {_esc(uc_file.get('filename'))} — " if uc_file else "Detection rules: ")
         + f"{_esc(total_rules)} rules ({_esc(counts.get('customer_tagged', 0))} tagged by you, "
-        + f"{_esc(counts.get('keyword_tagged', 0))} keyword-matched, {_esc(counts.get('ai_tagged', 0))} AI-tagged, "
+        + f"{_esc(counts.get('keyword_tagged', 0))} keyword-matched, {_esc(counts.get('ai_tagged', 0))} auto-tagged, "
         + f"{_esc(counts.get('unmapped', 0))} unmapped, {_esc(counts.get('invalid', 0))} invalid)"
     ]
     if env_file or env.get("platforms"):

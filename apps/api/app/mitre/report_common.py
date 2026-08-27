@@ -17,8 +17,8 @@ DOMAIN_LABELS = {"enterprise": "Enterprise", "ics": "ICS / OT", "mobile": "Mobil
 # Use-Case Mappings sheet — despite the name, not XLSX-only.
 _MAPPING_STATUS_PLAIN_XLSX = {
     "customer_tagged": "You tagged this",
-    "keyword_tagged": "Matched by tool/technique keyword (no AI)",
-    "ai_tagged": "AI-suggested — verify",
+    "keyword_tagged": "Matched by tool/technique keyword",
+    "ai_tagged": "Suggested by automated analysis — verify",
     "manual": "Edited by a reviewer",
     "tool_attested": "Tool-attested — alert path confirmed",
     "unmapped": "Could not be mapped",
@@ -52,8 +52,9 @@ def compute_moves(roadmap: dict, disabled_count: int, never_fired_count: int) ->
     moves = []
     if disabled_count:
         moves.append(
-            f"Review the {disabled_count} disabled rules — enabling the "
-            "right ones is the cheapest coverage you can buy."
+            f"Review the {disabled_count} disabled "
+            f"rule{'s' if disabled_count != 1 else ''} — enabling the "
+            "right ones is the fastest coverage gain available."
         )
     short_gaps = roadmap.get("short") or []
     if short_gaps:

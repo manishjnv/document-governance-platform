@@ -327,7 +327,7 @@ async def test_xlsx_tracker_structure(db_session):
 
     readme = wb["Read Me"]
     texts = [str(c.value) for row in readme.iter_rows() for c in row if c.value]
-    assert any("Is 33.3% bad?" in t for t in texts)
+    assert any("Context for 33.3%:" in t for t in texts)
     assert any("What each sheet contains" in t for t in texts)
     assert any("Technique Tracker" in t for t in texts)
 
@@ -370,9 +370,11 @@ async def test_xlsx_tracker_structure(db_session):
     assert "your query needs:" in gap_row[13].value      # Log fields needed
     assert "Windows Registry Key Modification" in gap_row[13].value
     # Reference KQL (2026-08-14): single-word via -> skeleton with the
-    # never-fires + false-positive discipline header
+    # never-fires + false-positive discipline header. 2026-08-20 (RCA #21):
+    # a product name is NOT printed as if it were a real SIEM table.
     assert "REFERENCE ONLY" in gap_row[14].value
-    assert "Sysmon | take 10" in gap_row[14].value
+    assert "<your_Sysmon_table> | take 10" in gap_row[14].value
+    assert "\nSysmon\n" not in gap_row[14].value
     assert gap_row[15].value == "Sysmon"                # Via
     # blank customer-tracking columns
     for col in (16, 17, 18, 19):
@@ -880,9 +882,11 @@ def test_assumptions_plain_language_helpers():
     legacy_tag = "tag 'T1562.001' is revoked in ATT&CK v19.1 — remapped to T1685.003"
     assert "revoked" not in _rewrite_legacy_revoked(legacy_tag)
 
-    assert _classify_assumption(
-        "12 rules were AI-tagged (confidence >= 0.6) — spot-check before use"
-    )[0] == "AI tagging"
+    # classification runs on neutralized text (client reports never say "AI")
+    from app.mitre.report_xlsx import neutralize_ai
+    raw = "12 rules were AI-tagged (confidence >= 0.6) — spot-check before use"
+    assert "AI" not in neutralize_ai(raw)
+    assert _classify_assumption(neutralize_ai(raw))[0] == "Automated tagging"
     assert _classify_assumption("a completely novel note")[0] == "General"
 
 
@@ -956,7 +960,7 @@ async def test_pptx_uplift_slides(db_session):
         for s in prs.slides for shape in s.shapes if shape.has_text_frame
     )
     for marker in (
-        "Where You Stand", "The 3 moves to make",
+        "Coverage Summary", "The 3 moves to make",
         "Your Coverage on the ATT&CK Board",
         "The 10 Techniques Attackers Use Most",
         "Adversary Spotlight", "never saw raw logs",

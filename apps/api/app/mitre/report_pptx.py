@@ -393,15 +393,16 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
         for d, v in domains.items() if v.get("applicable")
     ) or "no applicable domains"
     s = slide()
-    chrome(s, f"Where You Stand — {strict_pct}% Covered",
-           f"{overall.get('covered')} of {applicable} applicable techniques "
-           f"covered · {overall.get('partial') or 0} partial · weighted "
-           f"{overall.get('weighted_pct')}% — every number computed from "
-           "your own rule set")
     # split the covered count by provenance (2026-08-19 user request):
     # SIEM rules vs attested tools, each with its own count + %, plus the
     # combined headline — all from the same stored results
     rule_cov, tool_cov = covered_split(results)
+    chrome(s, f"Coverage Summary — {strict_pct}% Covered",
+           f"{overall.get('covered')} of {applicable} applicable techniques "
+           f"covered ({rule_cov} by SIEM rules + {tool_cov} by attested tools) "
+           f"· {overall.get('partial') or 0} partial · weighted "
+           f"{overall.get('weighted_pct')}% — every number computed from "
+           "your own rule set")
 
     def _pct(n):
         return round(100 * n / applicable, 1) if applicable else 0
@@ -409,8 +410,8 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
     board_tiles = [
         (str(rule_cov), f"covered by your SIEM rules ({_pct(rule_cov)}%)", _TEAL),
         (str(tool_cov),
-         f"covered via attested tools ({_pct(tool_cov)}%) — MITRE-evaluated, "
-         "alert path confirmed", "2563EB"),
+         f"covered via client-attested tools ({_pct(tool_cov)}%) — alert "
+         "path confirmed by your team", "2563EB"),
         (str(overall.get("covered") or 0),
          f"combined covered — the headline {strict_pct}%", _PURPLE),
         (str(overall.get("not_covered") or 0), "gaps — no detection today", _MAGENTA),
@@ -456,7 +457,7 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
                R(f" — {tool_overlay['caveat']}", color=_GREY, size=8)])])
     text(s, 0.45, 5.06, 9.10, 0.22, [
         P([R("Context: early SIEM detection programs typically start under "
-             "10% of ATT&CK — the roadmap matters more than the grade. "
+             "10% of ATT&CK; the priority is executing the roadmap. "
              "By matrix: ", color=_GREY, size=8),
            K(domains_line, 8)])])
 
@@ -539,8 +540,8 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
     # ------------------------------------------------- 5 · methodology
     s = slide()
     chrome(s, "Methodology — From Your Rules to a Coverage Score",
-           "Five deterministic steps · AI assists with wording only — it never "
-           "produces a number")
+           "Five deterministic steps · every number is computed directly "
+           "from your rule and asset data")
     keyword_tagged = max(0, total_rules - customer_tagged
                          - (counts.get("ai_tagged") or 0) - unmapped
                          - (counts.get("invalid") or 0) - (counts.get("manual") or 0))
@@ -551,7 +552,8 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
         ("2 · Map", _LAVENDER,
          [P([K(f"{customer_tagged} your own tags", 8.5), R(" (kept verbatim) · "
              f"{keyword_tagged} keyword-matched · "
-             f"{counts.get('ai_tagged') or 0} AI-suggested · ", size=8.5),
+             f"{counts.get('ai_tagged') or 0} suggested by automated "
+             "analysis · ", size=8.5),
              K(f"{unmapped} unmapped", 8.5, _MAGENTA),
              R(" (excluded, listed)", size=8.5)])]),
         ("3 · Filter", _PURPLE_NUM,
@@ -597,7 +599,7 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
                       R(" at intake and the next run orders gaps by who "
                         "actually targets you.", size=9)])])
     info_card(s, 5.10, 4.22, 4.45, 0.92, _MAGENTA, _ROSEBG,
-              "Where AI is allowed", _RED_D,
+              "Where automated analysis is used", _RED_D,
               [P([R("Tagging untagged rules (confidence-floored, flagged for "
                     "review) and phrasing recommendations. ", size=9),
                   K("Never a number.", 9, _MAGENTA)])])
@@ -653,16 +655,16 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
         best_paras = [P([K(f"{t.get('name')} {t.get('strict_pct')}%", 8.5),
                          R(f" — {t.get('covered')} of {t.get('applicable')} "
                            "techniques", size=8.5)], space_after=3) for t in best]
-        best_paras.append(P([R("Keep these maintained — they anchor the story "
-                               "that detection works here.",
+        best_paras.append(P([R("Keep these maintained — they are your "
+                               "strongest detection areas.",
                                color=_GREY, size=8)]))
         info_card(s, 6.50, 1.25, 3.05, 1.42, _TEAL, _MINT,
                   "Strongest stages", _GREEN_D, best_paras)
         worst_paras = [P([K(f"{t.get('name')} {t.get('strict_pct')}%", 8.5, _MAGENTA),
                           R(f" — {t.get('not_covered')} techniques open", size=8.5)],
                          space_after=3) for t in worst]
-        worst_paras.append(P([R("Start here — these stages give an attacker "
-                                "the freest run today.", color=_GREY, size=8)]))
+        worst_paras.append(P([R("Start here — these stages currently have "
+                                "the least detection.", color=_GREY, size=8)]))
         info_card(s, 6.50, 2.82, 3.05, 1.42, _MAGENTA, _ROSEBG,
                   "Weakest stages", _RED_D, worst_paras)
         biggest = max(tactics, key=lambda t: t.get("not_covered") or 0)
@@ -822,8 +824,8 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
                       R("nothing to build — re-validate quarterly so they "
                         "stay strong.", size=8.5)])])
         mod_body = [P([R("Reasonable rules with an open question — ", size=9),
-                       K("unproven firing, partial telemetry match, or "
-                         "AI-suggested mapping", 9, _AMBER),
+                       K("unproven firing, partial telemetry match, or an "
+                         "automated mapping suggestion", 9, _AMBER),
                        R(f". That is {mod_share}% of everything scored.", size=9)],
                      space_after=3),
                     P([R("What to do: ", bold=True, color=_GREY, size=8.5),
@@ -854,9 +856,9 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
     # ------------------------------------------- 10 · coverage by log source
     if groups:
         s = slide()
-        chrome(s, "What Each Log Source Buys You",
+        chrome(s, "Log Source Contribution",
                "Detection rules and techniques covered per source — and the "
-               "sources paying rent for nothing")
+               "sources not yet used by any detection")
         top = groups[:8]
         rows = [("Log source", "Rules", "Techniques covered", "Attack stages")]
         rows += [(g.get("log_source"), g.get("rule_count"),
@@ -876,7 +878,7 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
                       [P([K(str(best_g.get("log_source")), 8.5),
                           R(f" powers {best_g.get('rule_count')} rules covering "
                             f"{best_g.get('techniques_covered')} techniques — "
-                            "protect this pipeline first.", size=8.5)],
+                            "maintain this pipeline as a priority.", size=8.5)],
                          space_after=3),
                        P([R("Health-monitor it: parsing, normalization, event "
                            "freshness — losing it drops the most coverage.",
@@ -884,7 +886,7 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
         if zero_groups:
             worst_names = ", ".join(str(g.get("log_source")) for g in zero_groups[:3])
             info_card(s, 6.30, 2.72, 3.25, 1.30, _MAGENTA, _ROSEBG,
-                      "Paying for silence", _RED_D,
+                      "Onboarded but unused", _RED_D,
                       [P([K(f"{len(zero_groups)} source group(s)", 8.5, _MAGENTA),
                           R(" cover no technique today (incl. ", size=8.5),
                           R(worst_names, bold=True, size=8.5),
@@ -892,11 +894,11 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
                             "document, the gap.", size=8.5)])])
         else:
             info_card(s, 6.30, 2.72, 3.25, 1.30, _TEAL, _MINT,
-                      "Every source earns its keep", _GREEN_D,
+                      "Every source supports detection", _GREEN_D,
                       [P([R(f"All {len(groups)} source groups cover at least "
-                            "one technique — no telemetry is paying rent for "
-                            "nothing today. Keep it that way when onboarding "
-                            "new sources: rule first, connector second.",
+                            "one technique. Maintain this when onboarding "
+                            "new sources: define the detection rule alongside "
+                            "the connector.",
                             size=8.5)])])
         info_card(s, 6.30, 4.19, 3.25, 0.91, _LAVENDER, _CARD, "Action", _PURPLE,
                   [P([R("The spreadsheet's ", size=8.5),
@@ -1000,7 +1002,7 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
                   size=8.5)])]))
     if zero_groups:
         gap_cards.append((
-            "Log sources paying rent for nothing", _MAGENTA,
+            "Log sources with no detection coverage", _MAGENTA,
             [P([K(f"{len(zero_groups)} source group(s)", 9, _MAGENTA),
                 R(" ship logs that cover no technique today.", size=9)],
                space_after=3),
@@ -1045,8 +1047,8 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
                   "red row on that slide is a proven, common intrusion path.",
                   size=9)], space_after=3),
              P([R("What to do: ", bold=True, color=_GREY, size=8.5),
-                R("they already rank high in the tracker — verify they hold a "
-                  "build slot.", size=8.5)])]))
+                R("they already rank high in the tracker — confirm they are "
+                  "scheduled for build.", size=8.5)])]))
     if overall.get("partial"):
         gap_cards.append((
             f"{overall.get('partial')} techniques nearly there", _AMBER,
@@ -1123,9 +1125,9 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
         info_card(s, 6.50, 1.25, 3.05, 1.45, _TEAL, _MINT,
                   f"{top10['covered']} of 10 fully covered", _GREEN_D,
                   [P([R("Plus ", size=9), K(str(top10["partial"]), 9, _AMBER),
-                      R(" partially covered. These are the techniques real "
-                        "intrusions run on — every red row is worth a build "
-                        "slot.", size=9)])])
+                      R(" partially covered. These are the techniques most "
+                        "used in real intrusions — each open one merits a "
+                        "planned detection build.", size=9)])])
         info_card(s, 6.50, 2.87, 3.05, 1.45, _LAVENDER, _CARD,
                   "Where this list comes from", _PURPLE,
                   [P([R("A published industry report, refreshed yearly — "
@@ -1287,7 +1289,7 @@ def build_pptx_export(assessment, use_cases: list, branding: dict | None = None)
     s = slide()
     chrome(s, "Improvement Roadmap",
            f"{len(roadmap.get('short', []))} of {gap_total} gaps are buildable "
-           "on logs you already collect — sequencing is the whole game")
+           "on logs you already collect — a phased sequence is recommended")
     buckets = [
         ("NOW · 0–3 months", _TEAL, _MINT, _GREEN_D, roadmap.get("short", []),
          "telemetry already onboarded — build the detection now",
