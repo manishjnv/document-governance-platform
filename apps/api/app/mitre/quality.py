@@ -96,9 +96,9 @@ def _hit_score(uc: dict, mapping_confidence: float, source: str,
                  else "reviewer-set" if source == "manual"
                  else "keyword-matched"]
     elif mapping_confidence >= covered_confidence:
-        base, frags = _AI_HIGH_BASE, ["AI-mapped (high confidence)"]
+        base, frags = _AI_HIGH_BASE, ["auto-mapped (high confidence)"]
     else:
-        base, frags = _AI_MID_BASE, ["AI-mapped (low confidence)"]
+        base, frags = _AI_MID_BASE, ["auto-mapped (low confidence)"]
     score = base
 
     enabled = uc.get("enabled")

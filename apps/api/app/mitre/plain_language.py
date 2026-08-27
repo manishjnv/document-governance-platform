@@ -151,7 +151,7 @@ def _source_phrase(rule: dict) -> str:
     if source == "manual":
         return "set by your reviewer"
     pct = round((rule.get("confidence") or 0) * 100)
-    return f"AI-mapped at {pct}% confidence"
+    return f"auto-mapped at {pct}% confidence"
 
 
 def _quote_names(rules: list) -> str:
