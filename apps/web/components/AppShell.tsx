@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { FileText, LayoutDashboard, Target, Menu, LogOut, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
+import { Bug, FileText, LayoutDashboard, Target, Menu, LogOut, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'SOW Review', icon: LayoutDashboard },
   { href: '/mitre', label: 'MITRE Assessment', icon: Target },
+  { href: '/codereview', label: 'Code Security Review', icon: Bug },
 ];
 
 const ADMIN_NAV_ITEM = { href: '/admin', label: 'Admin', icon: ShieldCheck };

@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from app.core.rate_limit import RateLimitMiddleware
 from app.core.timing import ResponseTimeMiddleware
 from app.mitre import router as mitre
+from app.codereview import router as codereview
 from app.routers import (
     access_control,
     admin,
@@ -136,6 +137,7 @@ app.include_router(search.router)
 app.include_router(search_history.router)
 app.include_router(teams.router)
 app.include_router(mitre.router)  # MITRE assessment module (app/mitre) — appended last, isolated prefix /api/v1/mitre
+app.include_router(codereview.router)  # Code Security Review module (app/codereview) — isolated prefix /api/v1/codereview
 
 
 # Health Check Endpoint. /api/v1/health alias: the VPS reverse proxy only

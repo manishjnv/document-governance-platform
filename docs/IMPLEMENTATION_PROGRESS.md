@@ -11,6 +11,39 @@
 
 ## ✅ Done
 
+**Code Security Review module — professional UI + consultant scan kit +
+real golden scan (2026-09-11, second session, single commit):** the three
+pages were rebuilt to the MITRE standard per
+`docs/planning/CODE_REVIEW_UI_PLAN.md` (severity-tinted chips/bars/tiles,
+executive band with a derived headline, severity strip, tabs Findings /
+Exploit chains / Scan details, sortable+filterable table with mobile card
+rows, resizable drawer with prev/next + `?finding=N` deep link, dialogs
+instead of `window.confirm`). Scan kit: VVAH v1.3.0 wheel built from the
+tag (no PyPI/release assets) and vendored under
+`apps/api/app/codereview/kit/vendor/` with licences; `config.yaml`
+(OpenRouter via `via: openai`, deepseek-v4-pro/flash, remediation off),
+`scopewise-scan.ps1/.sh`, README; `GET /api/v1/codereview/kit.zip`; zip
+upload with entry/size/traversal/symlink guards (`ingest.unpack_scan_zip`).
+Golden fixture: real scan of `OWASP/NodeGoat` (29 findings, 6 chains, ≈ $4)
+under `docs/sample/CodeReview_Sample/real/nodegoat/` + golden ingest test.
+Suite **973 passed / 7 skipped**; committed, pushed and deployed 2026-09-12
+(migration 039 applied to prod). See `CODE_REVIEW_MODULE_REFERENCE.md` §8–9.
+
+**Code Security Review module (2026-09-11, first session):**
+third isolated module, built after a feasibility review of Visa's
+open-source Vulnerability Agentic Harness (VVAH, Apache-2.0). Decision:
+ScopeWise imports VVAH's `findings.json` / SARIF output (consultant runs
+`vvaharness scan --repo X --stop-after s9` themselves) and never runs the
+scanner server-side — no spend cap, Opus-heavy defaults, untrusted-repo
+sandboxing the shared VPS can't host. Delivered: migration 039
+(`code_reviews` table + `code_review` audit resource type),
+`app/codereview/{ingest,router,report_xlsx,report_pptx}.py` (pure
+deterministic ingest with caps/sort/chain-step remap, org-scoped CRUD +
+XLSX/PPTX exports), `apps/web/app/codereview/` (list / upload / results
+with drawer), nav entry, synthetic sample set under
+`docs/sample/CodeReview_Sample/` (generator script in `scripts/`), 21
+targeted tests. Reference: `docs/planning/CODE_REVIEW_MODULE_REFERENCE.md`.
+
 **MITRE feasibility source-suitability gate (2026-08-20, RCA #21):**
 a client review caught "Okta-based detection for RDP" in a delivered
 gap report — `ranking.py` now platform-gates IdP/SSO-class sources out

@@ -1,0 +1,462 @@
+{
+  "tool": "vvaharness",
+  "version": "1.3.0",
+  "started": "2026-09-11T18:58:22.635523+00:00",
+  "argv": [
+    "--repo",
+    "../target-nodegoat",
+    "--stop-after",
+    "s9",
+    "--config",
+    "config.yaml"
+  ],
+  "config_profile": "config.yaml",
+  "config_sha256": "9edcd9cecf6e442eba7849184cc5539bc397c0c3483f35bbc3463ad9ee8ccafb",
+  "config_local_sha256": null,
+  "models": {
+    "graph_annotate": {
+      "id": "deepseek/deepseek-v4-flash",
+      "via": "openai",
+      "provider": null,
+      "resolved_route": "openai",
+      "resolved_transport": null,
+      "use_responses_api": null
+    },
+    "autoexclude": {
+      "id": "deepseek/deepseek-v4-flash",
+      "via": "openai",
+      "provider": null,
+      "resolved_route": "openai",
+      "resolved_transport": null,
+      "use_responses_api": null
+    },
+    "preprocess": {
+      "id": "deepseek/deepseek-v4-pro",
+      "via": "openai",
+      "provider": null,
+      "resolved_route": "openai",
+      "resolved_transport": null,
+      "use_responses_api": null
+    },
+    "threatmodel": {
+      "id": "deepseek/deepseek-v4-pro",
+      "via": "openai",
+      "provider": null,
+      "resolved_route": "openai",
+      "resolved_transport": null,
+      "use_responses_api": null
+    },
+    "decompose": {
+      "id": "deepseek/deepseek-v4-pro",
+      "via": "openai",
+      "provider": null,
+      "resolved_route": "openai",
+      "resolved_transport": null,
+      "use_responses_api": null
+    },
+    "deepdive": {
+      "id": "deepseek/deepseek-v4-pro",
+      "via": "openai",
+      "provider": null,
+      "resolved_route": "openai",
+      "resolved_transport": null,
+      "use_responses_api": null
+    },
+    "verify": {
+      "id": "deepseek/deepseek-v4-pro",
+      "via": "openai",
+      "provider": null,
+      "resolved_route": "openai",
+      "resolved_transport": null,
+      "use_responses_api": null
+    },
+    "dedup": {
+      "id": "deepseek/deepseek-v4-pro",
+      "via": "openai",
+      "provider": null,
+      "resolved_route": "openai",
+      "resolved_transport": null,
+      "use_responses_api": null
+    },
+    "chain": {
+      "id": "deepseek/deepseek-v4-pro",
+      "via": "openai",
+      "provider": null,
+      "resolved_route": "openai",
+      "resolved_transport": null,
+      "use_responses_api": null
+    },
+    "remediate": {
+      "id": "deepseek/deepseek-v4-pro",
+      "via": "openai",
+      "provider": null,
+      "resolved_route": "openai",
+      "resolved_transport": null,
+      "use_responses_api": null
+    },
+    "validate": {
+      "id": "deepseek/deepseek-v4-pro",
+      "via": "deepagents",
+      "provider": "openai",
+      "resolved_route": "openai",
+      "resolved_transport": "responses",
+      "use_responses_api": null
+    }
+  },
+  "effective_scan_controls": {
+    "cache": {
+      "cache_markers": "on",
+      "cache_route": "auto",
+      "cache_min_block_tokens": null
+    },
+    "step0": {
+      "enabled": true,
+      "callgraph_detection": "llm",
+      "sources_yaml": null,
+      "sinks_yaml": null,
+      "call_graph_max_targets": null
+    },
+    "step1": {
+      "auto_exclude": false,
+      "auto_exclude_max_tokens": 8000,
+      "mode": "full",
+      "call_graph": "regex",
+      "max_budget_usd": 25.0,
+      "max_turns": 40,
+      "max_file_kb": 1024,
+      "call_graph_validate": true,
+      "call_graph_supplement": true,
+      "call_graph_rounds": 4,
+      "call_graph_max_targets": 3,
+      "config_dedup": null
+    },
+    "step2": {
+      "enabled": true,
+      "max_tokens": 64000,
+      "max_threats": 50,
+      "baseline": "auto",
+      "max_doc_chars": 20000,
+      "max_manifest_chars": 4000,
+      "max_modules": 100,
+      "max_entry_points": 400,
+      "max_config_reps": 80,
+      "max_api_artefacts": 100,
+      "max_graph_files": 220,
+      "max_graph_sinks": 80,
+      "max_graph_edges": 100
+    },
+    "step3": {
+      "max_tokens": 64000,
+      "timeout": 3600,
+      "taint_chunks": true,
+      "taint_max_hops": 10,
+      "taint_max_chunks": 60,
+      "taint_files_per_hop": 5,
+      "pack_by": "loc",
+      "chunk_token_budget": 180000,
+      "chunk_overhead_tokens": 80000,
+      "risk_chunk_loc": 10000,
+      "catchall_enabled": true,
+      "catchall_deduct_lens_coverage": false,
+      "catchall_mode": "all",
+      "catchall_chunk_loc": 4000,
+      "catchall_max_files": 100,
+      "max_files_per_chunk": 80,
+      "specialists": null,
+      "specialist_chunk_loc": 10000,
+      "threat_surface_fallbacks": true,
+      "max_threat_fallback_chunks": 50
+    },
+    "step4": {
+      "parallel": 4,
+      "timeout": 1800,
+      "runs": 1,
+      "taint_runs": null,
+      "taint_prompt_mode": "discover",
+      "vote_threshold": 1,
+      "specialist_runs": 1,
+      "line_bucket": 10,
+      "max_findings_per_run": 10,
+      "max_tokens": 64000,
+      "neighbor_context_lines": 25,
+      "neighbor_context_max": 50
+    },
+    "step5_prefilter": {
+      "min_pre_confidence": 0.6,
+      "require_evidence": true,
+      "line_tolerance": null,
+      "pre_verify_semantic": null,
+      "pre_verify_threshold": null
+    },
+    "step6_verify": {
+      "parallel": 5,
+      "min_confidence": 7,
+      "max_budget_usd": 10.0,
+      "max_turns": 30,
+      "allowed_tools": null
+    },
+    "step7_dedup": {
+      "line_tolerance": 3,
+      "semantic": true,
+      "max_tokens": 64000
+    },
+    "step8": {
+      "max_tokens": 64000,
+      "timeout": 3600
+    },
+    "step_remediate": {
+      "enabled": false,
+      "enforce_policy": null,
+      "top_n_findings": 20,
+      "max_budget_usd": 10.0,
+      "max_turns": 40,
+      "allowed_tools": null
+    },
+    "remediation_model": {
+      "id": "deepseek/deepseek-v4-pro",
+      "via": "openai"
+    },
+    "step_validate": {
+      "enabled": false,
+      "effort": "high",
+      "max_turns": 50,
+      "max_budget_usd": 15.0,
+      "max_findings": 20,
+      "allowed_tools": null
+    },
+    "validation_panel": {
+      "orchestrator": {
+        "id": "deepseek/deepseek-v4-pro",
+        "via": "deepagents",
+        "provider": "openai",
+        "resolved_route": "openai"
+      },
+      "security_architect": {
+        "id": "deepseek/deepseek-v4-pro",
+        "via": "deepagents",
+        "provider": "openai",
+        "resolved_route": "openai"
+      },
+      "penetration_tester": {
+        "id": "deepseek/deepseek-v4-pro",
+        "via": "deepagents",
+        "provider": "openai",
+        "resolved_route": "openai"
+      },
+      "cross_repo_analyzer": {
+        "id": "deepseek/deepseek-v4-pro",
+        "via": "deepagents",
+        "provider": "openai",
+        "resolved_route": "openai"
+      }
+    },
+    "input_hashes": {
+      "step0_sources_yaml": null,
+      "step0_sinks_yaml": null,
+      "cve_file": {
+        "path": "inputs\\known_cves.json",
+        "sha256": null
+      },
+      "controls_file": {
+        "path": "inputs\\design_controls.yaml",
+        "sha256": null
+      },
+      "cmdb_file": {
+        "path": "inputs\\cmdb.csv",
+        "sha256": null
+      },
+      "policy_file": null,
+      "playbook_file": null
+    }
+  },
+  "target_git_sha": "c5cb68a7084e4ae7dcc60e6a98768720a81841e8",
+  "exit_code": 0,
+  "ended": "2026-09-11T20:40:57.597988+00:00",
+  "duration_sec": 6154.9,
+  "stages": {
+    "s0": {
+      "label": "Step 0 \u2014 Static seed (callgraph)",
+      "outcome": "completed",
+      "duration_sec": 218.48,
+      "tokens": {
+        "prompt": 9371,
+        "completion": 8967,
+        "cache_read": 0,
+        "cache_write": 0,
+        "calls": 1
+      },
+      "model": "deepseek/deepseek-v4-flash",
+      "cost_usd": null,
+      "cost_estimated": false
+    },
+    "s1": {
+      "label": "Step 1 \u2014 Pre-process (deepseek/deepseek-v4-pro [openai])",
+      "outcome": "completed",
+      "duration_sec": 215.79,
+      "tokens": {
+        "prompt": 37485,
+        "completion": 11979,
+        "cache_read": 120576,
+        "cache_write": 0,
+        "calls": 10
+      },
+      "model": "deepseek/deepseek-v4-pro",
+      "cost_usd": null,
+      "cost_estimated": false
+    },
+    "s2": {
+      "label": "Step 2 \u2014 Threat model (deepseek/deepseek-v4-pro [openai])",
+      "outcome": "completed",
+      "duration_sec": 181.4,
+      "tokens": {
+        "prompt": 10832,
+        "completion": 11209,
+        "cache_read": 0,
+        "cache_write": 0,
+        "calls": 1
+      },
+      "model": "deepseek/deepseek-v4-pro",
+      "cost_usd": null,
+      "cost_estimated": false
+    },
+    "s3": {
+      "label": "Step 3 \u2014 Decompose (deepseek/deepseek-v4-pro [openai])",
+      "outcome": "completed",
+      "duration_sec": 154.72,
+      "tokens": {
+        "prompt": 11530,
+        "completion": 10329,
+        "cache_read": 0,
+        "cache_write": 0,
+        "calls": 1
+      },
+      "model": "deepseek/deepseek-v4-pro",
+      "cost_usd": null,
+      "cost_estimated": false
+    },
+    "s4": {
+      "label": "Step 4 \u2014 Deep-dive (deepseek/deepseek-v4-pro [openai]; 1 runs, vote\u22651, parallel=4)",
+      "outcome": "completed",
+      "duration_sec": 2229.5,
+      "tokens": {
+        "prompt": 1480832,
+        "completion": 520251,
+        "cache_read": 303104,
+        "cache_write": 0,
+        "calls": 86
+      },
+      "model": "deepseek/deepseek-v4-pro",
+      "cost_usd": null,
+      "cost_estimated": false
+    },
+    "s5": {
+      "label": "Step 5 \u2014 Pre-filter (deterministic + semantic pre-dedup)",
+      "outcome": "completed",
+      "duration_sec": 162.3,
+      "tokens": {
+        "prompt": 26462,
+        "completion": 12128,
+        "cache_read": 0,
+        "cache_write": 0,
+        "calls": 1
+      },
+      "model": "deepseek/deepseek-v4-pro",
+      "cost_usd": null,
+      "cost_estimated": false
+    },
+    "s6": {
+      "label": "Step 6 \u2014 Verify (deepseek/deepseek-v4-pro [openai])",
+      "outcome": "completed",
+      "duration_sec": 2750.13,
+      "tokens": {
+        "prompt": 659466,
+        "completion": 556570,
+        "cache_read": 2955037,
+        "cache_write": 0,
+        "calls": 399
+      },
+      "model": "deepseek/deepseek-v4-pro",
+      "cost_usd": null,
+      "cost_estimated": false
+    },
+    "s7": {
+      "label": "Step 7 \u2014 Dedup (deepseek/deepseek-v4-pro [openai])",
+      "outcome": "completed",
+      "duration_sec": 19.93,
+      "tokens": {
+        "prompt": 10349,
+        "completion": 1007,
+        "cache_read": 0,
+        "cache_write": 0,
+        "calls": 1
+      },
+      "model": "deepseek/deepseek-v4-pro",
+      "cost_usd": null,
+      "cost_estimated": false
+    },
+    "s8": {
+      "label": "Step 8 \u2014 Chain (deepseek/deepseek-v4-pro [openai])",
+      "outcome": "completed",
+      "duration_sec": 171.54,
+      "tokens": {
+        "prompt": 8015,
+        "completion": 10985,
+        "cache_read": 0,
+        "cache_write": 0,
+        "calls": 1
+      },
+      "model": "deepseek/deepseek-v4-pro",
+      "cost_usd": null,
+      "cost_estimated": false
+    },
+    "s9": {
+      "label": "Step 9 \u2014 SARIF (app_id=-)",
+      "outcome": "completed",
+      "duration_sec": 0.07,
+      "tokens": {
+        "prompt": 0,
+        "completion": 0,
+        "cache_read": 0,
+        "cache_write": 0,
+        "calls": 0
+      },
+      "model": null,
+      "cost_usd": null,
+      "cost_estimated": false
+    }
+  },
+  "totals": {
+    "prompt_tokens": 2256705,
+    "completion_tokens": 1143719,
+    "total_tokens": 3400424,
+    "cache_read_tokens": 3378789,
+    "cache_write_tokens": 0,
+    "calls": 505,
+    "calls_with_usage": 505,
+    "completion_absent": 0,
+    "cache_unparsed_calls": 0,
+    "cost_usd": null,
+    "unattributed": {
+      "prompt": 2363,
+      "completion": 294,
+      "cache_read": 72,
+      "cache_write": 0,
+      "calls": 4
+    }
+  },
+  "pricing": null,
+  "pricing_status": {
+    "status": "unavailable",
+    "reason": "no pricing table configured"
+  },
+  "counters": {
+    "s0_framework_marker_unnameable": 38,
+    "s2_baseline_undisposed": "",
+    "s2_repo_kinds": "web-api",
+    "s2_threats_raw": 19,
+    "s3_buckets": 8,
+    "s3_cohesion_groups": 38,
+    "s3_output_shape": "ids",
+    "s4_shard_sibling_parked_seconds": 50
+  }
+}

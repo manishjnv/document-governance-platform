@@ -1,0 +1,510 @@
+{
+  "repo_root": "/work/acme-payments-api",
+  "repo_name": "acme-payments-api",
+  "git_sha": "3f9c2a1",
+  "tool_version": "1.3.0",
+  "summary": "vvaharness scanned acme-payments-api (Python/FastAPI) end to end. Twelve findings were confirmed across all five severities, including a critical SQL injection in the payment query builder and hardcoded AWS credentials in the settings module. Two exploit chains link the credential and injection findings to broader compromise. One low-confidence finding (a TODO comment) was verified as a false positive: the referenced route is dead code behind a disabled debug flag.",
+  "degraded": false,
+  "degraded_reason": "",
+  "findings": [
+    {
+      "finding": {
+        "title": "SQL injection in payment query builder",
+        "vuln_class": "sql_injection",
+        "vuln_class_label": "SQL Injection",
+        "cwe": "CWE-89",
+        "cvss_score": 9.8,
+        "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        "cvss_rating": "CRITICAL",
+        "file": "app/payments/repository.py",
+        "line_start": 88,
+        "line_end": 94,
+        "confidence": 0.95,
+        "votes": 2,
+        "verdict": "TRUE_POSITIVE",
+        "verdict_confidence": 90,
+        "verdict_reason": "Confirmed by tracing the merchant_ref query parameter into a raw SQL string.",
+        "description": "User-supplied merchant_ref is string-formatted directly into a raw SQL query used to look up payment records.",
+        "impact": "Full compromise of the payments table (read/write), including card-reference tokens and settlement amounts.",
+        "exploit_scenario": "An authenticated merchant sends a crafted merchant_ref (e.g. `' OR '1'='1`) to /api/payments/search, which is interpolated into the WHERE clause and returns other merchants' transactions.",
+        "preconditions": [
+          "Caller must be able to reach /api/payments/search (any authenticated merchant)."
+        ],
+        "recommendation": "Use a parameterized query (SQLAlchemy bound parameters) instead of an f-string; add a regression test asserting the query is never built via string formatting.",
+        "code_snippet": "query = f\"SELECT * FROM payments WHERE merchant_ref = '{merchant_ref}'\"",
+        "verifier_reasoning": "Traced merchant_ref from the FastAPI path operation through to the raw cursor.execute() call with no sanitization in between.",
+        "offensive_priority": "highest",
+        "offensive_reason": "Directly reachable by any authenticated user with no additional preconditions.",
+        "source_ref": "app/payments/routes.py:41",
+        "sink_ref": "app/payments/repository.py:91",
+        "duplicates": [],
+        "severity": "critical",
+        "exploitability_notes": "No input validation or allowlisting precedes the query; the exploit path requires only a valid session, not elevated privileges."
+      },
+      "severity": "critical",
+      "exploitability_notes": "No input validation or allowlisting precedes the query; the exploit path requires only a valid session, not elevated privileges."
+    },
+    {
+      "finding": {
+        "title": "Hardcoded AWS credentials in settings module",
+        "vuln_class": "hardcoded_secret",
+        "vuln_class_label": "Hardcoded Credentials",
+        "cwe": "CWE-798",
+        "cvss_score": 9.1,
+        "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:L",
+        "cvss_rating": "CRITICAL",
+        "file": "app/config/settings.py",
+        "line_start": 22,
+        "line_end": 23,
+        "confidence": 0.9,
+        "votes": 1,
+        "verdict": "TRUE_POSITIVE",
+        "verdict_confidence": 85,
+        "verdict_reason": "Key pattern and format match a live AWS access key ID.",
+        "description": "A hardcoded AWS access key/secret pair is committed to the settings module and shipped in every build artifact.",
+        "impact": "Anyone with repo or artifact access can assume the AWS credentials and access the S3 buckets and SES sending identity they authorize.",
+        "exploit_scenario": "An attacker who obtains the built container image (e.g. from a leaked internal registry) extracts the key from settings.py and uses it directly against the AWS API.",
+        "preconditions": [
+          "Attacker has read access to the source tree, a build artifact, or a leaked container image."
+        ],
+        "recommendation": "Rotate the exposed key immediately, remove it from source control history, and load credentials from the environment or a secrets manager instead.",
+        "code_snippet": "AWS_ACCESS_KEY_ID = \"AKIA-EXAMPLE-NOT-REAL\"\nAWS_SECRET_ACCESS_KEY = \"fakeSecretFakeSecretFakeSecretFakeSecret\"",
+        "verifier_reasoning": "Confirmed the string matches the AKIA prefix format and is read directly by boto3.client() elsewhere in the module.",
+        "offensive_priority": "highest",
+        "offensive_reason": "Any party with source or artifact access gets standing AWS credentials.",
+        "source_ref": null,
+        "sink_ref": null,
+        "duplicates": [],
+        "severity": "critical",
+        "exploitability_notes": "Static string in a tracked file \u2014 no runtime interaction needed to extract it."
+      },
+      "severity": "critical",
+      "exploitability_notes": "Static string in a tracked file \u2014 no runtime interaction needed to extract it."
+    },
+    {
+      "finding": {
+        "title": "SSRF in webhook URL fetcher",
+        "vuln_class": "ssrf",
+        "vuln_class_label": "Server-Side Request Forgery",
+        "cwe": "CWE-918",
+        "cvss_score": 8.6,
+        "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:L/A:N",
+        "cvss_rating": "HIGH",
+        "file": "app/integrations/webhooks.py",
+        "line_start": 55,
+        "line_end": 71,
+        "confidence": 0.85,
+        "votes": 1,
+        "verdict": "TRUE_POSITIVE",
+        "verdict_confidence": 75,
+        "verdict_reason": "The fetcher follows redirects and has no destination allowlist.",
+        "description": "The outbound-webhook test endpoint fetches an arbitrary merchant-supplied URL server-side with no destination allowlist.",
+        "impact": "Can be used to reach internal-only services (metadata endpoints, admin consoles) from the application's network position.",
+        "exploit_scenario": "A merchant configures a webhook URL pointing at the cloud metadata endpoint (169.254.169.254) via the 'test webhook' feature and reads the response back through the test-result API.",
+        "preconditions": [
+          "Merchant-role account needed to reach the webhook test feature."
+        ],
+        "recommendation": "Resolve and validate the target host against an allowlist (or block RFC1918/link-local ranges) before issuing the outbound request.",
+        "code_snippet": "resp = requests.get(webhook_url, timeout=5, allow_redirects=True)",
+        "verifier_reasoning": "Verified webhook_url is user-supplied and unfiltered before reaching requests.get().",
+        "offensive_priority": "high",
+        "offensive_reason": "Requires only a merchant account, no elevated role.",
+        "source_ref": "app/integrations/routes.py:30",
+        "sink_ref": "app/integrations/webhooks.py:58",
+        "duplicates": [],
+        "severity": "high",
+        "exploitability_notes": "No egress filtering observed in the deployment manifests reviewed."
+      },
+      "severity": "high",
+      "exploitability_notes": "No egress filtering observed in the deployment manifests reviewed."
+    },
+    {
+      "finding": {
+        "title": "JWT signature verification can be bypassed",
+        "vuln_class": "broken_auth",
+        "vuln_class_label": "Broken Authentication",
+        "cwe": "CWE-347",
+        "cvss_score": 8.1,
+        "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
+        "cvss_rating": "HIGH",
+        "file": "app/auth/tokens.py",
+        "line_start": 30,
+        "line_end": 36,
+        "confidence": 0.8,
+        "votes": 1,
+        "verdict": "TRUE_POSITIVE",
+        "verdict_confidence": 70,
+        "verdict_reason": "The alg parameter is read from the token header, enabling alg=none.",
+        "description": "jwt.decode() is called with algorithms taken from the token's own header rather than a fixed server-side allowlist, permitting an alg=none token.",
+        "impact": "An attacker can forge a valid-looking session for any user ID.",
+        "exploit_scenario": "An attacker crafts a JWT with header {\"alg\": \"none\"} and an arbitrary payload, sends it as the bearer token, and is treated as authenticated.",
+        "preconditions": [
+          "None \u2014 unauthenticated attacker."
+        ],
+        "recommendation": "Pin the accepted algorithm list to the one the server issues tokens with (e.g. algorithms=[\"HS256\"]) and reject alg=none explicitly.",
+        "code_snippet": "payload = jwt.decode(token, key, algorithms=jwt.get_unverified_header(token)[\"alg\"])",
+        "verifier_reasoning": "Confirmed algorithms= is derived from attacker-controlled input, not a server-side constant.",
+        "offensive_priority": "highest",
+        "offensive_reason": "Full authentication bypass, reachable pre-auth.",
+        "source_ref": null,
+        "sink_ref": null,
+        "duplicates": [],
+        "severity": "high",
+        "exploitability_notes": "No additional network position or credentials required."
+      },
+      "severity": "high",
+      "exploitability_notes": "No additional network position or credentials required."
+    },
+    {
+      "finding": {
+        "title": "Path traversal in invoice download endpoint",
+        "vuln_class": "path_traversal",
+        "vuln_class_label": "Path Traversal",
+        "cwe": "CWE-22",
+        "cvss_score": 7.5,
+        "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+        "cvss_rating": "HIGH",
+        "file": "app/invoices/routes.py",
+        "line_start": 63,
+        "line_end": 70,
+        "confidence": 0.82,
+        "votes": 1,
+        "verdict": "TRUE_POSITIVE",
+        "verdict_confidence": 72,
+        "verdict_reason": "The filename query parameter reaches open() with only a naive '..' strip.",
+        "description": "The invoice-download endpoint builds a filesystem path from a user-supplied filename with only a naive '..' string replace, which does not stop encoded or nested traversal sequences.",
+        "impact": "Read access to arbitrary files on the API host readable by the service account.",
+        "exploit_scenario": "An authenticated user requests /api/invoices/download?filename=..%2f..%2f..%2fetc%2fpasswd and receives the file's contents.",
+        "preconditions": [
+          "Any authenticated user account."
+        ],
+        "recommendation": "Resolve the path with os.path.realpath and verify it stays under the invoices directory before opening; reject requests that fail the check.",
+        "code_snippet": "path = os.path.join(INVOICE_DIR, filename.replace(\"..\", \"\"))",
+        "verifier_reasoning": "Traced filename from the query string to open() with no realpath/prefix check in between.",
+        "offensive_priority": "high",
+        "offensive_reason": "Reachable by any authenticated user.",
+        "source_ref": "app/invoices/routes.py:63",
+        "sink_ref": "app/invoices/routes.py:69",
+        "duplicates": [],
+        "severity": "high",
+        "exploitability_notes": "URL-encoding and repeated separators bypass the single-pass replace."
+      },
+      "severity": "high",
+      "exploitability_notes": "URL-encoding and repeated separators bypass the single-pass replace."
+    },
+    {
+      "finding": {
+        "title": "No rate limiting on OTP verification endpoint",
+        "vuln_class": "missing_rate_limit",
+        "vuln_class_label": "Missing Rate Limiting",
+        "cwe": "CWE-799",
+        "cvss_score": 5.3,
+        "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+        "cvss_rating": "MEDIUM",
+        "file": "app/auth/otp.py",
+        "line_start": 40,
+        "line_end": 52,
+        "confidence": 0.7,
+        "votes": 1,
+        "verdict": "TRUE_POSITIVE",
+        "verdict_confidence": 60,
+        "verdict_reason": "No throttle or lockout observed on the verify path.",
+        "description": "The OTP verification endpoint has no per-account or per-IP rate limit, allowing an unbounded number of guesses against a 6-digit code.",
+        "impact": "Increases the practical odds of a successful OTP brute-force within the code's validity window.",
+        "exploit_scenario": "An attacker scripts repeated POSTs to /api/auth/otp/verify for a known email, cycling all 10^6 codes before expiry.",
+        "preconditions": [
+          "Knowledge of a target email address."
+        ],
+        "recommendation": "Add a per-account attempt counter with exponential backoff and a hard cap before requiring a fresh OTP request.",
+        "code_snippet": "def verify_otp(email: str, code: str): ...  # no attempt tracking",
+        "verifier_reasoning": "Confirmed no rate-limit decorator or attempt-count check on this route, unlike /api/auth/login which has one.",
+        "offensive_priority": "medium",
+        "offensive_reason": "Pre-auth, but requires sustained request volume.",
+        "source_ref": null,
+        "sink_ref": null,
+        "duplicates": [],
+        "severity": "medium",
+        "exploitability_notes": "6-digit numeric space is brute-forceable within typical OTP TTLs absent throttling."
+      },
+      "severity": "medium",
+      "exploitability_notes": "6-digit numeric space is brute-forceable within typical OTP TTLs absent throttling."
+    },
+    {
+      "finding": {
+        "title": "Stack traces returned in API error responses",
+        "vuln_class": "info_disclosure",
+        "vuln_class_label": "Information Disclosure",
+        "cwe": "CWE-209",
+        "cvss_score": 5.0,
+        "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+        "cvss_rating": "MEDIUM",
+        "file": "app/main.py",
+        "line_start": 18,
+        "line_end": 27,
+        "confidence": 0.75,
+        "votes": 1,
+        "verdict": "TRUE_POSITIVE",
+        "verdict_confidence": 65,
+        "verdict_reason": "The debug exception handler is registered unconditionally.",
+        "description": "The global exception handler returns the full traceback and local variable dump in the JSON response body for any unhandled exception.",
+        "impact": "Discloses internal file paths, library versions, and occasionally query parameters or partial secrets held in local variables.",
+        "exploit_scenario": "An attacker sends a request that triggers an unhandled exception (e.g. a malformed multipart body) and reads the stack trace from the response.",
+        "preconditions": [
+          "None \u2014 unauthenticated attacker."
+        ],
+        "recommendation": "Register the debug traceback handler only when DEBUG=true, and return a generic 500 body with a correlation ID in production.",
+        "code_snippet": "app.add_exception_handler(Exception, debug_traceback_handler)",
+        "verifier_reasoning": "Confirmed debug_traceback_handler is unconditional, not gated on an env flag.",
+        "offensive_priority": "low",
+        "offensive_reason": "Aids further exploitation but isn't independently exploitable.",
+        "source_ref": null,
+        "sink_ref": null,
+        "duplicates": [],
+        "severity": "medium",
+        "exploitability_notes": "No authentication required to trigger a 500 and read the traceback."
+      },
+      "severity": "medium",
+      "exploitability_notes": "No authentication required to trigger a 500 and read the traceback."
+    },
+    {
+      "finding": {
+        "title": "CORS allows any origin with credentials",
+        "vuln_class": "insecure_cors",
+        "vuln_class_label": "Insecure CORS Configuration",
+        "cwe": "CWE-942",
+        "cvss_score": 4.3,
+        "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:N/A:N",
+        "cvss_rating": "MEDIUM",
+        "file": "app/main.py",
+        "line_start": 33,
+        "line_end": 39,
+        "confidence": 0.68,
+        "votes": 1,
+        "verdict": "TRUE_POSITIVE",
+        "verdict_confidence": 55,
+        "verdict_reason": "allow_origins=[\"*\"] paired with allow_credentials=True.",
+        "description": "CORSMiddleware is configured with a wildcard origin alongside allow_credentials=True, which most browsers will reflect as an always-allowed origin, exposing cookie-authenticated endpoints to any site.",
+        "impact": "A malicious site visited by a logged-in user can read authenticated API responses cross-origin.",
+        "exploit_scenario": "A victim with an active session visits an attacker page that issues a fetch() with credentials: 'include' against the API and reads the JSON response.",
+        "preconditions": [
+          "Victim has an active authenticated session in the same browser."
+        ],
+        "recommendation": "Replace the wildcard with an explicit allowlist of trusted frontend origins.",
+        "code_snippet": "app.add_middleware(CORSMiddleware, allow_origins=[\"*\"], allow_credentials=True)",
+        "verifier_reasoning": "Confirmed both allow_origins=\"*\" and allow_credentials=True are set together, which is the specific insecure combination.",
+        "offensive_priority": "medium",
+        "offensive_reason": "Needs a logged-in victim to visit a malicious page.",
+        "source_ref": null,
+        "sink_ref": null,
+        "duplicates": [
+          {
+            "file": "app/main.py",
+            "line_start": 33,
+            "line_end": 39
+          }
+        ],
+        "severity": "medium",
+        "exploitability_notes": "Requires a victim to visit an attacker-controlled page while logged in."
+      },
+      "severity": "medium",
+      "exploitability_notes": "Requires a victim to visit an attacker-controlled page while logged in."
+    },
+    {
+      "finding": {
+        "title": "Password hashing uses a low bcrypt cost factor",
+        "vuln_class": "weak_crypto",
+        "vuln_class_label": "Weak Cryptography",
+        "cwe": "CWE-916",
+        "cvss_score": 3.7,
+        "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N",
+        "cvss_rating": "LOW",
+        "file": "app/auth/passwords.py",
+        "line_start": 12,
+        "line_end": 14,
+        "confidence": 0.6,
+        "votes": 1,
+        "verdict": "TRUE_POSITIVE",
+        "verdict_confidence": 50,
+        "verdict_reason": "bcrypt.gensalt(rounds=4) is well below the recommended cost factor.",
+        "description": "Passwords are hashed with bcrypt at a cost factor of 4, far below the current recommendation of 12+, making offline brute-force cheaper.",
+        "impact": "Reduces the cost of cracking a stolen password hash table.",
+        "exploit_scenario": "Given a leaked hash table (e.g. via the SQL injection finding above), an attacker cracks weakly-hashed passwords far faster than at a proper cost factor.",
+        "preconditions": [
+          "Attacker already has the password hash (chained from another finding)."
+        ],
+        "recommendation": "Raise the bcrypt cost factor to at least 12 and rehash on next login.",
+        "code_snippet": "salt = bcrypt.gensalt(rounds=4)",
+        "verifier_reasoning": "Confirmed the rounds= literal is 4 versus the library default of 12.",
+        "offensive_priority": "low",
+        "offensive_reason": "Only relevant after another finding exposes the hash table.",
+        "source_ref": null,
+        "sink_ref": null,
+        "duplicates": [],
+        "severity": "low",
+        "exploitability_notes": "Only matters if hashes are already exfiltrated; not independently reachable."
+      },
+      "severity": "low",
+      "exploitability_notes": "Only matters if hashes are already exfiltrated; not independently reachable."
+    },
+    {
+      "finding": {
+        "title": "Missing HSTS header on API responses",
+        "vuln_class": "missing_security_header",
+        "vuln_class_label": "Missing Security Header",
+        "cwe": "CWE-319",
+        "cvss_score": 2.6,
+        "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:N/A:N",
+        "cvss_rating": "LOW",
+        "file": "app/main.py",
+        "line_start": 44,
+        "line_end": 44,
+        "confidence": 0.55,
+        "votes": 1,
+        "verdict": "TRUE_POSITIVE",
+        "verdict_confidence": 45,
+        "verdict_reason": "No Strict-Transport-Security header is set on any response.",
+        "description": "The API never sends a Strict-Transport-Security header, so a client's first plaintext request is not upgraded to HTTPS automatically.",
+        "impact": "Slightly increases exposure to protocol-downgrade / SSL-stripping attacks on the first connection.",
+        "exploit_scenario": "A user on a hostile network is served a plaintext response before HSTS would otherwise force HTTPS, giving an on-path attacker one extra window.",
+        "preconditions": [
+          "Attacker must be on-path for the victim's first connection."
+        ],
+        "recommendation": "Add a Strict-Transport-Security response header (e.g. via middleware) with a sensible max-age.",
+        "code_snippet": "# no HSTS middleware registered",
+        "verifier_reasoning": "Confirmed no HSTS header is present in any response inspected.",
+        "offensive_priority": "low",
+        "offensive_reason": "Narrow window, on-path attacker only.",
+        "source_ref": null,
+        "sink_ref": null,
+        "duplicates": [
+          {
+            "file": "app/main.py",
+            "line_start": 44,
+            "line_end": 44
+          }
+        ],
+        "severity": "low",
+        "exploitability_notes": "Only affects the narrow first-connection window; TLS is otherwise enforced by the load balancer."
+      },
+      "severity": "low",
+      "exploitability_notes": "Only affects the narrow first-connection window; TLS is otherwise enforced by the load balancer."
+    },
+    {
+      "finding": {
+        "title": "Dependency with known CVE: requests 2.25.0",
+        "vuln_class": "vulnerable_dependency",
+        "vuln_class_label": "Vulnerable Dependency",
+        "cwe": "CWE-1104",
+        "cvss_score": null,
+        "cvss_vector": null,
+        "cvss_rating": null,
+        "file": "requirements.txt",
+        "line_start": 9,
+        "line_end": 9,
+        "confidence": 0.5,
+        "votes": 1,
+        "verdict": null,
+        "verdict_confidence": null,
+        "verdict_reason": "",
+        "description": "requirements.txt pins requests==2.25.0, which has a published CVE fixed in a later 2.x release.",
+        "impact": "Inherits whatever the upstream CVE allows (varies by advisory).",
+        "exploit_scenario": "Not independently exploitable without a code path that exercises the vulnerable function.",
+        "preconditions": [],
+        "recommendation": "Bump the pin to the latest 2.x patch release and re-run the dependency scan.",
+        "code_snippet": "requests==2.25.0",
+        "verifier_reasoning": "Version string matched against the advisory database only.",
+        "offensive_priority": null,
+        "offensive_reason": "",
+        "source_ref": null,
+        "sink_ref": null,
+        "duplicates": [],
+        "severity": "info",
+        "exploitability_notes": "Informational \u2014 flagged by version match against the advisory database, not by demonstrated exploitation."
+      },
+      "severity": "info",
+      "exploitability_notes": "Informational \u2014 flagged by version match against the advisory database, not by demonstrated exploitation."
+    },
+    {
+      "finding": {
+        "title": "TODO comment references a disabled debug endpoint",
+        "vuln_class": "code_hygiene",
+        "vuln_class_label": "Code Hygiene",
+        "cwe": "CWE-489",
+        "cvss_score": null,
+        "cvss_vector": null,
+        "cvss_rating": null,
+        "file": "app/debug/routes.py",
+        "line_start": 5,
+        "line_end": 5,
+        "confidence": 0.4,
+        "votes": 1,
+        "verdict": "FALSE_POSITIVE",
+        "verdict_confidence": 80,
+        "verdict_reason": "The route is registered behind an `if settings.DEBUG` guard that is False in every deployed environment; not reachable in production.",
+        "description": "A TODO comment mentions re-enabling a debug endpoint, but the route registration itself is already gated behind a DEBUG flag that is off in all deployed environments.",
+        "impact": "None in the current deployment configuration.",
+        "exploit_scenario": "",
+        "preconditions": [],
+        "recommendation": "No action required; consider deleting the dead code and comment for clarity.",
+        "code_snippet": "# TODO: re-enable /debug/dump-env before demo",
+        "verifier_reasoning": "Verified the guarding conditional evaluates to False in all reviewed environments.",
+        "offensive_priority": null,
+        "offensive_reason": "",
+        "source_ref": null,
+        "sink_ref": null,
+        "duplicates": [],
+        "severity": "info",
+        "exploitability_notes": "Not reachable \u2014 confirmed DEBUG=false in every deployment manifest reviewed."
+      },
+      "severity": "info",
+      "exploitability_notes": "Not reachable \u2014 confirmed DEBUG=false in every deployment manifest reviewed."
+    }
+  ],
+  "chains": [
+    {
+      "title": "Credential leak to account takeover",
+      "steps": [
+        2,
+        4
+      ],
+      "severity": "critical",
+      "narrative": "The hardcoded AWS credentials (finding 2) grant access to the deployment's S3 artifact bucket, which contains a build image with the JWT signing key. Combined with the alg=none bypass (finding 4), an attacker can forge a session for any account."
+    },
+    {
+      "title": "Injection to credential exposure",
+      "steps": [
+        1,
+        9
+      ],
+      "severity": "high",
+      "narrative": "The SQL injection (finding 1) exposes the full payments/users table, including weakly-hashed passwords (finding 9), making offline cracking of those hashes far cheaper than the cost factor was meant to guarantee."
+    }
+  ],
+  "dropped": [
+    {
+      "file": "tests/test_payments.py",
+      "reason": "test fixture, not application code"
+    },
+    {
+      "file": "app/migrations/env.py",
+      "reason": "alembic scaffold, no user input reaches it"
+    },
+    {
+      "file": "scripts/seed_dev_db.py",
+      "reason": "dev-only tooling, not part of the deployed service"
+    }
+  ],
+  "raw_findings_count": 15,
+  "metrics": {
+    "duration_sec": 842.5,
+    "total_files_in_scope": 118,
+    "analyzed_files_unique": 111,
+    "loc_scanned_by_language": {
+      "python": 9840,
+      "sql": 240
+    },
+    "true_positive_count": 11,
+    "false_positive_count": 1,
+    "total_tokens": 486213
+  }
+}

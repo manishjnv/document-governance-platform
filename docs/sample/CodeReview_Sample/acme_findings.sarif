@@ -1,0 +1,378 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "vvaharness",
+          "version": "1.3.0"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "sql_injection",
+          "level": "error",
+          "message": {
+            "text": "User-supplied merchant_ref is string-formatted directly into a raw SQL query used to look up payment records."
+          },
+          "properties": {
+            "severity": "critical",
+            "cwe": "CWE-89",
+            "cvssScore": 9.8,
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "cvssRating": "CRITICAL",
+            "confidence": 0.95
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/payments/repository.py"
+                },
+                "region": {
+                  "startLine": 88,
+                  "endLine": 94
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "hardcoded_secret",
+          "level": "error",
+          "message": {
+            "text": "A hardcoded AWS access key/secret pair is committed to the settings module and shipped in every build artifact."
+          },
+          "properties": {
+            "severity": "critical",
+            "cwe": "CWE-798",
+            "cvssScore": 9.1,
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:L",
+            "cvssRating": "CRITICAL",
+            "confidence": 0.9
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/config/settings.py"
+                },
+                "region": {
+                  "startLine": 22,
+                  "endLine": 23
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "ssrf",
+          "level": "error",
+          "message": {
+            "text": "The outbound-webhook test endpoint fetches an arbitrary merchant-supplied URL server-side with no destination allowlist."
+          },
+          "properties": {
+            "severity": "high",
+            "cwe": "CWE-918",
+            "cvssScore": 8.6,
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:L/A:N",
+            "cvssRating": "HIGH",
+            "confidence": 0.85
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/integrations/webhooks.py"
+                },
+                "region": {
+                  "startLine": 55,
+                  "endLine": 71
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "broken_auth",
+          "level": "error",
+          "message": {
+            "text": "jwt.decode() is called with algorithms taken from the token's own header rather than a fixed server-side allowlist, permitting an alg=none token."
+          },
+          "properties": {
+            "severity": "high",
+            "cwe": "CWE-347",
+            "cvssScore": 8.1,
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
+            "cvssRating": "HIGH",
+            "confidence": 0.8
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/auth/tokens.py"
+                },
+                "region": {
+                  "startLine": 30,
+                  "endLine": 36
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "path_traversal",
+          "level": "error",
+          "message": {
+            "text": "The invoice-download endpoint builds a filesystem path from a user-supplied filename with only a naive '..' string replace, which does not stop encoded or nested traversal sequences."
+          },
+          "properties": {
+            "severity": "high",
+            "cwe": "CWE-22",
+            "cvssScore": 7.5,
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+            "cvssRating": "HIGH",
+            "confidence": 0.82
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/invoices/routes.py"
+                },
+                "region": {
+                  "startLine": 63,
+                  "endLine": 70
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "missing_rate_limit",
+          "level": "warning",
+          "message": {
+            "text": "The OTP verification endpoint has no per-account or per-IP rate limit, allowing an unbounded number of guesses against a 6-digit code."
+          },
+          "properties": {
+            "severity": "medium",
+            "cwe": "CWE-799",
+            "cvssScore": 5.3,
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "cvssRating": "MEDIUM",
+            "confidence": 0.7
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/auth/otp.py"
+                },
+                "region": {
+                  "startLine": 40,
+                  "endLine": 52
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "info_disclosure",
+          "level": "warning",
+          "message": {
+            "text": "The global exception handler returns the full traceback and local variable dump in the JSON response body for any unhandled exception."
+          },
+          "properties": {
+            "severity": "medium",
+            "cwe": "CWE-209",
+            "cvssScore": 5.0,
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "cvssRating": "MEDIUM",
+            "confidence": 0.75
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/main.py"
+                },
+                "region": {
+                  "startLine": 18,
+                  "endLine": 27
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "insecure_cors",
+          "level": "warning",
+          "message": {
+            "text": "CORSMiddleware is configured with a wildcard origin alongside allow_credentials=True, which most browsers will reflect as an always-allowed origin, exposing cookie-authenticated endpoints to any site."
+          },
+          "properties": {
+            "severity": "medium",
+            "cwe": "CWE-942",
+            "cvssScore": 4.3,
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:N/A:N",
+            "cvssRating": "MEDIUM",
+            "confidence": 0.68
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/main.py"
+                },
+                "region": {
+                  "startLine": 33,
+                  "endLine": 39
+                }
+              }
+            }
+          ],
+          "relatedLocations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/main.py"
+                },
+                "region": {
+                  "startLine": 33,
+                  "endLine": 39
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "weak_crypto",
+          "level": "note",
+          "message": {
+            "text": "Passwords are hashed with bcrypt at a cost factor of 4, far below the current recommendation of 12+, making offline brute-force cheaper."
+          },
+          "properties": {
+            "severity": "low",
+            "cwe": "CWE-916",
+            "cvssScore": 3.7,
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "cvssRating": "LOW",
+            "confidence": 0.6
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/auth/passwords.py"
+                },
+                "region": {
+                  "startLine": 12,
+                  "endLine": 14
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "missing_security_header",
+          "level": "note",
+          "message": {
+            "text": "The API never sends a Strict-Transport-Security header, so a client's first plaintext request is not upgraded to HTTPS automatically."
+          },
+          "properties": {
+            "severity": "low",
+            "cwe": "CWE-319",
+            "cvssScore": 2.6,
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:N/A:N",
+            "cvssRating": "LOW",
+            "confidence": 0.55
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/main.py"
+                },
+                "region": {
+                  "startLine": 44,
+                  "endLine": 44
+                }
+              }
+            }
+          ],
+          "relatedLocations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/main.py"
+                },
+                "region": {
+                  "startLine": 44,
+                  "endLine": 44
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "vulnerable_dependency",
+          "level": "note",
+          "message": {
+            "text": "requirements.txt pins requests==2.25.0, which has a published CVE fixed in a later 2.x release."
+          },
+          "properties": {
+            "severity": "info",
+            "cwe": "CWE-1104",
+            "cvssScore": null,
+            "cvssVector": null,
+            "cvssRating": null,
+            "confidence": 0.5
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "requirements.txt"
+                },
+                "region": {
+                  "startLine": 9,
+                  "endLine": 9
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "code_hygiene",
+          "level": "note",
+          "message": {
+            "text": "A TODO comment mentions re-enabling a debug endpoint, but the route registration itself is already gated behind a DEBUG flag that is off in all deployed environments."
+          },
+          "properties": {
+            "severity": "info",
+            "cwe": "CWE-489",
+            "cvssScore": null,
+            "cvssVector": null,
+            "cvssRating": null,
+            "confidence": 0.4
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/debug/routes.py"
+                },
+                "region": {
+                  "startLine": 5,
+                  "endLine": 5
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

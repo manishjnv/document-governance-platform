@@ -100,8 +100,10 @@ last incident.
 ## Testing
 
 - Full backend suite: `cd apps/api && python -m pytest` — baseline is
-  **941 passed, 7 skipped** (measured 2026-08-20 after the RCA #21
-  feasibility source-suitability gate, run solo on edgp_test; if two sessions run the suite at once the
+  **973 passed, 7 skipped** (measured 2026-09-12 after the Code Security
+  Review scan kit + golden fixture landed, +11 over the 2026-09-11 module
+  baseline of 962, +32 over the 2026-08-20 RCA #21 baseline of 941;
+  run solo on edgp_test; if two sessions run the suite at once the
   shared edgp_test DB deadlocks — see memory `edgp-test-single-runner-rule`;
   the 7th skip is the prod-only WeasyPrint PDF render test; the
   long-stale "402/2" figure predated Jul-24 growth). Don't regress this;
@@ -182,3 +184,11 @@ last incident.
   anything under either mitre folder** (pipeline semantics, JSONB shapes,
   ORM-constraint sync points, tagging-ladder provenance, ops runbook).
   Design rationale: `docs/planning/MITRE_ASSESSMENT_PLAN.md`.
+- **Code Security Review module** (`apps/api/app/codereview/`,
+  `apps/web/app/codereview/`, `/codereview`): imports Visa Vulnerability
+  Agentic Harness (VVAH) `findings.json` / SARIF output and renders a
+  findings register + XLSX/PPTX deliverables. Deterministic, no LLM, no
+  server-side scanning by design. Contract + isolation touchpoints:
+  `docs/planning/CODE_REVIEW_MODULE_REFERENCE.md` — read before touching
+  either folder. Migration 039 (also widens the audit CHECK — sync point
+  #5 applies).

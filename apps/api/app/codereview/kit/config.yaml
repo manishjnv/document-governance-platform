@@ -1,0 +1,57 @@
+# ScopeWise consultant scan kit — VVAH config profile, v1.3.0.
+# Partial VVAH config: every key omitted here falls back to VVAH's own
+# built-in defaults (see vendor/THIRD_PARTY_LICENSES.md for VVAH itself).
+# Detection-only run (report is uploaded, never remediated/validated here).
+# ${VAR} / ${VAR:-default} below are resolved from a .env file placed next
+# to this config (or your shell env) — see README.md.
+
+models:
+  autoexclude:    {id: deepseek/deepseek-v4-flash, via: openai}
+  graph_annotate: {id: deepseek/deepseek-v4-flash, via: openai}
+  preprocess:     {id: deepseek/deepseek-v4-pro, via: openai}
+  threatmodel:    {id: deepseek/deepseek-v4-pro, via: openai}
+  decompose:      {id: deepseek/deepseek-v4-pro, via: openai}
+  deepdive:       {id: deepseek/deepseek-v4-pro, via: openai}
+  verify:         {id: deepseek/deepseek-v4-pro, via: openai}
+  dedup:          {id: deepseek/deepseek-v4-pro, via: openai}
+  chain:          {id: deepseek/deepseek-v4-pro, via: openai}
+  # Report-only: step_remediate.enabled is false below, so this role never runs.
+  remediate:      {id: deepseek/deepseek-v4-pro, via: openai}
+  validate:
+    orchestrator:        {id: deepseek/deepseek-v4-pro, via: deepagents, provider: openai}
+    security_architect:  {id: deepseek/deepseek-v4-pro}
+    penetration_tester:  {id: deepseek/deepseek-v4-pro}
+    cross_repo_analyzer: {id: deepseek/deepseek-v4-pro}
+
+openai:
+  api_key:  ${OPENAI_API_KEY}
+  base_url: ${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}
+  verify_ssl: true
+
+step0:
+  enabled: true
+  callgraph_detection: llm
+
+step4:
+  runs: 1
+  vote_threshold: 1
+  parallel: 4
+
+step_remediate:
+  enabled: false
+
+step_validate:
+  enabled: false
+
+scan_progress:
+  enabled: true
+  style: compact
+
+# Required block (VVAH has no built-in default for it). Missing files safely
+# mean no injected CVEs / design controls / CMDB context.
+inject:
+  cve_file:      ./inputs/known_cves.json
+  controls_file: ./inputs/design_controls.yaml
+  cmdb_file:     ./inputs/cmdb.csv
+  policy_file:   ./inputs/remediation_policy.yaml
+  playbook_file: ./inputs/remediation_playbook.yaml

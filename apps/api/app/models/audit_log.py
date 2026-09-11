@@ -20,10 +20,10 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
     __table_args__ = (
         CheckConstraint(
-            # Keep in lockstep with migration 030 and enums.AuditResourceType —
+            # Keep in lockstep with migration 030/039 and enums.AuditResourceType —
             # create_all() (dev/test bootstrap) builds the table from THIS string.
             "resource_type IN ('document', 'review', 'finding', 'user', "
-            "'organization', 'mitre_assessment')",
+            "'organization', 'mitre_assessment', 'code_review')",
             name="ck_audit_logs_resource_type",
         ),
     )

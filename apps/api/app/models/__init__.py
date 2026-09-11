@@ -4,6 +4,7 @@ from app.db.base import Base
 from app.models.approval import Approval
 from app.models.approval_template import ApprovalTemplate
 from app.models.audit_log import AuditLog
+from app.models.code_review import CodeReview
 from app.models.comment import Comment
 from app.models.comment_reaction import CommentReaction
 from app.models.compliance_control import ComplianceControl
@@ -43,6 +44,7 @@ __all__ = [
     "CommentReaction",
     "Approval",
     "ApprovalTemplate",
+    "CodeReview",
     "SearchHistory",
     "SavedSearch",
     "ComplianceControl",
