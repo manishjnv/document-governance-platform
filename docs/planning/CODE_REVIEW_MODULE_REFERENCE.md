@@ -180,8 +180,20 @@ All queries org-scoped and `deleted_at IS NULL`. Audit actions:
 Same palette/helpers as MITRE (`report_common.resolve_branding`, `_guard`
 pattern, BRAND `341954` / ACCENT `00A98B` / ZEBRA `F3F0F7`). Numbers only
 from `report` JSONB. XLSX sheets: Read Me, Summary (counts, metrics,
-manifest), Findings Register (one row per finding + blank Owner / Status /
-Target date / Notes tracker columns), Exploit Chains. PPTX (~8 slides):
+manifest), Findings Register (one row per finding + Owner / Status /
+Target date / Notes tracker columns), Exploit Chains. Presentation pass
+2026-09-12 (user feedback): numbers centred; severity / verdict / status
+as tinted chips (same hex tints as the web UI); Status is a dropdown
+(Open, In progress, Fixed, Accepted risk, False positive) with
+conditional-format colours; long prose columns ("What is wrong", "Why it
+matters", "How to fix", "How it is exploited") are split into bullet
+sentences as openpyxl `CellRichText` with code tokens in Consolas blue,
+attack terms in rose bold and fix actions in green bold (the same regex
+lists as `FindingDrawer.tsx`); row heights estimated from text length;
+Exploit Chains gets an explanatory banner, numbered steps resolved to
+finding titles and a "Fix this first" column. `_guard` still applies to
+every plain string; rich-text cells start with a bullet so cannot be
+formulas. PPTX (~8 slides):
 cover, how to read, headline tiles, severity + class charts, top-10
 findings table, exploit chains, recommended next steps (derived:
 critical/high first, grouped by file), closing with the VVAH attribution
