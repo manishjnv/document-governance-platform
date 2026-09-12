@@ -307,6 +307,21 @@ async def _run_scheduled_pull_async(connection_id: str, session_factory) -> dict
         if connection is None:
             return {"status": "skipped", "reason": "connection deleted"}
 
+        from app.entitlements import RUNS_DISABLED_DETAIL, runs_enabled
+        from app.models.organization import Organization
+
+        org_tier = await db.execute(
+            select(Organization.subscription_tier).where(
+                Organization.org_id == connection.org_id
+            )
+        )
+        tier = org_tier.scalar_one_or_none()
+        # email="" -- a scheduled pull has no acting user, so only the org's
+        # tier and the settings flag can allow it (never the admin-email carve-out).
+        if tier is None or not runs_enabled(subscription_tier=tier, email=""):
+            aid = await _record_failed_assessment(db, connection, RUNS_DISABLED_DETAIL)
+            return {"status": "skipped", "reason": "runs_disabled", "assessment_id": aid}
+
         shim_user = SimpleNamespace(
             org_id=str(connection.org_id),
             user_id=str(connection.created_by) if connection.created_by else None,

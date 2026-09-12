@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.dependencies import get_current_user, verify_org_access
+from app.entitlements import require_runs_enabled
 from app.models.document import Document
 from app.schemas.auth import TokenData
 from app.routers.reviews import get_orchestrator
@@ -22,6 +23,7 @@ async def bulk_trigger_review(
     body: dict,
     current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    _: TokenData = Depends(require_runs_enabled),
 ):
     """
     Trigger AI review for multiple documents in bulk.

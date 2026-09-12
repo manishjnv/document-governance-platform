@@ -22,6 +22,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { AppShell } from '@/components/AppShell';
+import { RequestAccessForm } from '@/components/RequestAccessForm';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const DOCUMENT_TYPES = ['SOW', 'Proposal', 'RFP', 'Other'];
 
@@ -394,6 +401,10 @@ export default function DashboardPage() {
   const [searchTotal, setSearchTotal] = useState(0);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState('');
+  const [assessmentsEnabled, setAssessmentsEnabled] = useState(true);
+  const [meEmail, setMeEmail] = useState('');
+  const [meName, setMeName] = useState('');
+  const [requestAccessOpen, setRequestAccessOpen] = useState(false);
   const router = useRouter();
 
   const toggleProject = (id: string) => {
@@ -473,6 +484,10 @@ export default function DashboardPage() {
 
       const org = userResponse.data.org_id;
       setOrgId(org);
+      // Older API without the field means unrestricted.
+      setAssessmentsEnabled(userResponse.data.assessments_enabled !== false);
+      setMeEmail(userResponse.data.email || '');
+      setMeName([userResponse.data.first_name, userResponse.data.last_name].filter(Boolean).join(' '));
 
       // Fetch documents
       let url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents?org_id=${org}`;
@@ -557,6 +572,10 @@ export default function DashboardPage() {
   };
 
   const handleReview = async (docId: string) => {
+    if (assessmentsEnabled === false) {
+      setRequestAccessOpen(true);
+      return;
+    }
     try {
       setError('');
       setReviewingDocId(docId);
@@ -943,6 +962,20 @@ export default function DashboardPage() {
       )}
         </>
       )}
+      <Dialog open={requestAccessOpen} onOpenChange={setRequestAccessOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request access to run reviews</DialogTitle>
+          </DialogHeader>
+          <RequestAccessForm
+            source="review_request"
+            message="SOW/RFP review access request"
+            heading=""
+            defaultEmail={meEmail}
+            defaultName={meName}
+          />
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }

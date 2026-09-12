@@ -158,6 +158,9 @@ class CurrentUserResponse(BaseModel):
     # True only for settings.platform_admin_emails (the product owner) --
     # gates the platform-wide /admin page, NOT per-org admin rights.
     is_platform_admin: bool = False
+    # True when this org may start reviews/assessments: pro/enterprise
+    # tier or platform admin.
+    assessments_enabled: bool = False
 
 
 class UserCreateRequest(BaseModel):

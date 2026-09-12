@@ -19,6 +19,12 @@ _TEST_DATABASE_URL_DEFAULT = (
 )
 os.environ["DATABASE_URL"] = os.getenv("TEST_DATABASE_URL", _TEST_DATABASE_URL_DEFAULT)
 
+# 45+ test files create free-tier orgs and trigger reviews/assessments
+# through them -- default the paid-tier run gate off so those keep passing;
+# tests/test_run_entitlement.py flips it on with monkeypatch where needed.
+# Must also happen BEFORE `import app.config` constructs the Settings() singleton.
+os.environ.setdefault("REQUIRE_PAID_TIER_FOR_RUNS", "false")
+
 import app.config  # noqa: F401,E402
 
 # TestClient sends Host: testserver by default; TrustedHostMiddleware (main.py)

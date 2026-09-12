@@ -16,6 +16,7 @@ from app.compliance.audit import log_action
 from app.core.cache import invalidate_cache
 from app.db.session import get_db
 from app.dependencies import get_current_user, verify_org_access
+from app.entitlements import require_runs_enabled
 from app.models.document import Document
 from app.models.finding import Finding
 from app.models.review import Review
@@ -169,6 +170,7 @@ async def trigger_review(
     doc_id: UUID,
     current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    _: TokenData = Depends(require_runs_enabled),
 ):
     """
     Trigger AI review for a document.

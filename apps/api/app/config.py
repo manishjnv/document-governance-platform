@@ -56,6 +56,10 @@ class Settings(BaseSettings):
     # org, so the product owner needs a cross-org view.
     platform_admin_emails: str = "manishjnvk@gmail.com"
 
+    # Gates review/assessment runs (LLM-spending actions) to orgs on
+    # pro/enterprise tier or platform admins; tests set this false via env.
+    require_paid_tier_for_runs: bool = True
+
     openrouter_model: str = "z-ai/glm-5.2"
     # Order set by the 2026-07-24 measured comparison (docs/planning/
     # AI_MODEL_ROUTING.md "Measured accuracy comparison"): deepseek first --

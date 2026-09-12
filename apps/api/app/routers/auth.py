@@ -592,6 +592,7 @@ async def get_current_user_info(
     first_name, last_name = _split_name(user.full_name)
 
     from app.config import settings
+    from app.entitlements import runs_enabled
 
     platform_admins = {
         e.strip().lower() for e in settings.platform_admin_emails.split(",") if e.strip()
@@ -608,6 +609,7 @@ async def get_current_user_info(
         created_at=user.created_at,
         last_login=user.last_login,
         is_platform_admin=user.email.lower() in platform_admins,
+        assessments_enabled=runs_enabled(subscription_tier=org.subscription_tier, email=user.email),
     )
 
 

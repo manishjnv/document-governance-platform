@@ -24,6 +24,7 @@ from app.compliance.audit import log_action
 from app.core.cache import invalidate_cache
 from app.db.session import get_db
 from app.dependencies import get_current_user, require_role
+from app.entitlements import require_runs_enabled
 from app.mitre import attack_data, ingest, navigator, plain_language, ranking, service
 from app.mitre.connectors import base as connectors
 from app.mitre.connectors import vault
@@ -1074,6 +1075,7 @@ async def run_assessment(
     assessment_id: UUID,
     current_user: TokenData = Depends(require_role("admin", "reviewer")),
     db: AsyncSession = Depends(get_db),
+    _: TokenData = Depends(require_runs_enabled),
 ):
     """202 + fire-and-forget pipeline task; poll GET /assessments/{id}."""
     org_id = UUID(str(current_user.org_id))

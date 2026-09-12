@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { ParsePreview, UseCaseItem } from '../lib';
 import { RuleListPanel } from '../components/RuleListPanel';
+import { RequestAccessForm } from '@/components/RequestAccessForm';
 
 const MAX_SIZE = 50 * 1024 * 1024;
 const USE_CASE_EXTS = ['.xlsx', '.xls', '.csv', '.pdf', '.docx'];
@@ -197,6 +198,9 @@ export default function NewMitreAssessmentPage() {
   });
   const [splunk, setSplunk] = useState({ host: '', port: '8089', app: '' });
   const [siemSecret, setSiemSecret] = useState('');
+  // Assessment execution gate: null = unknown yet, don't block the page on it.
+  const [assessmentsEnabled, setAssessmentsEnabled] = useState<boolean | null>(null);
+  const [me, setMe] = useState<{ email?: string; first_name?: string; last_name?: string } | null>(null);
 
   useEffect(() => {
     if (!localStorage.getItem('access_token')) {
@@ -209,6 +213,16 @@ export default function NewMitreAssessmentPage() {
       })
       .then((res) => setActorCatalog(res.data.actors ?? []))
       .catch(() => {}); // optional intake — the wizard works without it
+    axios
+      .get(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/me`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+      })
+      .then((res) => {
+        setMe(res.data);
+        // Undefined (older API) means unrestricted, same as the dashboard gate.
+        setAssessmentsEnabled(res.data?.assessments_enabled !== false);
+      })
+      .catch(() => {}); // don't block the page if this fails
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -351,6 +365,7 @@ export default function NewMitreAssessmentPage() {
 
   const handleRun = async () => {
     if (!preview) return;
+    if (assessmentsEnabled === false) return; // defence in depth — form replaces the button
     setRunning(true);
     setError('');
     try {
@@ -1081,15 +1096,29 @@ export default function NewMitreAssessmentPage() {
                 </div>
               )}
 
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button onClick={handleRun} disabled={running} className="flex-1">
-                  <Play size={15} className="mr-1.5" aria-hidden="true" />
-                  {running ? 'Starting…' : 'Run assessment'}
-                </Button>
-                <Button variant="outline" onClick={() => { setPreview(null); setError(''); }}>
-                  Back — change files
-                </Button>
-              </div>
+              {assessmentsEnabled === false ? (
+                <div className="flex flex-col gap-2">
+                  <RequestAccessForm
+                    source="assessment_request"
+                    message={`MITRE assessment access request. Assessment ${preview.assessment_id}`}
+                    defaultEmail={me?.email}
+                    defaultName={[me?.first_name, me?.last_name].filter(Boolean).join(' ')}
+                  />
+                  <Button variant="outline" onClick={() => { setPreview(null); setError(''); }}>
+                    Back — change files
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button onClick={handleRun} disabled={running} className="flex-1">
+                    <Play size={15} className="mr-1.5" aria-hidden="true" />
+                    {running ? 'Starting…' : 'Run assessment'}
+                  </Button>
+                  <Button variant="outline" onClick={() => { setPreview(null); setError(''); }}>
+                    Back — change files
+                  </Button>
+                </div>
+              )}
               <p className="text-center text-[11px] text-muted-foreground">
                 <Link href="/mitre" className="hover:underline">
                   Or keep it for later — it&apos;s saved in your assessment list.
