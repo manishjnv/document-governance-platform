@@ -17,13 +17,15 @@ if (-not $py) {
     exit 1
 }
 
-Write-Host "== Creating .venv with $py =="
+Write-Host "== Step 1/3: creating .venv with $py (about 20 seconds) =="
 & cmd /c "$py -m venv .venv"
 $python = ".\.venv\Scripts\python.exe"
+Write-Host "== Step 2/3: updating pip =="
 & $python -m pip install --quiet --upgrade pip
 $wheel = Get-ChildItem vendor -Filter 'vvaharness-*.whl' | Select-Object -First 1
-Write-Host "== Installing $($wheel.Name) (takes a minute) =="
-& $python -m pip install --quiet $wheel.FullName
+Write-Host "== Step 3/3: installing $($wheel.Name) and its dependencies (1-3 minutes, progress below) =="
+& $python -m pip install $wheel.FullName 2>&1 | ForEach-Object { if ("$_" -match "^(Collecting|Downloading|Installing collected|Successfully|Requirement already|ERROR)") { "$_" } }
+if ($LASTEXITCODE -ne 0) { Write-Error "Scanner install failed - see the ERROR lines above."; exit 1 }
 
 if (-not (Test-Path .env)) {
     $secure = Read-Host -AsSecureString "Paste your OpenRouter API key (starts with sk-or-, input hidden)"

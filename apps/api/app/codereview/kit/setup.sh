@@ -17,12 +17,14 @@ if [ -z "$PY" ]; then
   exit 1
 fi
 
-echo "== Creating .venv with $PY =="
+echo "== Step 1/3: creating .venv with $PY (about 20 seconds) =="
 "$PY" -m venv .venv
+echo "== Step 2/3: updating pip =="
 .venv/bin/python -m pip install --quiet --upgrade pip
 WHEEL="$(ls vendor/vvaharness-*.whl | head -n1)"
-echo "== Installing $(basename "$WHEEL") (takes a minute) =="
-.venv/bin/python -m pip install --quiet "$WHEEL"
+echo "== Step 3/3: installing $(basename "$WHEEL") and its dependencies (1-3 minutes, progress below) =="
+.venv/bin/python -m pip install "$WHEEL" 2>&1 | grep -E "^(Collecting|Downloading|Installing collected|Successfully|Requirement already|ERROR)" || true
+if [ "${PIPESTATUS[0]}" -ne 0 ]; then echo "Scanner install failed - see the ERROR lines above." >&2; exit 1; fi
 
 if [ ! -f .env ]; then
   read -r -s -p "Paste your OpenRouter API key (starts with sk-or-, input hidden): " KEY; echo
