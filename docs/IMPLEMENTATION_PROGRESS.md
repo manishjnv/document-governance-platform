@@ -17,7 +17,7 @@ Navigator and Semgrep plus a `/compare` index (`f19ae4b`, legal sign-off
 given; every competitor claim sourced from the competitor's own site the
 same day), per-pillar OG images (`fdfaba3`), `/about` name rationale
 (`db30589`), product screenshots on the homepage cards and the MITRE /
-Code Review heroes (`29dbd8c`). Live smoke 10/10; Lighthouse NOT re-run
+Code Review heroes (`29dbd8c`). Live smoke 10/10 (and 18/18 on `22c88a9` earlier); Lighthouse after the screenshots, local build: `/` mobile 79 / desktop 100, `/product/mitre-coverage` 78 / 100 (see the WRAPUP handoff addendum); owner decision: all prod orgs stay free for now; PageSpeed NOT re-run
 (PageSpeed daily quota exhausted, rerun 2026-09-13). All nine prod orgs
 remain `free`; owner to pick which get `pro` on `/admin`. Enterprise UI
 redesign canvas (design only) linked from the handoff. Handoff:

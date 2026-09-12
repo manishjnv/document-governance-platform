@@ -246,7 +246,7 @@ review: what changes".
 7. [ ] First four blog posts.
 8. [ ] `/compare/*` once legal sign-off exists.
 
-Also not done in the implementation session: product screenshots (needs a running stack with the NodeGoat and ACME samples ingested; no customer-data screenshots may be used), per-pillar OG images, `/about` rewrite.
+Follow-ups from the implementation session, done 2026-09-12: [x] product screenshots for MITRE (ACME v2 sample) and Code Review (NodeGoat golden fixture) on the homepage cards and product heroes (`29dbd8c`); [ ] SOW results screenshot (needs a review run; OpenRouter key at its limit); [x] per-pillar OG images (`fdfaba3`); [x] `/about` name-rationale paragraph (`db30589`).
 
 Each step is a separate commit; `npx tsc --noEmit` clean before each; Lighthouse + axe after 2
 and 3.

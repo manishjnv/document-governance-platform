@@ -87,3 +87,70 @@ live test · AI-quota error message in the app · PPTX org branding.
 - Sonnet: competitor comparison pages in an isolated worktree (reworked: N).
 - Haiku: n/a — smoke run inline (10 URLs).
 - codex:rescue: n/a — no security-adjacent change this session; the tier-toggle PATCH was reviewed in the wrap-up session.
+
+## Addendum — from the session that built `22c88a9` and the step-4 assets
+
+Written by the wrap-up session whose kickoff prompt this handoff closes;
+the section above was written by a parallel session that merged and
+deployed the tail of the work. Facts only that session did not have.
+
+**Step 2 (`22c88a9`) adversarial review** — Sonnet takeover (codex companion
+broken): **accept**. Seven vectors: JWT email/role are server-signed and no
+route changes an email; sign-up lowercases like the platform-admin check;
+the dependency resolves before body validation so a non-admin gets 403,
+never a 422 leak; the audit row and the tier change share one commit; the
+org list carries no PII; an empty `platform_admin_emails` denies everyone;
+`SubscriptionTier`-typed body round-trips by `.value`.
+
+**Deploy of `22c88a9`** (before the parallel session's two deploys):
+push accepted first time; VPS build + `GIT_SHA=22c88a9 … up -d`; Python
+3.11.15 `compileall` ok, `import main` + admin router ok, `/health`
+healthy, both `/admin/orgs` routes in the OpenAPI. Latest migration is
+still 039. Haiku live smoke **18/18**: 200 + title on `/`, three
+`/product/*`, compare, blog + four posts (no noindex), templates, privacy,
+terms; `/pricing` 200 + noindex + absent from the 47-URL sitemap; robots
+disallows `/pricing /mitre /codereview /admin /login /api`; no
+`href="/pricing"` on `/` or the SOW page; unauth run endpoint and
+`/admin/orgs` → 401; `POST /api/v1/contact` with `source=assessment_request`
+→ 200 (one smoke email sent). Not exercised on prod: a free-tier account's
+403 (needs an OTP inbox; covered by `tests/test_run_entitlement.py`).
+
+**Prod tiers — owner decision 2026-09-12: "None for now."** All nine orgs
+stay `free`; enable per request from the `/admin` toggle. No UPDATE was run.
+
+**OpenRouter key** (VPS `.env`, hash `71036a3a`): `limit 2,
+limit_remaining 0, usage 8.137`; credits 25.00 / used 17.15.
+**limit_remaining is 0**, so step 5 (severity harvest) was skipped and no
+SOW review could run for a screenshot.
+
+**Lighthouse after the screenshots** (local build with GA present,
+Lighthouse 12.8.2 — the parallel session could not run PageSpeed):
+
+| Page | Mobile perf / a11y / SEO | LCP | Desktop |
+|---|---|---|---|
+| `/` | 79 / 100 / 100 | 2.74s (lead paragraph) | 100 / 100 / 100 |
+| `/product/mitre-coverage` | 78 / 100 / 100 | 3.02s (hero image) | 100 / 100 / 100 |
+
+Homepage equals the July baseline (79). The hero costs the MITRE page about
+4 mobile points versus text-only; accepted. The standalone image has no
+`sharp`, so `next/image` returned the 140 KB originals for every width —
+hence the pre-sized 960px WebP (64 KB / 44 KB) served `unoptimized`.
+
+**Capture gotchas** (local stack): Chromium resolves `localhost` to `::1`
+while uvicorn binds IPv4 → `--host-resolver-rules=MAP localhost 127.0.0.1`;
+setting the token on `/login` races its redirect → `add_init_script`; API
+CORS default allows only `http://localhost:3000`; Docker Desktop's engine
+died twice mid-session — capture right after `docker start`.
+
+**GSC (owner):** Indexing → Sitemaps → open
+`https://scopewise.assessiq.in/sitemap.xml` → Resubmit; then URL Inspection
+→ Request indexing for the three product pages, then the compare index,
+`/resources/templates` and the four posts on following days (~10/day);
+inspect `/pricing` once and confirm "Excluded by noindex".
+
+Agent utilization (this session): Opus — state reconciliation, diff review
+of both step-2 implementers, deploy of `22c88a9`, screenshot pipeline and its
+four environment fixes, OG/about edits, Lighthouse, docs · Sonnet — step-2
+backend (reworked: N), step-2 frontend (reworked: N), adversarial takeover
+(accept) · Haiku — 18-check live smoke (reworked: N) · codex:rescue — n/a,
+companion broken, Sonnet takeover used.
