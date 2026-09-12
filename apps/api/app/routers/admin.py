@@ -15,8 +15,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin.organizations import get_organization, update_organization
 from app.admin.users import LastAdminError, list_org_users, update_user_role
+from app.compliance.audit import log_action
 from app.db.session import get_db
-from app.dependencies import require_role
+from app.dependencies import require_platform_admin, require_role
+from app.models.enums import AuditResourceType, SubscriptionTier
 from app.models.organization import Organization
 from app.models.user import User
 from app.schemas.auth import TokenData
@@ -40,6 +42,12 @@ class UserRoleUpdate(BaseModel):
     """PATCH /users/{user_id}/role body."""
 
     role: str = Field(..., pattern="^(admin|reviewer|viewer)$")
+
+
+class OrgTierUpdate(BaseModel):
+    """PATCH /orgs/{org_id}/tier body."""
+
+    subscription_tier: SubscriptionTier
 
 
 def _org_response(org: Organization) -> dict:
@@ -126,7 +134,7 @@ def _device_from_ua(user_agent: Optional[str]) -> Optional[str]:
 
 @router.get("/overview", summary="Admin overview: people, sign-ins, activity, AI usage")
 async def get_admin_overview(
-    current_user: TokenData = Depends(require_role("admin")),
+    current_user: TokenData = Depends(require_platform_admin()),
     db: AsyncSession = Depends(get_db),
 ):
     """Super-admin only (settings.platform_admin_emails): a platform-wide
@@ -137,17 +145,10 @@ async def get_admin_overview(
 
     from sqlalchemy import func, select
 
-    from app.config import settings
     from app.models.audit_log import AuditLog
     from app.models.document import Document
     from app.models.finding import Finding
     from app.models.review import Review
-
-    platform_admins = {
-        e.strip().lower() for e in settings.platform_admin_emails.split(",") if e.strip()
-    }
-    if (current_user.email or "").lower() not in platform_admins:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
 
     now = datetime.utcnow()
     week_ago = now - timedelta(days=7)
@@ -393,3 +394,85 @@ async def patch_user_role(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
     return _user_response(user)
+
+
+# ---------------------------------------------------------------------------
+# Platform-admin org tier management.
+# ---------------------------------------------------------------------------
+
+
+@router.get("/orgs", summary="List all organisations (platform admin only)")
+async def list_all_orgs(
+    current_user: TokenData = Depends(require_platform_admin()),
+    db: AsyncSession = Depends(get_db),
+):
+    from sqlalchemy import func, select
+
+    user_counts = dict(
+        (
+            await db.execute(
+                select(User.org_id, func.count())
+                .where(User.deleted_at.is_(None))
+                .group_by(User.org_id)
+            )
+        ).all()
+    )
+    orgs = (
+        await db.execute(
+            select(Organization)
+            .where(Organization.deleted_at.is_(None))
+            .order_by(Organization.created_at)
+        )
+    ).scalars().all()
+    return [
+        {
+            "org_id": str(org.org_id),
+            "name": org.name,
+            "subscription_tier": org.subscription_tier,
+            "user_count": user_counts.get(org.org_id, 0),
+            "created_at": org.created_at.isoformat() if org.created_at else None,
+        }
+        for org in orgs
+    ]
+
+
+@router.patch("/orgs/{org_id}/tier", summary="Change an org's subscription tier (platform admin only)")
+async def patch_org_tier(
+    org_id: UUID,
+    body: OrgTierUpdate,
+    current_user: TokenData = Depends(require_platform_admin()),
+    db: AsyncSession = Depends(get_db),
+):
+    if org_id == current_user.org_id or str(org_id) == str(current_user.org_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot change your own organisation's tier",
+        )
+
+    org = await get_organization(db, org_id)
+    if org is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found"
+        )
+
+    old_tier = org.subscription_tier
+    new_tier = body.subscription_tier.value
+    org.subscription_tier = new_tier
+
+    await log_action(
+        db,
+        org_id=org_id,
+        user_id=current_user.user_id,
+        action="organization.tier_updated",
+        resource_type=AuditResourceType.ORGANIZATION.value,
+        resource_id=org_id,
+        details={"field": "subscription_tier", "old": old_tier, "new": new_tier},
+    )
+    await db.commit()
+    await db.refresh(org)
+
+    return {
+        "org_id": str(org.org_id),
+        "name": org.name,
+        "subscription_tier": org.subscription_tier,
+    }

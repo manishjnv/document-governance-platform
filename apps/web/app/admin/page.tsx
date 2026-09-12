@@ -8,6 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
+interface Org {
+  org_id: string;
+  name: string;
+  subscription_tier: 'free' | 'pro' | 'enterprise';
+  user_count: number;
+  created_at: string;
+}
+
 interface Person {
   name: string;
   email: string;
@@ -117,6 +125,9 @@ export default function AdminPage() {
   const [peopleQuery, setPeopleQuery] = useState('');
   const [signInQuery, setSignInQuery] = useState('');
   const [activityQuery, setActivityQuery] = useState('');
+  const [orgs, setOrgs] = useState<Org[] | null>(null);
+  const [orgError, setOrgError] = useState('');
+  const [savingOrg, setSavingOrg] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -144,10 +155,53 @@ export default function AdminPage() {
       if (!resp.ok) throw new Error('Could not load the admin overview.');
       setData(await resp.json());
       setError('');
+
+      try {
+        const orgsResp = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/orgs`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!orgsResp.ok) throw new Error('Could not load organisations.');
+        setOrgs(await orgsResp.json());
+        setOrgError('');
+      } catch (orgErr) {
+        setOrgError(orgErr instanceof Error ? orgErr.message : 'Could not load organisations.');
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const updateOrgTier = async (orgId: string, tier: Org['subscription_tier']) => {
+    const previous = orgs;
+    const token = localStorage.getItem('access_token');
+    setOrgs((cur) =>
+      cur ? cur.map((o) => (o.org_id === orgId ? { ...o, subscription_tier: tier } : o)) : cur
+    );
+    setSavingOrg(orgId);
+    setOrgError('');
+    try {
+      const resp = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/orgs/${orgId}/tier`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ subscription_tier: tier }),
+      });
+      const body = await resp.json().catch(() => null);
+      if (!resp.ok) {
+        setOrgs(previous);
+        setOrgError(body?.detail || 'Could not update the tier.');
+        return;
+      }
+      setOrgs((cur) => (cur ? cur.map((o) => (o.org_id === orgId ? { ...o, ...body } : o)) : cur));
+    } catch {
+      setOrgs(previous);
+      setOrgError('Could not update the tier.');
+    } finally {
+      setSavingOrg(null);
     }
   };
 
@@ -223,6 +277,80 @@ export default function AdminPage() {
             />
             <StatTile value={data.totals.findings} label="Issues found" sub="across all reviews" />
           </div>
+
+          {/* Organisations */}
+          <Card className="mb-3">
+            <CardHeader className="pb-1 pt-3">
+              <CardTitle className="text-sm">Organisations</CardTitle>
+              <p className="text-[11px] text-muted-foreground">
+                Free-tier organisations can upload and configure but cannot start reviews or MITRE
+                assessments. Set pro or enterprise to enable runs. Requests arrive by email with
+                source assessment_request / review_request.
+              </p>
+            </CardHeader>
+            <CardContent className="pb-3 overflow-x-auto">
+              {orgError && (
+                <div role="alert" className="text-[11px] text-destructive mb-2">
+                  {orgError}
+                </div>
+              )}
+              {!orgs ? (
+                <p className="text-xs text-muted-foreground">Loading…</p>
+              ) : orgs.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No organisations yet.</p>
+              ) : (
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-muted-foreground border-b">
+                      <th className="py-1.5 pr-3 font-medium">Organisation</th>
+                      <th className="py-1.5 pr-3 font-medium">Tier</th>
+                      <th className="py-1.5 pr-3 font-medium text-right">Members</th>
+                      <th className="py-1.5 pr-3 font-medium">Created</th>
+                      <th className="py-1.5 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orgs.map((org) => (
+                      <tr key={org.org_id} className="border-b last:border-0">
+                        <td className="py-1.5 pr-3 font-medium">{org.name}</td>
+                        <td className="py-1.5 pr-3">
+                          <span
+                            className={cn(
+                              'px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide',
+                              org.subscription_tier === 'free'
+                                ? 'border'
+                                : 'bg-primary/10 text-primary'
+                            )}
+                          >
+                            {org.subscription_tier}
+                          </span>
+                        </td>
+                        <td className="py-1.5 pr-3 text-right">{org.user_count}</td>
+                        <td className="py-1.5 pr-3 text-muted-foreground">
+                          {new Date(org.created_at).toLocaleDateString('en-GB')}
+                        </td>
+                        <td className="py-1.5">
+                          <select
+                            value={org.subscription_tier}
+                            aria-label={`Tier for ${org.name}`}
+                            disabled={savingOrg === org.org_id}
+                            onChange={(e) =>
+                              updateOrgTier(org.org_id, e.target.value as Org['subscription_tier'])
+                            }
+                            className="rounded-md border bg-background px-2 py-1 text-xs"
+                          >
+                            <option value="free">free</option>
+                            <option value="pro">pro</option>
+                            <option value="enterprise">enterprise</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </CardContent>
+          </Card>
 
           {/* People */}
           <Card className="mb-3">

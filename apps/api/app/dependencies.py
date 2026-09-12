@@ -8,6 +8,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.auth import extract_token_from_header, verify_token
+from app.config import settings
 from app.schemas.auth import TokenData
 
 logger = logging.getLogger(__name__)
@@ -86,6 +87,28 @@ def require_role(*allowed_roles: str):
         return current_user
 
     return role_checker
+
+
+def require_platform_admin():
+    """Dependency factory: role "admin" AND email in settings.platform_admin_emails.
+
+    Same email-list check as the inline one in get_admin_overview -- split
+    on comma, strip, lower, compare against current_user.email lowercased.
+    """
+
+    role_checker = require_role("admin")
+
+    async def platform_admin_checker(
+        current_user: TokenData = Depends(role_checker),
+    ) -> TokenData:
+        platform_admins = {
+            e.strip().lower() for e in settings.platform_admin_emails.split(",") if e.strip()
+        }
+        if (current_user.email or "").lower() not in platform_admins:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+        return current_user
+
+    return platform_admin_checker
 
 
 async def verify_org_access(
