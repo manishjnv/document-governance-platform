@@ -10,8 +10,15 @@ Two files, the **minimum needed for a complete assessment**:
 Regenerate after any ATT&CK re-pin (run from `apps/api`):
 
 ```bash
-python ../../scripts/generate_uploadsample.py
+python ../../scripts/generate_uploadsample.py       # original 109-rule pair
+python ../../scripts/generate_uploadsample.py v2    # *_v2.xlsx, management demo
 ```
+
+**v2 (2026-09-08, management demo):** `acme_sentinel_usecases_v2.xlsx`
+(159 rules = the 109 above + 50 more across Windows, Linux, Entra, Azure,
+M365, email, network, NetScaler, SAP, SQL, GitLab, OT, mobile, backup) and
+`acme_environment_v2.xlsx` (40 assets, 29 log sources). Same column
+layout, same validation gates. The original files are unchanged.
 
 The generator hard-fails if a technique ID stops resolving, if a column
 stops auto-detecting, or if the environment gates drift.
