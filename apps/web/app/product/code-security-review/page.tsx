@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   description:
     'Run the open-source scanner on your side, upload findings only. ScopeWise turns them into a plain-language register, exploit chains, an XLSX tracker and a briefing deck.',
   alternates: { canonical: '/product/code-security-review' },
+  openGraph: { images: [{ url: '/og-code-security-review.png', width: 1200, height: 630, alt: "ScopeWise Code Security Review: never sees your client's code" }] },
+  twitter: { images: ['/og-code-security-review.png'] },
 };
 
 const STEPS = [

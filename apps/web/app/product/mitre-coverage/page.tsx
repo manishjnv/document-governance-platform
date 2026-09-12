@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   description:
     'Upload your SIEM detection rules and environment inventory. ScopeWise maps them to MITRE ATT&CK v19.1, scores coverage by tactic, ranks gaps and builds the deck.',
   alternates: { canonical: '/product/mitre-coverage' },
+  openGraph: { images: [{ url: '/og-mitre-coverage.png', width: 1200, height: 630, alt: 'ScopeWise MITRE ATT&CK Coverage: from rule export to board deck' }] },
+  twitter: { images: ['/og-mitre-coverage.png'] },
 };
 
 const FAQS = [

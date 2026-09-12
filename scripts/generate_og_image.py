@@ -1,4 +1,4 @@
-"""Generate apps/web/public/og-default.png (1200x630): wordmark + tagline.
+"""Generate the 1200x630 OG images (site default + one per product pillar).
 
 No stock imagery, no external assets -- pure Pillow drawing so the file is
 reproducible. Run from the repo root: python scripts/generate_og_image.py
@@ -8,7 +8,19 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-OUT = Path(__file__).resolve().parents[1] / "apps" / "web" / "public" / "og-default.png"
+OUT_DIR = Path(__file__).resolve().parents[1] / "apps" / "web" / "public"
+
+# (file name, line 1 in ink, line 2 in primary, sub-line in muted)
+VARIANTS = [
+    ("og-default.png", "Evidence-based risk reviews.", "Contracts, detections, code.",
+     "SOW & RFP Review   ·   MITRE ATT&CK Coverage   ·   Code Security Review"),
+    ("og-sow-review.png", "SOW & RFP Review.", "Evidence for every finding.",
+     "Six specialist reviewers + a deterministic rule engine   ·   fix-verification on re-review"),
+    ("og-mitre-coverage.png", "MITRE ATT&CK Coverage.", "From rule export to board deck.",
+     "Coverage by tactic   ·   ranked gaps   ·   PPTX, XLSX, Navigator layer"),
+    ("og-code-security-review.png", "Code Security Review.", "Never sees your client's code.",
+     "Scan on your side   ·   upload findings only   ·   register, exploit chains, fix plan"),
+]
 W, H = 1200, 630
 PRIMARY = (0, 102, 204)  # #0066cc
 INK = (15, 23, 42)
@@ -34,7 +46,7 @@ def _font(candidates, size):
     return ImageFont.load_default()
 
 
-def main() -> None:
+def render(name: str, line1: str, line2: str, subline: str) -> None:
     img = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(img)
 
@@ -52,22 +64,23 @@ def main() -> None:
     d.text((sx + 108, sy - 4), "ScopeWise", font=wordmark, fill=INK)
 
     tagline = _font(FONT_CANDIDATES, 46)
-    d.text((sx, 300), "Evidence-based risk reviews.", font=tagline, fill=INK)
-    d.text((sx, 360), "Contracts, detections, code.", font=tagline, fill=PRIMARY)
+    d.text((sx, 300), line1, font=tagline, fill=INK)
+    d.text((sx, 360), line2, font=tagline, fill=PRIMARY)
 
     pillars = _font(FONT_REG_CANDIDATES, 28)
-    d.text(
-        (sx, 470),
-        "SOW & RFP Review   ·   MITRE ATT&CK Coverage   ·   Code Security Review",
-        font=pillars,
-        fill=MUTED,
-    )
-    url = _font(FONT_REG_CANDIDATES, 26)
-    d.text((sx, 560), "scopewise.assessiq.in", font=url, fill=MUTED)
+    d.text((sx, 470), subline, font=pillars, fill=MUTED)
+    # No host name on purpose: the site is served on two domains during the
+    # scopesense.in dual-run (docs/planning/SCOPESENSE_DOMAIN_CUTOVER.md).
 
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    img.save(OUT, optimize=True)
-    print(f"wrote {OUT} ({W}x{H})")
+    out = OUT_DIR / name
+    out.parent.mkdir(parents=True, exist_ok=True)
+    img.save(out, optimize=True)
+    print(f"wrote {out} ({W}x{H})")
+
+
+def main() -> None:
+    for variant in VARIANTS:
+        render(*variant)
 
 
 if __name__ == "__main__":

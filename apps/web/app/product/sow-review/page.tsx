@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   description:
     'Six specialist AI reviewers plus a deterministic rule engine score your SOW or RFP, quote the evidence for every finding and verify fixes on re-review.',
   alternates: { canonical: '/product/sow-review' },
+  openGraph: { images: [{ url: '/og-sow-review.png', width: 1200, height: 630, alt: 'ScopeWise SOW & RFP Review: evidence for every finding' }] },
+  twitter: { images: ['/og-sow-review.png'] },
 };
 
 const AGENTS = [
