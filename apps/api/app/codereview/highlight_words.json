@@ -1,0 +1,16 @@
+{
+  "_comment": "SINGLE SOURCE OF TRUTH for the risk/fix keyword highlighting used by the finding drawer (web), the XLSX register and the PPTX deck. Each entry is a regex alternation fragment that must be valid in BOTH Python `re` and JavaScript (only \\b, \\w, (?:...), [...], ?, *, | are used). After editing, run `python scripts/generate_highlight_words.py` to regenerate the web mirror; test_codereview_report.py fails if the mirror is stale.",
+  "risk": [
+    "unauthenticated", "unauthorized", "attacker[s]?", "brute-?force", "credential[- ]stuffing",
+    "remote code execution", "RCE", "injection", "bypass(?:ed|es)?", "exfiltrat\\w*", "takeover",
+    "forg(?:e|ed|ing)", "hijack\\w*", "arbitrary", "plaintext", "hard-?coded", "no rate limiting",
+    "without any", "exposed", "enumerat\\w*", "escalat\\w*", "tamper\\w*", "spoof\\w*", "leak\\w*", "weak",
+    "insecure", "unsafe", "unvalidated", "unsanitized", "eval"
+  ],
+  "fix": [
+    "rate[- ]limit\\w*", "lockout", "CAPTCHA", "parameteri[sz]ed", "prepared statements?", "sanitiz\\w*",
+    "validat\\w*", "encrypt\\w*", "hash\\w*", "middleware", "allow-?list\\w*", "deny-?list\\w*", "escap\\w*",
+    "CSRF tokens?", "HttpOnly", "Secure flag", "SameSite", "least privilege", "upgrade", "patch\\w*",
+    "rotate\\w*", "remove", "disable", "pin(?:ned)?"
+  ]
+}

@@ -107,9 +107,10 @@ last incident.
 ## Testing
 
 - Full backend suite: `cd apps/api && python -m pytest` — baseline is
-  **973 passed, 7 skipped** (measured 2026-09-12 after the Code Security
-  Review scan kit + golden fixture landed, +11 over the 2026-09-11 module
-  baseline of 962, +32 over the 2026-08-20 RCA #21 baseline of 941;
+  **985 passed, 7 skipped** (measured 2026-09-12 after the Code Security
+  Review highlight-words single-source + VVAH schema-contract tests, +12
+  over the same-day kit baseline of 973, +44 over the 2026-08-20 RCA #21
+  baseline of 941;
   run solo on edgp_test; if two sessions run the suite at once the
   shared edgp_test DB deadlocks — see memory `edgp-test-single-runner-rule`;
   the 7th skip is the prod-only WeasyPrint PDF render test; the

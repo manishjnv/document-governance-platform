@@ -139,6 +139,16 @@ Guidance given on scan expectations: VVAH has a 10–15 min floor; NodeGoat
 the golden zip; smallest real scan `we45/Vulnerable-Flask-App` (~20 min).
 
 ## Open items / ideas (none blocking)
+
+_Resolution 2026-09-12 (later session, uncommitted):_ items 3 and 4 below
+are closed permanently — highlight words now have one source
+(`app/codereview/highlight_words.json`, generated web mirror + drift
+test) and schema coverage is pinned by `acme_full_schema.json` (every
+VVAH 1.3.0 field populated) plus `FINDING_FIELDS_1_3_0` /
+`FINAL_REPORT_FIELDS_1_3_0` contract tests, without a second scan. Items
+1 (org branding) and 2 (`pricing:` table) are deferred by the user.
+Suite 985 / 7.
+
 - PPTX org branding (`report_display_name`) still `resolve_branding(None)`.
 - A `pricing:` table in the kit config would make VVAH's manifest report
   `cost_usd` itself (today the README carries a list-price estimate).

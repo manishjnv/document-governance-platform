@@ -12,8 +12,10 @@ highlighted (rich text), and an Exploit Chains sheet that explains itself.
 """
 
 import io
+import json
 import re
 from datetime import datetime
+from pathlib import Path
 
 from app.mitre.report_common import resolve_branding
 
@@ -45,22 +47,15 @@ _STATUS_FILLS = {
     "False positive": ("F1F5F9", "475569"),
 }
 
-# Highlighting (mirrors apps/web .../FindingDrawer.tsx so XLSX and UI agree).
-_RISK_RE = re.compile(
-    r"\b(unauthenticated|unauthorized|attacker[s]?|brute-?force|credential[- ]stuffing|"
-    r"remote code execution|RCE|injection|bypass(?:ed|es)?|exfiltrat\w*|takeover|"
-    r"forg(?:e|ed|ing)|hijack\w*|arbitrary|plaintext|hard-?coded|no rate limiting|"
-    r"without any|exposed|enumerat\w*|escalat\w*|tamper\w*|spoof\w*|leak\w*|weak|"
-    r"insecure|unsafe|unvalidated|unsanitized|eval)\b",
-    re.I,
+# Highlighting: single source of truth is highlight_words.json (next to this
+# file); the web drawer's highlightWords.ts is GENERATED from it by
+# scripts/generate_highlight_words.py, and test_codereview_report.py fails
+# when that mirror is stale — so XLSX, PPTX and UI can no longer drift.
+_HIGHLIGHT_WORDS = json.loads(
+    (Path(__file__).with_name("highlight_words.json")).read_text(encoding="utf-8")
 )
-_FIX_RE = re.compile(
-    r"\b(rate[- ]limit\w*|lockout|CAPTCHA|parameteri[sz]ed|prepared statements?|sanitiz\w*|"
-    r"validat\w*|encrypt\w*|hash\w*|middleware|allow-?list\w*|deny-?list\w*|escap\w*|"
-    r"CSRF tokens?|HttpOnly|Secure flag|SameSite|least privilege|upgrade|patch\w*|"
-    r"rotate\w*|remove|disable|pin(?:ned)?)\b",
-    re.I,
-)
+_RISK_RE = re.compile(r"\b(" + "|".join(_HIGHLIGHT_WORDS["risk"]) + r")\b", re.I)
+_FIX_RE = re.compile(r"\b(" + "|".join(_HIGHLIGHT_WORDS["fix"]) + r")\b", re.I)
 _CODE_RE = re.compile(
     r"`[^`]+`|https?://[^\s)]+|\b(?:GET|POST|PUT|PATCH|DELETE)\s+/[\w\-./:?=&{}]*|"
     r"\b(?:[A-Za-z_$][\w$]*\.)+[A-Za-z_$][\w$]*(?:\(\))?|\b[a-z][\w$]*[A-Z][\w$]*(?:\(\))?|"

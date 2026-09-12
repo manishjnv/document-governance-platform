@@ -1,0 +1,4 @@
+// GENERATED FILE - do not edit. Source: apps/api/app/codereview/highlight_words.json
+// Regenerate: python scripts/generate_highlight_words.py
+export const RISK_RE = /\b(unauthenticated|unauthorized|attacker[s]?|brute-?force|credential[- ]stuffing|remote code execution|RCE|injection|bypass(?:ed|es)?|exfiltrat\w*|takeover|forg(?:e|ed|ing)|hijack\w*|arbitrary|plaintext|hard-?coded|no rate limiting|without any|exposed|enumerat\w*|escalat\w*|tamper\w*|spoof\w*|leak\w*|weak|insecure|unsafe|unvalidated|unsanitized|eval)\b/gi;
+export const FIX_RE = /\b(rate[- ]limit\w*|lockout|CAPTCHA|parameteri[sz]ed|prepared statements?|sanitiz\w*|validat\w*|encrypt\w*|hash\w*|middleware|allow-?list\w*|deny-?list\w*|escap\w*|CSRF tokens?|HttpOnly|Secure flag|SameSite|least privilege|upgrade|patch\w*|rotate\w*|remove|disable|pin(?:ned)?)\b/gi;

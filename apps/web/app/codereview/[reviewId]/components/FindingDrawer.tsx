@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { CodeReviewFinding, SEVERITY_META, VERDICT_META, Verdict } from '../../lib';
+import { FIX_RE, RISK_RE } from './highlightWords';
 
 const CWE_RE = /^CWE-(\d+)$/i;
 const MIN_WIDTH = 380;
@@ -70,10 +71,6 @@ function useDrawerWidth() {
 }
 
 /* ---------- rich text: highlight keywords, code tokens, links; bullet long prose ---------- */
-const RISK_RE =
-  /\b(unauthenticated|unauthorized|attacker[s]?|brute-?force|credential[- ]stuffing|remote code execution|RCE|injection|bypass(?:ed|es)?|exfiltrat\w*|takeover|forg(?:e|ed|ing)|hijack\w*|arbitrary|plaintext|hard-?coded|no rate limiting|without any|exposed|enumerat\w*|escalat\w*|tamper\w*|spoof\w*|leak\w*|weak|insecure|unsafe|unvalidated|unsanitized|eval)\b/gi;
-const FIX_RE =
-  /\b(rate[- ]limit\w*|lockout|CAPTCHA|parameteri[sz]ed|prepared statements?|sanitiz\w*|validat\w*|encrypt\w*|hash\w*|middleware|allow-?list\w*|deny-?list\w*|escap\w*|CSRF tokens?|HttpOnly|Secure flag|SameSite|least privilege|upgrade|patch\w*|rotate\w*|remove|disable)\b/gi;
 const ABBREV_RE = /^(e\.g|i\.e|etc|vs|cf)$/i;
 const CODE_RE =
   /`[^`]+`|https?:\/\/[^\s)]+|\b(?:GET|POST|PUT|PATCH|DELETE)\s+\/[\w\-./:?=&{}]*|\b(?:[A-Za-z_$][\w$]*\.)+[A-Za-z_$][\w$]*(?:\(\))?|\b[a-z][\w$]*[A-Z][\w$]*(?:\(\))?|\b[\w.-]+\.(?:js|ts|py|json|yml|yaml|html|env)\b|\b\w+\(\)|\/(?:[\w\-]+\/)+[\w\-.]*|\/[a-z][\w\-]+\b/g;

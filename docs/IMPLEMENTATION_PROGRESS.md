@@ -11,6 +11,13 @@
 
 ## ✅ Done
 
+**Code Security Review hardening (2026-09-12, uncommitted):** highlight
+word lists reduced to one source (`highlight_words.json` → generated
+`highlightWords.ts`, drift test) and VVAH 1.3.0 schema coverage pinned by
+a full-field synthetic fixture + field-list contract tests (no extra scan
+spend). Suite **985 / 7**; `tsc` clean. Deferred by user: PPTX org
+branding, kit `pricing:` table.
+
 **Pricing unlinked (2026-09-12, uncommitted):** decision reversed from the
 branding plan; `/pricing` stays reachable by direct URL only, `noindex`,
 in robots disallow, out of the sitemap, removed from nav and footer, and the

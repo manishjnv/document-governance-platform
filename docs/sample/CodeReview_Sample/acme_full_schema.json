@@ -1,0 +1,604 @@
+{
+  "repo_root": "/work/acme-billing-portal",
+  "repo_name": "acme-billing-portal",
+  "git_sha": "7d1e4b9",
+  "summary": "vvaharness scanned acme-billing-portal (Python/Django) end to end. Eight findings were confirmed or triaged across five vuln classes including SQL injection, unsafe deserialization, a business-logic flaw, a race condition, an information leak, a type-confusion false positive, an integer-overflow false positive, and a known-CVE dependency. The scan degraded partway through stage 2 threat modeling after a provider timeout.",
+  "degraded": true,
+  "degraded_reason": "Stage 2 (threat modeling) provider timed out twice; proceeded with a partial threat model rather than failing the whole scan.",
+  "findings": [
+    {
+      "finding": {
+        "title": "SQL injection in invoice search filter",
+        "file": "billing/views.py",
+        "line_start": 88,
+        "line_end": 93,
+        "vuln_class": "injection",
+        "severity": "critical",
+        "cwe": "CWE-89",
+        "vuln_class_label": "SQL Injection",
+        "chunk_id": "chunk-1",
+        "impact": "Full read/write access to the billing database, including stored card-reference tokens.",
+        "description": "The invoice search view interpolates the `q` query parameter directly into a raw SQL WHERE clause.",
+        "exploit_scenario": "An authenticated user sends `q=' OR '1'='1` to /billing/search and receives every tenant's invoices.",
+        "preconditions": [
+          "Caller must reach /billing/search (any authenticated user)."
+        ],
+        "recommendation": "Use the ORM's parameterized filter instead of raw SQL.",
+        "code_snippet": "cursor.execute(f\"SELECT * FROM invoices WHERE note LIKE '%{q}%'\")",
+        "source_ref": "billing/views.py:88",
+        "sink_ref": "billing/db.py:41",
+        "confidence": 0.95,
+        "votes": 3,
+        "duplicates": [
+          {
+            "file": "billing/api/search.py",
+            "line_start": 40,
+            "line_end": 44,
+            "vuln_class": "injection",
+            "title": "Same raw-SQL pattern in the API search endpoint",
+            "chunk_id": "chunk-2",
+            "source_ref": "billing/api/search.py:40",
+            "sink_ref": "billing/db.py:41",
+            "reasoning": "Identical string-interpolation call into the same db.py helper."
+          }
+        ],
+        "backfilled_refs": [
+          "billing/db.py:41"
+        ],
+        "case_id": "vvaf1_0001aaaa",
+        "exploitability_notes": "No input validation precedes the query; reachable by any session.",
+        "verdict": "TRUE_POSITIVE",
+        "verdict_confidence": 95,
+        "verdict_reason": "Traced q from the view straight into cursor.execute with no sanitization.",
+        "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        "cvss_score": 9.8,
+        "cvss_rating": "CRITICAL",
+        "verifier_reasoning": "Confirmed the WHERE clause is built via an f-string, not a bound parameter.",
+        "vsvs_vector": "VSVS:1.0/AV:N/AC:L/EX:H",
+        "vsvs_score": 9.5,
+        "vsvs_rating": "CRITICAL",
+        "offensive_priority": "P1 - exploit now",
+        "offensive_reason": "Directly reachable, no elevated role required, full data exposure."
+      },
+      "severity": "critical",
+      "exploitability_notes": "No input validation precedes the query; reachable by any session."
+    },
+    {
+      "finding": {
+        "title": "Unsafe pickle deserialization of cached report payloads",
+        "file": "billing/reports/cache.py",
+        "line_start": 51,
+        "line_end": 55,
+        "vuln_class": "unsafe-deserialization",
+        "severity": "critical",
+        "cwe": "CWE-502",
+        "vuln_class_label": "Unsafe Deserialization",
+        "chunk_id": "chunk-3",
+        "impact": "Arbitrary code execution on the worker process that renders reports.",
+        "description": "Cached report payloads are loaded with pickle.loads() from a Redis key an authenticated user can influence.",
+        "exploit_scenario": "An attacker crafts a malicious pickle, gets it stored under their own report cache key, then triggers a re-render to execute it.",
+        "preconditions": [
+          "Attacker can write to their own report cache entry."
+        ],
+        "recommendation": "Switch to json for the cache payload; never pickle.loads on anything not fully trusted.",
+        "code_snippet": "payload = pickle.loads(redis_client.get(cache_key))",
+        "source_ref": "billing/reports/cache.py:48",
+        "sink_ref": "billing/reports/cache.py:51",
+        "confidence": 0.88,
+        "votes": 2,
+        "duplicates": [],
+        "backfilled_refs": [
+          "billing/reports/views.py:20"
+        ],
+        "case_id": "vvaf1_0002bbbb",
+        "exploitability_notes": "Cache keys are namespaced per user, so the attacker only needs their own account to control the payload.",
+        "verdict": "TRUE_POSITIVE",
+        "verdict_confidence": 80,
+        "verdict_reason": "Confirmed pickle.loads is reached with attacker-influenced Redis data.",
+        "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+        "cvss_score": 8.8,
+        "cvss_rating": "HIGH",
+        "verifier_reasoning": "Traced the cache_key back to the report_id path parameter, which is user-controlled.",
+        "vsvs_vector": "VSVS:1.0/AV:N/AC:L/EX:M",
+        "vsvs_score": 8.2,
+        "vsvs_rating": "HIGH",
+        "offensive_priority": "P1 - exploit now",
+        "offensive_reason": "RCE with only a low-privilege account."
+      },
+      "severity": "critical",
+      "exploitability_notes": "Cache keys are namespaced per user, so the attacker only needs their own account to control the payload."
+    },
+    {
+      "finding": {
+        "title": "Discount code logic allows unlimited stacking",
+        "file": "billing/discounts.py",
+        "line_start": 30,
+        "line_end": 44,
+        "vuln_class": "logic-flaw",
+        "severity": "high",
+        "cwe": "CWE-840",
+        "vuln_class_label": "Business Logic Error",
+        "chunk_id": "chunk-4",
+        "impact": "Invoices can be discounted to near-zero by repeating the same code.",
+        "description": "apply_discount() loops over submitted codes without checking a code was already applied to the same invoice.",
+        "exploit_scenario": "A user submits the same 10%-off code 20 times in one checkout request and the invoice total drops to a few cents.",
+        "preconditions": [
+          "Any authenticated customer at checkout."
+        ],
+        "recommendation": "Track applied codes per invoice and reject duplicates server-side, not just in the UI.",
+        "code_snippet": "for code in submitted_codes: total = apply_discount(total, code)",
+        "source_ref": "billing/checkout/views.py:15",
+        "sink_ref": "billing/discounts.py:30",
+        "confidence": 0.82,
+        "votes": 2,
+        "duplicates": [],
+        "backfilled_refs": [],
+        "case_id": "vvaf1_0003cccc",
+        "exploitability_notes": "Server-side loop has no dedup guard; client-side dedup is trivially bypassed by editing the request body.",
+        "verdict": "TRUE_POSITIVE",
+        "verdict_confidence": 70,
+        "verdict_reason": "Confirmed no server-side check against already-applied codes.",
+        "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:N",
+        "cvss_score": 6.5,
+        "cvss_rating": "MEDIUM",
+        "verifier_reasoning": "Reproduced the loop mentally against the checkout serializer; no per-code uniqueness constraint anywhere in the path.",
+        "vsvs_vector": "VSVS:1.0/AV:N/AC:L/EX:L",
+        "vsvs_score": 5.9,
+        "vsvs_rating": "MEDIUM",
+        "offensive_priority": "P2 - exploit soon",
+        "offensive_reason": "Direct financial loss but no data exposure or RCE."
+      },
+      "severity": "high",
+      "exploitability_notes": "Server-side loop has no dedup guard; client-side dedup is trivially bypassed by editing the request body."
+    },
+    {
+      "finding": {
+        "title": "Internal user IDs leaked in invoice PDF metadata",
+        "file": "billing/pdf/render.py",
+        "line_start": 70,
+        "line_end": 74,
+        "vuln_class": "info-leak",
+        "severity": "medium",
+        "cwe": "CWE-200",
+        "vuln_class_label": "Information Exposure",
+        "chunk_id": "chunk-5",
+        "impact": "Discloses internal numeric user IDs to any recipient of an invoice PDF.",
+        "description": "The PDF author metadata field is set to the raw internal user.id instead of a display name.",
+        "exploit_scenario": "A customer forwards their invoice PDF; anyone who inspects its metadata sees the internal user ID, useful for further enumeration attacks.",
+        "preconditions": [
+          "Access to any generated invoice PDF."
+        ],
+        "recommendation": "Set the PDF author field to the tenant's display name, never the raw internal ID.",
+        "code_snippet": "pdf.set_author(str(user.id))",
+        "source_ref": "billing/pdf/render.py:70",
+        "sink_ref": "billing/pdf/render.py:70",
+        "confidence": 0.6,
+        "votes": 1,
+        "duplicates": [],
+        "backfilled_refs": [],
+        "case_id": "vvaf1_0004dddd",
+        "exploitability_notes": "Low severity on its own; useful only chained with an ID-enumeration path elsewhere.",
+        "verdict": "TRUE_POSITIVE",
+        "verdict_confidence": 55,
+        "verdict_reason": "Confirmed set_author() is called with the raw integer ID.",
+        "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:N/A:N",
+        "cvss_score": 4.3,
+        "cvss_rating": "MEDIUM",
+        "verifier_reasoning": "Inspected the PDF builder call site; no formatting layer between user.id and set_author.",
+        "vsvs_vector": "VSVS:1.0/AV:N/AC:L/EX:L",
+        "vsvs_score": 3.8,
+        "vsvs_rating": "LOW",
+        "offensive_priority": "P3 - exploit if convenient",
+        "offensive_reason": "Only useful as a reconnaissance aid for another attack."
+      },
+      "severity": "medium",
+      "exploitability_notes": "Low severity on its own; useful only chained with an ID-enumeration path elsewhere."
+    },
+    {
+      "finding": {
+        "title": "Race condition in wallet balance deduction",
+        "file": "billing/wallet.py",
+        "line_start": 18,
+        "line_end": 27,
+        "vuln_class": "race-condition",
+        "severity": "high",
+        "cwe": "CWE-362",
+        "vuln_class_label": "Race Condition",
+        "chunk_id": "chunk-6",
+        "impact": "Concurrent requests can deduct a wallet balance below zero, letting a customer spend funds they don't have.",
+        "description": "deduct_balance() reads then writes the balance without a row lock or atomic update, so two concurrent requests both pass the sufficient-funds check.",
+        "exploit_scenario": "An attacker fires two simultaneous purchase requests against a wallet with exactly one item's worth of balance; both succeed.",
+        "preconditions": [
+          "Ability to send two concurrent authenticated requests."
+        ],
+        "recommendation": "Use `SELECT ... FOR UPDATE` or an atomic `F()` expression update instead of read-then-write.",
+        "code_snippet": "balance = wallet.balance\nif balance >= amount:\n    wallet.balance = balance - amount\n    wallet.save()",
+        "source_ref": "billing/wallet.py:18",
+        "sink_ref": "billing/wallet.py:24",
+        "confidence": 0.78,
+        "votes": 2,
+        "duplicates": [],
+        "backfilled_refs": [
+          "billing/api/wallet_views.py:12"
+        ],
+        "case_id": "vvaf1_0005eeee",
+        "exploitability_notes": "Reliably reproducible by firing two requests within the same request-handling window.",
+        "verdict": "TRUE_POSITIVE",
+        "verdict_confidence": 75,
+        "verdict_reason": "Confirmed no row lock or atomic update between read and write.",
+        "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:H/A:N",
+        "cvss_score": 6.3,
+        "cvss_rating": "MEDIUM",
+        "verifier_reasoning": "Modeled the two-request timing window against the ORM calls; no locking primitive present.",
+        "vsvs_vector": "VSVS:1.0/AV:N/AC:H/EX:M",
+        "vsvs_score": 5.5,
+        "vsvs_rating": "MEDIUM",
+        "offensive_priority": "P2 - exploit soon",
+        "offensive_reason": "Direct financial loss, moderate timing precision required."
+      },
+      "severity": "high",
+      "exploitability_notes": "Reliably reproducible by firing two requests within the same request-handling window."
+    },
+    {
+      "finding": {
+        "title": "Type confusion in webhook payload amount field",
+        "file": "billing/webhooks/handlers.py",
+        "line_start": 60,
+        "line_end": 66,
+        "vuln_class": "type-confusion",
+        "severity": "medium",
+        "cwe": "CWE-843",
+        "vuln_class_label": "Type Confusion",
+        "chunk_id": "chunk-7",
+        "impact": "A string amount silently becomes 0 after a failed int() cast is caught.",
+        "description": "The webhook handler casts the vendor-supplied amount field with `int(amount)` inside a broad try/except that falls back to 0 on any error, rather than rejecting the payload.",
+        "exploit_scenario": "A malformed webhook amount field of \"free\" is caught and silently treated as a $0 charge instead of failing the request.",
+        "preconditions": [
+          "Ability to reach the webhook endpoint (signed but replay-checked separately)."
+        ],
+        "recommendation": "Reject the payload with a 400 instead of defaulting to 0 when the cast fails.",
+        "code_snippet": "try:\n    amount = int(payload[\"amount\"])\nexcept Exception:\n    amount = 0",
+        "source_ref": "billing/webhooks/handlers.py:60",
+        "sink_ref": "billing/webhooks/handlers.py:66",
+        "confidence": 0.4,
+        "votes": 1,
+        "duplicates": [],
+        "backfilled_refs": [],
+        "case_id": "vvaf1_0006ffff",
+        "exploitability_notes": "On review, the webhook signature check happens before this handler runs, and the amount field is server-derived in practice, not attacker-controlled.",
+        "verdict": "FALSE_POSITIVE",
+        "verdict_confidence": 65,
+        "verdict_reason": "The upstream signature verification and payload schema check already reject non-numeric amount fields before this code runs.",
+        "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:U/C:N/I:L/A:N",
+        "cvss_score": 3.1,
+        "cvss_rating": "LOW",
+        "verifier_reasoning": "Traced the call chain to webhooks/router.py and found a pydantic schema that already constrains amount to a positive int.",
+        "vsvs_vector": "VSVS:1.0/AV:N/AC:H/EX:L",
+        "vsvs_score": 2.4,
+        "vsvs_rating": "LOW",
+        "offensive_priority": "P4 - not worth pursuing",
+        "offensive_reason": "Upstream validation already closes this path in practice."
+      },
+      "severity": "medium",
+      "exploitability_notes": "On review, the webhook signature check happens before this handler runs, and the amount field is server-derived in practice, not attacker-controlled."
+    },
+    {
+      "finding": {
+        "title": "Integer overflow in bulk invoice line-item total",
+        "file": "billing/invoices/totals.py",
+        "line_start": 12,
+        "line_end": 16,
+        "vuln_class": "integer-overflow",
+        "severity": "low",
+        "cwe": "CWE-190",
+        "vuln_class_label": "Integer Overflow",
+        "chunk_id": "chunk-8",
+        "impact": "A crafted line-item quantity could wrap a fixed-width total in a downstream export format, though Python ints themselves don't overflow.",
+        "description": "The CSV export path casts the computed total to a C-style 32-bit int for a legacy partner format before writing it out.",
+        "exploit_scenario": "A quantity large enough to push the computed total past 2^31-1 wraps to a negative number in the exported CSV.",
+        "preconditions": [
+          "Ability to create an invoice with an extreme line-item quantity."
+        ],
+        "recommendation": "Validate quantity/total against the legacy format's range before export and reject or clamp instead of silently wrapping.",
+        "code_snippet": "packed_total = struct.pack('i', total)",
+        "source_ref": "billing/invoices/totals.py:12",
+        "sink_ref": "billing/export/legacy_csv.py:9",
+        "confidence": 0.5,
+        "votes": 1,
+        "duplicates": [],
+        "backfilled_refs": [],
+        "case_id": "vvaf1_0007gggg",
+        "exploitability_notes": "Requires an admin-only bulk-invoice tool to create the extreme quantity in the first place; not customer-reachable.",
+        "verdict": "FALSE_POSITIVE",
+        "verdict_confidence": 70,
+        "verdict_reason": "The bulk-invoice tool that could set such a quantity is admin-only and already has its own range validation.",
+        "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:N/S:U/C:N/I:L/A:N",
+        "cvss_score": 2.7,
+        "cvss_rating": "LOW",
+        "verifier_reasoning": "Confirmed the only caller of totals.py with attacker-influenced quantity is gated behind the admin-only bulk import tool's own validator.",
+        "vsvs_vector": "VSVS:1.0/AV:N/AC:H/EX:L",
+        "vsvs_score": 1.9,
+        "vsvs_rating": "LOW",
+        "offensive_priority": "P4 - not worth pursuing",
+        "offensive_reason": "Not reachable without admin access that already validates range."
+      },
+      "severity": "low",
+      "exploitability_notes": "Requires an admin-only bulk-invoice tool to create the extreme quantity in the first place; not customer-reachable."
+    },
+    {
+      "finding": {
+        "title": "Dependency with known CVE: Django 4.1.2",
+        "file": "requirements.txt",
+        "line_start": 3,
+        "line_end": 3,
+        "vuln_class": "other",
+        "severity": "info",
+        "cwe": "CWE-1104",
+        "vuln_class_label": "Vulnerable Dependency",
+        "chunk_id": "chunk-9",
+        "impact": "Inherits whatever the upstream Django advisory allows.",
+        "description": "requirements.txt pins Django==4.1.2, which has a published CVE fixed in a later 4.1.x release.",
+        "exploit_scenario": "Not independently exploitable without a code path that exercises the vulnerable Django subsystem.",
+        "preconditions": [
+          "None beyond the dependency being present in the deployed image."
+        ],
+        "recommendation": "Bump the pin to the latest patched 4.1.x release.",
+        "code_snippet": "Django==4.1.2",
+        "source_ref": "requirements.txt:3",
+        "sink_ref": "requirements.txt:3",
+        "confidence": 0.5,
+        "votes": 1,
+        "duplicates": [],
+        "backfilled_refs": [],
+        "case_id": "vvaf1_0008hhhh",
+        "exploitability_notes": "Informational \u2014 flagged by version match against the advisory database, not by demonstrated exploitation.",
+        "verdict": "TRUE_POSITIVE",
+        "verdict_confidence": 40,
+        "verdict_reason": "Version string matched against the advisory database only.",
+        "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+        "cvss_score": 5.0,
+        "cvss_rating": "MEDIUM",
+        "verifier_reasoning": "Confirmed the pinned version string against the public advisory feed for this package.",
+        "vsvs_vector": "VSVS:1.0/AV:N/AC:L/EX:L",
+        "vsvs_score": 3.0,
+        "vsvs_rating": "LOW",
+        "offensive_priority": "P3 - exploit if convenient",
+        "offensive_reason": "Exploitability depends entirely on which CVE is unpatched."
+      },
+      "severity": "info",
+      "exploitability_notes": "Informational \u2014 flagged by version match against the advisory database, not by demonstrated exploitation."
+    }
+  ],
+  "chains": [
+    {
+      "title": "Injection to deserialization RCE",
+      "steps": [
+        1,
+        2
+      ],
+      "severity": "critical",
+      "blocked_by_controls": [
+        "WAF rule blocks common SQLi payloads on /billing/search"
+      ],
+      "narrative": "The SQL injection (finding 1) exposes cached report keys, which the unsafe pickle deserialization (finding 2) then executes."
+    },
+    {
+      "title": "Logic flaw compounds with race condition",
+      "steps": [
+        3,
+        5
+      ],
+      "severity": "high",
+      "blocked_by_controls": [],
+      "narrative": "Unlimited discount stacking (finding 3) combined with the wallet race condition (finding 5) lets an attacker both zero out an invoice and double-spend the resulting wallet credit."
+    },
+    {
+      "title": "Info leak aids account enumeration",
+      "steps": [
+        4,
+        1
+      ],
+      "severity": "medium",
+      "blocked_by_controls": [
+        "Rate limiting on /billing/search slows bulk enumeration"
+      ],
+      "narrative": "The leaked internal user ID (finding 4) gives an attacker a seed value to target with the SQL injection (finding 1)."
+    }
+  ],
+  "dropped": [
+    {
+      "file": "billing/legacy/old_search.py",
+      "line": 10,
+      "vuln_class": "injection",
+      "title": "String-built query in deprecated search helper",
+      "chunk_id": "chunk-10",
+      "reason": "FALSE_POSITIVE",
+      "detail": "Helper is unreachable dead code, never imported.",
+      "canonical_idx": 0
+    },
+    {
+      "file": "billing/reports/cache.py",
+      "line": 90,
+      "vuln_class": "other",
+      "title": "Possible unsafe eval in report template filter",
+      "chunk_id": "chunk-11",
+      "reason": "VERIFY_ERROR",
+      "detail": "Verifier LLM call failed after 3 retries; excluded rather than guessed.",
+      "canonical_idx": 1
+    },
+    {
+      "file": "billing/api/search.py",
+      "line": 40,
+      "vuln_class": "injection",
+      "title": "Same raw-SQL pattern in the API search endpoint",
+      "chunk_id": "chunk-2",
+      "reason": "DUPLICATE",
+      "detail": "Duplicate of finding 1 (billing/views.py:88); kept as a cross-reference only.",
+      "canonical_idx": 0
+    },
+    {
+      "file": "billing/tasks/reconcile.py",
+      "line": 22,
+      "vuln_class": "logic-flaw",
+      "title": "Reconciliation task may double-count refunds",
+      "chunk_id": "chunk-12",
+      "reason": "UNCONFIRMED",
+      "detail": "Scanner flagged a possible double-count but could not construct a concrete trigger.",
+      "canonical_idx": 2
+    },
+    {
+      "file": "tests/test_billing.py",
+      "line": 5,
+      "vuln_class": "hardcoded_secret",
+      "title": "Test fixture contains a fake API key",
+      "chunk_id": "chunk-13",
+      "reason": "EXCLUDED",
+      "detail": "Test fixture, not application code, per scan scope rules.",
+      "canonical_idx": 3
+    },
+    {
+      "file": "billing/admin/bulk_import.py",
+      "line": 77,
+      "vuln_class": "injection",
+      "title": "Admin CSV import builds a dynamic query",
+      "chunk_id": "chunk-14",
+      "reason": "GUARDRAIL_BLOCKED",
+      "detail": "Finding text tripped the output-safety guardrail and was withheld pending manual review.",
+      "canonical_idx": 4
+    }
+  ],
+  "raw_findings_count": 14,
+  "metrics": {
+    "scan_id": "scan-acme-billing-20260912",
+    "module_name": "vvaharness-full",
+    "start_ts": "2026-09-12T09:00:00Z",
+    "end_ts": "2026-09-12T09:22:40Z",
+    "duration_sec": 1360.0,
+    "total_files_in_scope": 96,
+    "analyzed_files_unique": 90,
+    "chunks_total": 210,
+    "chunks_risk": 60,
+    "chunks_catchall": 40,
+    "chunks_specialist": 110,
+    "chunks_attempted": 205,
+    "chunks_failed": 5,
+    "errors_by_stage": {
+      "s3_chunking": 2,
+      "s4_verify": 3
+    },
+    "errors_log_path": "logs/acme-billing-20260912/errors.log",
+    "loc_in_scope_by_language": {
+      "python": 15230,
+      "html": 1200
+    },
+    "loc_scanned_by_language": {
+      "python": 14800,
+      "html": 1100
+    },
+    "raw_findings_count": 14,
+    "true_positive_count": 6,
+    "false_positive_count": 2,
+    "duplicate_count": 1,
+    "prompt_tokens": 610345,
+    "completion_tokens": 98211,
+    "total_tokens": 708556,
+    "tokens_by_phase": {
+      "scan": 420000,
+      "verify": 200000,
+      "report": 88556
+    },
+    "folders_scanned": [
+      "billing/",
+      "tests/"
+    ],
+    "scope": [
+      {
+        "name": "billing",
+        "kind": "app",
+        "files": 80
+      },
+      {
+        "name": "tests",
+        "kind": "tests",
+        "files": 16
+      }
+    ],
+    "excluded": {
+      "vendor/": "third-party, out of scope",
+      "migrations/": "generated code"
+    },
+    "s2_degraded": true,
+    "s2_threats_raw": 9,
+    "s2_threats_truncated": 1,
+    "s2_threats_promoted": 5,
+    "s2_baseline_undisposed": [
+      "threat-legacy-search-injection"
+    ],
+    "s2_repo_kinds": [
+      "web-app",
+      "billing"
+    ],
+    "s3_output_shape": "cohesion-grouped",
+    "s3_unknown_file_ids": [
+      "file-9981"
+    ],
+    "s3_dropped_paths": [
+      "billing/legacy/__pycache__/old_search.cpython-311.pyc"
+    ],
+    "s3_relocated_paths": [
+      "billing/old_search.py -> billing/legacy/old_search.py"
+    ],
+    "s3_dropped_empty_chunks": 3,
+    "s3_forced_coverage_files": [
+      "billing/wallet.py"
+    ],
+    "s3_fallback_chunks_dropped": 1,
+    "s3_cohesion_groups": 22,
+    "s3_buckets": 6,
+    "s4_findings_truncated": false,
+    "deepagents_oversize_prompts": 2,
+    "llm_truncated_replies": 1,
+    "chunks_by_kind": {
+      "risk": 60,
+      "catchall": 40,
+      "specialist": 110
+    }
+  },
+  "threat_model": {
+    "system_context": "acme-billing-portal is a multi-tenant Django billing service handling invoices, wallets, and payment-provider webhooks.",
+    "assets": [
+      "invoice records",
+      "wallet balances",
+      "cached report payloads",
+      "webhook secrets"
+    ],
+    "trust_boundaries": [
+      "public internet -> Django app",
+      "app -> Postgres",
+      "app -> Redis cache",
+      "payment provider -> webhook endpoint"
+    ],
+    "threats": [
+      "tenant-boundary bypass via SQL injection",
+      "RCE via cache deserialization",
+      "financial loss via discount/wallet logic flaws"
+    ],
+    "open_questions": [
+      "Is the webhook endpoint's replay-check window sufficient under load?",
+      "Are report cache keys ever shared across tenants?"
+    ]
+  },
+  "app_profile": {
+    "application_id": "acme-billing-portal",
+    "name": "Acme Billing Portal",
+    "externally_facing": true,
+    "pci_scoped": true,
+    "processes_pan": false,
+    "pii": true,
+    "source": "manual"
+  },
+  "unreachable_files": [
+    "billing/legacy/dead_module.py",
+    "scripts/one_off_migration.py"
+  ]
+}

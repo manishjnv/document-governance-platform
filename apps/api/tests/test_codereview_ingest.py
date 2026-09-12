@@ -20,6 +20,97 @@ def _sample(name: str) -> bytes:
     return (SAMPLE_DIR / name).read_bytes()
 
 
+# VVAH 1.3.0 FinalReport/Finding field lists, from vvaharness/models/_scan.py
+# (see docs/sample/CodeReview_Sample/acme_full_schema.json and its generator,
+# scripts/generate_codereview_sample.py, for the fixture pinned against these).
+# A VVAH version bump that adds/renames a field must update this list
+# consciously — that's the point of test_real_fixture_uses_only_known_fields.
+FINAL_REPORT_FIELDS_1_3_0 = [
+    "repo_root", "repo_name", "git_sha", "findings", "chains", "dropped",
+    "raw_findings_count", "metrics", "threat_model", "app_profile",
+    "unreachable_files", "summary", "degraded", "degraded_reason",
+]
+FINDING_FIELDS_1_3_0 = [
+    "title", "file", "line_start", "vuln_class", "severity", "line_end",
+    "cwe", "vuln_class_label", "chunk_id", "impact", "description",
+    "exploit_scenario", "preconditions", "recommendation", "code_snippet",
+    "source_ref", "sink_ref", "confidence", "votes", "duplicates",
+    "backfilled_refs", "case_id", "exploitability_notes", "verdict",
+    "verdict_confidence", "verdict_reason", "cvss_vector", "cvss_score",
+    "cvss_rating", "verifier_reasoning", "vsvs_vector", "vsvs_score",
+    "vsvs_rating", "offensive_priority", "offensive_reason",
+]
+
+FULL_SCHEMA_FILE = "acme_full_schema.json"
+
+
+def test_full_schema_fixture_populates_every_field():
+    obj = json.loads(_sample(FULL_SCHEMA_FILE))
+
+    for field in FINAL_REPORT_FIELDS_1_3_0:
+        assert field in obj, f"FinalReport field {field!r} missing from fixture"
+
+    findings = obj["findings"]
+    assert findings, "fixture must have at least one finding"
+    for entry in findings:
+        finding = entry["finding"]
+        for field in FINDING_FIELDS_1_3_0:
+            assert field in finding, f"Finding field {field!r} missing on {finding.get('title')!r}"
+
+    # every field is non-empty on at least one finding
+    for field in FINDING_FIELDS_1_3_0:
+        assert any(finding["finding"].get(field) not in (None, "", [], {}) for finding in findings), (
+            f"Finding field {field!r} is empty/null on every finding in the fixture"
+        )
+
+
+def test_full_schema_ingest_keeps_contract_fields():
+    report = ingest.parse_report(_sample(FULL_SCHEMA_FILE))
+
+    assert report["counts"]["total"] == 8
+    assert sum(report["counts"]["by_severity"].values()) == 8
+    n = report["counts"]["total"]
+    for chain in report["chains"]:
+        assert chain["steps"] and all(1 <= s <= n for s in chain["steps"])
+    assert report["dropped_count"] == 6
+
+    assert report["degraded"] is True
+    assert report["degraded_reason"]
+
+    metrics = report["metrics"]
+    for key in (
+        "duration_sec", "total_files_in_scope", "analyzed_files_unique",
+        "loc_scanned_by_language", "true_positive_count",
+        "false_positive_count", "total_tokens",
+    ):
+        assert metrics.get(key) is not None
+
+    contract_fields = (
+        "source_ref", "sink_ref", "verdict", "verdict_confidence",
+        "verdict_reason", "offensive_priority", "offensive_reason",
+        "exploitability_notes", "verifier_reasoning", "cvss_vector",
+        "cvss_score", "cvss_rating", "preconditions", "duplicates",
+    )
+    first = report["findings"][0]
+    for field in contract_fields:
+        assert first.get(field) not in (None, "", [], {}), f"contract field {field!r} not carried through"
+
+
+def test_real_fixture_uses_only_known_fields():
+    """Proves the pinned field lists match reality: every key VVAH's own real
+    NodeGoat golden output actually uses is one we know about. If VVAH adds a
+    field this fails and FINDING_FIELDS_1_3_0 / FINAL_REPORT_FIELDS_1_3_0 must
+    be bumped consciously."""
+    obj = json.loads((SAMPLE_DIR / "real" / "nodegoat" / "findings.json").read_bytes())
+
+    unknown_top = set(obj.keys()) - set(FINAL_REPORT_FIELDS_1_3_0)
+    assert not unknown_top, f"unknown FinalReport fields in real fixture: {unknown_top}"
+
+    for entry in obj["findings"]:
+        unknown = set(entry["finding"].keys()) - set(FINDING_FIELDS_1_3_0)
+        assert not unknown, f"unknown Finding fields in real fixture: {unknown}"
+
+
 def test_parse_findings_json_sample():
     report = ingest.parse_report(_sample("acme_findings.json"))
     assert report["source_format"] == "findings"

@@ -154,3 +154,23 @@ def io_bytes(data: bytes):
     import io
 
     return io.BytesIO(data)
+
+
+def test_highlight_words_web_mirror_is_current():
+    """highlight_words.json is the single source; the drawer's
+    highlightWords.ts is generated from it. Regenerate with
+    `python scripts/generate_highlight_words.py` when this fails."""
+    import json
+    import sys
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parents[3]
+    sys.path.insert(0, str(repo / "scripts"))
+    from generate_highlight_words import SOURCE, TARGET, render  # noqa: E402
+
+    words = json.loads(SOURCE.read_text(encoding="utf-8"))
+    assert TARGET.read_text(encoding="utf-8") == render(words)
+    # every fragment must compile in Python too (the JS side is checked by tsc)
+    import re
+    for frag in words["risk"] + words["fix"]:
+        re.compile(frag)
