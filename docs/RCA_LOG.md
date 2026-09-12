@@ -630,3 +630,18 @@ keep chronological.)*
   — get one real artefact from the external tool before calling an import
   path done, and pin its schema in a test so version bumps fail loudly.
 
+### 26. Remediation-plan slide printed literal backticks around code (2026-09-12, second prod deck check)
+
+- **Symptom:** After #24, slide 10's "Fix in one line" read
+  "Use `SELECT ... FOR UPDATE` or an atomic `F()` …" with the backticks
+  visible; the XLSX and the rich-text slides show the same text as code
+  without them.
+- **Root cause:** that table cell is written with plain `set_cell`, not
+  the `rich_runs` path that turns backtick spans into blue mono runs, so
+  the LLM's markdown reached the slide verbatim.
+- **Fix:** `report_pptx.py` strips "`" in the one-liner before `set_cell`;
+  `test_codereview_report.py::test_pptx_plan_table_has_no_raw_backticks`.
+- **Prevention:** any plain-text surface fed from LLM markdown needs the
+  same de-markdown step; prefer routing through `rich_runs` when the cell
+  can hold runs.
+

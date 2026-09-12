@@ -604,7 +604,8 @@ def build_pptx_export(review) -> bytes:
         p3 = c2.text_frame.add_paragraph()
         _add_run(p3, _trim((f.get("file") or "").split("/")[-1], 30), 8, False, _BLUE, mono=True)
         set_cell(tbl.cell(ri, 3), hits or "—", color=_MAGENTA if hits else _MUTED, bold=bool(hits), align=PP_ALIGN.CENTER)
-        set_cell(tbl.cell(ri, 4), _first_sentences(f.get("recommendation"), 1, 95))
+        # plain cell (no rich runs) — drop markdown backticks so code reads as prose
+        set_cell(tbl.cell(ri, 4), _first_sentences(f.get("recommendation"), 1, 95).replace("`", ""))
     if not plan:
         tbl.cell(1, 0).text = "Nothing to remediate."
     style_table(tbl, [0.35, 0.80, 2.15, 0.70, 2.30], body_size=8.5, row_h=0.44)

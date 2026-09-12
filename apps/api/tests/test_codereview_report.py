@@ -33,7 +33,7 @@ def _fake_review():
                 "verdict": "TRUE_POSITIVE", "verdict_confidence": 90,
                 "verdict_reason": "reproduced", "description": "Unsanitized query.",
                 "impact": "Full DB read/write.", "exploit_scenario": "Attacker sends `' OR 1=1`.",
-                "preconditions": ["network access"], "recommendation": "Use parameterized queries.",
+                "preconditions": ["network access"], "recommendation": "Use `SELECT ... FOR UPDATE` or parameterized queries.",
                 "code_snippet": "cursor.execute(f\"SELECT * FROM t WHERE id={id}\")",
                 "exploitability_notes": "", "verifier_reasoning": "",
                 "offensive_priority": None, "offensive_reason": "",
@@ -186,3 +186,19 @@ def test_sentences_keep_ellipsis_inside_code():
         "Use `SELECT ... FOR UPDATE` or an atomic `F()` update.",
         "Then add a test.",
     ]
+
+
+def test_pptx_plan_table_has_no_raw_backticks():
+    """Slide 'Remediation Plan' cells are plain text — backticks from the
+    LLM's markdown must be stripped, and the ellipsis sentence kept whole."""
+    from pptx import Presentation
+    import io
+
+    prs = Presentation(io.BytesIO(build_pptx_export(_fake_review())))
+    cells = [
+        c.text for s in prs.slides for sh in s.shapes if sh.has_table
+        for r in sh.table.rows for c in r.cells
+    ]
+    hit = [c for c in cells if "SELECT ... FOR UPDATE" in c]
+    assert hit and all("`" not in c for c in hit)
+
