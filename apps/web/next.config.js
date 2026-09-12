@@ -9,6 +9,9 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
   },
+  async redirects() {
+    return [{ source: '/product', destination: '/product/sow-review', permanent: true }];
+  },
 };
 
 module.exports = nextConfig;

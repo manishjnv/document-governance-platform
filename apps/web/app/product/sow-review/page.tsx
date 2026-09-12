@@ -4,10 +4,10 @@ import { MarketingHeader } from '@/components/MarketingHeader';
 import { MarketingFooter } from '@/components/MarketingFooter';
 
 export const metadata: Metadata = {
-  title: 'Product',
+  title: 'SOW & RFP Review',
   description:
-    'How ScopeWise reviews a SOW or RFP: six specialist AI agents plus a deterministic rule engine, scored and explained.',
-  alternates: { canonical: '/product' },
+    'Six specialist AI reviewers plus a deterministic rule engine score your SOW or RFP, quote the evidence for every finding and verify fixes on re-review.',
+  alternates: { canonical: '/product/sow-review' },
 };
 
 const AGENTS = [
@@ -37,13 +37,72 @@ const AGENTS = [
   },
 ];
 
-export default function ProductPage() {
+const EXTRAS = [
+  {
+    name: 'Projects and rollups',
+    desc: 'Group documents under a project and see risk roll up across versions and vendors.',
+  },
+  {
+    name: 'OCR for scanned documents',
+    desc: "Scanned PDFs are OCR'd before review, so a photographed contract works as well as a native file.",
+  },
+  {
+    name: 'PDF report with audit footer',
+    desc: 'Every exported report carries the review date, model configuration and build identifier in its footer.',
+  },
+  {
+    name: 'Supported formats',
+    desc: 'PDF, DOCX, DOC, XLSX, XLS, CSV.',
+  },
+];
+
+export default function SowReviewProductPage() {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'SoftwareApplication',
+        name: 'ScopeWise SOW & RFP Review',
+        applicationCategory: 'BusinessApplication',
+        operatingSystem: 'Web',
+        url: 'https://scopewise.assessiq.in/product/sow-review',
+        description:
+          'Six specialist AI reviewers plus a deterministic rule engine score your SOW or RFP, quote the evidence for every finding and verify fixes on re-review.',
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: 'https://scopewise.assessiq.in/',
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'SOW & RFP Review',
+            item: 'https://scopewise.assessiq.in/product/sow-review',
+          },
+        ],
+      },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      {/* eslint-disable-next-line react/no-danger */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       <MarketingHeader />
 
       <main className="max-w-4xl mx-auto px-4 py-16">
-        <h1 className="text-3xl md:text-4xl font-bold mb-4">How ScopeWise works</h1>
+        <h1 className="text-3xl md:text-4xl font-bold mb-4">
+          SOW and RFP review with evidence for every finding
+        </h1>
         <p className="text-lg text-muted-foreground mb-12">
           Upload a Statement of Work or RFP. ScopeWise parses it, runs six
           specialist AI agents and a deterministic rule engine against it in
@@ -81,6 +140,32 @@ export default function ProductPage() {
           checkbox.
         </p>
 
+        <h2 className="text-2xl font-bold mb-4">Risk by area, evidence anchored</h2>
+        <p className="text-muted-foreground mb-6">
+          Each review returns an overall risk score and a Risk by Area
+          breakdown across scope, delivery, commercial, security, PMO and
+          legal. Every finding quotes the clause it came from and carries a
+          confidence score; nothing is asserted without a quote.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-6 mb-12">
+          {EXTRAS.map((item) => (
+            <div key={item.name} className="rounded-lg border p-5">
+              <h3 className="font-semibold mb-2">{item.name}</h3>
+              <p className="text-sm text-muted-foreground">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <h2 className="text-2xl font-bold mb-4">Measured on a labeled test set</h2>
+        <p className="text-muted-foreground mb-12">
+          On our labeled SOW test set the pipeline reached 29 of 29
+          ground-truth findings with zero rule-engine false positives
+          (ScopeWise accuracy baseline, July 2026). Severity ratings are
+          assigned by the model and have not yet been validated by an
+          external legal reviewer; ScopeWise is a first-pass triage tool,
+          not legal advice.
+        </p>
+
         <div className="text-center">
           <Link
             href="/login"
@@ -92,6 +177,14 @@ export default function ProductPage() {
             See it applied to{' '}
             <Link href="/use-cases/sow-review" className="underline hover:no-underline">
               SOW review
+            </Link>{' '}
+            or{' '}
+            <Link href="/use-cases/rfp-review" className="underline hover:no-underline">
+              RFP review
+            </Link>
+            . Or check{' '}
+            <Link href="/pricing" className="underline hover:no-underline">
+              pricing
             </Link>
             .
           </p>
