@@ -259,6 +259,12 @@ input from the upload page, without reading VVAH docs.
     kit folder (local only, not in the zip); on a non-zero exit the script
     names the transcript, VVAH's `*_errors.jsonl` traceback and the
     `run_manifest` stage timeline (added 2026-09-12 on user request).
+    Size guard (2026-09-12, after the user scanned a working folder that
+    the estimate reported as 345,453 files / 3.4 GB — `node_modules` and
+    venvs — and sat in S0 for 40 min): after `estimate`, refuse > 20,000
+    code files or > 500 MB with "scan a fresh clone" advice, warn above
+    2,000 files or when dependency/build folders are found. Timing facts
+    for expectations: NodeGoat (63 files) 102 min; floor ≈ 10–15 min.
   - Kit root shows one entry per platform: `setup.cmd` + `scopewise-scan.cmd`
     (Windows), `setup.sh` + `scopewise-scan.sh` (macOS/Linux). The
     PowerShell internals and `KIT_VERSION.json` live under `bin/` (user

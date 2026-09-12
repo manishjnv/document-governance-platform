@@ -55,6 +55,27 @@ mark "estimate: started (no spend)"
 rc=${PIPESTATUS[0]}; [ "$rc" -eq 0 ] || explain_failure "estimate" "$rc"
 mark "estimate: done"
 
+# Size sanity check: a working folder with node_modules / .venv / build output
+# reports hundreds of thousands of "code files" and would run for hours.
+FILES=$(grep -E 'code files\s*:' "$LOG" | tail -n1 | sed 's/.*:\s*//; s/,//g'); FILES=${FILES:-0}
+BYTES=$(grep -E '^\s*bytes\s*:' "$LOG" | tail -n1 | sed 's/.*:\s*//; s/,//g'); BYTES=${BYTES:-0}
+JUNK=$(find "$REPO" -maxdepth 4 -type d \( -name node_modules -o -name .venv -o -name venv -o -name dist -o -name build -o -name .next -o -name __pycache__ -o -name site-packages \) 2>/dev/null | head -n3)
+if [ "$FILES" -gt 20000 ] || [ "$BYTES" -gt 524288000 ]; then
+  mark "refused: $FILES code files / $((BYTES / 1048576)) MB - far too large to be source only"
+  echo
+  echo "  This folder is too large to be just source code ($FILES files, $((BYTES / 1048576)) MB)."
+  [ -n "$JUNK" ] && { echo "  It contains dependency/build folders such as:"; echo "$JUNK" | sed 's/^/    /'; }
+  echo "  Scan a fresh clone instead (source only, no node_modules / .venv / build):"
+  echo "    git clone <repo-url-or-local-path> ~/scans/myrepo"
+  echo "    ./scopewise-scan.sh ~/scans/myrepo"
+  echo "  Rule of thumb: ~60 files take about 100 minutes; 20,000+ files would take days."
+  exit 1
+fi
+if [ "$FILES" -gt 2000 ] || [ -n "$JUNK" ]; then
+  echo
+  echo "  WARNING: $FILES code files${JUNK:+ and dependency/build folders present}. Expect a long run; a fresh git clone scans faster and cheaper."
+fi
+
 read -r -p "Continue with the scan? [y/N] " REPLY
 case "$REPLY" in
   [yY]) ;;

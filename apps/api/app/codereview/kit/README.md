@@ -24,6 +24,13 @@ macOS / Linux:
     ./setup.sh
     ./scopewise-scan.sh /path/to/repo
 
+**Scan a fresh clone, not your working folder.** The scanner reads every file
+under the path, so `node_modules`, `.venv` or build output turn a 25k-line app
+into a multi-hour, hundreds-of-dollars run. `git clone <url> C:\scans\myrepo`
+then scan that. The script refuses folders over 20,000 files / 500 MB and warns
+above 2,000 files. Timing: ~60 source files take about 100 minutes; there is a
+10–15 minute floor even for tiny repos.
+
 The scan script shows a scope/cost estimate first; nothing is spent until you
 answer `y`. Every run writes a timestamped transcript to `logs/scan-<repo>-<time>.log`
 (kept on your machine, never uploaded); if a stage fails the script prints the

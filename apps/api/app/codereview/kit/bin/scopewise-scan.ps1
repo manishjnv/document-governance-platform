@@ -66,6 +66,33 @@ $rc = Run-Logged "`"$Vva`" estimate --repo `"$RepoPath`" --config config.yaml"
 if ($rc -ne 0) { Explain-Failure "estimate" $rc }
 Mark "estimate: done"
 
+# Size sanity check: a working folder with node_modules / .venv / build output
+# reports hundreds of thousands of "code files" and would run for hours.
+$estText = Get-Content $Log -Raw
+$files = 0; $bytes = 0
+if ($estText -match 'code files\s*:\s*([\d,]+)') { $files = [int]($Matches[1] -replace ',', '') }
+if ($estText -match 'bytes\s*:\s*([\d,]+)') { $bytes = [long]($Matches[1] -replace ',', '') }
+$junk = Get-ChildItem -Path $RepoPath -Directory -Recurse -Depth 3 -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -in @('node_modules', '.venv', 'venv', 'dist', 'build', '.next', '__pycache__', 'site-packages') } |
+    Select-Object -First 3 -ExpandProperty FullName
+if ($files -gt 20000 -or $bytes -gt 500MB) {
+    Mark "refused: $files code files / $([math]::Round($bytes / 1MB)) MB - far too large to be source only"
+    Write-Host ""
+    Write-Host "  This folder is too large to be just source code ($files files, $([math]::Round($bytes / 1MB)) MB)." -ForegroundColor Red
+    if ($junk) { Write-Host "  It contains dependency/build folders such as:" -ForegroundColor Yellow; $junk | ForEach-Object { Write-Host "    $_" } }
+    Write-Host "  Scan a fresh clone instead (source only, no node_modules / .venv / build):" -ForegroundColor Yellow
+    Write-Host "    git clone <repo-url-or-local-path> C:\scans\myrepo"
+    Write-Host "    .\scopewise-scan.cmd C:\scans\myrepo"
+    Write-Host "  Rule of thumb: ~60 files take about 100 minutes; 20,000+ files would take days." -ForegroundColor Gray
+    exit 1
+}
+if ($files -gt 2000 -or $junk) {
+    Write-Host ""
+    Write-Host "  WARNING: $files code files" -ForegroundColor Yellow -NoNewline
+    if ($junk) { Write-Host " and dependency/build folders present (e.g. $($junk[0]))" -ForegroundColor Yellow -NoNewline }
+    Write-Host ". Expect a long run; a fresh git clone scans faster and cheaper." -ForegroundColor Yellow
+}
+
 $reply = Read-Host "Continue with the scan? [y/N]"
 if ($reply -notmatch '^[yY]$') {
     Mark "aborted by user before scan"
