@@ -1,0 +1,524 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--paper:#FAF9F6;--card:#FFFFFF;--ink:#14181F;--ink2:#3B4453;--ink3:#5E6877;--line:#E6E3DD;--line2:#D5D1C9;
+--accent:#2457B8;--accent-soft:#E8EFFB;--crit:#A32D25;--crit-soft:#FBE7E4;--high:#9C4A0C;--high-soft:#FCEEDF;
+--med:#705708;--med-soft:#FAF1D2;--low:#2E6A42;--low-soft:#E3F1E7;--info:#1F5C85;--info-soft:#E3EEF7;--ok:#2A6F46;--ok-soft:#E3F1E7;
+--na:#ECE9E3;--violet:#4F3691;--violet-soft:#EFE9FA;--r:8px;--rc:10px;
+--crit-fill:#C0392B;--high-fill:#D97A1F;--med-fill:#D4A72C;--low-fill:#3E8A57;--info-fill:#2E86C1;
+--shadow:0 1px 2px rgba(20,24,31,.05),0 8px 24px -12px rgba(20,24,31,.16);--ease:cubic-bezier(.22,.61,.36,1);--side:224px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 14px/1.5 "IBM Plex Sans","Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}a:hover{color:#1B4494;text-decoration:underline}
+h1,h2,h3,h4{margin:0;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+h1{font-size:24px;line-height:1.2}h2{font-size:18px}h3{font-size:14px}
+p{margin:0}button{font:inherit;color:inherit}
+.mono{font-family:"IBM Plex Mono",Consolas,Menlo,monospace;font-size:12px}
+.num{font-variant-numeric:tabular-nums}
+.sub{color:var(--ink2)}.faint{color:var(--ink3)}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--rc);box-shadow:var(--shadow)}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.card-b{padding:16px}
+.row{display:flex;align-items:center;gap:8px}.row>*{min-width:0}.wrap{flex-wrap:wrap}.between{justify-content:space-between}.grow{flex:1;min-width:0}
+.stack{display:flex;flex-direction:column;gap:8px}
+.grid{display:grid;gap:12px}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}.g5{grid-template-columns:repeat(5,minmax(0,1fr))}.g6{grid-template-columns:repeat(6,minmax(0,1fr))}.g8{grid-template-columns:repeat(8,minmax(0,1fr))}
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 14px;border-radius:var(--r);border:1px solid var(--line2);background:#fff;color:var(--ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .16s var(--ease),border-color .16s,transform .16s var(--ease),opacity .16s}
+.btn:hover{background:#F3F1EC}.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{background:#1E4CA2}
+.btn.danger{background:var(--crit);border-color:var(--crit);color:#fff}.btn.danger:hover{background:#9C2A23}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--ink2)}.btn.ghost:hover{background:#F0EDE7;color:var(--ink)}
+.btn.link{background:transparent;border-color:transparent;color:var(--accent);padding:0;height:auto}.btn.link:hover{text-decoration:underline}
+.btn.sm{height:30px;padding:0 10px;font-size:12px}.btn.lg{height:40px;padding:0 18px}.btn.icon{width:36px;padding:0}.btn.icon.sm{width:30px}
+.btn[disabled],.btn.disabled{opacity:.5;pointer-events:none}
+/* chips */
+.chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;border:1px solid transparent;transition:background .2s,color .2s}
+.chip.crit{background:var(--crit-soft);color:var(--crit)}.chip.high{background:var(--high-soft);color:var(--high)}.chip.med{background:var(--med-soft);color:var(--med)}.chip.low{background:var(--low-soft);color:var(--low)}.chip.info{background:var(--info-soft);color:var(--info)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}.chip.grey{background:var(--na);color:var(--ink2)}.chip.blue{background:var(--accent-soft);color:var(--accent)}.chip.violet{background:var(--violet-soft);color:var(--violet)}
+.chip.outline{background:#fff;border-color:var(--line2);color:var(--ink2);font-weight:500}
+.chip.xs{height:18px;font-size:10.5px;padding:0 6px}
+.dot{width:8px;height:8px;border-radius:999px;display:inline-block;flex:none}
+/* inputs */
+.input,.select,textarea.input{height:36px;padding:0 10px;border:1px solid var(--line2);border-radius:var(--r);background:#fff;color:var(--ink);font:inherit;font-size:13px;outline:none;transition:border-color .16s,box-shadow .16s}
+.input:focus,.select:focus,textarea.input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.input.sm,.select.sm{height:30px;font-size:12px}textarea.input{height:auto;padding:8px 10px}
+.select{padding-right:28px;appearance:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%233B4453' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 8px center}
+.search{position:relative}.search .input{padding-left:30px;width:100%}.search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--ink3);pointer-events:none}
+.label{display:block;font-size:12px;font-weight:500;color:var(--ink2);margin-bottom:4px}
+.req{color:var(--crit)}
+input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent)}
+/* tooltip */
+.tip{position:relative}
+.tip::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 8px);transform:translate(-50%,4px);background:var(--ink);color:#fff;font:400 12px/1.4 "IBM Plex Sans",sans-serif;padding:7px 10px;border-radius:7px;white-space:pre-line;width:max-content;max-width:280px;opacity:0;pointer-events:none;transition:opacity .16s var(--ease),transform .16s var(--ease);z-index:60;text-align:left;font-weight:400;text-transform:none;letter-spacing:0}
+.tip::before{content:"";position:absolute;left:50%;bottom:calc(100% + 3px);transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--ink);opacity:0;transition:opacity .16s;z-index:60}
+.tip:hover::after,.tip:hover::before,.tip:focus-visible::after,.tip:focus-visible::before{opacity:1;transform:translate(-50%,0)}
+.tip.left::after{left:0;transform:translate(0,4px)}.tip.left:hover::after{transform:translate(0,0)}.tip.left::before{left:14px}
+/* kpi */
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--rc);padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0;text-align:left;cursor:default}
+.kpi.click{cursor:pointer;transition:border-color .16s,background .16s}.kpi.click:hover{border-color:var(--accent);background:#FBFBFF}
+.kpi .v{font-size:24px;font-weight:600;letter-spacing:-.02em;line-height:1.1}
+/* tables */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);padding:9px 12px;border-bottom:1px solid var(--line);background:#FBFAF8;white-space:nowrap}
+.tbl th button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:4px;text-transform:inherit;letter-spacing:inherit}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+.tbl tbody tr{transition:background .12s}.tbl tbody tr:hover{background:#F6F4EF}.tbl tbody tr.sel{background:var(--accent-soft)}
+.tbl .r{text-align:right}.tbl tr.band td{background:#F5F3EE;padding:7px 12px}
+.tbl .clickable{cursor:pointer}
+/* div tables (loop-safe; rows become cards on phones) */
+.dt{border:1px solid var(--line);border-radius:var(--rc);background:#fff;overflow:hidden}
+.dt .dr{display:grid;align-items:center;gap:12px;padding:0 12px;border-bottom:1px solid var(--line);min-height:44px;font-size:13px}
+.dt .dr:last-child{border-bottom:0}.dt .dc{min-width:0}
+.dt .dh{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);background:#FBFAF8;min-height:36px}
+.dt .dh button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:4px;text-transform:inherit;letter-spacing:inherit}
+.dt .dr:not(.dh):not(.band):hover{background:#F6F4EF}.dt .dr.sel{background:var(--accent-soft)}
+.dt .band{background:#F5F3EE;min-height:38px}.dt .child{background:#FCFBF9}
+.dt .r{text-align:right;justify-self:end}.dt .link{cursor:pointer}
+.dt .acts{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:12.5px;justify-content:flex-end}
+.dt .acts a,.dt .acts button.lnk{background:none;border:0;padding:0;font:inherit;font-size:12.5px;color:var(--accent);cursor:pointer}
+.dt .acts button.lnk.danger{color:var(--crit)}
+/* tabs */
+.tabs{display:flex;gap:20px;border-bottom:1px solid var(--line);align-items:flex-end}
+.tab{background:none;border:0;padding:0 2px 10px;font-size:13px;font-weight:500;color:var(--ink2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .16s,border-color .16s}
+.tab:hover{color:var(--ink)}.tab.on{color:var(--ink);font-weight:600;border-color:var(--accent)}
+.seg{display:inline-flex;gap:2px;padding:3px;background:var(--na);border-radius:7px}
+.seg button{border:0;background:transparent;padding:0 10px;height:28px;border-radius:5px;font-size:12.5px;font-weight:500;color:var(--ink2);cursor:pointer;transition:background .16s,color .16s}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(20,24,31,.14)}
+.pillbar{display:flex;flex-wrap:wrap;gap:6px}
+.pillbar .chip{cursor:pointer;opacity:.75}.pillbar .chip:hover{opacity:1}.pillbar .chip.on{opacity:1;box-shadow:0 0 0 2px var(--accent-soft);border-color:var(--accent)}
+/* sheets / dialogs / menus */
+.ov{position:fixed;inset:0;background:rgba(20,24,31,.35);z-index:40;transition:opacity .25s var(--ease)}
+.sheet{position:fixed;top:0;right:0;height:100%;background:#fff;box-shadow:-12px 0 40px -20px rgba(20,24,31,.35);z-index:41;display:flex;flex-direction:column;transition:transform .32s var(--ease);max-width:100vw}
+.sheet-h{padding:16px 20px 12px 24px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:10px}
+.sheet-b{padding:16px 20px 16px 24px;overflow-y:auto;flex:1}
+.sheet-f{position:sticky;bottom:0;padding:10px 20px;border-top:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.grip{position:absolute;left:0;top:0;height:100%;width:12px;cursor:ew-resize;touch-action:none;display:flex;align-items:center;justify-content:center}
+.grip i{width:4px;height:40px;border-radius:999px;background:var(--line2);transition:background .16s}.grip:hover i,.grip:focus-visible i{background:var(--accent)}
+.grip:focus-visible{outline:none}
+.xbtn{background:none;border:0;padding:4px;border-radius:6px;color:var(--ink3);cursor:pointer;display:inline-flex}.xbtn:hover{background:#F0EDE7;color:var(--ink)}
+.dlg-ov{position:fixed;inset:0;background:rgba(20,24,31,.45);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;transition:opacity .2s var(--ease)}
+.dlg{background:#fff;border-radius:12px;box-shadow:0 24px 60px -20px rgba(20,24,31,.4);width:100%;max-width:480px;transition:transform .22s var(--ease),opacity .22s;position:relative}
+.dlg-h{padding:18px 20px 6px}.dlg-b{padding:8px 20px 16px;color:var(--ink2);font-size:13.5px}.dlg-f{padding:12px 20px 18px;display:flex;justify-content:flex-end;gap:8px}
+.menu{position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);min-width:160px;padding:4px;z-index:30;display:none}
+.menu.open{display:block}.menu button{display:flex;width:100%;text-align:left;background:none;border:0;padding:8px 10px;border-radius:6px;font-size:13px;cursor:pointer;color:var(--ink);align-items:center;gap:8px}
+.menu button:hover{background:#F3F1EC}.menu button.danger{color:var(--crit)}
+.rel{position:relative}
+/* alerts, states */
+.alert{border-radius:var(--r);padding:12px 14px;font-size:13px;border:1px solid}
+.alert.err{background:var(--crit-soft);border-color:#F1C5BF;color:#8A2A23}
+.alert.warn{background:#FFF8E6;border-color:#F0DFA8;color:#6B5407}
+.alert.ok{background:var(--ok-soft);border-color:#BFE1CB;color:#256A40}
+.alert.info{background:var(--info-soft);border-color:#C6DBEA;color:#1F4E6E}
+.alert.blue{background:var(--accent-soft);border-color:#C9D9F5;color:#1F3F80}
+.err-line{font-size:12px;color:var(--crit)}
+.empty{border:1px dashed var(--line2);border-radius:var(--rc);padding:36px 20px;text-align:center;color:var(--ink2);background:#FCFBF9}
+.empty h3{margin-bottom:6px}
+.skel{background:linear-gradient(90deg,#EFECE6 25%,#F7F5F1 50%,#EFECE6 75%);background-size:400% 100%;animation:sh 1.3s ease infinite;border-radius:6px}
+@keyframes sh{0%{background-position:100% 0}100%{background-position:0 0}}
+.spin{animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+.rise{animation:rise .45s var(--ease) both}@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.drop{border:2px dashed var(--line2);border-radius:var(--rc);padding:26px 16px;text-align:center;cursor:pointer;transition:border-color .16s,background .16s;color:var(--ink2)}
+.drop:hover{background:#F6F4EF}.drop.on{border-color:var(--accent);background:var(--accent-soft)}
+.filerow{display:flex;align-items:center;gap:8px;border:1px solid #BFE1CB;background:var(--ok-soft);color:#256A40;border-radius:var(--r);padding:8px 10px;font-size:13px}
+.bar{height:6px;border-radius:999px;background:var(--na);overflow:hidden}.bar i{display:block;height:100%;border-radius:999px;transition:width .5s var(--ease)}
+.code{font-family:"IBM Plex Mono",Consolas,monospace;font-size:12px;background:#F5F3EE;border:1px solid var(--line);border-radius:6px;padding:1px 5px;color:var(--ink)}
+pre.block{font-family:"IBM Plex Mono",Consolas,monospace;font-size:12px;background:#F5F3EE;border:1px solid var(--line);border-radius:8px;padding:10px 12px;overflow:auto;margin:0;color:var(--ink);line-height:1.55}
+.kbd{font:500 11px "IBM Plex Mono",monospace;border:1px solid var(--line2);border-radius:5px;padding:1px 5px;color:var(--ink3);background:#fff}
+.hr{border:0;border-top:1px solid var(--line);margin:0}
+/* shell */
+.app{min-height:100vh;display:flex;background:var(--paper)}
+.side{position:fixed;inset:0 auto 0 0;width:var(--side);border-right:1px solid var(--line);background:#fff;display:flex;flex-direction:column;padding:14px 10px;z-index:20;transition:width .18s var(--ease)}
+.side .brand{display:flex;align-items:center;gap:10px;padding:4px 8px;min-width:0}
+.side .tag{padding:2px 8px 14px;font-size:11.5px;color:var(--ink3);white-space:nowrap;overflow:hidden}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;font-size:13.5px;font-weight:500;color:var(--ink2);white-space:nowrap;overflow:hidden;transition:background .16s,color .16s}
+.nav a:hover{background:#F3F1EC;color:var(--ink);text-decoration:none}.nav a.on{background:var(--accent);color:#fff}
+.nav a svg{flex:none}
+.side .foot{margin-top:auto}
+.side .tog{position:absolute;right:-14px;top:30px;width:28px;height:28px;border-radius:999px;border:2px solid var(--paper);background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow)}
+.side .sgrip{position:absolute;right:0;top:0;height:100%;width:6px;cursor:col-resize;touch-action:none}.side .sgrip:hover{background:var(--accent-soft)}
+.side.c .tag,.side.c .nav a span,.side.c .brand span,.side.c .foot span{display:none}.side.c .nav a{justify-content:center;padding:8px 0}.side.c .foot .btn{justify-content:center;padding:0}
+.topbar{display:none;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:20}
+.msheet{position:fixed;inset:0 auto 0 0;width:256px;background:#fff;z-index:45;padding:16px 12px;display:flex;flex-direction:column;transition:transform .28s var(--ease);box-shadow:12px 0 40px -20px rgba(20,24,31,.35)}
+.main{flex:1;min-width:0;padding-left:var(--side);transition:padding-left .18s var(--ease)}
+.page{max-width:1240px;margin:0 auto;padding:24px 28px 48px}.page.wide{max-width:none}
+.pagehead{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.pagehead .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.appbar{position:fixed;left:0;right:0;top:0;z-index:70;background:var(--accent);color:#fff;padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:13px}
+.install{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:400px;background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:8px 8px 8px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;z-index:70}
+@media (max-width:760px){
+ .app{flex-direction:column}.side{display:none}.topbar{display:flex;width:100%}.main{padding-left:0;width:100%}.page{padding:16px 16px 40px}
+ .g2,.g3{grid-template-columns:minmax(0,1fr)}.g4,.g5,.g6,.g8{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .chip{white-space:normal;height:auto;min-height:22px;padding:2px 8px}
+ .tbl.cards thead{display:none}.tbl.cards tr{display:block;border:1px solid var(--line);border-radius:var(--r);margin-bottom:8px;background:#fff;padding:4px 0}
+ .tbl.cards td{display:flex;justify-content:space-between;align-items:center;gap:12px;border:0;padding:6px 12px;text-align:left}
+ .tbl.cards td::before{content:attr(data-th);font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);flex:none}
+ .tbl.cards td.r{text-align:right}.tbl.cards tr.band td::before{content:none}
+ .dt .dr{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:10px 12px}.dt .dh{display:none}
+ .dt .dc{display:flex;justify-content:space-between;align-items:center;gap:12px}.dt .dc::before{content:attr(data-th);font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);flex:none}
+ .dt .dc.nolbl::before,.dt .band .dc::before{content:none}.dt .r{justify-self:auto}.dt .acts{justify-content:flex-start}
+ .kpi .v{font-size:20px}.sheet{width:100vw !important}.pagehead .actions{width:100%}
+ .tip::after{display:none}
+}
+</style>
+</helmet>
+
+<div class="app" style="--side:{{shell.sideW}}" data-screen="MitreNew" data-ready="{{ready}}" onClick="{{root}}">
+  <aside class="side {{shell.cls}}" aria-label="Sidebar">
+    <div class="brand"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg><span style="font-weight:600;font-size:14px">ScopeWise</span></div>
+    <div class="tag">Catch contract risk before you sign.</div>
+    <nav class="nav" aria-label="Main"><a href="#" class="" title="SOW Review"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span>SOW Review</span></a><a href="#" class="on" title="MITRE Assessment"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg><span>MITRE Assessment</span></a><a href="#" class="" title="Code Security Review"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l1.5 2M16 2l-1.5 2"/><rect x="6" y="6" width="12" height="14" rx="6"/><path d="M12 6v14M2 13h4M18 13h4M3 20l3-2M21 20l-3-2M3 6l3 2M21 6l-3 2"/></svg><span>Code Security Review</span></a><sc-if value="{{shell.admin}}" hint-placeholder-val="{{true}}"><a href="#" class=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path d="M9 12l2 2 4-4"/></svg><span>Admin</span></a></sc-if></nav>
+    <div class="foot"><button class="btn ghost sm" style="width:100%;justify-content:flex-start"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M13 3h6v18h-6"/></svg><span>Log out</span></button></div>
+    <button class="tog" aria-label="{{shell.togLabel}}" onClick="{{shell.toggle}}"><sc-if value="{{shell.collapsed}}" hint-placeholder-val="{{false}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></sc-if><sc-if value="{{shell.expanded}}" hint-placeholder-val="{{true}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></sc-if></button>
+    <sc-if value="{{shell.expanded}}" hint-placeholder-val="{{true}}"><div class="sgrip" role="separator" aria-orientation="vertical" aria-label="Resize sidebar" onPointerDown="{{shell.gDown}}" onPointerMove="{{shell.gMove}}" onPointerUp="{{shell.gUp}}"></div></sc-if>
+  </aside>
+  <div class="topbar"><div class="brand"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg><span style="font-weight:600;font-size:14px">ScopeWise</span></div><button class="btn ghost icon sm" aria-label="Open navigation menu" onClick="{{shell.openMobile}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>
+  <div class="ov" style="opacity:{{shell.mOvOp}};pointer-events:{{shell.mPe}};z-index:44" onClick="{{shell.closeMobile}}"></div>
+  <div class="msheet" style="transform:{{shell.mTx}}" aria-label="Navigation">
+    <div class="row between" style="margin-bottom:14px"><div class="brand"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg><span style="font-weight:600;font-size:14px">ScopeWise</span></div><button class="xbtn" aria-label="Close" onClick="{{shell.closeMobile}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <nav class="nav" aria-label="Main"><a href="#" class=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span>SOW Review</span></a><a href="#" class="on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg><span>MITRE Assessment</span></a><a href="#" class=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l1.5 2M16 2l-1.5 2"/><rect x="6" y="6" width="12" height="14" rx="6"/><path d="M12 6v14M2 13h4M18 13h4M3 20l3-2M21 20l-3-2M3 6l3 2M21 6l-3 2"/></svg><span>Code Security Review</span></a><sc-if value="{{shell.admin}}" hint-placeholder-val="{{true}}"><a href="#" class=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path d="M9 12l2 2 4-4"/></svg><span>Admin</span></a></sc-if></nav>
+    <div class="foot" style="margin-top:auto"><button class="btn ghost sm" style="width:100%;justify-content:flex-start"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M13 3h6v18h-6"/></svg><span>Log out</span></button></div>
+  </div>
+  <main class="main"><div class="page">
+<div class="pagehead"><div class="row" style="gap:8px"><span style="color:var(--accent)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span><h1>New MITRE Assessment</h1></div></div>
+<div style="margin-bottom:14px"><div class="alert info row" role="alert" style="align-items:flex-start;gap:10px"><div class="grow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--info)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path d="M9 12l2 2 4-4"/></svg> We never ask for credentials, raw log data, or personal data — upload rule metadata and environment inventory only. Files are stored encrypted; only minimal rule excerpts are sent for AI tagging.</div></div></div>
+<sc-if value="{{stageForm}}" hint-placeholder-val="{{true}}">
+<div class="tabs" role="tablist" aria-label="Rule source"><button role="tab" class="tab {{src.file.cls}}" aria-selected="{{src.file.aria}}" onClick="{{src.file.pick}}">Upload a file</button><button role="tab" class="tab {{src.sentinel.cls}}" aria-selected="{{src.sentinel.aria}}" onClick="{{src.sentinel.pick}}">Pull from Microsoft Sentinel</button><button role="tab" class="tab {{src.splunk.cls}}" aria-selected="{{src.splunk.aria}}" onClick="{{src.splunk.pick}}">Pull from Splunk</button></div>
+<sc-if value="{{src.file.on}}" hint-placeholder-val="{{true}}">
+<div class="card rise" style="margin-top:12px"><div class="card-h"><h2 style="font-size:15px">Your files</h2></div>
+<div class="card-b">
+<div class="grid g2" style="gap:14px">
+ <div><label class="label">Detection rules export <span class="req">*</span></label><div class="drop {{drop.rules.cls}}" role="button" tabindex="0" aria-label="Detection rules export: choose a file or drag it here" onClick="{{drop.rules.pick}}" onDragOver="{{drop.rules.over}}" onDragLeave="{{drop.rules.leave}}" onDrop="{{drop.rules.pick}}">
+  <div style="display:flex;justify-content:center;margin-bottom:8px;color:var(--ink3)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V11M8 15l4-4 4 4"/><path d="M20 17a4 4 0 0 0-1-7.9A6 6 0 0 0 7.5 7.5 4.5 4.5 0 0 0 5 16"/></svg></div>
+  <div style="font-weight:600;color:var(--ink)">Drag &amp; drop or click to select</div><div class="sub" style="font-size:12.5px;margin-top:2px">xlsx, xls, csv, pdf or docx · up to 50MB</div></div>
+   <sc-if value="{{drop.rules.has}}" hint-placeholder-val="{{false}}"><div style="margin-top:8px"><div class="filerow"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M12 13v4"/></svg><span class="grow" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{drop.rules.file}}</span><span class="num faint" style="color:#256A40">{{drop.rules.size}}</span><button class="xbtn" aria-label="{{drop.rules.removeAria}}" onClick="{{drop.rules.clear}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div></div></sc-if></div>
+ <div><label class="label">Environment workbook (recommended)</label><div class="drop {{drop.env.cls}}" role="button" tabindex="0" aria-label="Environment workbook (recommended): choose a file or drag it here" onClick="{{drop.env.pick}}" onDragOver="{{drop.env.over}}" onDragLeave="{{drop.env.leave}}" onDrop="{{drop.env.pick}}">
+  <div style="display:flex;justify-content:center;margin-bottom:8px;color:var(--ink3)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V11M8 15l4-4 4 4"/><path d="M20 17a4 4 0 0 0-1-7.9A6 6 0 0 0 7.5 7.5 4.5 4.5 0 0 0 5 16"/></svg></div>
+  <div style="font-weight:600;color:var(--ink)">Drag &amp; drop or click to select</div><div class="sub" style="font-size:12.5px;margin-top:2px">xlsx with Assets, Log Sources, Tooling, Crown Jewels sheets</div></div>
+   <sc-if value="{{drop.env.has}}" hint-placeholder-val="{{true}}"><div style="margin-top:8px"><div class="filerow"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M12 13v4"/></svg><span class="grow" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{drop.env.file}}</span><span class="num faint" style="color:#256A40">{{drop.env.size}}</span><button class="xbtn" aria-label="{{drop.env.removeAria}}" onClick="{{drop.env.clear}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div></div></sc-if></div>
+</div>
+<p class="faint" style="font-size:12px;margin-top:12px">If one device sends more than one kind of log, list each log type as its own row in Log Sources — "Infoblox - DNS logs" and "Infoblox - SSH logs" — so each stream gets credited separately.</p>
+<div class="row wrap" style="gap:18px;margin-top:10px"><button class="btn link sm" ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M6 11l6 6 6-6"/><path d="M4 21h16"/></svg> Use-case template</button><button class="btn link sm" ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M6 11l6 6 6-6"/><path d="M4 21h16"/></svg> Environment template</button></div>
+<p class="faint" style="font-size:12px;margin-top:8px">Without the environment workbook we assess the full ATT&CK matrices, so your score reads lower than reality.</p>
+</div></div></sc-if><sc-if value="{{src.sentinel.on}}" hint-placeholder-val="{{true}}">
+<div class="card rise" style="margin-top:12px"><div class="card-h"><h2 style="font-size:15px">Microsoft Sentinel connection</h2></div>
+<div class="card-b">
+<p class="sub" style="font-size:12.5px;margin-bottom:12px">Read-only pull of your analytics rules via a service principal with the Microsoft Sentinel Reader role. The client secret is used once for this pull and is never stored.</p>
+<div class="grid g2" style="gap:10px">
+ <div><label class="label">Tenant ID (GUID)</label><input class="input" style="width:100%" value="{{form.tenantId}}" onChange="{{setTenantId}}"></div>
+ <div><label class="label">Client ID (GUID)</label><input class="input" style="width:100%" value="{{form.clientId}}" onChange="{{setClientId}}"></div>
+ <div><label class="label">Subscription ID (GUID)</label><input class="input" style="width:100%" value="{{form.subId}}" onChange="{{setSubId}}"></div>
+ <div><label class="label">Resource group</label><input class="input" style="width:100%" value="{{form.resourceGroup}}" onChange="{{setResourceGroup}}"></div>
+ <div><label class="label">Log Analytics workspace</label><input class="input" style="width:100%" value="{{form.workspace}}" onChange="{{setWorkspace}}"></div>
+ <div><label class="label">Client secret (never stored)</label><input class="input" type="password" style="width:100%" value="{{form.secret}}" onChange="{{setSecret}}"></div>
+</div>
+<p class="faint" style="font-size:12px;margin-top:10px">This path doesn't take an environment workbook yet, so the whole ATT&CK matrix set is assessed — the score reads lower than reality.</p>
+</div></div></sc-if><sc-if value="{{src.splunk.on}}" hint-placeholder-val="{{true}}">
+<div class="card rise" style="margin-top:12px"><div class="card-h"><h2 style="font-size:15px">Splunk connection</h2></div>
+<div class="card-b">
+<p class="sub" style="font-size:12.5px;margin-bottom:12px">Read-only pull of your saved searches via the Splunk REST API. The management port (usually 8089) must be reachable from ScopeWise — for Splunk Cloud that means allowlisting our IP on the stack. The auth token is used once for this pull and is never stored.</p>
+<div class="grid g2" style="gap:10px">
+ <div><label class="label">Host</label><input class="input" style="width:100%" placeholder="e.g. acme.splunkcloud.com" value="{{form.host}}" onChange="{{setHost}}"></div>
+ <div><label class="label">Management port</label><input class="input" style="width:100%" placeholder="8089" value="{{form.port}}" onChange="{{setPort}}"></div>
+ <div><label class="label">App</label><input class="input" style="width:100%" placeholder="optional — all apps if empty" value="{{form.app}}" onChange="{{setApp}}"></div>
+ <div><label class="label">Auth token (never stored)</label><input class="input" type="password" style="width:100%" value="{{form.token}}" onChange="{{setToken}}"></div>
+</div>
+</div></div></sc-if>
+
+<div class="card rise" style="margin-top:12px"><div class="card-h"><h2 style="font-size:15px">About this assessment</h2></div>
+<div class="card-b">
+<div class="grid g2" style="gap:12px">
+ <div><label class="label">Assessment name</label><input class="input" style="width:100%" placeholder="e.g. Q3 SOC coverage" value="{{form.name}}" onChange="{{setName}}"></div>
+ <div><label class="label">Industry</label><select class="select" style="width:100%" value="{{form.industry}}" onChange="{{setIndustry}}"><option value="" disabled>Select…</option><option>Financial Services</option><option>Banking</option><option>Insurance</option><option>Healthcare</option><option>Manufacturing</option><option>Energy &amp; Utilities</option><option>Technology</option><option>Telecommunications</option><option>Retail &amp; E-commerce</option><option>Government &amp; Public Sector</option><option>Education</option><option>Transportation &amp; Logistics</option><option>Media &amp; Entertainment</option><option>Professional Services</option><option>Hospitality &amp; Food Service</option><option>Pharmaceuticals &amp; Life Sciences</option><option>Agriculture &amp; Food Production</option><option>Mining &amp; Metals</option><option>Aerospace &amp; Defense</option><option>Construction &amp; Engineering</option><option>Maritime &amp; Shipping</option><option>Other</option></select></div>
+ <div><label class="label">Region</label><input class="input" list="mitre-new-region" style="width:100%" placeholder="e.g. North America" value="{{form.region}}" onChange="{{setRegion}}"><datalist id="mitre-new-region"><option value="North America"></option><option value="Europe"></option><option value="Asia-Pacific"></option><option value="Middle East &amp; Africa"></option><option value="Latin America"></option><option value="United Kingdom"></option><option value="India"></option><option value="Global"></option></datalist></div>
+ <div><label class="label">Customer / engagement <span class="faint" style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+   <sc-if value="{{isSiem}}" hint-placeholder-val="{{false}}"><div class="input" style="width:100%;height:auto;min-height:36px;border-style:dashed;display:flex;align-items:center;color:var(--ink3);background:#FCFBF9">Auto-set from your SIEM connection so scheduled re-runs group correctly.</div></sc-if>
+   <sc-if value="{{isFile}}" hint-placeholder-val="{{true}}"><input class="input" style="width:100%" placeholder="e.g. Acme Corp" value="{{form.customer}}" onChange="{{setCustomer}}"></sc-if>
+   <p class="faint" style="font-size:11.5px;margin-top:4px">Compares this run's trend only against the same customer's previous runs.</p>
+ </div>
+ <div><label class="label">Organization / project</label><input class="input" style="width:100%" placeholder="e.g. Contoso Bank SOC" value="{{form.org}}" onChange="{{setOrg}}"></div>
+ <div><label class="label">Department or scope</label><input class="input" style="width:100%" placeholder="e.g. EMEA production estate" value="{{form.dept}}" onChange="{{setDept}}"></div>
+ <div><label class="label">Prepared by</label><input class="input" style="width:100%" placeholder="e.g. Jane Doe, Security Engineering" value="{{form.preparedBy}}" onChange="{{setPreparedBy}}"></div>
+ <div style="grid-column:1/-1"><label class="label">Purpose</label><textarea class="input" rows="2" style="width:100%" placeholder="e.g. Annual detection-coverage review for the audit committee" value="{{form.purpose}}" onChange="{{setPurpose}}"></textarea></div>
+</div>
+</div></div>
+
+<div class="card rise" style="margin-top:12px"><div class="card-h"><h2 style="font-size:15px">Threat actors of concern (optional)</h2></div>
+<div class="card-b">
+<p class="sub" style="font-size:12.5px;margin-bottom:10px">Pick any groups you track or worry about — gaps in techniques they use will be prioritized in your roadmap. This never changes your coverage score, only the ordering.</p>
+<div class="pillbar"><sc-for list="{{actorList}}" as="a" hint-placeholder-count="8"><span class="{{a.cls}}" role="button" tabindex="0" aria-pressed="{{a.aria}}" onClick="{{a.toggle}}">{{a.label}}</span></sc-for></div>
+<hr class="hr" style="margin:16px 0">
+<label class="row" style="gap:8px;font-size:13px"><input type="checkbox" checked="{{countDisabled}}" onChange="{{toggleCountDisabled}}"> Count disabled rules as coverage</label>
+<p class="faint" style="font-size:12px;margin-top:4px;margin-left:23px">Off (recommended): a disabled rule scores as "partial" at best, since it isn't actually alerting today.</p>
+</div></div>
+
+<div class="card rise" style="margin-top:12px"><div class="card-h"><h2 style="font-size:15px">Scope exclusions</h2></div>
+<div class="card-b">
+<p class="sub" style="font-size:12.5px;margin-bottom:10px">Tell us what NOT to assess and why — e.g. "mobile: BYOD fleet is unmanaged", "T1200: accepted risk, physical controls". Excluded items leave the score entirely, and the report lists them with your reason.</p>
+<sc-for list="{{exclusions}}" as="x" hint-placeholder-count="1"><div class="grid g2" style="gap:8px;margin-bottom:8px">
+  <input class="input" style="width:100%" placeholder="T1200, mobile, or a platform (e.g. macOS)" aria-label="{{x.targetAria}}" value="{{x.target}}" onChange="{{x.setTarget}}">
+  <div class="row" style="gap:8px">
+    <input class="input grow" placeholder="Why it's out of scope (required)" value="{{x.reason}}" onChange="{{x.setReason}}">
+    <button class="xbtn" aria-label="{{x.removeAria}}" onClick="{{x.remove}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v7M14 10v7"/></svg></button>
+  </div>
+</div></sc-for>
+<button class="btn sm" aria-label="Add exclusion" onClick="{{addExclusion}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add exclusion</button>
+</div></div>
+
+<sc-if value="{{is.error}}" hint-placeholder-val="{{false}}"><div style="margin-top:12px"><div class="alert err row" role="alert" style="align-items:flex-start;gap:10px"><div class="grow">{{bannerMsg}}</div></div></div></sc-if>
+<div style="margin-top:14px"><button class="btn primary {{submitCls}}" style="width:100%;height:40px" aria-disabled="{{submitAria}}" onClick="{{submitForm}}">{{submitLabel}}</button></div>
+</sc-if>
+<sc-if value="{{stagePreview}}" hint-placeholder-val="{{false}}">
+<div class="card rise" style="margin-top:12px"><div class="card-h"><h2 style="font-size:15px">Parse preview — check before running</h2></div>
+<div class="card-b">
+<div class="grid g4"><button class="kpi click tip" data-tip="Click to see these rows" aria-label="Rule(s) found — click to see these rows" onClick="{{tiles.openAll}}"><span class="lbl">rule(s) found</span><span class="v num" style="color:var(--ink)">{{tiles.nTotal}}</span><span class="faint" style="font-size:12px">parsed from your file</span></button><button class="kpi click tip" data-tip="Click to see these rows" aria-label="Already tagged — click to see these rows" onClick="{{tiles.openTagged}}"><span class="lbl">already tagged</span><span class="v num" style="color:var(--ok)">{{tiles.nTagged}}</span><span class="faint" style="font-size:12px">ready to use</span></button><button class="kpi click tip" data-tip="Click to see these rows" aria-label="For AI tagging — click to see these rows" onClick="{{tiles.openUntagged}}"><span class="lbl">for AI tagging</span><span class="v num" style="color:var(--med)">{{tiles.nUntagged}}</span><span class="faint" style="font-size:12px">no technique yet</span></button><button class="kpi click tip" data-tip="Click to see these rows" aria-label="Invalid tag(s) — click to see these rows" onClick="{{tiles.openInvalid}}"><span class="lbl">invalid tag(s)</span><span class="v num" style="color:var(--crit)">{{tiles.nInvalid}}</span><span class="faint" style="font-size:12px">couldn't be parsed</span></button></div>
+<sc-if value="{{isPdf}}" hint-placeholder-val="{{false}}"><div style="margin-top:12px"><div class="alert warn row" role="alert" style="align-items:flex-start;gap:10px"><div class="grow">Your document isn't a spreadsheet, so rules will be AI-extracted from its text when the assessment runs — lower fidelity than the XLSX template.</div></div></div></sc-if>
+
+<div style="margin-top:14px"><span class="lbl">Detected columns (sheet "Use Cases")</span>
+<div class="row wrap" style="gap:6px;margin-top:6px"><span class="chip outline" >Use-case name: column 1</span><span class="chip outline" >MITRE techniques: column 3</span><span class="chip outline" >Detection logic: column 2</span><span class="chip outline" >Description: column 4</span><span class="chip outline" >Log source: column 5</span><span class="chip outline" >Status: column 6</span><button class="btn ghost sm tip" data-tip="Columns can only be adjusted before the assessment runs." aria-label="Adjust columns" onClick="{{toggleWizard}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></svg> Adjust columns</button></div></div>
+
+<sc-if value="{{colmapOpen}}" hint-placeholder-val="{{false}}">
+<div class="card" style="margin-top:12px;background:#FBFAF8;box-shadow:none">
+<div class="card-b">
+<p class="sub" style="font-size:12.5px;margin-bottom:10px">Map each field to the right column of your file, then apply — we re-read the uploaded file with your mapping. Only the name column is required.</p>
+<div class="grid g3" style="gap:10px"><div><label class="label">Use-case name <span class="req">*</span></label><select class="select" style="width:100%" value="{{colmap.name}}" onChange="{{setColName}}"><option value="">— not mapped —</option><option value="1">1: Use Case Name</option><option value="2">2: Rule Logic</option><option value="3">3: MITRE Technique(s)</option><option value="4">4: Description</option><option value="5">5: Log Source</option><option value="6">6: Status</option></select></div><div><label class="label">MITRE techniques</label><select class="select" style="width:100%" value="{{colmap.techniques}}" onChange="{{setColTech}}"><option value="">— not mapped —</option><option value="1">1: Use Case Name</option><option value="2">2: Rule Logic</option><option value="3">3: MITRE Technique(s)</option><option value="4">4: Description</option><option value="5">5: Log Source</option><option value="6">6: Status</option></select></div><div><label class="label">Detection logic</label><select class="select" style="width:100%" value="{{colmap.logic}}" onChange="{{setColLogic}}"><option value="">— not mapped —</option><option value="1">1: Use Case Name</option><option value="2">2: Rule Logic</option><option value="3">3: MITRE Technique(s)</option><option value="4">4: Description</option><option value="5">5: Log Source</option><option value="6">6: Status</option></select></div><div><label class="label">Description</label><select class="select" style="width:100%" value="{{colmap.description}}" onChange="{{setColDesc}}"><option value="">— not mapped —</option><option value="1">1: Use Case Name</option><option value="2">2: Rule Logic</option><option value="3">3: MITRE Technique(s)</option><option value="4">4: Description</option><option value="5">5: Log Source</option><option value="6">6: Status</option></select></div><div><label class="label">Log source</label><select class="select" style="width:100%" value="{{colmap.logsource}}" onChange="{{setColLogsrc}}"><option value="">— not mapped —</option><option value="1">1: Use Case Name</option><option value="2">2: Rule Logic</option><option value="3">3: MITRE Technique(s)</option><option value="4">4: Description</option><option value="5">5: Log Source</option><option value="6">6: Status</option></select></div><div><label class="label">Status</label><select class="select" style="width:100%" value="{{colmap.status}}" onChange="{{setColStatus}}"><option value="">— not mapped —</option><option value="1">1: Use Case Name</option><option value="2">2: Rule Logic</option><option value="3">3: MITRE Technique(s)</option><option value="4">4: Description</option><option value="5">5: Log Source</option><option value="6">6: Status</option></select></div></div>
+<div class="dt" style="margin:12px 0"><div class="dr dh" style="grid-template-columns:repeat(6,minmax(0,1fr))"><div class="dc">Use Case Name</div><div class="dc">Rule Logic</div><div class="dc">MITRE Technique(s)</div><div class="dc">Description</div><div class="dc">Log Source</div><div class="dc">Status</div></div><div class="dr" style="grid-template-columns:repeat(6,minmax(0,1fr))"><div class="dc" data-th="Use Case Name" >Impossible travel sign-in</div><div class="dc" data-th="Rule Logic" >distance(loc1,loc2)/time &gt; threshold</div><div class="dc" data-th="MITRE Technique(s)" >T1078.004</div><div class="dc" data-th="Description" >Detects sign-ins from geographically impossible locations for the same account</div><div class="dc" data-th="Log Source" >Entra sign-in logs</div><div class="dc" data-th="Status" >Enabled</div></div><div class="dr" style="grid-template-columns:repeat(6,minmax(0,1fr))"><div class="dc" data-th="Use Case Name" >Suspicious PowerShell EncodedCommand</div><div class="dc" data-th="Rule Logic" >cmdline contains '-enc'</div><div class="dc" data-th="MITRE Technique(s)" >T1059.001</div><div class="dc" data-th="Description" >Flags obfuscated PowerShell execution</div><div class="dc" data-th="Log Source" >Windows process creation (Sysmon 1)</div><div class="dc" data-th="Status" >Enabled</div></div><div class="dr" style="grid-template-columns:repeat(6,minmax(0,1fr))"><div class="dc" data-th="Use Case Name" >Legacy VPN brute force</div><div class="dc" data-th="Rule Logic" >auth_failures &gt; 10 in 5m</div><div class="dc" data-th="MITRE Technique(s)" >T1110</div><div class="dc" data-th="Description" >Repeated failed VPN logins</div><div class="dc" data-th="Log Source" >VPN gateway logs</div><div class="dc" data-th="Status" >Disabled</div></div></div>
+<div class="row" style="gap:8px;margin-top:10px"><button class="btn primary sm" onClick="{{applyMapping}}">{{applyLabel}}</button><button class="btn sm" onClick="{{cancelWizard}}">Cancel</button></div>
+</div></div></sc-if>
+
+<sc-if value="{{envPresent}}" hint-placeholder-val="{{true}}"><p class="sub" style="font-size:12.5px;margin-top:14px">Environment: Windows, Linux, ESXi, IaaS, Containers, Office Suite, Identity Provider, Network Devices, Android, iOS, macOS, SaaS · OT/ICS assets · managed mobile · sheets: Assets, Log Sources, Tooling, Crown Jewels</p></sc-if>
+<sc-if value="{{envAbsent}}" hint-placeholder-val="{{false}}"><div style="margin-top:14px"><div class="alert warn row" role="alert" style="align-items:flex-start;gap:10px"><div class="grow">No environment workbook — the full ATT&CK matrices will be assessed, so the score is a lower bound.</div></div></div></sc-if>
+<div class="stack" style="gap:6px;margin-top:12px"><div class="alert warn row" role="alert" style="align-items:flex-start;gap:10px"><div class="grow">Three disabled rules were found — they will score as "partial" at best unless you enable "Count disabled rules as coverage" above.</div></div><div class="alert warn row" role="alert" style="align-items:flex-start;gap:10px"><div class="grow">Four rows have a MITRE Techniques value that couldn't be parsed as a valid ATT&CK ID — see the Invalid tag(s) tile.</div></div></div>
+<hr class="hr" style="margin:16px 0">
+
+<sc-if value="{{is.gated}}" hint-placeholder-val="{{false}}">
+  <div style="margin-top:14px"><div class="card card-b rise" style="max-width:520px"><h2 style="font-size:15px;margin-bottom:4px">Request access to run assessments</h2>
+<p class="sub" style="font-size:13px;margin-bottom:12px">Running a review or assessment is switched on per organisation. Send us your details and we will enable it.</p>
+<sc-if value="{{req.sent}}" hint-placeholder-val="{{false}}"><p role="status" class="sub">Thanks. We will enable assessments for your organisation and email you.</p></sc-if>
+<sc-if value="{{req.form}}" hint-placeholder-val="{{true}}">
+<div class="stack" style="gap:10px">
+ <div><label class="label">Name</label><input class="input" style="width:100%" value="{{req.name}}" onChange="{{req.setName}}" maxlength="200"></div>
+ <div><label class="label">Work email</label><input class="input" type="email" style="width:100%" value="{{req.email}}" onChange="{{req.setEmail}}"></div>
+ <div aria-hidden="true" style="display:none"><label>Website</label><input name="website" tabindex="-1" autocomplete="off"></div>
+ <button class="btn primary" style="width:100%;height:40px" onClick="{{req.submit}}">{{req.btn}}</button>
+</div></sc-if></div></div>
+  <div class="row" style="margin-top:12px"><button class="btn sm" onClick="{{backToFiles}}">Back — change files</button></div>
+</sc-if>
+<sc-if value="{{ungated}}" hint-placeholder-val="{{true}}">
+  <div class="row between wrap" style="margin-top:14px;gap:10px">
+    <div class="row" style="gap:10px"><button class="btn primary" onClick="{{runAssessment}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg> {{runLabel}}</button><button class="btn sm" onClick="{{backToFiles}}">Back — change files</button></div>
+    <span class="faint num" style="font-size:12px">{{runsHint}}</span>
+  </div>
+</sc-if>
+<div style="margin-top:12px"><button class="btn link sm" >Or keep it for later — it's saved in your assessment list.</button></div>
+</div></div></sc-if>
+
+<div class="ov" style="opacity:{{sheets.rules.ovOp}};pointer-events:{{sheets.rules.pe}};z-index:{{sheets.rules.oz}}" onClick="{{sheets.rules.close}}"></div>
+<aside class="sheet" role="dialog" aria-label="Rule list" style="width:{{sheets.rules.w}};transform:{{sheets.rules.tx}};z-index:{{sheets.rules.z}}">
+  <div class="grip" role="separator" aria-orientation="vertical" aria-label="Resize panel (drag, or use arrow keys)" tabindex="0" title="Drag to resize"
+       onPointerDown="{{sheets.rules.gDown}}" onPointerMove="{{sheets.rules.gMove}}" onPointerUp="{{sheets.rules.gUp}}" onKeyDown="{{sheets.rules.gKey}}"><i></i></div>
+  <div class="sheet-h"><div class="grow"><h2 style="font-size:16px">{{sheetTitle}}</h2></div><button class="xbtn" aria-label="Close" onClick="{{sheets.rules.close}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+  <div class="sheet-b">
+<sc-if value="{{isPdf}}" hint-placeholder-val="{{false}}"><p class="sub" style="font-size:12.5px;margin-bottom:10px">Rows from PDF/DOCX documents are AI-extracted when the assessment runs, so this list may be empty until then.</p></sc-if>
+<sc-for list="{{ruleCards}}" as="u" hint-placeholder-count="4"><div class="card" style="padding:10px 12px;box-shadow:none;margin-bottom:8px">
+  <div class="row between" style="gap:8px"><b style="font-size:13px">{{u.name}}</b><span class="chip {{u.tagTone}} xs">{{u.tagText}}</span></div>
+  <div class="row wrap" style="gap:8px;margin-top:6px">
+    <span class="chip outline xs mono">{{u.techOrNone}}</span><span class="faint" style="font-size:12px">{{u.logsrc}}</span><span class="faint" style="font-size:12px">· {{u.status}}</span>
+  </div>
+</div></sc-for></div>
+  
+</aside></div></main>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview": {"width": 1440, "height": 900}, "view": {"editor": "enum", "options": ["default", "loading", "empty", "error", "gated"], "default": "default", "section": "State"}, "admin": {"editor": "boolean", "default": true, "section": "State"}, "format": {"editor": "enum", "options": ["xlsx", "pdf"], "default": "xlsx", "section": "State"}}'>
+class Component extends DCLogic {
+  constructor(p){ super(p); this.state = {"shell": {"collapsed": false, "width": 224, "mobileOpen": false}, "sheets": {}, "sheetOrder": [], "dlg": null, "dlgArg": null, "menu": null, "listbox": null, "sort": {}, "filters": {}, "search": "", "rename": {"id": null, "value": ""}, "expanded": {}, "drop": {"env": {"active": false, "file": "acme_environment_v2.xlsx"}}, "tab": {"src": "file"}, "req": {"sent": false, "name": "", "email": "", "busy": false}, "busy": {}, "stage": "form", "actors": {}, "countDisabled": false, "exclusions": [{"target": "", "reason": ""}], "form": {"name": "", "industry": "", "region": "", "customer": "", "org": "", "dept": "", "preparedBy": "", "purpose": "", "tenantId": "", "clientId": "", "subId": "", "resourceGroup": "", "workspace": "", "secret": "", "host": "", "port": "", "app": "", "token": ""}, "colmap": {"open": false, "name": "1", "techniques": "3", "logic": "2", "description": "4", "logsource": "5", "status": "6"}, "submitError": false, "submitErrMsg": ""}; this._drag = null; }
+  data(){ return {"actors": [{"id": "G0016", "name": "APT29"}, {"id": "G1015", "name": "Scattered Spider"}, {"id": "G0176", "name": "LockBit"}, {"id": "G0032", "name": "Lazarus Group"}, {"id": "G0046", "name": "FIN7"}, {"id": "G0096", "name": "APT41"}, {"id": "G0094", "name": "Kimsuky"}, {"id": "G0129", "name": "Mustang Panda"}], "rules": [{"id": "u1", "name": "Impossible travel sign-in", "tech": "T1078.004", "status": "Enabled", "tag": "customer", "logsrc": "Entra sign-in logs"}, {"id": "u2", "name": "Suspicious PowerShell EncodedCommand", "tech": "T1059.001", "status": "Enabled", "tag": "customer", "logsrc": "Sysmon process creation"}, {"id": "u3", "name": "Impossible travel (secondary correlation)", "tech": "T1078.004", "status": "Enabled", "tag": "ai", "logsrc": "Okta system log"}, {"id": "u4", "name": "Privileged group membership change", "tech": "T1098", "status": "Enabled", "tag": "manual", "logsrc": "AD audit logs"}, {"id": "u5", "name": "New scheduled task created", "tech": "", "status": "Enabled", "tag": "unmapped", "logsrc": "Windows Security 4698"}, {"id": "u6", "name": "Outbound traffic to rare domain", "tech": "", "status": "Enabled", "tag": "unmapped", "logsrc": "DNS query logs"}, {"id": "u7", "name": "Rule with malformed technique tag", "tech": "TA0099X", "status": "Enabled", "tag": "invalid", "logsrc": "Proxy logs"}, {"id": "u8", "name": "Legacy VPN brute force", "tech": "T1110", "status": "Disabled", "tag": "customer", "logsrc": "VPN gateway logs"}], "tiles": {"total": 175, "tagged": 153, "untagged": 18, "invalid": 4}}; }
+  // ---- shared helpers (class methods so nothing lives at script top level) ----
+  setIn(path, val){ const s = JSON.parse(JSON.stringify(this.state)); let o = s;
+    for (let i = 0; i < path.length - 1; i++) { if (o[path[i]] == null) o[path[i]] = {}; o = o[path[i]]; }
+    o[path[path.length - 1]] = val; this.setState(s); }
+  vw(){ return (typeof window !== 'undefined' && window.innerWidth) ? window.innerWidth : 1440; }
+  viewFlags(){ const v = (this.props && this.props.view) || 'default';
+    return { default: v === 'default', loading: v === 'loading', empty: v === 'empty', error: v === 'error', gated: v === 'gated' }; }
+  closeAll(){ if (this.state.menu !== null || this.state.listbox !== null) this.setState({ menu: null, listbox: null }); }
+  shellVals(){ const s = this.state.shell; const c = s.collapsed; const w = c ? 56 : s.width;
+    return { sideW: w + 'px', cls: c ? 'c' : '', collapsed: c, expanded: !c, togLabel: c ? 'Expand sidebar' : 'Collapse sidebar',
+      admin: !(this.props && this.props.admin === false),
+      toggle: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setIn(['shell', 'collapsed'], !c); },
+      gDown: (e) => { e.currentTarget.setPointerCapture(e.pointerId); this._drag = { kind: 'side', x0: e.clientX, w0: s.width }; },
+      gMove: (e) => { if (!this._drag || this._drag.kind !== 'side') return; const nw = Math.max(180, Math.min(400, this._drag.w0 + (e.clientX - this._drag.x0))); this.setIn(['shell', 'width'], nw); },
+      gUp: () => { this._drag = null; },
+      mTx: s.mobileOpen ? 'translateX(0)' : 'translateX(-105%)', mOvOp: s.mobileOpen ? 1 : 0, mPe: s.mobileOpen ? 'auto' : 'none',
+      openMobile: () => this.setIn(['shell', 'mobileOpen'], true), closeMobile: () => this.setIn(['shell', 'mobileOpen'], false) }; }
+  tabVals(key, keys){ const cur = this.state.tab[key] || keys[0]; const o = {};
+    keys.forEach(k => { const on = cur === k; o[k] = { on: on, cls: on ? 'on' : '', aria: on ? 'true' : 'false', pick: () => this.setIn(['tab', key], k) }; });
+    o.current = cur; return o; }
+  sheetVals(name, def){ const s = this.state.sheets[name] || { open: false, id: null, width: def || 448 };
+    const w = Math.min(s.width, this.vw() * 0.95); const order = this.state.sheetOrder.indexOf(name); const z = 41 + (order < 0 ? 0 : order * 2);
+    return { open: s.open, id: s.id, w: w + 'px', tx: s.open ? 'translateX(0)' : 'translateX(105%)', ovOp: s.open ? 1 : 0, pe: s.open ? 'auto' : 'none', z: z, oz: z - 1,
+      close: (e) => { e && e.stopPropagation && e.stopPropagation(); this.closeSheet(name); },
+      gDown: (e) => { e.currentTarget.setPointerCapture(e.pointerId); this._drag = { kind: name, x0: e.clientX, w0: s.width }; },
+      gMove: (e) => { if (!this._drag || this._drag.kind !== name) return; const nw = Math.max(360, Math.min(this.vw() * 0.95, this._drag.w0 - (e.clientX - this._drag.x0))); this.setIn(['sheets', name, 'width'], nw); },
+      gUp: () => { this._drag = null; },
+      gKey: (e) => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); const d = e.key === 'ArrowLeft' ? 40 : -40;
+        this.setIn(['sheets', name, 'width'], Math.max(360, Math.min(this.vw() * 0.95, s.width + d))); } } }; }
+  openSheet(name, id, def){ const sheets = Object.assign({}, this.state.sheets);
+    sheets[name] = Object.assign({ width: def || 448 }, sheets[name] || {}, { open: true, id: id == null ? null : id });
+    this.setState({ sheets: sheets, sheetOrder: this.state.sheetOrder.filter(n => n !== name).concat([name]), menu: null, listbox: null }); }
+  closeSheet(name){ const sheets = Object.assign({}, this.state.sheets); if (sheets[name]) sheets[name] = Object.assign({}, sheets[name], { open: false });
+    this.setState({ sheets: sheets, sheetOrder: this.state.sheetOrder.filter(n => n !== name) }); }
+  dlgVals(name){ const on = this.state.dlg === name;
+    return { open: on, op: on ? 1 : 0, pe: on ? 'auto' : 'none', tx: on ? 'scale(1)' : 'scale(.96)',
+      close: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setState({ dlg: null, dlgArg: null }); },
+      key: (e) => { if (e.key === 'Escape') this.setState({ dlg: null, dlgArg: null }); } }; }
+  openDlg(name, arg){ this.setState({ dlg: name, dlgArg: arg == null ? null : arg, menu: null, listbox: null }); }
+  menuVals(id){ const on = this.state.menu === id;
+    return { cls: on ? 'open' : '', toggle: (e) => { e.stopPropagation(); this.setState({ menu: on ? null : id, listbox: null }); } }; }
+  lbVals(name){ const on = this.state.listbox === name;
+    return { open: on, cls: on ? 'open' : '', aria: on ? 'true' : 'false', toggle: (e) => { e.stopPropagation(); this.setState({ listbox: on ? null : name, menu: null }); } }; }
+  sortVals(name, rows, cols, defKey, defDir){ const st = this.state.sort[name] || { key: defKey, dir: defDir || 'asc' }; const col = cols.find(c => c.key === st.key);
+    const get = (r) => col && col.get ? col.get(r) : r[st.key];
+    const sorted = rows.slice().sort((a, b) => { const va = get(a), vb = get(b); if (va == null && vb == null) return 0; if (va == null) return 1; if (vb == null) return -1;
+      const r = (typeof va === 'number' && typeof vb === 'number') ? va - vb : String(va).localeCompare(String(vb)); return st.dir === 'asc' ? r : -r; });
+    const h = {}; cols.forEach(c => { const on = c.key === st.key; h[c.key] = { aria: on ? (st.dir === 'asc' ? 'ascending' : 'descending') : 'none', arrow: on ? (st.dir === 'asc' ? '↑' : '↓') : '↕', op: on ? 1 : .35,
+      pick: () => this.setIn(['sort', name], { key: c.key, dir: on && st.dir === 'asc' ? 'desc' : 'asc' }) }; });
+    return { rows: sorted, h: h, key: st.key, dir: st.dir }; }
+  dropVals(name, sample, size){ const d = this.state.drop[name] || { active: false, file: null };
+    return { cls: d.active ? 'on' : '', file: d.file || '', size: d.file ? (size || '') : '', has: !!d.file, none: !d.file,
+      over: (e) => { e.preventDefault(); if (!d.active) this.setIn(['drop', name, 'active'], true); },
+      leave: () => { if (d.active) this.setIn(['drop', name, 'active'], false); },
+      pick: (e) => { e && e.preventDefault && e.preventDefault(); this.setIn(['drop', name], { active: false, file: sample }); },
+      clear: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setIn(['drop', name], { active: false, file: null }); } }; }
+  reqVals(){ const r = this.state.req;
+    return { sent: r.sent, form: !r.sent, name: r.name, email: r.email, btn: r.busy ? 'Sending...' : 'Request access',
+      setName: (e) => this.setIn(['req', 'name'], e.target.value), setEmail: (e) => this.setIn(['req', 'email'], e.target.value),
+      submit: () => { this.setIn(['req', 'busy'], true); setTimeout(() => this.setState({ req: Object.assign({}, this.state.req, { busy: false, sent: true }) }), 700); } }; }
+  busy(key){ return !!this.state.busy[key]; }
+  runBusy(key, ms, after){ const b = Object.assign({}, this.state.busy); b[key] = true; this.setState({ busy: b });
+    setTimeout(() => { const b2 = Object.assign({}, this.state.busy); delete b2[key]; this.setState({ busy: b2 }); if (after) after(); }, ms || 900); }
+  isOpen(id){ return !!this.state.expanded[id]; }
+  toggleOpen(id){ this.setIn(['expanded', id], !this.state.expanded[id]); }
+  renameVals(id, current, onCommit){ const r = this.state.rename; const on = r.id === id;
+    return { on: on, off: !on, value: on ? r.value : current,
+      start: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setState({ rename: { id: id, value: current }, menu: null }); },
+      set: (e) => this.setIn(['rename', 'value'], e.target.value),
+      commit: (e) => { e && e.stopPropagation && e.stopPropagation(); const v = (this.state.rename.value || '').trim(); if (!v) return; if (onCommit) onCommit(v); this.setIn(['rename'], { id: null, value: '' }); },
+      cancel: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setIn(['rename'], { id: null, value: '' }); },
+      key: (e) => { if (e.key === 'Enter') { const v = (this.state.rename.value || '').trim(); if (!v) return; if (onCommit) onCommit(v); this.setIn(['rename'], { id: null, value: '' }); }
+        if (e.key === 'Escape') this.setIn(['rename'], { id: null, value: '' }); },
+      canSave: !on || !!(r.value || '').trim() }; }
+
+  renderVals(){
+    const S = this.state, D = this.data(), P = this.props || {};
+    const base = { ready:'1', stop:(e)=>{ e && e.stopPropagation && e.stopPropagation(); }, root:()=>this.closeAll(),
+      shell:this.shellVals(), is:this.viewFlags(), req:this.reqVals() };
+    const vals = (function(self){ 
+// Actor chip labels (name · attack_id): APT29 · G0016, Scattered Spider · G1015, LockBit · G0176, Lazarus Group · G0032,
+// FIN7 · G0046, APT41 · G0096, Kimsuky · G0094, Mustang Panda · G0129
+// Runs-remaining hint text pattern: "{n} run(s) remaining for your organisation" (singular/plural below)
+const src = self.tabVals('src', ['file', 'sentinel', 'splunk']);
+const curSrc = src.current;
+const isFile = curSrc === 'file', isSiem = !isFile;
+const f = S.form || {};
+const setF = (k) => (e) => self.setIn(['form', k], e.target.value);
+
+const dropRules = Object.assign(self.dropVals('rules', 'acme_sentinel_usecases_v2.xlsx', '36.9 KB'), { removeAria: 'Remove acme_sentinel_usecases_v2.xlsx' });
+const dropEnv = Object.assign(self.dropVals('env', 'acme_environment_v2.xlsx', '9.5 KB'), { removeAria: 'Remove acme_environment_v2.xlsx' });
+const rulesFile = !!dropRules.file;
+const envPresent = !!dropEnv.file;
+
+const actorsSel = S.actors || {};
+const actorList = D.actors.map((a) => { const on = !!actorsSel[a.id]; const label = a.name + ' · ' + a.id;
+  return { id: a.id, label: label, aria: on ? 'true' : 'false', cls: 'chip ' + (on ? 'violet on' : 'outline'),
+    toggle: () => { const n = Object.assign({}, actorsSel); n[a.id] = !on; self.setIn(['actors'], n); } }; });
+
+const exclSrc = (S.exclusions && S.exclusions.length) ? S.exclusions : [{ target: '', reason: '' }];
+const exclusions = exclSrc.map((x, i) => ({
+  n: i + 1, target: x.target || '', reason: x.reason || '',
+  targetAria: 'Exclusion ' + (i + 1) + ' target', removeAria: 'Remove exclusion ' + (i + 1),
+  setTarget: (e) => { const arr = exclSrc.slice(); arr[i] = Object.assign({}, arr[i], { target: e.target.value }); self.setIn(['exclusions'], arr); },
+  setReason: (e) => { const arr = exclSrc.slice(); arr[i] = Object.assign({}, arr[i], { reason: e.target.value }); self.setIn(['exclusions'], arr); },
+  remove: () => { const arr = exclSrc.slice(); arr.splice(i, 1); self.setIn(['exclusions'], arr.length ? arr : [{ target: '', reason: '' }]); },
+}));
+
+const submitDisabled = isFile && !rulesFile;
+function computeError() {
+  if (isFile && !rulesFile) return 'Please add your detection-rule export first';
+  if (curSrc === 'sentinel' && !(f.tenantId && f.clientId && f.subId && f.resourceGroup && f.workspace && f.secret)) return 'Please fill in every Sentinel connection field, including the client secret';
+  if (curSrc === 'splunk' && !(f.host && f.token)) return 'Please fill in the Splunk host and the auth token';
+  if (exclusions.some((x) => (!!x.target.trim()) !== (!!x.reason.trim()))) return 'Every scope exclusion needs both a target and a reason';
+  return null;
+}
+const liveErr = computeError();
+const bannerMsg = S.submitErrMsg || liveErr || (isFile ? 'Upload failed' : 'SIEM pull failed');
+
+const TILE_N = D.tiles;
+const gated = P.view === 'gated';
+const runsRemaining = S.runs == null ? 3 : S.runs;
+
+const sheetId = (S.sheets && S.sheets.rules && S.sheets.rules.id) || 'all';
+const TAG_TEXT = { customer: 'Tagged by you', ai: 'AI-mapped — verify', manual: 'Edited by reviewer', unmapped: 'Not mapped to any technique', invalid: 'Tags invalid — treated as untagged' };
+const TAG_TONE = { customer: 'ok', ai: 'med', manual: 'blue', unmapped: 'grey', invalid: 'crit' };
+const catOf = (r) => (r.tag === 'unmapped' ? 'untagged' : (r.tag === 'invalid' ? 'invalid' : 'tagged'));
+const filteredRules = D.rules.filter((r) => sheetId === 'all' || catOf(r) === sheetId);
+const ruleCards = filteredRules.map((r) => Object.assign({}, r, { techOrNone: r.tech || '—', tagText: TAG_TEXT[r.tag], tagTone: TAG_TONE[r.tag] }));
+const sheetTitle = ({ all: 'All rules (' + TILE_N.total + ')', tagged: 'Already tagged (' + TILE_N.tagged + ')',
+  untagged: 'For AI tagging (' + TILE_N.untagged + ')', invalid: 'Invalid tag(s) (' + TILE_N.invalid + ')' })[sheetId];
+
+const colmapS = S.colmap || {};
+
+return {
+  src, isFile, isSiem, ungated: !gated,
+  form: { name: f.name || '', industry: f.industry || '', region: f.region || '', customer: f.customer || '', org: f.org || '',
+    dept: f.dept || '', preparedBy: f.preparedBy || '', purpose: f.purpose || '',
+    tenantId: f.tenantId || '', clientId: f.clientId || '', subId: f.subId || '', resourceGroup: f.resourceGroup || '', workspace: f.workspace || '', secret: f.secret || '',
+    host: f.host || '', port: f.port || '', app: f.app || '', token: f.token || '' },
+  setName: setF('name'), setIndustry: setF('industry'), setRegion: setF('region'), setCustomer: setF('customer'), setOrg: setF('org'),
+  setDept: setF('dept'), setPreparedBy: setF('preparedBy'), setPurpose: setF('purpose'),
+  setTenantId: setF('tenantId'), setClientId: setF('clientId'), setSubId: setF('subId'), setResourceGroup: setF('resourceGroup'), setWorkspace: setF('workspace'), setSecret: setF('secret'),
+  setHost: setF('host'), setPort: setF('port'), setApp: setF('app'), setToken: setF('token'),
+  drop: { rules: dropRules, env: dropEnv },
+  actorList: actorList,
+  countDisabled: !!S.countDisabled, toggleCountDisabled: () => self.setIn(['countDisabled'], !S.countDisabled),
+  exclusions: exclusions, addExclusion: () => self.setIn(['exclusions'], exclSrc.concat([{ target: '', reason: '' }])),
+  bannerMsg: bannerMsg, submitCls: submitDisabled ? 'disabled' : '', submitAria: submitDisabled ? 'true' : 'false',
+  submitLabel: self.busy('upload') ? 'Uploading & parsing…' : 'Upload & preview',
+  submitForm: () => { if (submitDisabled) return; const err = computeError(); if (err) { self.setState({ submitError: true, submitErrMsg: err }); return; }
+    self.setState({ submitError: false, submitErrMsg: '' }); self.runBusy('upload', 900, () => self.setIn(['stage'], 'preview')); },
+  stageForm: S.stage !== 'preview', stagePreview: S.stage === 'preview', backToFiles: () => self.setIn(['stage'], 'form'),
+  tiles: { nTotal: String(TILE_N.total), nTagged: String(TILE_N.tagged), nUntagged: String(TILE_N.untagged), nInvalid: String(TILE_N.invalid),
+    openAll: () => self.openSheet('rules', 'all', 480), openTagged: () => self.openSheet('rules', 'tagged', 480),
+    openUntagged: () => self.openSheet('rules', 'untagged', 480), openInvalid: () => self.openSheet('rules', 'invalid', 480) },
+  isPdf: P.format === 'pdf',
+  colmapOpen: !!colmapS.open, toggleWizard: () => self.setIn(['colmap', 'open'], !colmapS.open),
+  colmap: { name: colmapS.name || '1', techniques: colmapS.techniques || '3', logic: colmapS.logic || '2',
+    description: colmapS.description || '4', logsource: colmapS.logsource || '5', status: colmapS.status || '6' },
+  setColName: (e) => self.setIn(['colmap', 'name'], e.target.value), setColTech: (e) => self.setIn(['colmap', 'techniques'], e.target.value),
+  setColLogic: (e) => self.setIn(['colmap', 'logic'], e.target.value), setColDesc: (e) => self.setIn(['colmap', 'description'], e.target.value),
+  setColLogsrc: (e) => self.setIn(['colmap', 'logsource'], e.target.value), setColStatus: (e) => self.setIn(['colmap', 'status'], e.target.value),
+  applyLabel: self.busy('remap') ? 'Re-parsing…' : 'Apply mapping',
+  applyMapping: () => self.runBusy('remap', 900, () => self.setIn(['colmap', 'open'], false)),
+  cancelWizard: () => self.setIn(['colmap', 'open'], false),
+  envPresent: envPresent, envAbsent: !envPresent,
+  runLabel: self.busy('run') ? 'Starting…' : 'Run assessment', runAssessment: () => self.runBusy('run', 1200),
+  runsHint: (runsRemaining === 1 ? '1 run remaining for your organisation' : runsRemaining + ' runs remaining for your organisation'),
+  sheetTitle: sheetTitle, ruleCards: ruleCards,
+  sheets: { rules: self.sheetVals('rules', 480) },
+};
+ }).call(this, this);
+    return Object.assign(base, vals);
+  }
+}
+</script>
+</body>
+</html>
