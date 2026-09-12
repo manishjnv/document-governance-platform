@@ -13,7 +13,14 @@ user-facing text). Backend: FastAPI (`apps/api`). Frontend: Next.js
 Legal) + a rule engine, per `docs/planning/4_AI_AGENT_SPECS.md`.
 
 - Public repo: github.com/manishjnv/document-governance-platform
-- Live deployment: https://scopewise.assessiq.in
+- Live deployment: https://scopewise.assessiq.in — and, from the
+  2026-09-12 cut-over, https://scopesense.in as well. **Both hosts stay live
+  for ~30 days** (until ~2026-10-12; office proxies may block the new
+  domain), so: no redirect yet, the web build uses `NEXT_PUBLIC_API_URL=`
+  (empty = same-origin `/api/...`), Caddy has one site block per host, and
+  the SEO canonical/metadataBase stays on the old host until the switch.
+  Cut-over runbook: `/opt/scopewise/deploy/cutover-scopesense.sh` on the VPS;
+  Cloudflare zone `scopesense.in` id `b2765bac…` (memory `scopesense-domain-cutover`).
 - LLM provider: OpenRouter (see `apps/api/app/ai/agent.py` — never
   Anthropic/OpenAI/Google directly for the review pipeline itself, that's
   a deliberate cost choice).
