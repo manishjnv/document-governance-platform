@@ -601,3 +601,25 @@ async def test_keyword_matches_keep_assessment_alive_when_ai_is_down(
     assert body["status"] == "completed", body.get("error_message")
     assert body["summary"]["counts"]["keyword_tagged"] == 1
     assert _tech(body, "T1021.002")["state"] == "covered"
+
+
+@pytest.mark.asyncio
+async def test_demo_assessment_visible_read_only_to_other_org(client, db_session, monkeypatch):
+    """An assessment id listed in MITRE_DEMO_ASSESSMENT_IDS is listed and
+    viewable by another org (read-only); rename/delete stay owner-only."""
+    _, _, headers_a = await _make_user(db_session, email="demo-owner@example.com")
+    _, _, headers_b = await _make_user(db_session, email="demo-viewer@example.com")
+    aid = (await _create(client, headers_a))["assessment_id"]
+
+    assert (await client.get(f"/api/v1/mitre/assessments/{aid}", headers=headers_b)).status_code == 404
+
+    monkeypatch.setenv("MITRE_DEMO_ASSESSMENT_IDS", f"{aid}, junk")
+    detail = await client.get(f"/api/v1/mitre/assessments/{aid}", headers=headers_b)
+    assert detail.status_code == 200
+    assert detail.json()["demo"] is True and detail.json()["editable"] is False
+    assert (await client.get(f"/api/v1/mitre/assessments/{aid}", headers=headers_a)).json()["editable"] is True
+    rows = (await client.get("/api/v1/mitre/assessments", headers=headers_b)).json()
+    assert [r for r in rows if r["assessment_id"] == aid and r["demo"] and not r["editable"]]
+    assert (await client.get(f"/api/v1/mitre/assessments/{aid}/use-cases", headers=headers_b)).status_code == 200
+    assert (await client.patch(f"/api/v1/mitre/assessments/{aid}", json={"name": "x"}, headers=headers_b)).status_code == 404
+    assert (await client.delete(f"/api/v1/mitre/assessments/{aid}", headers=headers_b)).status_code == 404

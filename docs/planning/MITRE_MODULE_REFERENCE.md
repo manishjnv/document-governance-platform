@@ -542,6 +542,15 @@ Audit events (`audit_logs`): `mitre.assessment_created` / `_completed` /
   allowlist, 50MB, filename sanitization, row caps, empty/unreadable 422s.
   Client checks are UX only.
 - **Org isolation**: every query filters `org_id == current_user.org_id`
+  — with one read-only exception added 2026-09-12: assessment ids listed in
+  the env var `MITRE_DEMO_ASSESSMENT_IDS` (compose passes it from the VPS
+  `.env`) are shared samples. `_read_org()` resolves the OWNER org for the
+  read endpoints (get, use-cases, explain, report, xlsx/pptx/navigator
+  exports) so every org-filtered sub-query returns the demo's data; list
+  rows include them; rows/detail carry `demo` + `editable` and the UI hides
+  rename/archive/mapping-edit/attest when not editable. PATCH/DELETE/run/
+  remap never use `_read_org`, so they stay owner-only. Prod demo: "Acme
+  MITRE Assessment" `0fe2d3e2-…`. Test: `test_demo_assessment_visible_read_only_to_other_org`.
   (+ the fire-and-forget pipeline's own queries, hardened Phase 5);
   compare validates BOTH assessments; cross-org is always 404.
 - **Stored-XSS**: every customer/LLM string in the HTML report goes

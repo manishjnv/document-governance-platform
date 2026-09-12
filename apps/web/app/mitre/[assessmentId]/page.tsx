@@ -491,6 +491,9 @@ export default function MitreResultsPage() {
               <h1 className="flex min-w-0 items-center gap-2 text-lg font-semibold">
                 <Target size={18} strokeWidth={2} className="shrink-0 text-primary" aria-hidden="true" />
                 <span className="truncate">{assessment.name}</span>
+                {assessment.demo && (
+                  <span title="Shared sample assessment — read-only for everyone" className="shrink-0 rounded-full border border-sky-200 bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-800">Demo</span>
+                )}
               </h1>
               {status && (
                 <span className={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium', status.chip)}>
@@ -958,7 +961,7 @@ export default function MitreResultsPage() {
                   summary={summary}
                   useCases={useCases}
                   useCasesTruncated={useCasesTotal > useCases.length}
-                  canEdit={userRole === 'admin' || userRole === 'reviewer'}
+                  canEdit={(userRole === 'admin' || userRole === 'reviewer') && assessment.editable !== false}
                   onEditMappings={handleEditMappings}
                   toolCoverage={assessment.tool_coverage?.by_technique ?? null}
                   onAttest={handleAttest}

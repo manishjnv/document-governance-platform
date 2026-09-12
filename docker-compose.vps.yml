@@ -56,6 +56,7 @@ services:
       # Comma-separated code_reviews.review_id values every signed-in user may
       # view/export read-only (the NodeGoat demo). Set in .env; empty = none.
       CODEREVIEW_DEMO_REVIEW_IDS: ${CODEREVIEW_DEMO_REVIEW_IDS:-}
+      MITRE_DEMO_ASSESSMENT_IDS: ${MITRE_DEMO_ASSESSMENT_IDS:-}
       SMTP_SERVER: ${SMTP_SERVER}
       SMTP_PORT: ${SMTP_PORT}
       SMTP_USERNAME: ${SMTP_USERNAME}
@@ -111,6 +112,7 @@ services:
       # Comma-separated code_reviews.review_id values every signed-in user may
       # view/export read-only (the NodeGoat demo). Set in .env; empty = none.
       CODEREVIEW_DEMO_REVIEW_IDS: ${CODEREVIEW_DEMO_REVIEW_IDS:-}
+      MITRE_DEMO_ASSESSMENT_IDS: ${MITRE_DEMO_ASSESSMENT_IDS:-}
       SMTP_SERVER: ${SMTP_SERVER}
       SMTP_PORT: ${SMTP_PORT}
       SMTP_USERNAME: ${SMTP_USERNAME}

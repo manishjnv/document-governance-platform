@@ -9,6 +9,7 @@ import base64
 import io
 import json
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID, uuid4
@@ -191,6 +192,40 @@ def _build_use_case_rows(parsed_rows: list) -> tuple:
             {"row": row, "mappings": mappings, "mapping_status": mapping_status}
         )
     return models_data, tagged, unmapped, invalid, notes
+
+
+def _demo_ids() -> set:
+    """Assessments every signed-in user may view and export (read-only), e.g.
+    the Acme sample. Comma-separated UUIDs in MITRE_DEMO_ASSESSMENT_IDS, read
+    per request (container recreate is the only deploy step). Same pattern
+    as app/codereview/router.py's CODEREVIEW_DEMO_REVIEW_IDS."""
+    out = set()
+    for part in os.getenv("MITRE_DEMO_ASSESSMENT_IDS", "").split(","):
+        part = part.strip()
+        if part:
+            try:
+                out.add(UUID(part))
+            except ValueError:
+                logger.warning("MITRE_DEMO_ASSESSMENT_IDS: ignoring non-UUID %r", part)
+    return out
+
+
+async def _read_org(db: AsyncSession, assessment_id: UUID, user_org: UUID) -> UUID:
+    """Org to scope READ queries by: the caller's own org, or — for a demo
+    assessment — the owning org, so every org-filtered sub-query (files,
+    use cases, settings) resolves to the demo's data. Write endpoints never
+    call this, so they stay owner-org only."""
+    if assessment_id in _demo_ids():
+        result = await db.execute(
+            select(MitreAssessment.org_id).where(
+                (MitreAssessment.assessment_id == assessment_id)
+                & (MitreAssessment.deleted_at.is_(None))
+            )
+        )
+        owner = result.scalar_one_or_none()
+        if owner is not None:
+            return owner
+    return user_org
 
 
 async def _get_assessment(
@@ -1239,10 +1274,12 @@ async def list_assessments(
     current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    conditions = (
-        (MitreAssessment.org_id == UUID(str(current_user.org_id)))
-        & (MitreAssessment.deleted_at.is_(None))
-    )
+    user_org = UUID(str(current_user.org_id))
+    demo = _demo_ids()
+    scope = MitreAssessment.org_id == user_org
+    if demo:  # shared read-only samples appear in every org's list
+        scope = scope | MitreAssessment.assessment_id.in_(demo)
+    conditions = scope & (MitreAssessment.deleted_at.is_(None))
     if not include_archived:
         # Phase 14f soft archive flag rides the params JSONB (no migration).
         conditions = conditions & (
@@ -1264,6 +1301,8 @@ async def list_assessments(
         items.append(
             {
                 "assessment_id": str(a.assessment_id),
+                "demo": a.assessment_id in demo,
+                "editable": a.org_id == user_org,
                 "name": a.name,
                 "status": a.status,
                 # Phase 14f: archive flag + 14d project name on list rows
@@ -1362,7 +1401,9 @@ async def get_assessment(
     current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    assessment = await _get_assessment(db, assessment_id, UUID(str(current_user.org_id)))
+    user_org = UUID(str(current_user.org_id))
+    org_id = await _read_org(db, assessment_id, user_org)
+    assessment = await _get_assessment(db, assessment_id, org_id)
 
     # Stale-run guard: a fire-and-forget task dies with its container; flip
     # long-stuck 'running' rows to failed so the UI can offer a re-run.
@@ -1394,7 +1435,7 @@ async def get_assessment(
     files_result = await db.execute(
         select(MitreFile).where(
             (MitreFile.assessment_id == assessment_id)
-            & (MitreFile.org_id == UUID(str(current_user.org_id)))
+            & (MitreFile.org_id == org_id)
             & (MitreFile.deleted_at.is_(None))
         )
     )
@@ -1416,7 +1457,7 @@ async def get_assessment(
     tool_coverage = None
     if assessment.status == "completed":
         use_cases = await _load_use_case_dicts(
-            db, assessment_id, UUID(str(current_user.org_id))
+            db, assessment_id, org_id
         )
         log_source_coverage = report_common.compute_log_source_coverage(
             use_cases, assessment.technique_results or [], attack_data.DEFAULT
@@ -1433,6 +1474,8 @@ async def get_assessment(
     return {
         "files": files,
         "assessment_id": str(assessment.assessment_id),
+        "demo": assessment.assessment_id in _demo_ids(),
+        "editable": assessment.org_id == user_org,
         "name": assessment.name,
         "status": assessment.status,
         "attack_version": assessment.attack_version,
@@ -1456,7 +1499,7 @@ async def list_use_cases(
     current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    org_id = UUID(str(current_user.org_id))
+    org_id = await _read_org(db, assessment_id, UUID(str(current_user.org_id)))
     await _get_assessment(db, assessment_id, org_id)
 
     conditions = (
@@ -1542,7 +1585,7 @@ async def explain_technique(
 ):
     """What is this / where is the gap / why / what would good look like —
     all deterministic: curated data files + stored result data. No LLM."""
-    org_id = UUID(str(current_user.org_id))
+    org_id = await _read_org(db, assessment_id, UUID(str(current_user.org_id)))
     assessment = await _completed_assessment(db, assessment_id, org_id)
     results = assessment.technique_results or []
     result = next(
@@ -2008,7 +2051,7 @@ async def assessment_report(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="scope must be one of: full, executive, coverage, gaps, assumptions",
         )
-    org_id = UUID(str(current_user.org_id))
+    org_id = await _read_org(db, assessment_id, UUID(str(current_user.org_id)))
     assessment = await _completed_assessment(db, assessment_id, org_id)
     use_cases = await _load_use_case_dicts(db, assessment_id, org_id)
     files_result = await db.execute(
@@ -2094,7 +2137,7 @@ async def assessment_export_xlsx(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="scope must be one of: full, coverage, gaps, assumptions",
         )
-    org_id = UUID(str(current_user.org_id))
+    org_id = await _read_org(db, assessment_id, UUID(str(current_user.org_id)))
     assessment = await _completed_assessment(db, assessment_id, org_id)
     use_cases = await _load_use_case_dicts(db, assessment_id, org_id)
     settings = await service.get_mitre_settings(db, org_id)
@@ -2127,7 +2170,7 @@ async def assessment_export_pptx(
     coverage-by-tactic chart, detection quality, log sources, top fixes,
     roadmap and next steps. Same stored-summary data as the PDF/XLSX; same
     StreamingResponse pattern as export.xlsx."""
-    org_id = UUID(str(current_user.org_id))
+    org_id = await _read_org(db, assessment_id, UUID(str(current_user.org_id)))
     assessment = await _completed_assessment(db, assessment_id, org_id)
     use_cases = await _load_use_case_dicts(db, assessment_id, org_id)
     settings = await service.get_mitre_settings(db, org_id)
@@ -2160,7 +2203,7 @@ async def assessment_navigator_export(
     zip with one layer file each. Open at mitre-attack.github.io/attack-navigator."""
     import zipfile
 
-    org_id = UUID(str(current_user.org_id))
+    org_id = await _read_org(db, assessment_id, UUID(str(current_user.org_id)))
     assessment = await _completed_assessment(db, assessment_id, org_id)
     layers = navigator.build_navigator_layers(assessment)
     if not layers:  # defensive — completed assessments always have >=1 domain

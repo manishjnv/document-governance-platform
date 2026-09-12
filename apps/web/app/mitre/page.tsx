@@ -284,6 +284,15 @@ export default function MitreListPage() {
                         className="flex shrink-0 items-center gap-0.5"
                         onClick={(e) => e.stopPropagation()}
                       >
+                        {item.demo && (
+                          <Tooltip delayDuration={150}>
+                            <TooltipTrigger asChild>
+                              <span className="mr-1 rounded-full border border-sky-200 bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-800">Demo</span>
+                            </TooltipTrigger>
+                            <TooltipContent className="text-xs">Shared sample assessment — visible to every signed-in user, read-only</TooltipContent>
+                          </Tooltip>
+                        )}
+                        {item.editable !== false && (<>
                         <Tooltip delayDuration={150}>
                           <TooltipTrigger asChild>
                             <button
@@ -323,6 +332,7 @@ export default function MitreListPage() {
                               : 'Hide from the default list — stays available in Compare. Nothing is deleted.'}
                           </TooltipContent>
                         </Tooltip>
+                        </>)}
                       </span>
                     )}
                   </div>

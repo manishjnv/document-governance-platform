@@ -12,6 +12,10 @@ export interface DomainBrief {
 
 export interface AssessmentListItem {
   assessment_id: string;
+  /** Shared read-only sample (visible to every signed-in user). */
+  demo?: boolean;
+  /** False when the assessment belongs to another org — hide edit controls. */
+  editable?: boolean;
   name: string;
   status: string;
   attack_version: string;
@@ -216,6 +220,8 @@ export interface ThreatGroup {
 
 export interface Assessment {
   assessment_id: string;
+  demo?: boolean;
+  editable?: boolean;
   name: string;
   status: string;
   attack_version: string;
