@@ -26,6 +26,8 @@ touched files; Sonnet adversarial takeover: accept. All nine prod orgs at
 allowance 0 until the owner grants. Design canvas sources committed under
 `docs/design/app-redesign-2026-09-12/` (`c6b4e53`).
 
+**2026-09-12 consolidated session log:** every phase of the day's marketing/content/deploy conversation, decisions, gotchas and open items in one place — `docs/phases/summaries/SESSION_HANDOFF_2026_09_12_MARKETING_SESSION_LOG.md`.
+
 **Wrap-up deployed 2026-09-12 night, SHA `29dbd8c`:** admin organisation
 tier toggle (`22c88a9`), competitor comparison pages for SOWaudit, ATT&CK
 Navigator and Semgrep plus a `/compare` index (`f19ae4b`, legal sign-off
