@@ -1,6 +1,6 @@
 # EDGP Implementation Progress
 
-**Last Updated:** 2026-09-12 (CWV fix + /resources/templates committed locally, not deployed)
+**Last Updated:** 2026-09-12 night (wrap-up deployed at `29dbd8c`)
 **Current Phase:** Phase 1-2 core product complete + deployed live; pre-launch fix plan Steps 1-2 done, Step 3 pending SME. Document Lifecycle & Multi-Project plan (Projects/Versioning/Fix-verification) — all three phases implemented, deployed, mandatory-project + fuzzy name matching added on top. Auth is now seamless Google Sign-In + email-OTP only (no password anywhere in the real UI; unrecognized emails auto-create an account). New file types (.doc/.xlsx/.xls/.csv) supported. Enterprise SEO strategy written, a live Cloudflare misconfiguration blocking all AI crawlers was found and fixed, and **SEO Phase 1 (Foundation) is implemented and deployed live** (real marketing homepage/product/pricing/about/contact/sitemap/schema -- only GSC/GA4/Lighthouse remain, blocked on dashboard access). Full detail: `docs/phases/summaries/SESSION_HANDOFF_2026_07_20_LIFECYCLE_SSO_SEO.md`.
 
 > Previous version of this doc (dated 07-17 02:00, showing "14% overall") was
@@ -10,6 +10,18 @@
 ---
 
 ## ✅ Done
+
+**Wrap-up deployed 2026-09-12 night, SHA `29dbd8c`:** admin organisation
+tier toggle (`22c88a9`), competitor comparison pages for SOWaudit, ATT&CK
+Navigator and Semgrep plus a `/compare` index (`f19ae4b`, legal sign-off
+given; every competitor claim sourced from the competitor's own site the
+same day), per-pillar OG images (`fdfaba3`), `/about` name rationale
+(`db30589`), product screenshots on the homepage cards and the MITRE /
+Code Review heroes (`29dbd8c`). Live smoke 10/10; Lighthouse NOT re-run
+(PageSpeed daily quota exhausted, rerun 2026-09-13). All nine prod orgs
+remain `free`; owner to pick which get `pro` on `/admin`. Enterprise UI
+redesign canvas (design only) linked from the handoff. Handoff:
+`docs/phases/summaries/SESSION_HANDOFF_2026_09_12_WRAPUP.md`.
 
 **Docs consolidated feature-wise (2026-09-12):** Code Security Review now
 has a single living reference
