@@ -10,7 +10,7 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, conint
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin.organizations import get_organization, update_organization
@@ -50,6 +50,12 @@ class OrgTierUpdate(BaseModel):
     subscription_tier: SubscriptionTier
 
 
+class RunAllowanceUpdate(BaseModel):
+    """PATCH /orgs/{org_id}/run-allowance body."""
+
+    run_allowance: conint(ge=0, le=1000)
+
+
 def _org_response(org: Organization) -> dict:
     return {
         "org_id": str(org.org_id),
@@ -58,6 +64,7 @@ def _org_response(org: Organization) -> dict:
         "logo_url": org.logo_url,
         "brand_primary_color": org.brand_primary_color,
         "brand_secondary_color": org.brand_secondary_color,
+        "run_allowance": org.run_allowance,
     }
 
 
@@ -429,6 +436,7 @@ async def list_all_orgs(
             "org_id": str(org.org_id),
             "name": org.name,
             "subscription_tier": org.subscription_tier,
+            "run_allowance": org.run_allowance,
             "user_count": user_counts.get(org.org_id, 0),
             "created_at": org.created_at.isoformat() if org.created_at else None,
         }
@@ -475,4 +483,46 @@ async def patch_org_tier(
         "org_id": str(org.org_id),
         "name": org.name,
         "subscription_tier": org.subscription_tier,
+    }
+
+
+@router.patch("/orgs/{org_id}/run-allowance", summary="Grant a free-tier org a fixed number of runs (platform admin only)")
+async def patch_org_run_allowance(
+    org_id: UUID,
+    body: RunAllowanceUpdate,
+    current_user: TokenData = Depends(require_platform_admin()),
+    db: AsyncSession = Depends(get_db),
+):
+    if org_id == current_user.org_id or str(org_id) == str(current_user.org_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot change your own organisation's run allowance",
+        )
+
+    org = await get_organization(db, org_id)
+    if org is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found"
+        )
+
+    old_allowance = org.run_allowance
+    new_allowance = int(body.run_allowance)
+    org.run_allowance = new_allowance
+
+    await log_action(
+        db,
+        org_id=org_id,
+        user_id=current_user.user_id,
+        action="organization.run_allowance_updated",
+        resource_type=AuditResourceType.ORGANIZATION.value,
+        resource_id=org_id,
+        details={"field": "run_allowance", "old": old_allowance, "new": new_allowance},
+    )
+    await db.commit()
+    await db.refresh(org)
+
+    return {
+        "org_id": str(org.org_id),
+        "name": org.name,
+        "run_allowance": org.run_allowance,
     }

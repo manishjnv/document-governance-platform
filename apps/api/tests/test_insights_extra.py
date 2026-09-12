@@ -110,6 +110,7 @@ async def analytics_db():
                 brand_secondary_color TEXT,
                 audit_retention_days INTEGER NOT NULL DEFAULT 90,
                 similarity_suggestion_threshold REAL NOT NULL DEFAULT 0.55,
+                run_allowance INTEGER NOT NULL DEFAULT 0,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 deleted_at TIMESTAMP

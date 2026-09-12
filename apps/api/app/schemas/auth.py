@@ -159,8 +159,11 @@ class CurrentUserResponse(BaseModel):
     # gates the platform-wide /admin page, NOT per-org admin rights.
     is_platform_admin: bool = False
     # True when this org may start reviews/assessments: pro/enterprise
-    # tier or platform admin.
+    # tier, platform admin, or a free org with run_allowance left.
     assessments_enabled: bool = False
+    # Remaining interactive runs for a free-tier org; None = unlimited
+    # (flag off, platform admin, or pro/enterprise tier).
+    runs_remaining: Optional[int] = None
 
 
 class UserCreateRequest(BaseModel):

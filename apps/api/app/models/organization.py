@@ -60,6 +60,9 @@ class Organization(Base, TimestampMixin, SoftDeleteMixin):
     brand_primary_color: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)
     brand_secondary_color: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)
     audit_retention_days: Mapped[int] = mapped_column(Integer, nullable=False, default=90)
+    run_allowance: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
     similarity_suggestion_threshold: Mapped[Decimal] = mapped_column(
         Numeric(3, 2), nullable=False, default=Decimal("0.55")
     )

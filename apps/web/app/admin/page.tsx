@@ -14,6 +14,7 @@ interface Org {
   subscription_tier: 'free' | 'pro' | 'enterprise';
   user_count: number;
   created_at: string;
+  run_allowance: number;
 }
 
 interface Person {
@@ -128,6 +129,7 @@ export default function AdminPage() {
   const [orgs, setOrgs] = useState<Org[] | null>(null);
   const [orgError, setOrgError] = useState('');
   const [savingOrg, setSavingOrg] = useState<string | null>(null);
+  const [runDrafts, setRunDrafts] = useState<Record<string, string>>({});
 
   const load = async () => {
     setLoading(true);
@@ -200,6 +202,35 @@ export default function AdminPage() {
     } catch {
       setOrgs(previous);
       setOrgError('Could not update the tier.');
+    } finally {
+      setSavingOrg(null);
+    }
+  };
+
+  const updateRunAllowance = async (orgId: string, value: number) => {
+    const previous = orgs;
+    const token = localStorage.getItem('access_token');
+    setSavingOrg(orgId);
+    setOrgError('');
+    try {
+      const resp = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/orgs/${orgId}/run-allowance`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ run_allowance: value }),
+      });
+      const body = await resp.json().catch(() => null);
+      if (!resp.ok) {
+        setOrgs(previous);
+        setOrgError(body?.detail || 'Could not update the run allowance.');
+        return;
+      }
+      setOrgs((cur) => (cur ? cur.map((o) => (o.org_id === orgId ? { ...o, ...body } : o)) : cur));
+    } catch {
+      setOrgs(previous);
+      setOrgError('Could not update the run allowance.');
     } finally {
       setSavingOrg(null);
     }
@@ -284,8 +315,8 @@ export default function AdminPage() {
               <CardTitle className="text-sm">Organisations</CardTitle>
               <p className="text-[11px] text-muted-foreground">
                 Free-tier organisations can upload and configure but cannot start reviews or MITRE
-                assessments. Set pro or enterprise to enable runs. Requests arrive by email with
-                source assessment_request / review_request.
+                assessments. Grant a number of runs, or set pro/enterprise for unlimited. Requests
+                arrive by email with source assessment_request / review_request.
               </p>
             </CardHeader>
             <CardContent className="pb-3 overflow-x-auto">
@@ -304,6 +335,7 @@ export default function AdminPage() {
                     <tr className="text-left text-muted-foreground border-b">
                       <th className="py-1.5 pr-3 font-medium">Organisation</th>
                       <th className="py-1.5 pr-3 font-medium">Tier</th>
+                      <th className="py-1.5 pr-3 font-medium">Runs</th>
                       <th className="py-1.5 pr-3 font-medium text-right">Members</th>
                       <th className="py-1.5 pr-3 font-medium">Created</th>
                       <th className="py-1.5 font-medium">Actions</th>
@@ -324,6 +356,38 @@ export default function AdminPage() {
                           >
                             {org.subscription_tier}
                           </span>
+                        </td>
+                        <td className="py-1.5 pr-3">
+                          {org.subscription_tier === 'free' ? (
+                            <span className="flex items-center gap-1.5">
+                              <input
+                                type="number"
+                                min={0}
+                                max={1000}
+                                aria-label="Runs to grant"
+                                value={runDrafts[org.org_id] ?? String(org.run_allowance)}
+                                disabled={savingOrg === org.org_id}
+                                onChange={(e) =>
+                                  setRunDrafts((prev) => ({ ...prev, [org.org_id]: e.target.value }))
+                                }
+                                className="h-7 w-[72px] rounded-md border bg-background px-1.5 text-xs"
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={savingOrg === org.org_id}
+                                onClick={() => {
+                                  const raw = runDrafts[org.org_id] ?? String(org.run_allowance);
+                                  const value = Math.max(0, Math.min(1000, Number(raw) || 0));
+                                  updateRunAllowance(org.org_id, value);
+                                }}
+                              >
+                                Set
+                              </Button>
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">Unlimited</span>
+                          )}
                         </td>
                         <td className="py-1.5 pr-3 text-right">{org.user_count}</td>
                         <td className="py-1.5 pr-3 text-muted-foreground">

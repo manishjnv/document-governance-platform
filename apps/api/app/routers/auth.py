@@ -597,6 +597,12 @@ async def get_current_user_info(
     platform_admins = {
         e.strip().lower() for e in settings.platform_admin_emails.split(",") if e.strip()
     }
+    is_platform_admin = user.email.lower() in platform_admins
+    unlimited = (
+        not settings.require_paid_tier_for_runs
+        or is_platform_admin
+        or org.subscription_tier in ("pro", "enterprise")
+    )
     return CurrentUserResponse(
         user_id=user.user_id,
         email=user.email,
@@ -608,8 +614,13 @@ async def get_current_user_info(
         mfa_enabled=False,
         created_at=user.created_at,
         last_login=user.last_login,
-        is_platform_admin=user.email.lower() in platform_admins,
-        assessments_enabled=runs_enabled(subscription_tier=org.subscription_tier, email=user.email),
+        is_platform_admin=is_platform_admin,
+        assessments_enabled=runs_enabled(
+            subscription_tier=org.subscription_tier,
+            email=user.email,
+            run_allowance=org.run_allowance,
+        ),
+        runs_remaining=None if unlimited else org.run_allowance,
     )
 
 

@@ -402,6 +402,7 @@ export default function DashboardPage() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState('');
   const [assessmentsEnabled, setAssessmentsEnabled] = useState(true);
+  const [runsRemaining, setRunsRemaining] = useState<number | null>(null);
   const [meEmail, setMeEmail] = useState('');
   const [meName, setMeName] = useState('');
   const [requestAccessOpen, setRequestAccessOpen] = useState(false);
@@ -486,6 +487,9 @@ export default function DashboardPage() {
       setOrgId(org);
       // Older API without the field means unrestricted.
       setAssessmentsEnabled(userResponse.data.assessments_enabled !== false);
+      setRunsRemaining(
+        typeof userResponse.data.runs_remaining === 'number' ? userResponse.data.runs_remaining : null
+      );
       setMeEmail(userResponse.data.email || '');
       setMeName([userResponse.data.first_name, userResponse.data.last_name].filter(Boolean).join(' '));
 
@@ -670,7 +674,14 @@ export default function DashboardPage() {
   return (
     <AppShell>
       <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
-        <h1 className="text-2xl font-medium">SOW Review</h1>
+        <div>
+          <h1 className="text-2xl font-medium">SOW Review</h1>
+          {runsRemaining !== null && (
+            <p className="text-xs text-muted-foreground">
+              {runsRemaining} run{runsRemaining === 1 ? '' : 's'} remaining for your organisation
+            </p>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search

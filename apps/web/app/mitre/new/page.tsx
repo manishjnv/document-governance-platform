@@ -200,6 +200,7 @@ export default function NewMitreAssessmentPage() {
   const [siemSecret, setSiemSecret] = useState('');
   // Assessment execution gate: null = unknown yet, don't block the page on it.
   const [assessmentsEnabled, setAssessmentsEnabled] = useState<boolean | null>(null);
+  const [runsRemaining, setRunsRemaining] = useState<number | null>(null);
   const [me, setMe] = useState<{ email?: string; first_name?: string; last_name?: string } | null>(null);
 
   useEffect(() => {
@@ -221,6 +222,7 @@ export default function NewMitreAssessmentPage() {
         setMe(res.data);
         // Undefined (older API) means unrestricted, same as the dashboard gate.
         setAssessmentsEnabled(res.data?.assessments_enabled !== false);
+        setRunsRemaining(typeof res.data?.runs_remaining === 'number' ? res.data.runs_remaining : null);
       })
       .catch(() => {}); // don't block the page if this fails
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1109,14 +1111,21 @@ export default function NewMitreAssessmentPage() {
                   </Button>
                 </div>
               ) : (
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Button onClick={handleRun} disabled={running} className="flex-1">
-                    <Play size={15} className="mr-1.5" aria-hidden="true" />
-                    {running ? 'Starting…' : 'Run assessment'}
-                  </Button>
-                  <Button variant="outline" onClick={() => { setPreview(null); setError(''); }}>
-                    Back — change files
-                  </Button>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Button onClick={handleRun} disabled={running} className="flex-1">
+                      <Play size={15} className="mr-1.5" aria-hidden="true" />
+                      {running ? 'Starting…' : 'Run assessment'}
+                    </Button>
+                    <Button variant="outline" onClick={() => { setPreview(null); setError(''); }}>
+                      Back — change files
+                    </Button>
+                  </div>
+                  {assessmentsEnabled === true && runsRemaining !== null && (
+                    <p className="text-center text-[11px] text-muted-foreground">
+                      {runsRemaining} run{runsRemaining === 1 ? '' : 's'} remaining for your organisation
+                    </p>
+                  )}
                 </div>
               )}
               <p className="text-center text-[11px] text-muted-foreground">
