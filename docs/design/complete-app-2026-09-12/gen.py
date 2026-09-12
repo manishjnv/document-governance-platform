@@ -26,13 +26,22 @@ PAGES = [
 W, H, PW, PH, GAP = 1440, 900, 390, 844, 120
 
 
-def discover():
+def discover(only=None):
+    """Import screen modules. A module that fails to import is skipped with a warning unless
+    it is explicitly requested with --only, so one half-written screen never blocks the rest."""
     mods = []
     for path in sorted(glob.glob(os.path.join(HERE, "screens", "*.py"))):
         name = os.path.basename(path)[:-3]
         if name.startswith("_"):
             continue
-        m = importlib.import_module(name)
+        try:
+            m = importlib.import_module(name)
+        except Exception as e:  # noqa: BLE001
+            wanted = only and any(s.lower().replace("_", "") == name.replace("_", "") or s in open(path, encoding="utf-8", errors="ignore").read() for s in only)
+            if wanted:
+                raise
+            print("SKIP %s: %s: %s" % (name, type(e).__name__, str(e)[:120]))
+            continue
         if not hasattr(m, "STEM") or not hasattr(m, "build"):
             continue
         mods.append(m)
@@ -47,7 +56,7 @@ def main():
         only = set(sys.argv[sys.argv.index("--only") + 1].split(","))
     artboards, notes, clicks = [], [], {}
     slot = {p: 0 for p, _ in PAGES}
-    for m in discover():
+    for m in discover(only):
         stem, page, title = m.STEM, getattr(m, "PAGE", "system"), getattr(m, "TITLE", m.STEM)
         if only and stem not in only:
             continue

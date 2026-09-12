@@ -1,0 +1,21 @@
+[
+  "SIEM connections", "Add connection", "Assessments",
+  "Failed to load connections", "Could not delete the connection", "SIEM connections are managed by org admins.",
+  "Edit ", "Add connection",
+  "Read-only pull of your detection rules. The", "is stored encrypted and never shown again.",
+  "The service principal needs the Microsoft Sentinel Reader role.",
+  "Microsoft Sentinel", "Splunk",
+  "Name (optional)", "Tenant ID (GUID)", "Client ID (GUID)", "Subscription ID (GUID)", "Resource group", "Log Analytics workspace",
+  "Host (e.g. acme.splunkcloud.com)", "Management port", "App (optional — all apps if empty)",
+  "Client secret", "Auth token", "(stored encrypted)", "(blank = keep saved)",
+  "Auto-pull schedule", "Off — manual pulls only", "Daily", "Weekly", "Hour (UTC)", "Day of week",
+  "The client secret is required — it is stored encrypted and never shown again.",
+  "The auth token is required — it is stored encrypted and never shown again.",
+  "Could not save the connection",
+  "Save connection", "Save changes", "Saving…", "Cancel",
+  "No saved connections yet. Add one to pull detection rules straight from Microsoft Sentinel or Splunk — on a schedule if you like. Saved secrets are encrypted at rest and never shown again.",
+  "Connection", "Schedule", "Last pull", "Health", "Coverage trend", "Last error", "Actions",
+  "Off", "never", "Healthy", "failed in a row",
+  "Test", "Testing…", "OK — 175 rules reachable", "Test failed", "Pull now", "Pulling…", "Pull failed",
+  "Delete connection", "Scheduled pulls stop; past assessments are kept."
+]

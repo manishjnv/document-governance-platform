@@ -1,0 +1,400 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--paper:#FAF9F6;--card:#FFFFFF;--ink:#14181F;--ink2:#3B4453;--ink3:#5E6877;--line:#E6E3DD;--line2:#D5D1C9;
+--accent:#2457B8;--accent-soft:#E8EFFB;--crit:#A32D25;--crit-soft:#FBE7E4;--high:#9C4A0C;--high-soft:#FCEEDF;
+--med:#705708;--med-soft:#FAF1D2;--low:#2E6A42;--low-soft:#E3F1E7;--info:#1F5C85;--info-soft:#E3EEF7;--ok:#2A6F46;--ok-soft:#E3F1E7;
+--na:#ECE9E3;--violet:#4F3691;--violet-soft:#EFE9FA;--r:8px;--rc:10px;
+--crit-fill:#C0392B;--high-fill:#D97A1F;--med-fill:#D4A72C;--low-fill:#3E8A57;--info-fill:#2E86C1;
+--shadow:0 1px 2px rgba(20,24,31,.05),0 8px 24px -12px rgba(20,24,31,.16);--ease:cubic-bezier(.22,.61,.36,1);--side:224px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 14px/1.5 "IBM Plex Sans","Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}a:hover{color:#1B4494;text-decoration:underline}
+h1,h2,h3,h4{margin:0;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+h1{font-size:24px;line-height:1.2}h2{font-size:18px}h3{font-size:14px}
+p{margin:0}button{font:inherit;color:inherit}
+.mono{font-family:"IBM Plex Mono",Consolas,Menlo,monospace;font-size:12px}
+.num{font-variant-numeric:tabular-nums}
+.sub{color:var(--ink2)}.faint{color:var(--ink3)}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--rc);box-shadow:var(--shadow)}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.card-b{padding:16px}
+.row{display:flex;align-items:center;gap:8px}.row>*{min-width:0}.wrap{flex-wrap:wrap}.between{justify-content:space-between}.grow{flex:1;min-width:0}
+.stack{display:flex;flex-direction:column;gap:8px}
+.grid{display:grid;gap:12px}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}.g5{grid-template-columns:repeat(5,minmax(0,1fr))}.g6{grid-template-columns:repeat(6,minmax(0,1fr))}.g8{grid-template-columns:repeat(8,minmax(0,1fr))}
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 14px;border-radius:var(--r);border:1px solid var(--line2);background:#fff;color:var(--ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .16s var(--ease),border-color .16s,transform .16s var(--ease),opacity .16s}
+.btn:hover{background:#F3F1EC}.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{background:#1E4CA2}
+.btn.danger{background:var(--crit);border-color:var(--crit);color:#fff}.btn.danger:hover{background:#9C2A23}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--ink2)}.btn.ghost:hover{background:#F0EDE7;color:var(--ink)}
+.btn.link{background:transparent;border-color:transparent;color:var(--accent);padding:0;height:auto}.btn.link:hover{text-decoration:underline}
+.btn.sm{height:30px;padding:0 10px;font-size:12px}.btn.lg{height:40px;padding:0 18px}.btn.icon{width:36px;padding:0}.btn.icon.sm{width:30px}
+.btn[disabled],.btn.disabled{opacity:.5;pointer-events:none}
+/* chips */
+.chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;border:1px solid transparent;transition:background .2s,color .2s}
+.chip.crit{background:var(--crit-soft);color:var(--crit)}.chip.high{background:var(--high-soft);color:var(--high)}.chip.med{background:var(--med-soft);color:var(--med)}.chip.low{background:var(--low-soft);color:var(--low)}.chip.info{background:var(--info-soft);color:var(--info)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}.chip.grey{background:var(--na);color:var(--ink2)}.chip.blue{background:var(--accent-soft);color:var(--accent)}.chip.violet{background:var(--violet-soft);color:var(--violet)}
+.chip.outline{background:#fff;border-color:var(--line2);color:var(--ink2);font-weight:500}
+.chip.xs{height:18px;font-size:10.5px;padding:0 6px}
+.dot{width:8px;height:8px;border-radius:999px;display:inline-block;flex:none}
+/* inputs */
+.input,.select,textarea.input{height:36px;padding:0 10px;border:1px solid var(--line2);border-radius:var(--r);background:#fff;color:var(--ink);font:inherit;font-size:13px;outline:none;transition:border-color .16s,box-shadow .16s}
+.input:focus,.select:focus,textarea.input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.input.sm,.select.sm{height:30px;font-size:12px}textarea.input{height:auto;padding:8px 10px}
+.select{padding-right:28px;appearance:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%233B4453' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 8px center}
+.search{position:relative}.search .input{padding-left:30px;width:100%}.search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--ink3);pointer-events:none}
+.label{display:block;font-size:12px;font-weight:500;color:var(--ink2);margin-bottom:4px}
+.req{color:var(--crit)}
+input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent)}
+/* tooltip */
+.tip{position:relative}
+.tip::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 8px);transform:translate(-50%,4px);background:var(--ink);color:#fff;font:400 12px/1.4 "IBM Plex Sans",sans-serif;padding:7px 10px;border-radius:7px;white-space:pre-line;width:max-content;max-width:280px;opacity:0;pointer-events:none;transition:opacity .16s var(--ease),transform .16s var(--ease);z-index:60;text-align:left;font-weight:400;text-transform:none;letter-spacing:0}
+.tip::before{content:"";position:absolute;left:50%;bottom:calc(100% + 3px);transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--ink);opacity:0;transition:opacity .16s;z-index:60}
+.tip:hover::after,.tip:hover::before,.tip:focus-visible::after,.tip:focus-visible::before{opacity:1;transform:translate(-50%,0)}
+.tip.left::after{left:0;transform:translate(0,4px)}.tip.left:hover::after{transform:translate(0,0)}.tip.left::before{left:14px}
+/* kpi */
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--rc);padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0;text-align:left;cursor:default}
+.kpi.click{cursor:pointer;transition:border-color .16s,background .16s}.kpi.click:hover{border-color:var(--accent);background:#FBFBFF}
+.kpi .v{font-size:24px;font-weight:600;letter-spacing:-.02em;line-height:1.1}
+/* tables */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);padding:9px 12px;border-bottom:1px solid var(--line);background:#FBFAF8;white-space:nowrap}
+.tbl th button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:4px;text-transform:inherit;letter-spacing:inherit}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+.tbl tbody tr{transition:background .12s}.tbl tbody tr:hover{background:#F6F4EF}.tbl tbody tr.sel{background:var(--accent-soft)}
+.tbl .r{text-align:right}.tbl tr.band td{background:#F5F3EE;padding:7px 12px}
+.tbl .clickable{cursor:pointer}
+/* div tables (loop-safe; rows become cards on phones) */
+.dt{border:1px solid var(--line);border-radius:var(--rc);background:#fff;overflow:hidden}
+.dt .dr{display:grid;align-items:center;gap:12px;padding:0 12px;border-bottom:1px solid var(--line);min-height:44px;font-size:13px}
+.dt .dr:last-child{border-bottom:0}.dt .dc{min-width:0}
+.dt .dh{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);background:#FBFAF8;min-height:36px}
+.dt .dh button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:4px;text-transform:inherit;letter-spacing:inherit}
+.dt .dr:not(.dh):not(.band):hover{background:#F6F4EF}.dt .dr.sel{background:var(--accent-soft)}
+.dt .band{background:#F5F3EE;min-height:38px}.dt .child{background:#FCFBF9}
+.dt .r{text-align:right;justify-self:end}.dt .link{cursor:pointer}
+.dt .acts{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:12.5px;justify-content:flex-end}
+.dt .acts a,.dt .acts button.lnk{background:none;border:0;padding:0;font:inherit;font-size:12.5px;color:var(--accent);cursor:pointer}
+.dt .acts button.lnk.danger{color:var(--crit)}
+/* tabs */
+.tabs{display:flex;gap:20px;border-bottom:1px solid var(--line);align-items:flex-end}
+.tab{background:none;border:0;padding:0 2px 10px;font-size:13px;font-weight:500;color:var(--ink2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .16s,border-color .16s}
+.tab:hover{color:var(--ink)}.tab.on{color:var(--ink);font-weight:600;border-color:var(--accent)}
+.seg{display:inline-flex;gap:2px;padding:3px;background:var(--na);border-radius:7px}
+.seg button{border:0;background:transparent;padding:0 10px;height:28px;border-radius:5px;font-size:12.5px;font-weight:500;color:var(--ink2);cursor:pointer;transition:background .16s,color .16s}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(20,24,31,.14)}
+.pillbar{display:flex;flex-wrap:wrap;gap:6px}
+.pillbar .chip{cursor:pointer;opacity:.75}.pillbar .chip:hover{opacity:1}.pillbar .chip.on{opacity:1;box-shadow:0 0 0 2px var(--accent-soft);border-color:var(--accent)}
+/* sheets / dialogs / menus */
+.ov{position:fixed;inset:0;background:rgba(20,24,31,.35);z-index:40;transition:opacity .25s var(--ease)}
+.sheet{position:fixed;top:0;right:0;height:100%;background:#fff;box-shadow:-12px 0 40px -20px rgba(20,24,31,.35);z-index:41;display:flex;flex-direction:column;transition:transform .32s var(--ease);max-width:100vw}
+.sheet-h{padding:16px 20px 12px 24px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:10px}
+.sheet-b{padding:16px 20px 16px 24px;overflow-y:auto;flex:1}
+.sheet-f{position:sticky;bottom:0;padding:10px 20px;border-top:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.grip{position:absolute;left:0;top:0;height:100%;width:12px;cursor:ew-resize;touch-action:none;display:flex;align-items:center;justify-content:center}
+.grip i{width:4px;height:40px;border-radius:999px;background:var(--line2);transition:background .16s}.grip:hover i,.grip:focus-visible i{background:var(--accent)}
+.grip:focus-visible{outline:none}
+.xbtn{background:none;border:0;padding:4px;border-radius:6px;color:var(--ink3);cursor:pointer;display:inline-flex}.xbtn:hover{background:#F0EDE7;color:var(--ink)}
+.dlg-ov{position:fixed;inset:0;background:rgba(20,24,31,.45);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;transition:opacity .2s var(--ease)}
+.dlg{background:#fff;border-radius:12px;box-shadow:0 24px 60px -20px rgba(20,24,31,.4);width:100%;max-width:480px;transition:transform .22s var(--ease),opacity .22s;position:relative}
+.dlg-h{padding:18px 20px 6px}.dlg-b{padding:8px 20px 16px;color:var(--ink2);font-size:13.5px}.dlg-f{padding:12px 20px 18px;display:flex;justify-content:flex-end;gap:8px}
+.menu{position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);min-width:160px;padding:4px;z-index:30;display:none}
+.menu.open{display:block}.menu button{display:flex;width:100%;text-align:left;background:none;border:0;padding:8px 10px;border-radius:6px;font-size:13px;cursor:pointer;color:var(--ink);align-items:center;gap:8px}
+.menu button:hover{background:#F3F1EC}.menu button.danger{color:var(--crit)}
+.rel{position:relative}
+/* alerts, states */
+.alert{border-radius:var(--r);padding:12px 14px;font-size:13px;border:1px solid}
+.alert.err{background:var(--crit-soft);border-color:#F1C5BF;color:#8A2A23}
+.alert.warn{background:#FFF8E6;border-color:#F0DFA8;color:#6B5407}
+.alert.ok{background:var(--ok-soft);border-color:#BFE1CB;color:#256A40}
+.alert.info{background:var(--info-soft);border-color:#C6DBEA;color:#1F4E6E}
+.alert.blue{background:var(--accent-soft);border-color:#C9D9F5;color:#1F3F80}
+.err-line{font-size:12px;color:var(--crit)}
+.empty{border:1px dashed var(--line2);border-radius:var(--rc);padding:36px 20px;text-align:center;color:var(--ink2);background:#FCFBF9}
+.empty h3{margin-bottom:6px}
+.skel{background:linear-gradient(90deg,#EFECE6 25%,#F7F5F1 50%,#EFECE6 75%);background-size:400% 100%;animation:sh 1.3s ease infinite;border-radius:6px}
+@keyframes sh{0%{background-position:100% 0}100%{background-position:0 0}}
+.spin{animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+.rise{animation:rise .45s var(--ease) both}@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.drop{border:2px dashed var(--line2);border-radius:var(--rc);padding:26px 16px;text-align:center;cursor:pointer;transition:border-color .16s,background .16s;color:var(--ink2)}
+.drop:hover{background:#F6F4EF}.drop.on{border-color:var(--accent);background:var(--accent-soft)}
+.filerow{display:flex;align-items:center;gap:8px;border:1px solid #BFE1CB;background:var(--ok-soft);color:#256A40;border-radius:var(--r);padding:8px 10px;font-size:13px}
+.bar{height:6px;border-radius:999px;background:var(--na);overflow:hidden}.bar i{display:block;height:100%;border-radius:999px;transition:width .5s var(--ease)}
+.code{font-family:"IBM Plex Mono",Consolas,monospace;font-size:12px;background:#F5F3EE;border:1px solid var(--line);border-radius:6px;padding:1px 5px;color:var(--ink)}
+pre.block{font-family:"IBM Plex Mono",Consolas,monospace;font-size:12px;background:#F5F3EE;border:1px solid var(--line);border-radius:8px;padding:10px 12px;overflow:auto;margin:0;color:var(--ink);line-height:1.55}
+.kbd{font:500 11px "IBM Plex Mono",monospace;border:1px solid var(--line2);border-radius:5px;padding:1px 5px;color:var(--ink3);background:#fff}
+.hr{border:0;border-top:1px solid var(--line);margin:0}
+/* shell */
+.app{min-height:100vh;display:flex;background:var(--paper)}
+.side{position:fixed;inset:0 auto 0 0;width:var(--side);border-right:1px solid var(--line);background:#fff;display:flex;flex-direction:column;padding:14px 10px;z-index:20;transition:width .18s var(--ease)}
+.side .brand{display:flex;align-items:center;gap:10px;padding:4px 8px;min-width:0}
+.side .tag{padding:2px 8px 14px;font-size:11.5px;color:var(--ink3);white-space:nowrap;overflow:hidden}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;font-size:13.5px;font-weight:500;color:var(--ink2);white-space:nowrap;overflow:hidden;transition:background .16s,color .16s}
+.nav a:hover{background:#F3F1EC;color:var(--ink);text-decoration:none}.nav a.on{background:var(--accent);color:#fff}
+.nav a svg{flex:none}
+.side .foot{margin-top:auto}
+.side .tog{position:absolute;right:-14px;top:30px;width:28px;height:28px;border-radius:999px;border:2px solid var(--paper);background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow)}
+.side .sgrip{position:absolute;right:0;top:0;height:100%;width:6px;cursor:col-resize;touch-action:none}.side .sgrip:hover{background:var(--accent-soft)}
+.side.c .tag,.side.c .nav a span,.side.c .brand span,.side.c .foot span{display:none}.side.c .nav a{justify-content:center;padding:8px 0}.side.c .foot .btn{justify-content:center;padding:0}
+.topbar{display:none;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:20}
+.msheet{position:fixed;inset:0 auto 0 0;width:256px;background:#fff;z-index:45;padding:16px 12px;display:flex;flex-direction:column;transition:transform .28s var(--ease);box-shadow:12px 0 40px -20px rgba(20,24,31,.35)}
+.main{flex:1;min-width:0;padding-left:var(--side);transition:padding-left .18s var(--ease)}
+.page{max-width:1240px;margin:0 auto;padding:24px 28px 48px}.page.wide{max-width:none}
+.pagehead{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.pagehead .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.appbar{position:fixed;left:0;right:0;top:0;z-index:70;background:var(--accent);color:#fff;padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:13px}
+.install{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:400px;background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:8px 8px 8px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;z-index:70}
+@media (max-width:760px){
+ .app{flex-direction:column}.side{display:none}.topbar{display:flex;width:100%}.main{padding-left:0;width:100%}.page{padding:16px 16px 40px}
+ .g2,.g3{grid-template-columns:minmax(0,1fr)}.g4,.g5,.g6,.g8{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .chip{white-space:normal;height:auto;min-height:22px;padding:2px 8px}
+ .tbl.cards thead{display:none}.tbl.cards tr{display:block;border:1px solid var(--line);border-radius:var(--r);margin-bottom:8px;background:#fff;padding:4px 0}
+ .tbl.cards td{display:flex;justify-content:space-between;align-items:center;gap:12px;border:0;padding:6px 12px;text-align:left}
+ .tbl.cards td::before{content:attr(data-th);font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);flex:none}
+ .tbl.cards td.r{text-align:right}.tbl.cards tr.band td::before{content:none}
+ .dt .dr{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:10px 12px}.dt .dh{display:none}
+ .dt .dc{display:flex;justify-content:space-between;align-items:center;gap:12px}.dt .dc::before{content:attr(data-th);font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);flex:none}
+ .dt .dc.nolbl::before,.dt .band .dc::before{content:none}.dt .r{justify-self:auto}.dt .acts{justify-content:flex-start}
+ .kpi .v{font-size:20px}.sheet{width:100vw !important}.pagehead .actions{width:100%}
+ .tip::after{display:none}
+}
+</style>
+</helmet>
+
+<div class="app" style="--side:{{shell.sideW}}" data-screen="MitreConnectionsPhone" data-ready="{{ready}}" onClick="{{root}}">
+  <aside class="side {{shell.cls}}" aria-label="Sidebar">
+    <div class="brand"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg><span style="font-weight:600;font-size:14px">ScopeWise</span></div>
+    <div class="tag">Catch contract risk before you sign.</div>
+    <nav class="nav" aria-label="Main"><a href="#" class="" title="SOW Review"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span>SOW Review</span></a><a href="#" class="on" title="MITRE Assessment"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg><span>MITRE Assessment</span></a><a href="#" class="" title="Code Security Review"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l1.5 2M16 2l-1.5 2"/><rect x="6" y="6" width="12" height="14" rx="6"/><path d="M12 6v14M2 13h4M18 13h4M3 20l3-2M21 20l-3-2M3 6l3 2M21 6l-3 2"/></svg><span>Code Security Review</span></a><sc-if value="{{shell.admin}}" hint-placeholder-val="{{true}}"><a href="#" class=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path d="M9 12l2 2 4-4"/></svg><span>Admin</span></a></sc-if></nav>
+    <div class="foot"><button class="btn ghost sm" style="width:100%;justify-content:flex-start"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M13 3h6v18h-6"/></svg><span>Log out</span></button></div>
+    <button class="tog" aria-label="{{shell.togLabel}}" onClick="{{shell.toggle}}"><sc-if value="{{shell.collapsed}}" hint-placeholder-val="{{false}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></sc-if><sc-if value="{{shell.expanded}}" hint-placeholder-val="{{true}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></sc-if></button>
+    <sc-if value="{{shell.expanded}}" hint-placeholder-val="{{true}}"><div class="sgrip" role="separator" aria-orientation="vertical" aria-label="Resize sidebar" onPointerDown="{{shell.gDown}}" onPointerMove="{{shell.gMove}}" onPointerUp="{{shell.gUp}}"></div></sc-if>
+  </aside>
+  <div class="topbar"><div class="brand"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg><span style="font-weight:600;font-size:14px">ScopeWise</span></div><button class="btn ghost icon sm" aria-label="Open navigation menu" onClick="{{shell.openMobile}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>
+  <div class="ov" style="opacity:{{shell.mOvOp}};pointer-events:{{shell.mPe}};z-index:44" onClick="{{shell.closeMobile}}"></div>
+  <div class="msheet" style="transform:{{shell.mTx}}" aria-label="Navigation">
+    <div class="row between" style="margin-bottom:14px"><div class="brand"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg><span style="font-weight:600;font-size:14px">ScopeWise</span></div><button class="xbtn" aria-label="Close" onClick="{{shell.closeMobile}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <nav class="nav" aria-label="Main"><a href="#" class=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span>SOW Review</span></a><a href="#" class="on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg><span>MITRE Assessment</span></a><a href="#" class=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l1.5 2M16 2l-1.5 2"/><rect x="6" y="6" width="12" height="14" rx="6"/><path d="M12 6v14M2 13h4M18 13h4M3 20l3-2M21 20l-3-2M3 6l3 2M21 6l-3 2"/></svg><span>Code Security Review</span></a><sc-if value="{{shell.admin}}" hint-placeholder-val="{{true}}"><a href="#" class=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path d="M9 12l2 2 4-4"/></svg><span>Admin</span></a></sc-if></nav>
+    <div class="foot" style="margin-top:auto"><button class="btn ghost sm" style="width:100%;justify-content:flex-start"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M13 3h6v18h-6"/></svg><span>Log out</span></button></div>
+  </div>
+  <main class="main"><div class="page">
+<div class="pagehead">
+  <div class="row" style="gap:8px"><span style="color:var(--accent)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4"/></svg></span><h1>SIEM connections</h1></div>
+  <div class="actions"><button class="btn primary sm" onClick="{{openAdd}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add connection</button><button class="btn sm" ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Assessments</button></div>
+</div>
+<sc-if value="{{formOpen}}" hint-placeholder-val="{{false}}">
+<div class="card rise" id="mtc-form" style="padding:16px;margin-bottom:14px">
+  <h2 style="font-size:15px">{{formHeading}}</h2>
+  <p class="sub" style="font-size:12.5px;margin:4px 0 12px;max-width:640px">{{blurb}}</p>
+  <div class="tabs" role="tablist" aria-label="Platform"><button role="tab" class="tab {{platform.sentinel.cls}}" aria-selected="{{platform.sentinel.aria}}" onClick="{{platform.sentinel.pick}}">Microsoft Sentinel</button><button role="tab" class="tab {{platform.splunk.cls}}" aria-selected="{{platform.splunk.aria}}" onClick="{{platform.splunk.pick}}">Splunk</button></div>
+  <div class="grid g2" style="gap:12px;margin-top:12px">
+    <div><label class="label">Name (optional)</label><input class="input" style="width:100%" value="{{form.name}}" onChange="{{setName}}"></div>
+    <sc-if value="{{isSentinel}}" hint-placeholder-val="{{true}}">
+      <div><label class="label">Tenant ID (GUID)</label><input class="input" style="width:100%" value="{{form.tenant}}" onChange="{{setTenant}}"></div>
+      <div><label class="label">Client ID (GUID)</label><input class="input" style="width:100%" value="{{form.client}}" onChange="{{setClient}}"></div>
+      <div><label class="label">Subscription ID (GUID)</label><input class="input" style="width:100%" value="{{form.sub}}" onChange="{{setSub}}"></div>
+      <div><label class="label">Resource group</label><input class="input" style="width:100%" value="{{form.rg}}" onChange="{{setRg}}"></div>
+      <div><label class="label">Log Analytics workspace</label><input class="input" style="width:100%" value="{{form.workspace}}" onChange="{{setWorkspace}}"></div>
+    </sc-if>
+    <sc-if value="{{isSplunk}}" hint-placeholder-val="{{false}}">
+      <div><label class="label">Host (e.g. acme.splunkcloud.com)</label><input class="input" style="width:100%" value="{{form.host}}" onChange="{{setHost}}"></div>
+      <div><label class="label">Management port</label><input class="input" style="width:100%" value="{{form.port}}" onChange="{{setPort}}" placeholder="8089"></div>
+      <div><label class="label">App (optional — all apps if empty)</label><input class="input" style="width:100%" value="{{form.app}}" onChange="{{setApp}}"></div>
+    </sc-if>
+    <div><label class="label">{{secretLabel}}{{secretSuffix}}</label><input class="input" type="password" style="width:100%" value="{{form.secret}}" onChange="{{setSecret}}"></div>
+    <div><label class="label">Auto-pull schedule</label><select class="select" style="width:100%" value="{{form.schedule}}" onChange="{{setSchedule}}"><option value="off">Off — manual pulls only</option><option value="daily">Daily</option><option value="weekly">Weekly</option></select></div>
+    <sc-if value="{{showHour}}" hint-placeholder-val="{{false}}"><div><label class="label">Hour (UTC)</label><select class="select" style="width:100%" value="{{form.hour}}" onChange="{{setHour}}"><option value="00:00">00:00 UTC</option><option value="01:00">01:00 UTC</option><option value="02:00">02:00 UTC</option><option value="03:00">03:00 UTC</option><option value="04:00">04:00 UTC</option><option value="05:00">05:00 UTC</option><option value="06:00">06:00 UTC</option><option value="07:00">07:00 UTC</option><option value="08:00">08:00 UTC</option><option value="09:00">09:00 UTC</option><option value="10:00">10:00 UTC</option><option value="11:00">11:00 UTC</option><option value="12:00">12:00 UTC</option><option value="13:00">13:00 UTC</option><option value="14:00">14:00 UTC</option><option value="15:00">15:00 UTC</option><option value="16:00">16:00 UTC</option><option value="17:00">17:00 UTC</option><option value="18:00">18:00 UTC</option><option value="19:00">19:00 UTC</option><option value="20:00">20:00 UTC</option><option value="21:00">21:00 UTC</option><option value="22:00">22:00 UTC</option><option value="23:00">23:00 UTC</option></select></div></sc-if>
+    <sc-if value="{{showDay}}" hint-placeholder-val="{{false}}"><div><label class="label">Day of week</label><select class="select" style="width:100%" value="{{form.day}}" onChange="{{setDay}}"><option value="Mon">Mon</option><option value="Tue">Tue</option><option value="Wed">Wed</option><option value="Thu">Thu</option><option value="Fri">Fri</option><option value="Sat">Sat</option><option value="Sun">Sun</option></select></div></sc-if>
+  </div>
+  <sc-if value="{{hasFormErr}}" hint-placeholder-val="{{false}}"><p class="err-line" style="margin-top:10px">{{formErr}}</p></sc-if>
+  <sc-if value="{{saveErr}}" hint-placeholder-val="{{false}}"><p class="err-line" style="margin-top:10px">Could not save the connection</p></sc-if>
+  <div class="row" style="margin-top:14px;gap:8px">
+    <button class="btn primary" onClick="{{save}}">{{saveLabel}}</button>
+    <button class="btn" onClick="{{closeForm}}">Cancel</button>
+  </div>
+</div>
+</sc-if>
+<sc-if value="{{is.default}}" hint-placeholder-val="{{true}}">
+<sc-if value="{{loadErr}}" hint-placeholder-val="{{false}}"><div class="alert err" style="margin-bottom:12px">Failed to load connections</div></sc-if>
+<sc-if value="{{delErr}}" hint-placeholder-val="{{false}}"><p role="alert" class="err-line" style="margin-bottom:8px">Could not delete the connection</p></sc-if>
+<div class="dt"><div class="dr dh" style="grid-template-columns:minmax(0,1.7fr) minmax(0,1.05fr) minmax(0,1fr) minmax(0,0.9fr) minmax(0,1.2fr) minmax(0,1.5fr) minmax(0,1.5fr)"><div class="dc">Connection</div><div class="dc">Schedule</div><div class="dc">Last pull</div><div class="dc">Health</div><div class="dc">Coverage trend</div><div class="dc">Last error</div><div class="dc r">Actions</div></div><sc-for list="{{rows}}" as="c" hint-placeholder-count="2">
+<div class="dr" style="grid-template-columns:minmax(0,1.7fr) minmax(0,1.05fr) minmax(0,1fr) minmax(0,0.9fr) minmax(0,1.2fr) minmax(0,1.5fr) minmax(0,1.5fr)">
+  <div class="dc" data-th="Connection" ><div><div style="font-weight:600">{{c.name}}</div><div class="faint" style="font-size:12px">{{c.subtitle}}</div></div></div><div class="dc" data-th="Schedule" >{{c.schedText}}</div><div class="dc" data-th="Last pull" ><span class="num">{{c.lastPull}}</span></div><div class="dc" data-th="Health" ><span class="chip {{c.healthTone}} xs">{{c.healthLabel}}</span></div><div class="dc" data-th="Coverage trend" >
+<sc-if value="{{c.hasTrend}}" hint-placeholder-val="{{true}}"><div class="row" style="gap:6px"><a href="#" class="num">{{c.pct}}%</a><span class="num" style="font-size:12px;font-weight:600;color:{{c.deltaColor}}">{{c.deltaText}}</span><span class="tip" data-tip="{{c.trendTip}}"><svg width="64" height="18" viewBox="0 0 64 18" fill="none" aria-hidden="true"><polyline points="0.0,16.0 12.8,14.4 25.6,12.7 38.4,8.9 51.2,6.6 64.0,2.0" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div></sc-if>
+<sc-if value="{{c.noTrend}}" hint-placeholder-val="{{false}}"><span class="faint">—</span></sc-if>
+</div><div class="dc" data-th="Last error" ><span class="sub" style="font-size:12.5px">{{c.lastErrorText}}</span></div>
+  <div class="dc acts" data-th="Actions">
+    <button class="lnk" onClick="{{c.test}}">{{c.testLabel}}</button><button class="lnk" onClick="{{c.pull}}">{{c.pullLabel}}</button>
+    <button class="btn icon sm ghost tip" aria-label="{{c.editAria}}" data-tip="Edit" onClick="{{c.openEdit}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+    <button class="btn icon sm ghost tip" aria-label="{{c.deleteAria}}" data-tip="Delete" onClick="{{c.openDelete}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v7M14 10v7"/></svg></button>
+  </div>
+</div></sc-for></div>
+</sc-if><sc-if value="{{is.loading}}" hint-placeholder-val="{{false}}"><div class="dt"><div class="dr dh" style="grid-template-columns:minmax(0,1.7fr) minmax(0,1.05fr) minmax(0,1fr) minmax(0,0.9fr) minmax(0,1.2fr) minmax(0,1.5fr) minmax(0,1.5fr)"><div class="dc">Connection</div><div class="dc">Schedule</div><div class="dc">Last pull</div><div class="dc">Health</div><div class="dc">Coverage trend</div><div class="dc">Last error</div><div class="dc r">Actions</div></div><div class="dr" style="grid-template-columns:minmax(0,1.7fr) minmax(0,1.05fr) minmax(0,1fr) minmax(0,0.9fr) minmax(0,1.2fr) minmax(0,1.5fr) minmax(0,1.5fr)"><div class="dc" data-th="Connection" ><div class="skel" style="width:70%;height:14px;"></div></div><div class="dc" data-th="Schedule" ><div class="skel" style="width:60%;height:14px;"></div></div><div class="dc" data-th="Last pull" ><div class="skel" style="width:60%;height:14px;"></div></div><div class="dc" data-th="Health" ><div class="skel" style="width:50%;height:14px;"></div></div><div class="dc" data-th="Coverage trend" ><div class="skel" style="width:70%;height:14px;"></div></div><div class="dc" data-th="Last error" ><div class="skel" style="width:50%;height:14px;"></div></div><div class="dc r" data-th="Actions" ><div class="skel" style="width:40%;height:14px;"></div></div></div><div class="dr" style="grid-template-columns:minmax(0,1.7fr) minmax(0,1.05fr) minmax(0,1fr) minmax(0,0.9fr) minmax(0,1.2fr) minmax(0,1.5fr) minmax(0,1.5fr)"><div class="dc" data-th="Connection" ><div class="skel" style="width:70%;height:14px;"></div></div><div class="dc" data-th="Schedule" ><div class="skel" style="width:60%;height:14px;"></div></div><div class="dc" data-th="Last pull" ><div class="skel" style="width:60%;height:14px;"></div></div><div class="dc" data-th="Health" ><div class="skel" style="width:50%;height:14px;"></div></div><div class="dc" data-th="Coverage trend" ><div class="skel" style="width:70%;height:14px;"></div></div><div class="dc" data-th="Last error" ><div class="skel" style="width:50%;height:14px;"></div></div><div class="dc r" data-th="Actions" ><div class="skel" style="width:40%;height:14px;"></div></div></div></div></sc-if><sc-if value="{{is.empty}}" hint-placeholder-val="{{false}}"><div class="empty" style="padding:40px 24px"><p class="sub" style="max-width:520px;margin:0 auto">No saved connections yet. Add one to pull detection rules straight from Microsoft Sentinel or Splunk — on a schedule if you like. Saved secrets are encrypted at rest and never shown again.</p></div></sc-if><sc-if value="{{is.error}}" hint-placeholder-val="{{false}}"><div class="alert err" role="alert">SIEM connections are managed by org admins.</div></sc-if>
+
+<div class="dlg-ov" style="opacity:{{dlg.delete.op}};pointer-events:{{dlg.delete.pe}}" onClick="{{dlg.delete.close}}">
+  <div class="dlg" role="dialog" aria-modal="true" aria-label="Delete connection" style="max-width:440px;transform:{{dlg.delete.tx}}" onClick="{{stop}}" onKeyDown="{{dlg.delete.key}}" tabindex="-1">
+    <button class="xbtn" style="position:absolute;right:10px;top:10px" aria-label="Close" onClick="{{dlg.delete.close}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    <div class="dlg-h"><h2 style="font-size:16px">Delete connection</h2></div>
+    <div class="dlg-b"><p>Delete "<b>{{delName}}</b>"? Scheduled pulls stop; past assessments are kept.</p></div>
+    <div class="dlg-f"><button class="btn sm" onClick="{{dlg.delete.close}}">Cancel</button><button class="btn danger sm" onClick="{{confirmDelete}}">Delete</button></div>
+  </div>
+</div></div></main>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview": {"width": 390, "height": 844}, "view": {"editor": "enum", "options": ["default", "loading", "empty", "error", "gated"], "default": "default", "section": "State"}, "admin": {"editor": "boolean", "default": true, "section": "State"}}'>
+class Component extends DCLogic {
+  constructor(p){ super(p); this.state = {"shell": {"collapsed": false, "width": 224, "mobileOpen": false}, "sheets": {}, "sheetOrder": [], "dlg": null, "dlgArg": null, "menu": null, "listbox": null, "sort": {}, "filters": {}, "search": "", "rename": {"id": null, "value": ""}, "expanded": {}, "drop": {}, "tab": {}, "req": {"sent": false, "name": "", "email": "", "busy": false}, "busy": {}, "removed": {}, "rowMsg": {}, "formOpen": false, "editId": null, "form": {}, "formErr": ""}; this._drag = null; }
+  data(){ return {"connections": [{"id": "c1", "name": "abc ltd Sentinel", "platform": "sentinel", "tenant": "8f2c1a6e-91b4-4d3a-9c2e-1a7f5b8d3e60", "client": "2b6d4f1a-7c3e-4a9b-8d5f-6e1c2a9b4d70", "sub": "5a1e3c7b-2f4d-4b8a-9e6c-3d7a1f5b2c90", "rg": "acme-sec-rg", "workspace": "acme-sec-ops", "schedule": "weekly", "hour": "02:00", "day": "Mon", "last_pull": "Sep 8, 2026", "last_status": "completed", "health_ok": true, "fail_count": 0, "pct": 14.4, "delta": 14.1, "trend": [2.2, 3.6, 5.1, 8.4, 10.4, 14.4], "last_error": null}, {"id": "c2", "name": "Cisco CDC Splunk", "platform": "splunk", "host": "splunk.cisco-cdc.internal", "port": "8089", "app": "", "schedule": "off", "hour": "00:00", "day": "Mon", "last_pull": null, "last_status": null, "health_ok": false, "fail_count": 2, "pct": null, "delta": null, "trend": [], "last_error": "Connection refused: management port 8089 unreachable"}]}; }
+  // ---- shared helpers (class methods so nothing lives at script top level) ----
+  setIn(path, val){ const s = JSON.parse(JSON.stringify(this.state)); let o = s;
+    for (let i = 0; i < path.length - 1; i++) { if (o[path[i]] == null) o[path[i]] = {}; o = o[path[i]]; }
+    o[path[path.length - 1]] = val; this.setState(s); }
+  vw(){ return (typeof window !== 'undefined' && window.innerWidth) ? window.innerWidth : 1440; }
+  viewFlags(){ const v = (this.props && this.props.view) || 'default';
+    return { default: v === 'default', loading: v === 'loading', empty: v === 'empty', error: v === 'error', gated: v === 'gated' }; }
+  closeAll(){ if (this.state.menu !== null || this.state.listbox !== null) this.setState({ menu: null, listbox: null }); }
+  shellVals(){ const s = this.state.shell; const c = s.collapsed; const w = c ? 56 : s.width;
+    return { sideW: w + 'px', cls: c ? 'c' : '', collapsed: c, expanded: !c, togLabel: c ? 'Expand sidebar' : 'Collapse sidebar',
+      admin: !(this.props && this.props.admin === false),
+      toggle: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setIn(['shell', 'collapsed'], !c); },
+      gDown: (e) => { e.currentTarget.setPointerCapture(e.pointerId); this._drag = { kind: 'side', x0: e.clientX, w0: s.width }; },
+      gMove: (e) => { if (!this._drag || this._drag.kind !== 'side') return; const nw = Math.max(180, Math.min(400, this._drag.w0 + (e.clientX - this._drag.x0))); this.setIn(['shell', 'width'], nw); },
+      gUp: () => { this._drag = null; },
+      mTx: s.mobileOpen ? 'translateX(0)' : 'translateX(-105%)', mOvOp: s.mobileOpen ? 1 : 0, mPe: s.mobileOpen ? 'auto' : 'none',
+      openMobile: () => this.setIn(['shell', 'mobileOpen'], true), closeMobile: () => this.setIn(['shell', 'mobileOpen'], false) }; }
+  tabVals(key, keys){ const cur = this.state.tab[key] || keys[0]; const o = {};
+    keys.forEach(k => { const on = cur === k; o[k] = { on: on, cls: on ? 'on' : '', aria: on ? 'true' : 'false', pick: () => this.setIn(['tab', key], k) }; });
+    o.current = cur; return o; }
+  sheetVals(name, def){ const s = this.state.sheets[name] || { open: false, id: null, width: def || 448 };
+    const w = Math.min(s.width, this.vw() * 0.95); const order = this.state.sheetOrder.indexOf(name); const z = 41 + (order < 0 ? 0 : order * 2);
+    return { open: s.open, id: s.id, w: w + 'px', tx: s.open ? 'translateX(0)' : 'translateX(105%)', ovOp: s.open ? 1 : 0, pe: s.open ? 'auto' : 'none', z: z, oz: z - 1,
+      close: (e) => { e && e.stopPropagation && e.stopPropagation(); this.closeSheet(name); },
+      gDown: (e) => { e.currentTarget.setPointerCapture(e.pointerId); this._drag = { kind: name, x0: e.clientX, w0: s.width }; },
+      gMove: (e) => { if (!this._drag || this._drag.kind !== name) return; const nw = Math.max(360, Math.min(this.vw() * 0.95, this._drag.w0 - (e.clientX - this._drag.x0))); this.setIn(['sheets', name, 'width'], nw); },
+      gUp: () => { this._drag = null; },
+      gKey: (e) => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); const d = e.key === 'ArrowLeft' ? 40 : -40;
+        this.setIn(['sheets', name, 'width'], Math.max(360, Math.min(this.vw() * 0.95, s.width + d))); } } }; }
+  openSheet(name, id, def){ const sheets = Object.assign({}, this.state.sheets);
+    sheets[name] = Object.assign({ width: def || 448 }, sheets[name] || {}, { open: true, id: id == null ? null : id });
+    this.setState({ sheets: sheets, sheetOrder: this.state.sheetOrder.filter(n => n !== name).concat([name]), menu: null, listbox: null }); }
+  closeSheet(name){ const sheets = Object.assign({}, this.state.sheets); if (sheets[name]) sheets[name] = Object.assign({}, sheets[name], { open: false });
+    this.setState({ sheets: sheets, sheetOrder: this.state.sheetOrder.filter(n => n !== name) }); }
+  dlgVals(name){ const on = this.state.dlg === name;
+    return { open: on, op: on ? 1 : 0, pe: on ? 'auto' : 'none', tx: on ? 'scale(1)' : 'scale(.96)',
+      close: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setState({ dlg: null, dlgArg: null }); },
+      key: (e) => { if (e.key === 'Escape') this.setState({ dlg: null, dlgArg: null }); } }; }
+  openDlg(name, arg){ this.setState({ dlg: name, dlgArg: arg == null ? null : arg, menu: null, listbox: null }); }
+  menuVals(id){ const on = this.state.menu === id;
+    return { cls: on ? 'open' : '', toggle: (e) => { e.stopPropagation(); this.setState({ menu: on ? null : id, listbox: null }); } }; }
+  lbVals(name){ const on = this.state.listbox === name;
+    return { open: on, cls: on ? 'open' : '', aria: on ? 'true' : 'false', toggle: (e) => { e.stopPropagation(); this.setState({ listbox: on ? null : name, menu: null }); } }; }
+  sortVals(name, rows, cols, defKey, defDir){ const st = this.state.sort[name] || { key: defKey, dir: defDir || 'asc' }; const col = cols.find(c => c.key === st.key);
+    const get = (r) => col && col.get ? col.get(r) : r[st.key];
+    const sorted = rows.slice().sort((a, b) => { const va = get(a), vb = get(b); if (va == null && vb == null) return 0; if (va == null) return 1; if (vb == null) return -1;
+      const r = (typeof va === 'number' && typeof vb === 'number') ? va - vb : String(va).localeCompare(String(vb)); return st.dir === 'asc' ? r : -r; });
+    const h = {}; cols.forEach(c => { const on = c.key === st.key; h[c.key] = { aria: on ? (st.dir === 'asc' ? 'ascending' : 'descending') : 'none', arrow: on ? (st.dir === 'asc' ? '↑' : '↓') : '↕', op: on ? 1 : .35,
+      pick: () => this.setIn(['sort', name], { key: c.key, dir: on && st.dir === 'asc' ? 'desc' : 'asc' }) }; });
+    return { rows: sorted, h: h, key: st.key, dir: st.dir }; }
+  dropVals(name, sample, size){ const d = this.state.drop[name] || { active: false, file: null };
+    return { cls: d.active ? 'on' : '', file: d.file || '', size: d.file ? (size || '') : '', has: !!d.file, none: !d.file,
+      over: (e) => { e.preventDefault(); if (!d.active) this.setIn(['drop', name, 'active'], true); },
+      leave: () => { if (d.active) this.setIn(['drop', name, 'active'], false); },
+      pick: (e) => { e && e.preventDefault && e.preventDefault(); this.setIn(['drop', name], { active: false, file: sample }); },
+      clear: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setIn(['drop', name], { active: false, file: null }); } }; }
+  reqVals(){ const r = this.state.req;
+    return { sent: r.sent, form: !r.sent, name: r.name, email: r.email, btn: r.busy ? 'Sending...' : 'Request access',
+      setName: (e) => this.setIn(['req', 'name'], e.target.value), setEmail: (e) => this.setIn(['req', 'email'], e.target.value),
+      submit: () => { this.setIn(['req', 'busy'], true); setTimeout(() => this.setState({ req: Object.assign({}, this.state.req, { busy: false, sent: true }) }), 700); } }; }
+  busy(key){ return !!this.state.busy[key]; }
+  runBusy(key, ms, after){ const b = Object.assign({}, this.state.busy); b[key] = true; this.setState({ busy: b });
+    setTimeout(() => { const b2 = Object.assign({}, this.state.busy); delete b2[key]; this.setState({ busy: b2 }); if (after) after(); }, ms || 900); }
+  isOpen(id){ return !!this.state.expanded[id]; }
+  toggleOpen(id){ this.setIn(['expanded', id], !this.state.expanded[id]); }
+  renameVals(id, current, onCommit){ const r = this.state.rename; const on = r.id === id;
+    return { on: on, off: !on, value: on ? r.value : current,
+      start: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setState({ rename: { id: id, value: current }, menu: null }); },
+      set: (e) => this.setIn(['rename', 'value'], e.target.value),
+      commit: (e) => { e && e.stopPropagation && e.stopPropagation(); const v = (this.state.rename.value || '').trim(); if (!v) return; if (onCommit) onCommit(v); this.setIn(['rename'], { id: null, value: '' }); },
+      cancel: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setIn(['rename'], { id: null, value: '' }); },
+      key: (e) => { if (e.key === 'Enter') { const v = (this.state.rename.value || '').trim(); if (!v) return; if (onCommit) onCommit(v); this.setIn(['rename'], { id: null, value: '' }); }
+        if (e.key === 'Escape') this.setIn(['rename'], { id: null, value: '' }); },
+      canSave: !on || !!(r.value || '').trim() }; }
+
+  renderVals(){
+    const S = this.state, D = this.data(), P = this.props || {};
+    const base = { ready:'1', stop:(e)=>{ e && e.stopPropagation && e.stopPropagation(); }, root:()=>this.closeAll(),
+      shell:this.shellVals(), is:this.viewFlags(), req:this.reqVals() };
+    const vals = (function(self){ 
+const removed = S.removed || {};
+const rowMsg = S.rowMsg || {};
+const form = S.form || {};
+const editId = S.editId;
+const formOpen = !!S.formOpen;
+const platTab = self.tabVals('platform', ['sentinel', 'splunk']);
+const isSentinel = platTab.current === 'sentinel', isSplunk = !isSentinel;
+const secretLabel = isSentinel ? 'Client secret' : 'Auth token';
+const secretSuffix = editId ? ' (blank = keep saved)' : ' (stored encrypted)';
+const blurb = 'Read-only pull of your detection rules. The ' + (isSentinel ? 'client secret' : 'auth token') + ' is stored encrypted and never shown again.' + (isSentinel ? ' The service principal needs the Microsoft Sentinel Reader role.' : '');
+const editRow = editId ? D.connections.find(x => x.id === editId) : null;
+const formHeading = editRow ? ('Edit ' + editRow.name) : 'Add connection';
+const setField = (k) => (e) => self.setIn(['form', k], e.target.value);
+const FIELDS = ['name', 'tenant', 'client', 'sub', 'rg', 'workspace', 'host', 'port', 'app', 'secret', 'schedule', 'hour', 'day'];
+const setters = {}; FIELDS.forEach(k => { setters['set' + k[0].toUpperCase() + k.slice(1)] = setField(k); });
+const defaultForm = () => ({ name: '', tenant: '', client: '', sub: '', rg: '', workspace: '', host: '', port: '8089', app: '', secret: '', schedule: 'off', hour: '00:00', day: 'Mon' });
+const openAdd = () => self.setState({ formOpen: true, editId: null, formErr: '', form: defaultForm(), tab: Object.assign({}, S.tab, { platform: 'sentinel' }) });
+const openEdit = (c) => (e) => { e.stopPropagation(); self.setState({ formOpen: true, editId: c.id, formErr: '', form: Object.assign(defaultForm(), c, { secret: '' }), tab: Object.assign({}, S.tab, { platform: c.platform }) }); };
+const closeForm = () => self.setState({ formOpen: false, editId: null, formErr: '' });
+const save = () => {
+  if (!editId && !(form.secret || '').trim()) { self.setState({ formErr: isSentinel ? 'The client secret is required — it is stored encrypted and never shown again.' : 'The auth token is required — it is stored encrypted and never shown again.' }); return; }
+  self.setState({ formErr: '' });
+  self.runBusy('save', 900, () => self.setState({ formOpen: false, editId: null }));
+};
+const rows = D.connections.filter(c => !removed[c.id]).map(c => {
+  const subtitle = c.platform === 'sentinel' ? ('Sentinel · ' + c.workspace) : ('Splunk · ' + c.host);
+  const schedText = c.schedule === 'off' ? 'Off' : c.schedule === 'daily' ? ('Daily · ' + c.hour + ' UTC') : ('Weekly · ' + c.day + ' ' + c.hour + ' UTC');
+  const lastPull = c.last_pull ? (c.last_pull + ' · ' + c.last_status) : 'never';
+  const hasTrend = c.pct != null;
+  const msg = rowMsg[c.id];
+  return Object.assign({}, c, {
+    subtitle, schedText, lastPull, hasTrend, noTrend: !hasTrend,
+    healthTone: c.health_ok ? 'ok' : 'crit', healthLabel: c.health_ok ? 'Healthy' : (c.fail_count + ' failed in a row'),
+    deltaText: hasTrend && c.delta != null ? ((c.delta >= 0 ? '▲' : '▼') + Math.abs(c.delta)) : '',
+    deltaColor: c.delta >= 0 ? 'var(--ok)' : 'var(--crit)',
+    trendTip: 'Coverage % across your ' + (c.trend || []).length + ' completed runs, oldest to newest.',
+    lastErrorText: msg || c.last_error || '—',
+    testLabel: self.busy('test-' + c.id) ? 'Testing…' : 'Test',
+    pullLabel: self.busy('pull-' + c.id) ? 'Pulling…' : 'Pull now',
+    test: () => { self.runBusy('test-' + c.id, 900, () => { const m2 = Object.assign({}, self.state.rowMsg); m2[c.id] = c.health_ok ? 'OK — 175 rules reachable' : 'Test failed'; self.setState({ rowMsg: m2 }); }); },
+    pull: () => { self.runBusy('pull-' + c.id, 900, () => { const m2 = Object.assign({}, self.state.rowMsg); m2[c.id] = c.health_ok ? null : 'Pull failed'; self.setState({ rowMsg: m2 }); }); },
+    editAria: 'Edit ' + c.name, deleteAria: 'Delete ' + c.name,
+    openEdit: openEdit(c), openDelete: (e) => { e.stopPropagation(); self.openDlg('delete', c.id); },
+  });
+});
+const cur = D.connections.find(c => c.id === S.dlgArg) || {};
+return Object.assign({
+  platform: platTab, formOpen, editId, isSentinel, isSplunk, secretLabel, secretSuffix, blurb, formHeading,
+  form, openAdd, closeForm, save, saveLabel: self.busy('save') ? 'Saving…' : (editId ? 'Save changes' : 'Save connection'),
+  hasFormErr: !!S.formErr, formErr: S.formErr || '', saveErr: false,
+  showHour: form.schedule && form.schedule !== 'off', showDay: form.schedule === 'weekly',
+  loadErr: false, delErr: false,
+  rows, dlg: { delete: self.dlgVals('delete') }, delName: cur.name || '',
+  confirmDelete: () => { const rm = Object.assign({}, removed); rm[S.dlgArg] = true; self.setState({ removed: rm, dlg: null, dlgArg: null }); },
+}, setters);
+ }).call(this, this);
+    return Object.assign(base, vals);
+  }
+}
+</script>
+</body>
+</html>
