@@ -6,17 +6,16 @@ import { MarketingFooter } from '@/components/MarketingFooter';
 
 export const metadata: Metadata = {
   title: 'Pricing',
-  description: 'ScopeWise pricing -- talk to us about your team\'s document review volume.',
+  description: 'ScopeWise pricing is quote-based: contract review, MITRE ATT&CK coverage assessments and code security reviews, sized to your engagement volume.',
   alternates: { canonical: '/pricing' },
-  robots: { index: false, follow: false },
 };
 
 const INCLUDED = [
-  'AI review by all six specialist agents',
-  'Rule-engine risk checks',
-  'Document versioning and fix-verification',
-  'Project-level organization and rollup reporting',
-  'PDF/DOCX/DOC/XLSX/XLS/CSV document support',
+  'SOW & RFP Review: six specialist agents, rule-engine checks, versioning and fix-verification, project rollups',
+  'MITRE ATT&CK Coverage: file or read-only Sentinel/Splunk intake, PDF, XLSX, PPTX and Navigator exports, scheduled re-runs',
+  'Code Security Review: scan kit, findings register, exploit chains, XLSX tracker and PPTX deck',
+  'Organization accounts with member management',
+  'Email support during early access',
 ];
 
 export default function PricingPage() {
@@ -27,9 +26,9 @@ export default function PricingPage() {
       <main className="max-w-3xl mx-auto px-4 py-16 text-center">
         <h1 className="text-3xl md:text-4xl font-bold mb-4">Pricing</h1>
         <p className="text-lg text-muted-foreground mb-10">
-          ScopeWise is in early access. Pricing is tailored to your team&apos;s
-          document volume and review needs -- talk to us and we&apos;ll work out
-          a plan that fits.
+          ScopeWise is in early access and pricing is quote-based. Tell us
+          which of the three products you need and roughly how many reviews
+          or assessments a month, and we will send a plan that fits.
         </p>
 
         <div className="rounded-lg border p-8 text-left mb-10">

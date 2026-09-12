@@ -1,6 +1,6 @@
 /**
  * T-701: Login page component
- * Seamless sign-in/sign-up via Google or an emailed one-time code -- no
+ * Password-free sign-in/sign-up via Google or an emailed one-time code -- no
  * password, no separate signup screen. A new email creates the account
  * on the spot (see app/routers/auth.py::_get_or_create_user).
  */

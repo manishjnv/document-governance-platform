@@ -9,17 +9,22 @@ const BASE_URL = 'https://scopewise.assessiq.in';
 // moves on every build).
 const PAGES: Record<string, string> = {
   '': '2026-09-12',
-  '/product': '2026-07-20',
+  '/product/sow-review': '2026-09-12',
+  '/product/mitre-coverage': '2026-09-12',
+  '/product/code-security-review': '2026-09-12',
   '/pricing': '2026-09-12',
   '/about': '2026-07-20',
   '/contact': '2026-07-20',
   '/privacy': '2026-08-20',
+  '/terms': '2026-09-12',
   '/use-cases/sow-review': '2026-07-20',
   '/use-cases/rfp-review': '2026-07-20',
   '/use-cases/scope-creep-prevention': '2026-07-20',
   '/solutions/for-procurement': '2026-07-20',
   '/solutions/for-legal': '2026-07-20',
   '/solutions/for-agencies': '2026-07-20',
+  '/solutions/for-security-consultancies': '2026-09-12',
+  '/solutions/for-appsec-consultants': '2026-09-12',
   '/resources/glossary': '2026-07-20',
   '/resources/blog': '2026-08-01',
 };
