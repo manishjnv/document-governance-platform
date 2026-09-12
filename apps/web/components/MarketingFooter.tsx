@@ -12,6 +12,7 @@ export function MarketingFooter() {
           <Link href="/resources/blog" className="hover:text-primary">Blog</Link>
           <Link href="/about" className="hover:text-primary">About</Link>
           <Link href="/contact" className="hover:text-primary">Contact</Link>
+          <Link href="/privacy" className="hover:text-primary">Privacy</Link>
         </div>
       </div>
     </footer>

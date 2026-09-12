@@ -10,6 +10,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/product',
     '/about',
     '/contact',
+    '/privacy',
     '/use-cases/sow-review',
     '/use-cases/rfp-review',
     '/use-cases/scope-creep-prevention',
