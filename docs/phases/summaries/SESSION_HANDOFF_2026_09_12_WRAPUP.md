@@ -154,3 +154,22 @@ four environment fixes, OG/about edits, Lighthouse, docs · Sonnet — step-2
 backend (reworked: N), step-2 frontend (reworked: N), adversarial takeover
 (accept) · Haiku — 18-check live smoke (reworked: N) · codex:rescue — n/a,
 companion broken, Sonnet takeover used.
+
+### Late addendum — free model on prod, SOW screenshot (`d5c2a25`, `8ae053b`)
+
+The key limit blocks paid models only. Tested on the capped key:
+`nvidia/nemotron-3.5-lightning:free` and `nvidia/nemotron-3-ultra-550b-a55b:free`
+answer; most older `:free` slugs are retired. Owner asked for prod to use it:
+VPS `.env` now has `OPENROUTER_MODEL=nvidia/nemotron-3.5-lightning:free` and
+`OPENROUTER_FALLBACK_MODELS=["nvidia/nemotron-3-ultra-550b-a55b:free"]`
+(backup `.env.bak.<ts>` beside it); `docker-compose.vps.yml` passes both
+variables to api and worker (`d5c2a25`, defaults unchanged). Deployed
+`8ae053b`; both containers report the free model. Accuracy on this model is
+**unmeasured** (the paid chain order came from `AI_MODEL_ROUTING.md`); the
+severity-calibration harvest still needs the paid chain. A local review of
+the public SOC SOW on the free model completed (19 findings, score 82.4,
+risk 85.6) and its results page is the new SOW screenshot on the homepage
+card and `/product/sow-review` hero (`8ae053b`, 65 KB WebP). Noticed: the
+worker container prints the default-JWT-secret warning, i.e. compose does
+not pass `JWT_SECRET_KEY` to the worker (api has it; the worker mints no
+tokens). Low impact; add the variable to the worker service when convenient.
