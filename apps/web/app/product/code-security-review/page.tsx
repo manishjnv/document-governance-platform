@@ -125,9 +125,9 @@ export default function CodeSecurityReviewPage() {
 
         <h2 className="text-2xl font-bold mb-4">The problem</h2>
         <p className="text-muted-foreground mb-4">
-          A manual penetration-test or code-review engagement typically
-          costs $10,000 to $35,000 and runs for weeks (Bright Defense and
-          Blaze Information Security pricing guides). The average data
+          A manual internal penetration-test engagement typically costs
+          $7,000 to $35,000 and runs for weeks (Bright Defense, penetration
+          testing pricing guide). The average data
           breach now costs $4.99M globally and $11.5M in the United States
           (IBM, Cost of a Data Breach Report 2026).
         </p>

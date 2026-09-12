@@ -68,7 +68,7 @@ const STEPS = [
 const STATS = [
   {
     number: '~9%',
-    claim: 'of annual contract value lost to poor contract management',
+    claim: 'of annual revenue lost to poor contract management',
     source: 'Source: World Commerce & Contracting (WorldCC)',
   },
   {
@@ -78,9 +78,9 @@ const STATS = [
     source: 'Source: CardinalOps, 2025 State of SIEM Detection Risk',
   },
   {
-    number: '$10k–$35k',
-    claim: 'typical cost of a manual penetration-test or code-review engagement',
-    source: 'Source: Bright Defense and Blaze Information Security pricing guides',
+    number: '$7k–$35k',
+    claim: 'typical cost of a manual internal penetration-test engagement',
+    source: 'Source: Bright Defense, penetration testing pricing guide',
   },
 ];
 
