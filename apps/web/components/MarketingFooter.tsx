@@ -7,7 +7,6 @@ const COLUMNS = [
       { href: '/product/sow-review', label: 'SOW & RFP Review' },
       { href: '/product/mitre-coverage', label: 'MITRE ATT&CK Coverage' },
       { href: '/product/code-security-review', label: 'Code Security Review' },
-      { href: '/pricing', label: 'Pricing' },
     ],
   },
   {

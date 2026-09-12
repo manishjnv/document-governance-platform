@@ -181,9 +181,9 @@ export default function ForAppsecConsultantsPage() {
             <Link href="/product/code-security-review" className="underline hover:no-underline">
               Code Security Review product page
             </Link>{' '}
-            or check{' '}
-            <Link href="/pricing" className="underline hover:no-underline">
-              pricing
+            or{' '}
+            <Link href="/contact" className="underline hover:no-underline">
+              contact us
             </Link>
             .
           </p>

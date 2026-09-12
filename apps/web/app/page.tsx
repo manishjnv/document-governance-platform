@@ -337,8 +337,8 @@ export default function HomePage() {
                 Start a review
               </Link>
             </div>
-            <Link href="/pricing" className="text-sm text-primary hover:underline">
-              Talk to us about pricing
+            <Link href="/contact" className="text-sm text-primary hover:underline">
+              Talk to us
             </Link>
           </div>
         </section>

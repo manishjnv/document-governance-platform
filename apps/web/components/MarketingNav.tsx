@@ -38,7 +38,8 @@ const RESOURCES = [
   },
 ];
 
-const NAV_LINKS = [{ href: '/pricing', label: 'Pricing' }];
+// Pricing is quote-only and deliberately unlinked on prod (2026-09-12); the page stays at /pricing, noindex.
+const NAV_LINKS: { href: string; label: string }[] = [];
 
 function NavDropdown({ label, items }: { label: string; items: typeof PRODUCTS }) {
   return (

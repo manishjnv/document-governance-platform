@@ -182,9 +182,9 @@ export default function SowReviewProductPage() {
             <Link href="/use-cases/rfp-review" className="underline hover:no-underline">
               RFP review
             </Link>
-            . Or check{' '}
-            <Link href="/pricing" className="underline hover:no-underline">
-              pricing
+            . Or{' '}
+            <Link href="/contact" className="underline hover:no-underline">
+              contact us
             </Link>
             .
           </p>

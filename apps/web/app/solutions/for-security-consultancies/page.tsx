@@ -203,8 +203,8 @@ export default function ForSecurityConsultanciesPage() {
               code security review
             </Link>
             , or{' '}
-            <Link href="/pricing" className="underline hover:no-underline">
-              pricing
+            <Link href="/contact" className="underline hover:no-underline">
+              contact us
             </Link>
             .
           </p>

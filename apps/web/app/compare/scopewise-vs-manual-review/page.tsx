@@ -211,9 +211,9 @@ export default function ScopeWiseVsManualReviewPage() {
             <Link href="/use-cases/sow-review" className="underline hover:no-underline">
               SOW review use case
             </Link>{' '}
-            or check{' '}
-            <Link href="/pricing" className="underline hover:no-underline">
-              pricing
+            or{' '}
+            <Link href="/contact" className="underline hover:no-underline">
+              contact us
             </Link>
             .
           </p>

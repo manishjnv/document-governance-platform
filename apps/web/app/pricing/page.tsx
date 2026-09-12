@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   title: 'Pricing',
   description: 'ScopeWise pricing is quote-based: contract review, MITRE ATT&CK coverage assessments and code security reviews, sized to your engagement volume.',
   alternates: { canonical: '/pricing' },
+  // Kept for direct sharing only; not linked or indexed on prod (2026-09-12).
+  robots: { index: false, follow: false },
 };
 
 const INCLUDED = [

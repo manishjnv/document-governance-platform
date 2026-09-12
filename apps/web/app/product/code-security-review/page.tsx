@@ -233,8 +233,8 @@ export default function CodeSecurityReviewPage() {
               See it for AppSec consultants
             </Link>
             {' '}&middot;{' '}
-            <Link href="/pricing" className="underline hover:no-underline">
-              Pricing
+            <Link href="/contact" className="underline hover:no-underline">
+              Contact us
             </Link>
           </p>
         </div>

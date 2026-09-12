@@ -12,7 +12,6 @@ const PAGES: Record<string, string> = {
   '/product/sow-review': '2026-09-12',
   '/product/mitre-coverage': '2026-09-12',
   '/product/code-security-review': '2026-09-12',
-  '/pricing': '2026-09-12',
   '/about': '2026-07-20',
   '/contact': '2026-07-20',
   '/privacy': '2026-08-20',

@@ -292,8 +292,8 @@ export default function MitreCoveragePage() {
               See it for security consultancies
             </Link>
             .{' '}
-            <Link href="/pricing" className="underline hover:no-underline">
-              Pricing
+            <Link href="/contact" className="underline hover:no-underline">
+              Contact us
             </Link>
             .
           </p>
