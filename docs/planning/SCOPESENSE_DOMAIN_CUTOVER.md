@@ -1,8 +1,9 @@
 # scopesense.in — domain cut-over runbook (dual-run with scopewise.assessiq.in)
 
-**Written:** 2026-09-12. **Status:** everything on our side is staged; blocked
-only on the registrar's 24-hour hold on nameserver changes for a newly
-registered domain. Decision (user, 2026-09-12): **both hosts stay live for
+**Written:** 2026-09-12. **Status (end of 2026-09-12):** everything is staged and Google OAuth is
+done; the ONLY blocker is the registrar's 24-hour hold on nameserver changes
+for a newly registered domain (Hostinger message: "Nameserver changes for
+this domain are temporarily unavailable. Please try again in 24 hours"). Decision (user, 2026-09-12): **both hosts stay live for
 about 30 days** (until ~2026-10-12) because office proxies may block the new
 domain; no redirect until then. Product name stays **ScopeWise** (only the
 domain changes) unless the user decides otherwise.
@@ -52,7 +53,7 @@ Code (commit `e83f435`, deployed): `apps/web/next.config.js` treats an **empty**
    ```
    Fallback if the API keeps refusing: dashboard → SSL/TLS → Origin Server → Create Certificate (`scopesense.in, *.scopesense.in`), paste cert/key into the same two paths.
 3. **Cut-over** (Claude): `bash /opt/scopewise/deploy/cutover-scopesense.sh` — see section 3. Old host untouched.
-4. **Google OAuth** (user): add `https://scopesense.in` to Authorised JavaScript origins and the redirect URI on client `522377802447…`. Keep the old host's entries for the dual-run.
+4. **Google OAuth** — DONE 2026-09-12: client `522377802447-o9p935omg2gp4kf42n6hkdnjpat2lokl` (project AutomateEdge) now has origins `https://scopewise.assessiq.in` + `https://scopesense.in` and redirect URIs `…/api/auth/google/cb` for both hosts.
 5. **Smoke** (Claude): login page, Google sign-in, one review page, one XLSX download, on the new host; same four on the old host.
 
 ## 3. What the cut-over script does
