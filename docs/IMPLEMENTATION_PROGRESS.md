@@ -1,6 +1,6 @@
 # EDGP Implementation Progress
 
-**Last Updated:** 2026-09-12 (all 09-12 work pushed + deployed at `4ddfd9f`; four pillar posts published)
+**Last Updated:** 2026-09-12 (CWV fix + /resources/templates committed locally, not deployed)
 **Current Phase:** Phase 1-2 core product complete + deployed live; pre-launch fix plan Steps 1-2 done, Step 3 pending SME. Document Lifecycle & Multi-Project plan (Projects/Versioning/Fix-verification) — all three phases implemented, deployed, mandatory-project + fuzzy name matching added on top. Auth is now seamless Google Sign-In + email-OTP only (no password anywhere in the real UI; unrecognized emails auto-create an account). New file types (.doc/.xlsx/.xls/.csv) supported. Enterprise SEO strategy written, a live Cloudflare misconfiguration blocking all AI crawlers was found and fixed, and **SEO Phase 1 (Foundation) is implemented and deployed live** (real marketing homepage/product/pricing/about/contact/sitemap/schema -- only GSC/GA4/Lighthouse remain, blocked on dashboard access). Full detail: `docs/phases/summaries/SESSION_HANDOFF_2026_07_20_LIFECYCLE_SSO_SEO.md`.
 
 > Previous version of this doc (dated 07-17 02:00, showing "14% overall") was
@@ -10,6 +10,8 @@
 ---
 
 ## ✅ Done
+
+**CWV re-check + templates lead magnet (2026-09-12, 2 commits, local, NOT pushed):** Lighthouse against live found mobile LCP doubled versus the July baseline on every marketing page (4.8–5.7s); cause isolated by local A/B to GA4 loading `afterInteractive` (gtag 175KB, ~900ms main-thread blocking), not the new Inter font or OG image. Fix: `lazyOnload` (LCP 4.33s → 2.74s on `/`, 4.70s → 2.71s on `/product/sow-review`, mobile Perf 59 → 81). `/resources/templates` closes the last Phase 3 technical item: three gated downloads behind name + work email via the existing contact endpoint (`source=templates`, one optional field added to `contact.py`), honeypot, no new tables/services; Accessibility 100. Handoff: `docs/phases/summaries/SESSION_HANDOFF_2026_09_12_CWV_TEMPLATES.md`.
 
 **Pushed + deployed 2026-09-12 evening, SHA `4ddfd9f`:** housekeeping commits (Sentinel workbook v0 `d0e27ae`, v2 ACME sample pair `b2a6a1e`, remaining prompt docs `ad8e19a`), the four pillar posts published after the user's read-through (`4ddfd9f`), and the whole content phase (`b48b510`…`313d44b`) are live. No migration. Python 3.11 in-container compile + `/health` ok. Live smoke 20/20, Lighthouse SEO/A11y 100/100 on `/` and `/product/mitre-coverage`; sitemap 47 URLs. GSC resubmit / URL-inspection steps and the (not yet wired) `product_card_click` GA4 event are in `docs/phases/summaries/SESSION_HANDOFF_2026_09_12_DEPLOY_CONTENT.md`.
 

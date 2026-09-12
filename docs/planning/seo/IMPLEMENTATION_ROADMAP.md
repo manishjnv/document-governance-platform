@@ -138,10 +138,17 @@ verification itself is still blocked on human dashboard access per Phase 1.
   themselves). `/compare/*` still open — no `/compare/*` pages exist yet.
 - [x] `FAQPage` schema on `/compare/*` — done 2026-09-12 on the first
   compare page; `/compare/[competitor]` pages still need legal sign-off first.
-- [ ] `/resources/templates` download flow (gated lead magnet — needs a
-  form + email capture, check if this reuses any existing
-  signup/lead infrastructure or needs new plumbing)
-- [ ] Core Web Vitals re-check against Phase 1 baseline; fix regressions
+- [x] `/resources/templates` download flow — done 2026-09-12: gated
+  three-file download (SOW checklist PDF, RFP evaluation worksheet XLSX,
+  MITRE environment template XLSX) behind name + work email, posting to the
+  existing `/api/v1/contact` with `source=templates`; honeypot + existing
+  rate limiting; no new tables or services. Generator:
+  `scripts/generate_templates.py`.
+- [x] Core Web Vitals re-check against Phase 1 baseline — done 2026-09-12.
+  Mobile LCP had doubled (4.8–5.7s live) because GA4 loaded
+  `afterInteractive`; switched to `lazyOnload`, local A/B restores 2.7s.
+  Table in `docs/phases/summaries/SESSION_HANDOFF_2026_09_12_CWV_TEMPLATES.md`;
+  re-run live after deploy and refresh the baseline table below.
 
 ### Content
 - [x] Remaining 10 of the 15-term glossary batch — done 2026-07-20 (rfp,
