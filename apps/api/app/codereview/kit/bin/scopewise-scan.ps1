@@ -1,5 +1,5 @@
-# ScopeWise consultant scan kit runner.
-# Usage: .\scopewise-scan.ps1 <path-to-repo>
+# ScopeWise consultant scan kit runner. Launched by scopewise-scan.cmd in the kit root.
+# Usage: .\scopewise-scan.cmd <path-to-repo>
 param(
     [Parameter(Mandatory=$true)]
     [string]$RepoPath
@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $env:PYTHONUTF8 = '1'   # vvaharness prints UTF-8 symbols; avoids cp1252 crashes on Windows consoles
 
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ScriptDir = (Resolve-Path (Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) '..')).Path   # kit root
 Set-Location $ScriptDir
 
 if (-not (Test-Path (Join-Path $ScriptDir ".env"))) {

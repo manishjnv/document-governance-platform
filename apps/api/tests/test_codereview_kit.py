@@ -29,12 +29,12 @@ def test_kit_zip_contains_expected_files_and_wheel_hash():
         "scopewise-scan-kit/README.md",
         "scopewise-scan-kit/config.yaml",
         "scopewise-scan-kit/setup.cmd",
-        "scopewise-scan-kit/setup.ps1",
-        "scopewise-scan-kit/scopewise-scan.cmd",
         "scopewise-scan-kit/setup.sh",
-        "scopewise-scan-kit/scopewise-scan.ps1",
+        "scopewise-scan-kit/scopewise-scan.cmd",
         "scopewise-scan-kit/scopewise-scan.sh",
-        "scopewise-scan-kit/KIT_VERSION.json",
+        "scopewise-scan-kit/bin/setup.ps1",
+        "scopewise-scan-kit/bin/scopewise-scan.ps1",
+        "scopewise-scan-kit/bin/KIT_VERSION.json",
         "scopewise-scan-kit/vendor/vvaharness-1.3.0-py3-none-any.whl",
         "scopewise-scan-kit/vendor/LICENSE",
         "scopewise-scan-kit/vendor/NOTICE",
@@ -70,7 +70,10 @@ def test_config_yaml_sanity():
 
 
 def test_scripts_reference_stop_after_s9_and_estimate_and_no_leaked_key():
-    for name in ("scopewise-scan.sh", "scopewise-scan.ps1"):
+    # one visible entry per platform at the kit root; no stray setup files
+    root_names = {n.split("/", 1)[1] for n in zipfile.ZipFile(BytesIO(build_kit_zip())).namelist() if n.count("/") == 1}
+    assert {n for n in root_names if n.startswith("setup")} == {"setup.cmd", "setup.sh"}
+    for name in ("scopewise-scan.sh", "bin/scopewise-scan.ps1"):
         text = (KIT_DIR / name).read_text()
         assert "--stop-after s9" in text
         assert "estimate" in text

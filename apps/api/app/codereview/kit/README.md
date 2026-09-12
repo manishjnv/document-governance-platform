@@ -15,9 +15,8 @@ Windows - double-click `setup.cmd`, or in a terminal:
     .\setup.cmd                       # creates .venv, installs the scanner, asks for your key
     .\scopewise-scan.cmd C:\path\to\repo
 
-(the .cmd launchers unblock the downloaded .ps1 files and bypass the
-execution policy for this kit only; `.\setup.ps1` also works after
-`Unblock-File .\*.ps1`)
+(`bin\` holds the PowerShell scripts the launchers run; you never need to
+open it)
 
 macOS / Linux:
 

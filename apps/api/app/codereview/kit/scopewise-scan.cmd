@@ -6,4 +6,4 @@ if "%~1"=="" (
   echo Usage: scopewise-scan.cmd ^<path-to-repo^>
   exit /b 1
 )
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Unblock-File -Path '.\*.ps1' -ErrorAction SilentlyContinue; & '.\scopewise-scan.ps1' -RepoPath '%~1'"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Unblock-File -Path '.\bin\*.ps1' -ErrorAction SilentlyContinue; & '.\bin\scopewise-scan.ps1' -RepoPath '%~1'; exit $LASTEXITCODE"

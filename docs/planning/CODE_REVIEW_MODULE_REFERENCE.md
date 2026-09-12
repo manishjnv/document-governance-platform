@@ -233,8 +233,12 @@ input from the upload page, without reading VVAH docs.
     `scopewise-scan-<repo>-<yyyymmdd>.zip`. Both set `PYTHONUTF8=1` (VVAH
     prints UTF-8 glyphs; cp1252 consoles crash otherwise). The key is only
     ever read from `.env`.
+  - Kit root shows one entry per platform: `setup.cmd` + `scopewise-scan.cmd`
+    (Windows), `setup.sh` + `scopewise-scan.sh` (macOS/Linux). The
+    PowerShell internals and `KIT_VERSION.json` live under `bin/` (user
+    request 2026-09-12: "only one setup file to pick").
   - `setup.cmd` / `scopewise-scan.cmd` — Windows launchers that `Unblock-File`
-    the kit's `.ps1` files and run them with `-ExecutionPolicy Bypass`, because
+    `bin\*.ps1` and run them with `-ExecutionPolicy Bypass`, because
     a downloaded unsigned `.ps1` is refused by the default policy (hit by the
     first real user on 2026-09-12).
   - `setup.ps1` / `setup.sh` — one-time install: creates `.venv` in the kit

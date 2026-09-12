@@ -7,16 +7,18 @@ import zipfile
 from pathlib import Path
 
 KIT_DIR = Path(__file__).parent / "kit"
+# Kit root shows one entry per platform (setup.cmd / setup.sh, scopewise-scan.cmd / .sh);
+# the PowerShell internals live under bin/ so users are not offered three "setup" files.
 KIT_FILES = (
     "README.md",
     "config.yaml",
     "setup.cmd",
-    "setup.ps1",
     "setup.sh",
     "scopewise-scan.cmd",
-    "scopewise-scan.ps1",
     "scopewise-scan.sh",
-    "KIT_VERSION.json",
+    "bin/setup.ps1",
+    "bin/scopewise-scan.ps1",
+    "bin/KIT_VERSION.json",
 )
 
 
@@ -33,4 +35,4 @@ def build_kit_zip() -> bytes:
 
 
 def kit_version() -> dict:
-    return json.loads((KIT_DIR / "KIT_VERSION.json").read_text())
+    return json.loads((KIT_DIR / "bin" / "KIT_VERSION.json").read_text())
