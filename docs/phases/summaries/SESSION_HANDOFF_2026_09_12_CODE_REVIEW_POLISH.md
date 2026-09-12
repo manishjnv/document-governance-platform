@@ -117,6 +117,27 @@ Visual QA method that worked: PowerPoint COM `Presentation.Export(dir,
 - Every deploy: `docker exec scopewise-api python -c "import …"` smoke on
   the 3.11 image; public routes 200/401 as expected.
 
+## Late-session additions (same day, after the docs commit `63810e2`)
+
+| Commit | What |
+|---|---|
+| `a319895` | Scan kit size guard: after `estimate`, refuse > 20,000 code files / 500 MB, warn > 2,000 files or when `node_modules`/`.venv`/`dist`/`build`/`.next` exist; README timing table. Triggered by the user scanning `E:\code\DhanRadar` working folder (345k files, 3.4 GB) — 40 min stuck in S0. Rule: scan a fresh `git clone`. |
+| `cf39b7d` | **Demo reviews**: `CODEREVIEW_DEMO_REVIEW_IDS` env (compose → VPS `.env`) makes listed code reviews readable/exportable by every signed-in user across orgs; `demo`/`editable` flags; UI chip + hidden edit controls; cross-org test. Prod: NodeGoat golden review `49e45724-ff5d-4e53-937b-aba306d3cfd3`. |
+| `ee19ff9` | **Demo assessments** for MITRE: `MITRE_DEMO_ASSESSMENT_IDS`; `_read_org()` resolves the owner org for read endpoints only (get, use-cases, explain, report, xlsx/pptx/navigator); writes stay owner-only; UI chip, `canEdit` gated. Prod: "Acme MITRE Assessment" `0fe2d3e2-7d59-4385-abbe-7055c49130fa`. Both demos are what talk2maq@gmail.com (or any Google login) sees. |
+| `e83f435` | Web: empty `NEXT_PUBLIC_API_URL` = same-origin API, for the scopesense.in dual-run. |
+| (other session) `4ddfd9f`, `fab4da8`, `644ab3b` | Blog/SEO commits from a parallel session — not this work. |
+
+Domain: `scopesense.in` registered; Cloudflare zone configured from the VPS
+(DNS, Full strict, HTTPS, TLS 1.2, Authenticated Origin Pulls); blocked on
+the registrar's 24 h nameserver hold and the Origin cert (only issuable once
+the zone is active). Full runbook: `docs/planning/SCOPESENSE_DOMAIN_CUTOVER.md`;
+kickoff for the follow-up: `docs/phases/prompts/SCOPESENSE_CUTOVER_PROMPT.md`.
+Dual-run for ~30 days; both hosts live; product name stays ScopeWise.
+
+Guidance given on scan expectations: VVAH has a 10–15 min floor; NodeGoat
+(63 files) took 102 min; a 2–3 min scan is not possible — for demos upload
+the golden zip; smallest real scan `we45/Vulnerable-Flask-App` (~20 min).
+
 ## Open items / ideas (none blocking)
 - PPTX org branding (`report_display_name`) still `resolve_branding(None)`.
 - A `pricing:` table in the kit config would make VVAH's manifest report

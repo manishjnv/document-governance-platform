@@ -35,6 +35,15 @@ four blog posts, `/compare/*`, per-pillar OG images, product screenshots.
 Plan + step ticks: `docs/planning/HOMEPAGE_BRANDING_SEO_PLAN.md`; handoff:
 `docs/phases/summaries/SESSION_HANDOFF_2026_09_12_HOMEPAGE_BRANDING.md`.
 
+**Shared demos + scopesense.in domain (2026-09-12):** NodeGoat code review
+and the Acme MITRE assessment are read-only demos for every signed-in user
+(`CODEREVIEW_DEMO_REVIEW_IDS` / `MITRE_DEMO_ASSESSMENT_IDS` env, commits
+`cf39b7d` / `ee19ff9`). New domain `scopesense.in` registered; Cloudflare
+zone configured; dual-run with `scopewise.assessiq.in` for ~30 days once the
+registrar releases the nameserver hold. Runbook:
+`docs/planning/SCOPESENSE_DOMAIN_CUTOVER.md`; kickoff:
+`docs/phases/prompts/SCOPESENSE_CUTOVER_PROMPT.md`.
+
 **Code Security Review — post-launch polish from live use (2026-09-12,
 9 commits `f2ffe3e`…`0db4a86`, all deployed):** plain-language finding
 drawer (bullets, code/attack/fix highlighting, quick-fact chips, resizable);
