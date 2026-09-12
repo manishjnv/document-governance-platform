@@ -6,7 +6,20 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/dashboard', '/upload', '/search', '/results', '/projects', '/versions', '/pricing'],
+        // Authenticated app shells only -- every marketing page stays crawlable.
+        disallow: [
+          '/dashboard',
+          '/upload',
+          '/search',
+          '/results',
+          '/projects',
+          '/versions',
+          '/mitre',
+          '/codereview',
+          '/admin',
+          '/login',
+          '/api',
+        ],
       },
     ],
     sitemap: 'https://scopewise.assessiq.in/sitemap.xml',

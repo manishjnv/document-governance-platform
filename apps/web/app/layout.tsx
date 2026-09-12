@@ -1,9 +1,12 @@
 import type { Metadata } from 'next'
 import Script from 'next/script'
+import { Inter } from 'next/font/google'
 import './globals.css'
 import { ServiceWorkerRegister } from '@/components/service-worker-register'
 import { InstallPrompt } from '@/components/install-prompt'
 import { CtaClickTracker } from '@/components/CtaClickTracker'
+
+const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' })
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
 
@@ -19,15 +22,17 @@ export const metadata: Metadata = {
   openGraph: {
     siteName: 'ScopeWise',
     type: 'website',
+    images: [{ url: '/og-default.png', width: 1200, height: 630, alt: 'ScopeWise: evidence-based risk reviews. Contracts, detections, code.' }],
   },
   twitter: {
-    card: 'summary',
+    card: 'summary_large_image',
+    images: ['/og-default.png'],
   },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={inter.variable}>
       <body>
         {GA_MEASUREMENT_ID && (
           <>
