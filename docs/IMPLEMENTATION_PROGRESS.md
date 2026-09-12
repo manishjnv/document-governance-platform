@@ -11,6 +11,18 @@
 
 ## ✅ Done
 
+**Code Security Review — post-launch polish from live use (2026-09-12,
+9 commits `f2ffe3e`…`0db4a86`, all deployed):** plain-language finding
+drawer (bullets, code/attack/fix highlighting, quick-fact chips, resizable);
+self-installing scan kit (`setup.cmd`/`setup.sh` installer with progress
+bar and completion box, Windows launchers that clear download blocking,
+internals in `bin/`, per-run transcript logs with failure pointers);
+professional XLSX tracker (tinted chips, status dropdown, rich-text
+bullets, explained chains, byte-deterministic); PPTX briefing deck rebuilt
+on the MITRE engine (executive summary, risk profile, spotlights, chain
+step flows, remediation plan with set-cover "fewest fixes", coverage &
+confidence). Detail: `docs/phases/summaries/SESSION_HANDOFF_2026_09_12_CODE_REVIEW_POLISH.md`.
+
 **Code Security Review module — professional UI + consultant scan kit +
 real golden scan (2026-09-11, second session, single commit):** the three
 pages were rebuilt to the MITRE standard per
