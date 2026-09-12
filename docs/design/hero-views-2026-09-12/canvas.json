@@ -1,0 +1,91 @@
+{
+ "artboards": [
+  {
+   "file": "Main.dc.html",
+   "title": "SOW review \u00b7 annotated document",
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "SowPhone.dc.html",
+   "title": "SOW review \u00b7 phone",
+   "x": 1540,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "MitreTimeline.dc.html",
+   "title": "MITRE \u00b7 living heatmap over runs",
+   "x": 0,
+   "y": 1060,
+   "w": 1440,
+   "h": 900,
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "MitrePhone.dc.html",
+   "title": "MITRE \u00b7 phone",
+   "x": 1540,
+   "y": 1060,
+   "w": 390,
+   "h": 844,
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "ExploitChains.dc.html",
+   "title": "Code review \u00b7 exploit chain graph",
+   "x": 0,
+   "y": 2120,
+   "w": 1440,
+   "h": 900,
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "ChainsPhone.dc.html",
+   "title": "Code review \u00b7 phone",
+   "x": 1540,
+   "y": 2120,
+   "w": 390,
+   "h": 844,
+   "expand": "fill",
+   "is_interactive": true
+  }
+ ],
+ "annotations": [
+  {
+   "id": "refs",
+   "x": 2020,
+   "y": 0,
+   "w": 420,
+   "text": "References held against: Linear (restraint, motion that explains), Attio (light, data-dense), Vercel (type and whitespace), Wiz (security graph), Notion (annotated document).\n\nSystem: Instrument Serif for headlines, Instrument Sans for UI, JetBrains Mono for IDs. Warm paper #FBFAF7, ink #1B1F27, one accent #2B62C9, severity ramp critical/high/medium/low each with a soft tint. 10px radius, one shadow, one easing curve (.22,.61,.36,1)."
+  },
+  {
+   "id": "interact",
+   "x": 2020,
+   "y": 300,
+   "w": 420,
+   "text": "Everything is live. SOW: click a finding or a sentence to pin them together; Mark fixed and the risk score, bar and area chips recompute with transitions. MITRE: drag the timeline, click a dot, or press Play; cells turn green in the run that covered them, hover any cell for the rule. Code: click a node or a step chip to fix it; edges through it go dashed and chains flip to Broken; Fewest fixes applies the set-cover result (#7 and #1 break all six).\n\nHover any chip, cell or button for a tooltip. Phone frames are the same files at 390px: the grid stacks, the score band collapses, the heatmap auto-fits columns."
+  },
+  {
+   "id": "next",
+   "x": 2020,
+   "y": 700,
+   "w": 420,
+   "text": "Not designed yet on purpose: shells, navigation, tables, settings. Once a hero direction is approved the rest inherits this system. Open questions: keep serif headlines in the product (bolder identity) or reserve serif for marketing; dark mode as a system toggle later."
+  }
+ ],
+ "launch": {
+  "view": "focused",
+  "file": "Main.dc.html"
+ }
+}
