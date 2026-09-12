@@ -48,7 +48,7 @@ limitation of liability.
 
 | # | Title | Pillar | Target keyword | Type | Notes |
 |---|---|---|---|---|---|
-| 17 | ScopeWise vs. Manual SOW Review: A Side-by-Side | Bottom-of-funnel | `AI SOW review tool` | `/compare/*` page | No legal risk (not naming a competitor) |
+| 17 | ✅ ScopeWise vs. Manual SOW Review: A Side-by-Side — live at `/compare/scopewise-vs-manual-review` (2026-09-12) | Bottom-of-funnel | `AI SOW review tool` | `/compare/*` page | No legal risk (not naming a competitor) |
 | 18 | [Competitor] Alternative: Pre-Signature Risk Review | Bottom-of-funnel | `[competitor]-alternative` | `/compare/*` page | **Legal sign-off required before drafting** |
 | 19 | PMO Risk Signals: What Project Managers Should Flag in a SOW | Pillar 1, PMO persona | `PMO SOW risk review` | Blog (feeds `/solutions` persona pages) |
 | 20 | Security Review Clauses Every SOW Should Include | Pillar 1, security persona | `security clauses in SOW` | Blog |

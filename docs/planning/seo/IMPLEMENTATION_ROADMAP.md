@@ -136,8 +136,8 @@ verification itself is still blocked on human dashboard access per Phase 1.
 - [x] `FAQPage` schema on `/use-cases/*` — done 2026-07-20 as part of
   Phase 2 (was built ahead of schedule alongside the use-case pages
   themselves). `/compare/*` still open — no `/compare/*` pages exist yet.
-- [ ] `FAQPage` schema on `/compare/*` — blocked on `/compare/*` pages
-  existing (see Content section below).
+- [x] `FAQPage` schema on `/compare/*` — done 2026-09-12 on the first
+  compare page; `/compare/[competitor]` pages still need legal sign-off first.
 - [ ] `/resources/templates` download flow (gated lead magnet — needs a
   form + email capture, check if this reuses any existing
   signup/lead infrastructure or needs new plumbing)
@@ -161,7 +161,7 @@ verification itself is still blocked on human dashboard access per Phase 1.
   under a general approval rather than that specific named-reviewer
   process — worth tightening if/when a real reviewer is assigned. Posts
   #4-8 of the Month 1-2 batch (and all of #9-16) not drafted yet.
-- [ ] `/compare/scopewise-vs-manual-review` (no legal gate needed — not
+- [x] `/compare/scopewise-vs-manual-review` — done 2026-09-12 (`d09ce33`, FAQPage + BreadcrumbList, in sitemap/nav/footer; no legal gate needed — not
   naming a competitor)
 - [ ] **Legal review** of any `/compare/[competitor]` page before
   drafting starts, not after
