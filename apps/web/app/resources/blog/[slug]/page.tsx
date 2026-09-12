@@ -72,8 +72,8 @@ export default async function BlogPostPage({
     image: [`${baseUrl}/og-default.png`],
     datePublished: post.publishedDate,
     dateModified: post.updatedDate ?? post.publishedDate,
-    // TODO(author): switch to { '@type': 'Person', name, jobTitle } once the
-    // named author and title are confirmed -- do not invent one.
+    // Decision 2026-09-12: posts are authored as "ScopeWise Team"; the schema
+    // author is deliberately the Organization, not a Person.
     author: { '@type': 'Organization', name: 'ScopeWise', url: baseUrl },
     publisher: {
       '@type': 'Organization',

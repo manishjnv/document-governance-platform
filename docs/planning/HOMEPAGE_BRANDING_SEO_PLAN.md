@@ -242,7 +242,7 @@ review: what changes".
 3. [x] New homepage — `bb1ac3f` (+ `68ec0bd` statistic wording, `0384a46` title).
 4. [x] Two new product landing pages + rename `/product` with redirect — `eeb7aec`.
 5. [x] Header/footer rework, `/terms`, pricing indexed and linked — `71ef549`.
-6. [x] Two new solution pages, glossary schema fix, BlogPosting image/dateModified/publisher — `3f555e7`, `3ebd27d`. **Open within this step:** BlogPosting `author` is still the Organization; switch to `Person` (name + jobTitle) once the user supplies a real name and title (`TODO(author)` in `resources/blog/[slug]/page.tsx`). `/about` Person schema and the name-rationale paragraph also wait on that.
+6. [x] Two new solution pages, glossary schema fix, BlogPosting image/dateModified/publisher — `3f555e7`, `3ebd27d`. **Decided 2026-09-12:** the author is "ScopeWise Team"; BlogPosting `author` stays the Organization by choice. Only the `/about` name-rationale paragraph remains open.
 7. [ ] First four blog posts.
 8. [ ] `/compare/*` once legal sign-off exists.
 

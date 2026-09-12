@@ -60,7 +60,7 @@ GA4 (property `G-BS21BGYW3B`): no new event names were added this session. The e
 
 ## Open / next
 
-1. `/about` rewrite + Person schema + named blog author (name and title still not supplied).
+1. `/about` rewrite. Blog author decided 2026-09-12: "ScopeWise Team" with the Organization schema author; no Person schema planned.
 2. `product_card_click` GA4 event (see above) when wanted.
 3. Product screenshots (NodeGoat + ACME only), per-pillar OG images.
 4. `/compare/[competitor]` stays blocked on legal sign-off; next blog batch per `CONTENT_CALENDAR.md`.
