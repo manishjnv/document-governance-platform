@@ -1,6 +1,6 @@
 # Homepage branding + SEO guideline plan (2026-09-12)
 
-Positioning and SEO plan for the public marketing site now that ScopeWise has three products (SOW/RFP review, MITRE ATT&CK coverage, Code Security Review). Decisions: platform-umbrella homepage with three equal product cards; pricing stays quote-based but becomes indexed and linked. Supersedes the homepage/positioning parts of `SEO_STRATEGY.md`; its Phase 3 items (`/compare/*`, templates, case study) still stand. Steps 1-6 of §7 implemented 2026-09-12 (commits `2608b7d`…`0384a46`, see §7 ticks); steps 7-8 open.
+Positioning and SEO plan for the public marketing site now that ScopeWise has three products (SOW/RFP review, MITRE ATT&CK coverage, Code Security Review). Decisions: platform-umbrella homepage with three equal product cards; pricing stays quote-based. **Amended 2026-09-12: pricing is NOT linked or indexed on prod; the page exists for direct sharing only.** Supersedes the homepage/positioning parts of `SEO_STRATEGY.md`; its Phase 3 items (`/compare/*`, templates, case study) still stand. Steps 1-6 of §7 implemented 2026-09-12 (commits `2608b7d`…`0384a46`, see §7 ticks); steps 7-8 open.
 
 
 ## 1. Audit of what exists today (public surface)
@@ -241,7 +241,7 @@ review: what changes".
 2. [x] Token + font + OG image + robots/sitemap fixes — `8d5fdb6`. Inter is loaded via `next/font/google` (display swap, latin); tailwind `sans` reads `--font-inter`.
 3. [x] New homepage — `bb1ac3f` (+ `68ec0bd` statistic wording, `0384a46` title).
 4. [x] Two new product landing pages + rename `/product` with redirect — `eeb7aec`.
-5. [x] Header/footer rework, `/terms`, pricing indexed and linked — `71ef549`.
+5. [x] Header/footer rework, `/terms`, pricing indexed and linked — `71ef549`. **Reversed `a6a5bdb` (2026-09-12): pricing unlinked, noindex, out of sitemap; page kept for direct sharing.**
 6. [x] Two new solution pages, glossary schema fix, BlogPosting image/dateModified/publisher — `3f555e7`, `3ebd27d`. **Decided 2026-09-12:** the author is "ScopeWise Team"; BlogPosting `author` stays the Organization by choice. Only the `/about` name-rationale paragraph remains open.
 7. [ ] First four blog posts.
 8. [ ] `/compare/*` once legal sign-off exists.

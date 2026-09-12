@@ -11,6 +11,29 @@
 
 ## ✅ Done
 
+**Pricing unlinked (2026-09-12, uncommitted):** decision reversed from the
+branding plan; `/pricing` stays reachable by direct URL only, `noindex`,
+in robots disallow, out of the sitemap, removed from nav and footer, and the
+seven inline "pricing" links now point at `/contact`.
+
+**Run-entitlement gate (2026-09-12, uncommitted):** free-tier orgs can
+upload, create MITRE assessments and use the column wizard, but the three
+LLM-spending actions (`POST /reviews/{id}/trigger`, bulk trigger,
+`POST /mitre/assessments/{id}/run`) and the Celery scheduled SIEM pull now
+403 unless `organizations.subscription_tier` is pro/enterprise or the JWT
+email is in `platform_admin_emails`. Reuses the existing (never-enforced)
+tier column, no migration. `GET /auth/me` exposes `assessments_enabled`;
+the MITRE run button and the dashboard Review button swap to an inline
+request-access form (`components/RequestAccessForm.tsx`, posts to
+`/api/v1/contact` with `source=assessment_request|review_request`).
+`settings.require_paid_tier_for_runs` (default true) is set false in
+conftest so the 45 free-org test files keep passing. New
+`app/entitlements.py`, `tests/test_run_entitlement.py` (6). Sonnet
+adversarial takeover: accept. **Prod follow-up:** set
+`subscription_tier='pro'` for every org that should keep running (the
+owner's org is covered by the admin carve-out); scheduled pulls for a
+disabled org record a failed assessment each run by design (plan §2.6).
+
 **CWV re-check + templates lead magnet (2026-09-12, 2 commits, local, NOT pushed):** Lighthouse against live found mobile LCP doubled versus the July baseline on every marketing page (4.8–5.7s); cause isolated by local A/B to GA4 loading `afterInteractive` (gtag 175KB, ~900ms main-thread blocking), not the new Inter font or OG image. Fix: `lazyOnload` (LCP 4.33s → 2.74s on `/`, 4.70s → 2.71s on `/product/sow-review`, mobile Perf 59 → 81). `/resources/templates` closes the last Phase 3 technical item: three gated downloads behind name + work email via the existing contact endpoint (`source=templates`, one optional field added to `contact.py`), honeypot, no new tables/services; Accessibility 100. Handoff: `docs/phases/summaries/SESSION_HANDOFF_2026_09_12_CWV_TEMPLATES.md`.
 
 **Pushed + deployed 2026-09-12 evening, SHA `4ddfd9f`:** housekeeping commits (Sentinel workbook v0 `d0e27ae`, v2 ACME sample pair `b2a6a1e`, remaining prompt docs `ad8e19a`), the four pillar posts published after the user's read-through (`4ddfd9f`), and the whole content phase (`b48b510`…`313d44b`) are live. No migration. Python 3.11 in-container compile + `/health` ok. Live smoke 20/20, Lighthouse SEO/A11y 100/100 on `/` and `/product/mitre-coverage`; sitemap 47 URLs. GSC resubmit / URL-inspection steps and the (not yet wired) `product_card_click` GA4 event are in `docs/phases/summaries/SESSION_HANDOFF_2026_09_12_DEPLOY_CONTENT.md`.
