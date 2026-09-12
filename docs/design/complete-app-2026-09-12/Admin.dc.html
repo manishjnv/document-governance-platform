@@ -1,0 +1,468 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--paper:#FAF9F6;--card:#FFFFFF;--ink:#14181F;--ink2:#3B4453;--ink3:#5E6877;--line:#E6E3DD;--line2:#D5D1C9;
+--accent:#2457B8;--accent-soft:#E8EFFB;--crit:#A32D25;--crit-soft:#FBE7E4;--high:#9C4A0C;--high-soft:#FCEEDF;
+--med:#705708;--med-soft:#FAF1D2;--low:#2E6A42;--low-soft:#E3F1E7;--info:#1F5C85;--info-soft:#E3EEF7;--ok:#2A6F46;--ok-soft:#E3F1E7;
+--na:#ECE9E3;--violet:#4F3691;--violet-soft:#EFE9FA;--r:8px;--rc:10px;
+--crit-fill:#C0392B;--high-fill:#D97A1F;--med-fill:#D4A72C;--low-fill:#3E8A57;--info-fill:#2E86C1;
+--shadow:0 1px 2px rgba(20,24,31,.05),0 8px 24px -12px rgba(20,24,31,.16);--ease:cubic-bezier(.22,.61,.36,1);--side:224px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 14px/1.5 "IBM Plex Sans","Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}a:hover{color:#1B4494;text-decoration:underline}
+h1,h2,h3,h4{margin:0;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+h1{font-size:24px;line-height:1.2}h2{font-size:18px}h3{font-size:14px}
+p{margin:0}button{font:inherit;color:inherit}
+.mono{font-family:"IBM Plex Mono",Consolas,Menlo,monospace;font-size:12px}
+.num{font-variant-numeric:tabular-nums}
+.sub{color:var(--ink2)}.faint{color:var(--ink3)}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--rc);box-shadow:var(--shadow)}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.card-b{padding:16px}
+.row{display:flex;align-items:center;gap:8px}.row>*{min-width:0}.wrap{flex-wrap:wrap}.between{justify-content:space-between}.grow{flex:1;min-width:0}
+.stack{display:flex;flex-direction:column;gap:8px}
+.grid{display:grid;gap:12px}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}.g5{grid-template-columns:repeat(5,minmax(0,1fr))}.g6{grid-template-columns:repeat(6,minmax(0,1fr))}.g8{grid-template-columns:repeat(8,minmax(0,1fr))}
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 14px;border-radius:var(--r);border:1px solid var(--line2);background:#fff;color:var(--ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .16s var(--ease),border-color .16s,transform .16s var(--ease),opacity .16s}
+.btn:hover{background:#F3F1EC}.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{background:#1E4CA2}
+.btn.danger{background:var(--crit);border-color:var(--crit);color:#fff}.btn.danger:hover{background:#9C2A23}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--ink2)}.btn.ghost:hover{background:#F0EDE7;color:var(--ink)}
+.btn.link{background:transparent;border-color:transparent;color:var(--accent);padding:0;height:auto}.btn.link:hover{text-decoration:underline}
+.btn.sm{height:30px;padding:0 10px;font-size:12px}.btn.lg{height:40px;padding:0 18px}.btn.icon{width:36px;padding:0}.btn.icon.sm{width:30px}
+.btn[disabled],.btn.disabled{opacity:.5;pointer-events:none}
+/* chips */
+.chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;border:1px solid transparent;transition:background .2s,color .2s}
+.chip.crit{background:var(--crit-soft);color:var(--crit)}.chip.high{background:var(--high-soft);color:var(--high)}.chip.med{background:var(--med-soft);color:var(--med)}.chip.low{background:var(--low-soft);color:var(--low)}.chip.info{background:var(--info-soft);color:var(--info)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}.chip.grey{background:var(--na);color:var(--ink2)}.chip.blue{background:var(--accent-soft);color:var(--accent)}.chip.violet{background:var(--violet-soft);color:var(--violet)}
+.chip.outline{background:#fff;border-color:var(--line2);color:var(--ink2);font-weight:500}
+.chip.xs{height:18px;font-size:10.5px;padding:0 6px}
+.dot{width:8px;height:8px;border-radius:999px;display:inline-block;flex:none}
+/* inputs */
+.input,.select,textarea.input{height:36px;padding:0 10px;border:1px solid var(--line2);border-radius:var(--r);background:#fff;color:var(--ink);font:inherit;font-size:13px;outline:none;transition:border-color .16s,box-shadow .16s}
+.input:focus,.select:focus,textarea.input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.input.sm,.select.sm{height:30px;font-size:12px}textarea.input{height:auto;padding:8px 10px}
+.select{padding-right:28px;appearance:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%233B4453' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 8px center}
+.search{position:relative}.search .input{padding-left:30px;width:100%}.search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--ink3);pointer-events:none}
+.label{display:block;font-size:12px;font-weight:500;color:var(--ink2);margin-bottom:4px}
+.req{color:var(--crit)}
+input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent)}
+/* tooltip */
+.tip{position:relative}
+.tip::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 8px);transform:translate(-50%,4px);background:var(--ink);color:#fff;font:400 12px/1.4 "IBM Plex Sans",sans-serif;padding:7px 10px;border-radius:7px;white-space:pre-line;width:max-content;max-width:280px;opacity:0;pointer-events:none;transition:opacity .16s var(--ease),transform .16s var(--ease);z-index:60;text-align:left;font-weight:400;text-transform:none;letter-spacing:0}
+.tip::before{content:"";position:absolute;left:50%;bottom:calc(100% + 3px);transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--ink);opacity:0;transition:opacity .16s;z-index:60}
+.tip:hover::after,.tip:hover::before,.tip:focus-visible::after,.tip:focus-visible::before{opacity:1;transform:translate(-50%,0)}
+.tip.left::after{left:0;transform:translate(0,4px)}.tip.left:hover::after{transform:translate(0,0)}.tip.left::before{left:14px}
+/* kpi */
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--rc);padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0;text-align:left;cursor:default}
+.kpi.click{cursor:pointer;transition:border-color .16s,background .16s}.kpi.click:hover{border-color:var(--accent);background:#FBFBFF}
+.kpi .v{font-size:24px;font-weight:600;letter-spacing:-.02em;line-height:1.1}
+/* tables */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);padding:9px 12px;border-bottom:1px solid var(--line);background:#FBFAF8;white-space:nowrap}
+.tbl th button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:4px;text-transform:inherit;letter-spacing:inherit}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+.tbl tbody tr{transition:background .12s}.tbl tbody tr:hover{background:#F6F4EF}.tbl tbody tr.sel{background:var(--accent-soft)}
+.tbl .r{text-align:right}.tbl tr.band td{background:#F5F3EE;padding:7px 12px}
+.tbl .clickable{cursor:pointer}
+/* div tables (loop-safe; rows become cards on phones) */
+.dt{border:1px solid var(--line);border-radius:var(--rc);background:#fff;overflow:hidden}
+.dt .dr{display:grid;align-items:center;gap:12px;padding:0 12px;border-bottom:1px solid var(--line);min-height:44px;font-size:13px}
+.dt .dr:last-child{border-bottom:0}.dt .dc{min-width:0}
+.dt .dh{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);background:#FBFAF8;min-height:36px}
+.dt .dh button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:4px;text-transform:inherit;letter-spacing:inherit}
+.dt .dr:not(.dh):not(.band):hover{background:#F6F4EF}.dt .dr.sel{background:var(--accent-soft)}
+.dt .band{background:#F5F3EE;min-height:38px}.dt .child{background:#FCFBF9}
+.dt .r{text-align:right;justify-self:end}.dt .link{cursor:pointer}
+.dt .acts{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:12.5px;justify-content:flex-end}
+.dt .acts a,.dt .acts button.lnk{background:none;border:0;padding:0;font:inherit;font-size:12.5px;color:var(--accent);cursor:pointer}
+.dt .acts button.lnk.danger{color:var(--crit)}
+/* tabs */
+.tabs{display:flex;gap:20px;border-bottom:1px solid var(--line);align-items:flex-end}
+.tab{background:none;border:0;padding:0 2px 10px;font-size:13px;font-weight:500;color:var(--ink2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .16s,border-color .16s}
+.tab:hover{color:var(--ink)}.tab.on{color:var(--ink);font-weight:600;border-color:var(--accent)}
+.seg{display:inline-flex;gap:2px;padding:3px;background:var(--na);border-radius:7px}
+.seg button{border:0;background:transparent;padding:0 10px;height:28px;border-radius:5px;font-size:12.5px;font-weight:500;color:var(--ink2);cursor:pointer;transition:background .16s,color .16s}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(20,24,31,.14)}
+.pillbar{display:flex;flex-wrap:wrap;gap:6px}
+.pillbar .chip{cursor:pointer;opacity:.75}.pillbar .chip:hover{opacity:1}.pillbar .chip.on{opacity:1;box-shadow:0 0 0 2px var(--accent-soft);border-color:var(--accent)}
+/* sheets / dialogs / menus */
+.ov{position:fixed;inset:0;background:rgba(20,24,31,.35);z-index:40;transition:opacity .25s var(--ease)}
+.sheet{position:fixed;top:0;right:0;height:100%;background:#fff;box-shadow:-12px 0 40px -20px rgba(20,24,31,.35);z-index:41;display:flex;flex-direction:column;transition:transform .32s var(--ease);max-width:100vw}
+.sheet-h{padding:16px 20px 12px 24px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:10px}
+.sheet-b{padding:16px 20px 16px 24px;overflow-y:auto;flex:1}
+.sheet-f{position:sticky;bottom:0;padding:10px 20px;border-top:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.grip{position:absolute;left:0;top:0;height:100%;width:12px;cursor:ew-resize;touch-action:none;display:flex;align-items:center;justify-content:center}
+.grip i{width:4px;height:40px;border-radius:999px;background:var(--line2);transition:background .16s}.grip:hover i,.grip:focus-visible i{background:var(--accent)}
+.grip:focus-visible{outline:none}
+.xbtn{background:none;border:0;padding:4px;border-radius:6px;color:var(--ink3);cursor:pointer;display:inline-flex}.xbtn:hover{background:#F0EDE7;color:var(--ink)}
+.dlg-ov{position:fixed;inset:0;background:rgba(20,24,31,.45);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;transition:opacity .2s var(--ease)}
+.dlg{background:#fff;border-radius:12px;box-shadow:0 24px 60px -20px rgba(20,24,31,.4);width:100%;max-width:480px;transition:transform .22s var(--ease),opacity .22s;position:relative}
+.dlg-h{padding:18px 20px 6px}.dlg-b{padding:8px 20px 16px;color:var(--ink2);font-size:13.5px}.dlg-f{padding:12px 20px 18px;display:flex;justify-content:flex-end;gap:8px}
+.menu{position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);min-width:160px;padding:4px;z-index:30;display:none}
+.menu.open{display:block}.menu button{display:flex;width:100%;text-align:left;background:none;border:0;padding:8px 10px;border-radius:6px;font-size:13px;cursor:pointer;color:var(--ink);align-items:center;gap:8px}
+.menu button:hover{background:#F3F1EC}.menu button.danger{color:var(--crit)}
+.rel{position:relative}
+/* alerts, states */
+.alert{border-radius:var(--r);padding:12px 14px;font-size:13px;border:1px solid}
+.alert.err{background:var(--crit-soft);border-color:#F1C5BF;color:#8A2A23}
+.alert.warn{background:#FFF8E6;border-color:#F0DFA8;color:#6B5407}
+.alert.ok{background:var(--ok-soft);border-color:#BFE1CB;color:#256A40}
+.alert.info{background:var(--info-soft);border-color:#C6DBEA;color:#1F4E6E}
+.alert.blue{background:var(--accent-soft);border-color:#C9D9F5;color:#1F3F80}
+.err-line{font-size:12px;color:var(--crit)}
+.empty{border:1px dashed var(--line2);border-radius:var(--rc);padding:36px 20px;text-align:center;color:var(--ink2);background:#FCFBF9}
+.empty h3{margin-bottom:6px}
+.skel{background:linear-gradient(90deg,#EFECE6 25%,#F7F5F1 50%,#EFECE6 75%);background-size:400% 100%;animation:sh 1.3s ease infinite;border-radius:6px}
+@keyframes sh{0%{background-position:100% 0}100%{background-position:0 0}}
+.spin{animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+.rise{animation:rise .45s var(--ease) both}@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.drop{border:2px dashed var(--line2);border-radius:var(--rc);padding:26px 16px;text-align:center;cursor:pointer;transition:border-color .16s,background .16s;color:var(--ink2)}
+.drop:hover{background:#F6F4EF}.drop.on{border-color:var(--accent);background:var(--accent-soft)}
+.filerow{display:flex;align-items:center;gap:8px;border:1px solid #BFE1CB;background:var(--ok-soft);color:#256A40;border-radius:var(--r);padding:8px 10px;font-size:13px}
+.bar{height:6px;border-radius:999px;background:var(--na);overflow:hidden}.bar i{display:block;height:100%;border-radius:999px;transition:width .5s var(--ease)}
+.code{font-family:"IBM Plex Mono",Consolas,monospace;font-size:12px;background:#F5F3EE;border:1px solid var(--line);border-radius:6px;padding:1px 5px;color:var(--ink)}
+pre.block{font-family:"IBM Plex Mono",Consolas,monospace;font-size:12px;background:#F5F3EE;border:1px solid var(--line);border-radius:8px;padding:10px 12px;overflow:auto;margin:0;color:var(--ink);line-height:1.55}
+.kbd{font:500 11px "IBM Plex Mono",monospace;border:1px solid var(--line2);border-radius:5px;padding:1px 5px;color:var(--ink3);background:#fff}
+.hr{border:0;border-top:1px solid var(--line);margin:0}
+/* shell */
+.app{min-height:100vh;display:flex;background:var(--paper)}
+.side{position:fixed;inset:0 auto 0 0;width:var(--side);border-right:1px solid var(--line);background:#fff;display:flex;flex-direction:column;padding:14px 10px;z-index:20;transition:width .18s var(--ease)}
+.side .brand{display:flex;align-items:center;gap:10px;padding:4px 8px;min-width:0}
+.side .tag{padding:2px 8px 14px;font-size:11.5px;color:var(--ink3);white-space:nowrap;overflow:hidden}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;font-size:13.5px;font-weight:500;color:var(--ink2);white-space:nowrap;overflow:hidden;transition:background .16s,color .16s}
+.nav a:hover{background:#F3F1EC;color:var(--ink);text-decoration:none}.nav a.on{background:var(--accent);color:#fff}
+.nav a svg{flex:none}
+.side .foot{margin-top:auto}
+.side .tog{position:absolute;right:-14px;top:30px;width:28px;height:28px;border-radius:999px;border:2px solid var(--paper);background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow)}
+.side .sgrip{position:absolute;right:0;top:0;height:100%;width:6px;cursor:col-resize;touch-action:none}.side .sgrip:hover{background:var(--accent-soft)}
+.side.c .tag,.side.c .nav a span,.side.c .brand span,.side.c .foot span{display:none}.side.c .nav a{justify-content:center;padding:8px 0}.side.c .foot .btn{justify-content:center;padding:0}
+.topbar{display:none;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:20}
+.msheet{position:fixed;inset:0 auto 0 0;width:256px;background:#fff;z-index:45;padding:16px 12px;display:flex;flex-direction:column;transition:transform .28s var(--ease);box-shadow:12px 0 40px -20px rgba(20,24,31,.35)}
+.main{flex:1;min-width:0;padding-left:var(--side);transition:padding-left .18s var(--ease)}
+.page{max-width:1240px;margin:0 auto;padding:24px 28px 48px}.page.wide{max-width:none}
+.pagehead{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.pagehead .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.appbar{position:fixed;left:0;right:0;top:0;z-index:70;background:var(--accent);color:#fff;padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:13px}
+.install{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:400px;background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:8px 8px 8px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;z-index:70}
+@media (max-width:760px){
+ .app{flex-direction:column}.side{display:none}.topbar{display:flex;width:100%}.main{padding-left:0;width:100%}.page{padding:16px 16px 40px}
+ .g2,.g3{grid-template-columns:minmax(0,1fr)}.g4,.g5,.g6,.g8{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .chip{white-space:normal;height:auto;min-height:22px;padding:2px 8px}
+ .tbl.cards thead{display:none}.tbl.cards tr{display:block;border:1px solid var(--line);border-radius:var(--r);margin-bottom:8px;background:#fff;padding:4px 0}
+ .tbl.cards td{display:flex;justify-content:space-between;align-items:center;gap:12px;border:0;padding:6px 12px;text-align:left}
+ .tbl.cards td::before{content:attr(data-th);font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);flex:none}
+ .tbl.cards td.r{text-align:right}.tbl.cards tr.band td::before{content:none}
+ .dt .dr{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:10px 12px}.dt .dh{display:none}
+ .dt .dc{display:flex;justify-content:space-between;align-items:center;gap:12px}.dt .dc::before{content:attr(data-th);font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);flex:none}
+ .dt .dc.nolbl::before,.dt .band .dc::before{content:none}.dt .r{justify-self:auto}.dt .acts{justify-content:flex-start}
+ .kpi .v{font-size:20px}.sheet{width:100vw !important}.pagehead .actions{width:100%}
+ .tip::after{display:none}
+}
+</style>
+</helmet>
+
+<div class="app" style="--side:{{shell.sideW}}" data-screen="Admin" data-ready="{{ready}}" onClick="{{root}}">
+  <aside class="side {{shell.cls}}" aria-label="Sidebar">
+    <div class="brand"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg><span style="font-weight:600;font-size:14px">ScopeWise</span></div>
+    <div class="tag">Catch contract risk before you sign.</div>
+    <nav class="nav" aria-label="Main"><a href="#" class="" title="SOW Review"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span>SOW Review</span></a><a href="#" class="" title="MITRE Assessment"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg><span>MITRE Assessment</span></a><a href="#" class="" title="Code Security Review"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l1.5 2M16 2l-1.5 2"/><rect x="6" y="6" width="12" height="14" rx="6"/><path d="M12 6v14M2 13h4M18 13h4M3 20l3-2M21 20l-3-2M3 6l3 2M21 6l-3 2"/></svg><span>Code Security Review</span></a><sc-if value="{{shell.admin}}" hint-placeholder-val="{{true}}"><a href="#" class="on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path d="M9 12l2 2 4-4"/></svg><span>Admin</span></a></sc-if></nav>
+    <div class="foot"><button class="btn ghost sm" style="width:100%;justify-content:flex-start"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M13 3h6v18h-6"/></svg><span>Log out</span></button></div>
+    <button class="tog" aria-label="{{shell.togLabel}}" onClick="{{shell.toggle}}"><sc-if value="{{shell.collapsed}}" hint-placeholder-val="{{false}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></sc-if><sc-if value="{{shell.expanded}}" hint-placeholder-val="{{true}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></sc-if></button>
+    <sc-if value="{{shell.expanded}}" hint-placeholder-val="{{true}}"><div class="sgrip" role="separator" aria-orientation="vertical" aria-label="Resize sidebar" onPointerDown="{{shell.gDown}}" onPointerMove="{{shell.gMove}}" onPointerUp="{{shell.gUp}}"></div></sc-if>
+  </aside>
+  <div class="topbar"><div class="brand"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg><span style="font-weight:600;font-size:14px">ScopeWise</span></div><button class="btn ghost icon sm" aria-label="Open navigation menu" onClick="{{shell.openMobile}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>
+  <div class="ov" style="opacity:{{shell.mOvOp}};pointer-events:{{shell.mPe}};z-index:44" onClick="{{shell.closeMobile}}"></div>
+  <div class="msheet" style="transform:{{shell.mTx}}" aria-label="Navigation">
+    <div class="row between" style="margin-bottom:14px"><div class="brand"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg><span style="font-weight:600;font-size:14px">ScopeWise</span></div><button class="xbtn" aria-label="Close" onClick="{{shell.closeMobile}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <nav class="nav" aria-label="Main"><a href="#" class=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span>SOW Review</span></a><a href="#" class=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg><span>MITRE Assessment</span></a><a href="#" class=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l1.5 2M16 2l-1.5 2"/><rect x="6" y="6" width="12" height="14" rx="6"/><path d="M12 6v14M2 13h4M18 13h4M3 20l3-2M21 20l-3-2M3 6l3 2M21 6l-3 2"/></svg><span>Code Security Review</span></a><sc-if value="{{shell.admin}}" hint-placeholder-val="{{true}}"><a href="#" class="on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path d="M9 12l2 2 4-4"/></svg><span>Admin</span></a></sc-if></nav>
+    <div class="foot" style="margin-top:auto"><button class="btn ghost sm" style="width:100%;justify-content:flex-start"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M13 3h6v18h-6"/></svg><span>Log out</span></button></div>
+  </div>
+  <main class="main"><div class="page">
+<div class="pagehead">
+  <div class="row" style="gap:8px"><span style="color:var(--accent)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path d="M9 12l2 2 4-4"/></svg></span><h1>Admin</h1></div>
+  <div class="actions"><span class="faint" style="font-size:11.5px">Last updated {{updated}}</span><button class="btn sm" onClick="{{refresh}}"><span class="{{spinCls}}" style="display:inline-flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></span>Refresh</button></div>
+</div>
+<sc-if value="{{is.default}}" hint-placeholder-val="{{true}}"><div class="grid g5" style="margin-bottom:16px"><div class="kpi" ><span class="lbl">Members</span><span class="v num" style="color:var(--ink)">9</span><span class="faint" style="font-size:12px">9 active</span></div><div class="kpi" ><span class="lbl">Sign-ins this week</span><span class="v num" style="color:var(--ink)">23</span><span class="faint" style="font-size:12px">37 in the last 30 days</span></div><div class="kpi" ><span class="lbl">Documents</span><span class="v num" style="color:var(--ink)">11</span><span class="faint" style="font-size:12px">0 added this week</span></div><div class="kpi" ><span class="lbl">AI reviews</span><span class="v num" style="color:var(--ink)">15</span><span class="faint" style="font-size:12px">0 this week</span></div><div class="kpi" ><span class="lbl">Issues found</span><span class="v num" style="color:var(--ink)">896</span><span class="faint" style="font-size:12px">across all reviews</span></div></div>
+<div class="card" style="margin-bottom:16px">
+  <div class="card-h" style="align-items:flex-start;flex-direction:column;gap:4px"><h3>Organisations</h3>
+    <p class="sub" style="font-size:12.5px">Free-tier organisations can upload and configure but cannot start reviews or MITRE assessments. Grant a number of runs, or set pro/enterprise for unlimited. Requests arrive by email with source assessment_request / review_request.</p>
+    <sc-if value="{{is.error}}" hint-placeholder-val="{{false}}"><p role="alert" class="err-line">Could not load organisations.</p></sc-if>
+  </div>
+  <div class="card-b" style="padding:12px">
+    <sc-if value="{{is.loading}}" hint-placeholder-val="{{false}}"><p class="faint" style="font-size:12px">Loading…</p></sc-if>
+    <sc-if value="{{is.empty}}" hint-placeholder-val="{{false}}"><p class="sub" style="font-size:13px">No organisations yet.</p></sc-if>
+    <sc-if value="{{showOrgs}}" hint-placeholder-val="{{true}}">
+    <div class="dt">
+      <div class="dr dh" style="grid-template-columns:minmax(0,2.2fr) minmax(0,.8fr) minmax(0,1.5fr) minmax(0,.7fr) minmax(0,1fr) minmax(0,1.3fr)"><div class="dc">Organisation</div><div class="dc">Tier</div><div class="dc">Runs</div><div class="dc r">Members</div><div class="dc">Created</div><div class="dc r">Actions</div></div>
+      <sc-for list="{{orgs}}" as="o" hint-placeholder-count="3">
+<div class="dr" style="grid-template-columns:minmax(0,2.2fr) minmax(0,.8fr) minmax(0,1.5fr) minmax(0,.7fr) minmax(0,1fr) minmax(0,1.3fr)">
+  <div class="dc" data-th="Organisation" ><div><div style="font-weight:500">{{o.name}}</div><div class="faint" style="font-size:11.5px">{{o.email}}</div></div></div>
+  <div class="dc" data-th="Tier" ><span class="chip {{o.tierTone}} xs" style="text-transform:uppercase;letter-spacing:.04em">{{o.tier}}</span></div>
+  <div class="dc" data-th="Runs">
+    <sc-if value="{{o.free}}" hint-placeholder-val="{{true}}"><span class="row" style="gap:6px" onClick="{{stop}}"><input class="input sm num" type="number" min="0" max="1000" aria-label="Runs to grant" style="width:76px" value="{{o.draft}}" onChange="{{o.setDraft}}"><button class="btn sm" onClick="{{o.setRuns}}">Set</button><span class="faint num" style="font-size:12px">{{o.runsNote}}</span></span></sc-if>
+    <sc-if value="{{o.paid}}" hint-placeholder-val="{{false}}"><span class="sub">Unlimited</span></sc-if>
+  </div>
+  <div class="dc r" data-th="Members" ><span class="num">{{o.members}}</span></div>
+  <div class="dc" data-th="Created" ><span class="sub num">{{o.created}}</span></div>
+  <div class="dc r" data-th="Actions"><select class="select sm" aria-label="{{o.tierAria}}" value="{{o.tier}}" onChange="{{o.setTier}}" onClick="{{stop}}"><option value="free">free</option><option value="pro">pro</option><option value="enterprise">enterprise</option></select></div>
+</div></sc-for>
+    </div></sc-if>
+  </div>
+</div>
+<div class="card" style="margin-bottom:16px">
+  <div class="card-h"><h3>People</h3><div class="search" style="width:220px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input class="input sm" placeholder="Search people…" aria-label="Search people…" value="{{qPeople}}" onChange="{{setQPeople}}"></div></div>
+  <div class="card-b" style="padding:12px">
+    <sc-if value="{{noPeople}}" hint-placeholder-val="{{false}}"><p class="sub" style="font-size:13px;padding:8px 4px">No people match your search.</p></sc-if>
+    <sc-if value="{{hasPeople}}" hint-placeholder-val="{{true}}">
+    <div class="dt" style="overflow-x:auto">
+      <div class="dr dh" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1.8fr) minmax(0,.7fr) minmax(0,1.6fr) minmax(0,.9fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,.7fr) minmax(0,1fr)"><div class="dc">Name</div><div class="dc">Email</div><div class="dc">Role</div><div class="dc">Workspace</div><div class="dc">Status</div><div class="dc">Joined</div><div class="dc">Last sign-in</div><div class="dc r">Documents</div><div class="dc r">Reviews</div><div class="dc">Last active</div></div>
+      <sc-for list="{{people}}" as="p" hint-placeholder-count="3">
+<div class="dr" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1.8fr) minmax(0,.7fr) minmax(0,1.6fr) minmax(0,.9fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,.7fr) minmax(0,1fr)"><div class="dc" data-th="Name" ><span style="font-weight:500">{{p.name}}</span></div><div class="dc" data-th="Email" ><span class="sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block">{{p.email}}</span></div><div class="dc" data-th="Role" >{{p.role}}</div><div class="dc" data-th="Workspace" ><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block">{{p.ws}}</span></div><div class="dc" data-th="Status"><span class="chip {{p.tone}} xs" style="text-transform:uppercase;letter-spacing:.04em">{{p.status}}</span></div><div class="dc" data-th="Joined" ><span class="sub">{{p.joined}}</span></div><div class="dc" data-th="Last sign-in" ><span class="sub">{{p.signin}}</span></div><div class="dc r" data-th="Documents" ><span class="num">{{p.docs}}</span></div><div class="dc r" data-th="Reviews" ><span class="num">{{p.reviews}}</span></div><div class="dc" data-th="Last active" ><span class="sub">{{p.active}}</span></div></div></sc-for>
+    </div></sc-if>
+  </div>
+</div>
+<div class="grid g2" style="margin-bottom:16px">
+  <div class="card"><div class="card-h"><h3>Recent sign-ins</h3><div class="search" style="width:190px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input class="input sm" placeholder="Search sign-ins…" aria-label="Search sign-ins…" value="{{qSign}}" onChange="{{setQSign}}"></div></div>
+    <div class="card-b" style="padding:6px 0;max-height:288px;overflow-y:auto">
+      <sc-if value="{{noSign}}" hint-placeholder-val="{{false}}"><p class="sub" style="font-size:13px;padding:8px 16px">No sign-ins recorded yet.</p></sc-if>
+      <sc-for list="{{signins}}" as="s" hint-placeholder-count="3"><div class="row between" style="padding:7px 16px;font-size:12.5px;border-bottom:1px solid var(--line)"><span><b>{{s.who}}</b> <span class="sub">· {{s.how}} · {{s.device}} · from {{s.ip}}</span></span><span class="faint num" style="white-space:nowrap">{{s.when}}</span></div></sc-for>
+    </div></div>
+  <div class="card"><div class="card-h"><h3>Recent activity</h3><div class="search" style="width:190px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input class="input sm" placeholder="Search activity…" aria-label="Search activity…" value="{{qAct}}" onChange="{{setQAct}}"></div></div>
+    <div class="card-b" style="padding:6px 0;max-height:288px;overflow-y:auto">
+      <sc-if value="{{noAct}}" hint-placeholder-val="{{false}}"><p class="sub" style="font-size:13px;padding:8px 16px">Nothing yet.</p></sc-if>
+      <sc-for list="{{activity}}" as="a" hint-placeholder-count="3"><div class="row between" style="padding:7px 16px;font-size:12.5px;border-bottom:1px solid var(--line)"><span><b>{{a.who}}</b> <span class="sub">— {{a.what}}</span></span><span class="faint num" style="white-space:nowrap">{{a.when}}</span></div></sc-for>
+    </div></div>
+</div>
+<div class="card"><div class="card-h"><h3>AI usage</h3></div><div class="card-b">
+  <div class="grid g6" style="gap:10px"><div class="kpi" ><span class="lbl">Reviews finished</span><span class="v num" style="color:var(--ink)">15</span><span class="faint" style="font-size:12px"></span></div><div class="kpi" ><span class="lbl">Reviews failed</span><span class="v num" style="color:var(--crit)">1</span><span class="faint" style="font-size:12px"></span></div><div class="kpi" ><span class="lbl">Checks per review</span><span class="v num" style="color:var(--ink)">6</span><span class="faint" style="font-size:12px"></span></div><div class="kpi" ><span class="lbl">AI calls (approx.)</span><span class="v num" style="color:var(--ink)">90</span><span class="faint" style="font-size:12px">finished reviews × checks</span></div><div class="kpi" ><span class="lbl">Average review time</span><span class="v num" style="color:var(--ink)">42s</span><span class="faint" style="font-size:12px"></span></div><div class="kpi" ><span class="lbl">Last review</span><span class="v num" style="color:var(--ink)">1 day ago</span><span class="faint" style="font-size:12px"></span></div></div>
+  <p class="faint" style="font-size:12px;margin-top:10px">AI models in use: z-ai/glm-5.2, minimax/minimax-m3, deepseek/deepseek-v4-flash</p>
+</div></div></sc-if><sc-if value="{{is.loading}}" hint-placeholder-val="{{false}}"><p class="sub" style="font-size:13px">Loading…</p><div class="grid g5" style="margin-bottom:16px"><div class="kpi" ><span class="lbl">Members</span><span class="v num" style="color:var(--ink)">9</span><span class="faint" style="font-size:12px">9 active</span></div><div class="kpi" ><span class="lbl">Sign-ins this week</span><span class="v num" style="color:var(--ink)">23</span><span class="faint" style="font-size:12px">37 in the last 30 days</span></div><div class="kpi" ><span class="lbl">Documents</span><span class="v num" style="color:var(--ink)">11</span><span class="faint" style="font-size:12px">0 added this week</span></div><div class="kpi" ><span class="lbl">AI reviews</span><span class="v num" style="color:var(--ink)">15</span><span class="faint" style="font-size:12px">0 this week</span></div><div class="kpi" ><span class="lbl">Issues found</span><span class="v num" style="color:var(--ink)">896</span><span class="faint" style="font-size:12px">across all reviews</span></div></div></sc-if><sc-if value="{{is.empty}}" hint-placeholder-val="{{false}}"><div class="grid g5" style="margin-bottom:16px"><div class="kpi" ><span class="lbl">Members</span><span class="v num" style="color:var(--ink)">9</span><span class="faint" style="font-size:12px">9 active</span></div><div class="kpi" ><span class="lbl">Sign-ins this week</span><span class="v num" style="color:var(--ink)">23</span><span class="faint" style="font-size:12px">37 in the last 30 days</span></div><div class="kpi" ><span class="lbl">Documents</span><span class="v num" style="color:var(--ink)">11</span><span class="faint" style="font-size:12px">0 added this week</span></div><div class="kpi" ><span class="lbl">AI reviews</span><span class="v num" style="color:var(--ink)">15</span><span class="faint" style="font-size:12px">0 this week</span></div><div class="kpi" ><span class="lbl">Issues found</span><span class="v num" style="color:var(--ink)">896</span><span class="faint" style="font-size:12px">across all reviews</span></div></div>
+<div class="card" style="margin-bottom:16px">
+  <div class="card-h" style="align-items:flex-start;flex-direction:column;gap:4px"><h3>Organisations</h3>
+    <p class="sub" style="font-size:12.5px">Free-tier organisations can upload and configure but cannot start reviews or MITRE assessments. Grant a number of runs, or set pro/enterprise for unlimited. Requests arrive by email with source assessment_request / review_request.</p>
+    <sc-if value="{{is.error}}" hint-placeholder-val="{{false}}"><p role="alert" class="err-line">Could not load organisations.</p></sc-if>
+  </div>
+  <div class="card-b" style="padding:12px">
+    <sc-if value="{{is.loading}}" hint-placeholder-val="{{false}}"><p class="faint" style="font-size:12px">Loading…</p></sc-if>
+    <sc-if value="{{is.empty}}" hint-placeholder-val="{{false}}"><p class="sub" style="font-size:13px">No organisations yet.</p></sc-if>
+    <sc-if value="{{showOrgs}}" hint-placeholder-val="{{true}}">
+    <div class="dt">
+      <div class="dr dh" style="grid-template-columns:minmax(0,2.2fr) minmax(0,.8fr) minmax(0,1.5fr) minmax(0,.7fr) minmax(0,1fr) minmax(0,1.3fr)"><div class="dc">Organisation</div><div class="dc">Tier</div><div class="dc">Runs</div><div class="dc r">Members</div><div class="dc">Created</div><div class="dc r">Actions</div></div>
+      <sc-for list="{{orgs}}" as="o" hint-placeholder-count="3">
+<div class="dr" style="grid-template-columns:minmax(0,2.2fr) minmax(0,.8fr) minmax(0,1.5fr) minmax(0,.7fr) minmax(0,1fr) minmax(0,1.3fr)">
+  <div class="dc" data-th="Organisation" ><div><div style="font-weight:500">{{o.name}}</div><div class="faint" style="font-size:11.5px">{{o.email}}</div></div></div>
+  <div class="dc" data-th="Tier" ><span class="chip {{o.tierTone}} xs" style="text-transform:uppercase;letter-spacing:.04em">{{o.tier}}</span></div>
+  <div class="dc" data-th="Runs">
+    <sc-if value="{{o.free}}" hint-placeholder-val="{{true}}"><span class="row" style="gap:6px" onClick="{{stop}}"><input class="input sm num" type="number" min="0" max="1000" aria-label="Runs to grant" style="width:76px" value="{{o.draft}}" onChange="{{o.setDraft}}"><button class="btn sm" onClick="{{o.setRuns}}">Set</button><span class="faint num" style="font-size:12px">{{o.runsNote}}</span></span></sc-if>
+    <sc-if value="{{o.paid}}" hint-placeholder-val="{{false}}"><span class="sub">Unlimited</span></sc-if>
+  </div>
+  <div class="dc r" data-th="Members" ><span class="num">{{o.members}}</span></div>
+  <div class="dc" data-th="Created" ><span class="sub num">{{o.created}}</span></div>
+  <div class="dc r" data-th="Actions"><select class="select sm" aria-label="{{o.tierAria}}" value="{{o.tier}}" onChange="{{o.setTier}}" onClick="{{stop}}"><option value="free">free</option><option value="pro">pro</option><option value="enterprise">enterprise</option></select></div>
+</div></sc-for>
+    </div></sc-if>
+  </div>
+</div>
+<div class="card" style="margin-bottom:16px">
+  <div class="card-h"><h3>People</h3><div class="search" style="width:220px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input class="input sm" placeholder="Search people…" aria-label="Search people…" value="{{qPeople}}" onChange="{{setQPeople}}"></div></div>
+  <div class="card-b" style="padding:12px">
+    <sc-if value="{{noPeople}}" hint-placeholder-val="{{false}}"><p class="sub" style="font-size:13px;padding:8px 4px">No people match your search.</p></sc-if>
+    <sc-if value="{{hasPeople}}" hint-placeholder-val="{{true}}">
+    <div class="dt" style="overflow-x:auto">
+      <div class="dr dh" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1.8fr) minmax(0,.7fr) minmax(0,1.6fr) minmax(0,.9fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,.7fr) minmax(0,1fr)"><div class="dc">Name</div><div class="dc">Email</div><div class="dc">Role</div><div class="dc">Workspace</div><div class="dc">Status</div><div class="dc">Joined</div><div class="dc">Last sign-in</div><div class="dc r">Documents</div><div class="dc r">Reviews</div><div class="dc">Last active</div></div>
+      <sc-for list="{{people}}" as="p" hint-placeholder-count="3">
+<div class="dr" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1.8fr) minmax(0,.7fr) minmax(0,1.6fr) minmax(0,.9fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,.7fr) minmax(0,1fr)"><div class="dc" data-th="Name" ><span style="font-weight:500">{{p.name}}</span></div><div class="dc" data-th="Email" ><span class="sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block">{{p.email}}</span></div><div class="dc" data-th="Role" >{{p.role}}</div><div class="dc" data-th="Workspace" ><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block">{{p.ws}}</span></div><div class="dc" data-th="Status"><span class="chip {{p.tone}} xs" style="text-transform:uppercase;letter-spacing:.04em">{{p.status}}</span></div><div class="dc" data-th="Joined" ><span class="sub">{{p.joined}}</span></div><div class="dc" data-th="Last sign-in" ><span class="sub">{{p.signin}}</span></div><div class="dc r" data-th="Documents" ><span class="num">{{p.docs}}</span></div><div class="dc r" data-th="Reviews" ><span class="num">{{p.reviews}}</span></div><div class="dc" data-th="Last active" ><span class="sub">{{p.active}}</span></div></div></sc-for>
+    </div></sc-if>
+  </div>
+</div>
+<div class="grid g2" style="margin-bottom:16px">
+  <div class="card"><div class="card-h"><h3>Recent sign-ins</h3><div class="search" style="width:190px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input class="input sm" placeholder="Search sign-ins…" aria-label="Search sign-ins…" value="{{qSign}}" onChange="{{setQSign}}"></div></div>
+    <div class="card-b" style="padding:6px 0;max-height:288px;overflow-y:auto">
+      <sc-if value="{{noSign}}" hint-placeholder-val="{{false}}"><p class="sub" style="font-size:13px;padding:8px 16px">No sign-ins recorded yet.</p></sc-if>
+      <sc-for list="{{signins}}" as="s" hint-placeholder-count="3"><div class="row between" style="padding:7px 16px;font-size:12.5px;border-bottom:1px solid var(--line)"><span><b>{{s.who}}</b> <span class="sub">· {{s.how}} · {{s.device}} · from {{s.ip}}</span></span><span class="faint num" style="white-space:nowrap">{{s.when}}</span></div></sc-for>
+    </div></div>
+  <div class="card"><div class="card-h"><h3>Recent activity</h3><div class="search" style="width:190px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input class="input sm" placeholder="Search activity…" aria-label="Search activity…" value="{{qAct}}" onChange="{{setQAct}}"></div></div>
+    <div class="card-b" style="padding:6px 0;max-height:288px;overflow-y:auto">
+      <sc-if value="{{noAct}}" hint-placeholder-val="{{false}}"><p class="sub" style="font-size:13px;padding:8px 16px">Nothing yet.</p></sc-if>
+      <sc-for list="{{activity}}" as="a" hint-placeholder-count="3"><div class="row between" style="padding:7px 16px;font-size:12.5px;border-bottom:1px solid var(--line)"><span><b>{{a.who}}</b> <span class="sub">— {{a.what}}</span></span><span class="faint num" style="white-space:nowrap">{{a.when}}</span></div></sc-for>
+    </div></div>
+</div>
+<div class="card"><div class="card-h"><h3>AI usage</h3></div><div class="card-b">
+  <div class="grid g6" style="gap:10px"><div class="kpi" ><span class="lbl">Reviews finished</span><span class="v num" style="color:var(--ink)">15</span><span class="faint" style="font-size:12px"></span></div><div class="kpi" ><span class="lbl">Reviews failed</span><span class="v num" style="color:var(--crit)">1</span><span class="faint" style="font-size:12px"></span></div><div class="kpi" ><span class="lbl">Checks per review</span><span class="v num" style="color:var(--ink)">6</span><span class="faint" style="font-size:12px"></span></div><div class="kpi" ><span class="lbl">AI calls (approx.)</span><span class="v num" style="color:var(--ink)">90</span><span class="faint" style="font-size:12px">finished reviews × checks</span></div><div class="kpi" ><span class="lbl">Average review time</span><span class="v num" style="color:var(--ink)">42s</span><span class="faint" style="font-size:12px"></span></div><div class="kpi" ><span class="lbl">Last review</span><span class="v num" style="color:var(--ink)">1 day ago</span><span class="faint" style="font-size:12px"></span></div></div>
+  <p class="faint" style="font-size:12px;margin-top:10px">AI models in use: z-ai/glm-5.2, minimax/minimax-m3, deepseek/deepseek-v4-flash</p>
+</div></div></sc-if><sc-if value="{{is.error}}" hint-placeholder-val="{{false}}"><div class="alert err row" style="margin-bottom:14px" role="alert" style="align-items:flex-start;gap:10px"><div class="grow">Could not load the admin overview.</div></div><div class="grid g5" style="margin-bottom:16px"><div class="kpi" ><span class="lbl">Members</span><span class="v num" style="color:var(--ink)">9</span><span class="faint" style="font-size:12px">9 active</span></div><div class="kpi" ><span class="lbl">Sign-ins this week</span><span class="v num" style="color:var(--ink)">23</span><span class="faint" style="font-size:12px">37 in the last 30 days</span></div><div class="kpi" ><span class="lbl">Documents</span><span class="v num" style="color:var(--ink)">11</span><span class="faint" style="font-size:12px">0 added this week</span></div><div class="kpi" ><span class="lbl">AI reviews</span><span class="v num" style="color:var(--ink)">15</span><span class="faint" style="font-size:12px">0 this week</span></div><div class="kpi" ><span class="lbl">Issues found</span><span class="v num" style="color:var(--ink)">896</span><span class="faint" style="font-size:12px">across all reviews</span></div></div>
+<div class="card" style="margin-bottom:16px">
+  <div class="card-h" style="align-items:flex-start;flex-direction:column;gap:4px"><h3>Organisations</h3>
+    <p class="sub" style="font-size:12.5px">Free-tier organisations can upload and configure but cannot start reviews or MITRE assessments. Grant a number of runs, or set pro/enterprise for unlimited. Requests arrive by email with source assessment_request / review_request.</p>
+    <sc-if value="{{is.error}}" hint-placeholder-val="{{false}}"><p role="alert" class="err-line">Could not load organisations.</p></sc-if>
+  </div>
+  <div class="card-b" style="padding:12px">
+    <sc-if value="{{is.loading}}" hint-placeholder-val="{{false}}"><p class="faint" style="font-size:12px">Loading…</p></sc-if>
+    <sc-if value="{{is.empty}}" hint-placeholder-val="{{false}}"><p class="sub" style="font-size:13px">No organisations yet.</p></sc-if>
+    <sc-if value="{{showOrgs}}" hint-placeholder-val="{{true}}">
+    <div class="dt">
+      <div class="dr dh" style="grid-template-columns:minmax(0,2.2fr) minmax(0,.8fr) minmax(0,1.5fr) minmax(0,.7fr) minmax(0,1fr) minmax(0,1.3fr)"><div class="dc">Organisation</div><div class="dc">Tier</div><div class="dc">Runs</div><div class="dc r">Members</div><div class="dc">Created</div><div class="dc r">Actions</div></div>
+      <sc-for list="{{orgs}}" as="o" hint-placeholder-count="3">
+<div class="dr" style="grid-template-columns:minmax(0,2.2fr) minmax(0,.8fr) minmax(0,1.5fr) minmax(0,.7fr) minmax(0,1fr) minmax(0,1.3fr)">
+  <div class="dc" data-th="Organisation" ><div><div style="font-weight:500">{{o.name}}</div><div class="faint" style="font-size:11.5px">{{o.email}}</div></div></div>
+  <div class="dc" data-th="Tier" ><span class="chip {{o.tierTone}} xs" style="text-transform:uppercase;letter-spacing:.04em">{{o.tier}}</span></div>
+  <div class="dc" data-th="Runs">
+    <sc-if value="{{o.free}}" hint-placeholder-val="{{true}}"><span class="row" style="gap:6px" onClick="{{stop}}"><input class="input sm num" type="number" min="0" max="1000" aria-label="Runs to grant" style="width:76px" value="{{o.draft}}" onChange="{{o.setDraft}}"><button class="btn sm" onClick="{{o.setRuns}}">Set</button><span class="faint num" style="font-size:12px">{{o.runsNote}}</span></span></sc-if>
+    <sc-if value="{{o.paid}}" hint-placeholder-val="{{false}}"><span class="sub">Unlimited</span></sc-if>
+  </div>
+  <div class="dc r" data-th="Members" ><span class="num">{{o.members}}</span></div>
+  <div class="dc" data-th="Created" ><span class="sub num">{{o.created}}</span></div>
+  <div class="dc r" data-th="Actions"><select class="select sm" aria-label="{{o.tierAria}}" value="{{o.tier}}" onChange="{{o.setTier}}" onClick="{{stop}}"><option value="free">free</option><option value="pro">pro</option><option value="enterprise">enterprise</option></select></div>
+</div></sc-for>
+    </div></sc-if>
+  </div>
+</div>
+<div class="card" style="margin-bottom:16px">
+  <div class="card-h"><h3>People</h3><div class="search" style="width:220px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input class="input sm" placeholder="Search people…" aria-label="Search people…" value="{{qPeople}}" onChange="{{setQPeople}}"></div></div>
+  <div class="card-b" style="padding:12px">
+    <sc-if value="{{noPeople}}" hint-placeholder-val="{{false}}"><p class="sub" style="font-size:13px;padding:8px 4px">No people match your search.</p></sc-if>
+    <sc-if value="{{hasPeople}}" hint-placeholder-val="{{true}}">
+    <div class="dt" style="overflow-x:auto">
+      <div class="dr dh" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1.8fr) minmax(0,.7fr) minmax(0,1.6fr) minmax(0,.9fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,.7fr) minmax(0,1fr)"><div class="dc">Name</div><div class="dc">Email</div><div class="dc">Role</div><div class="dc">Workspace</div><div class="dc">Status</div><div class="dc">Joined</div><div class="dc">Last sign-in</div><div class="dc r">Documents</div><div class="dc r">Reviews</div><div class="dc">Last active</div></div>
+      <sc-for list="{{people}}" as="p" hint-placeholder-count="3">
+<div class="dr" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1.8fr) minmax(0,.7fr) minmax(0,1.6fr) minmax(0,.9fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,.7fr) minmax(0,1fr)"><div class="dc" data-th="Name" ><span style="font-weight:500">{{p.name}}</span></div><div class="dc" data-th="Email" ><span class="sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block">{{p.email}}</span></div><div class="dc" data-th="Role" >{{p.role}}</div><div class="dc" data-th="Workspace" ><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block">{{p.ws}}</span></div><div class="dc" data-th="Status"><span class="chip {{p.tone}} xs" style="text-transform:uppercase;letter-spacing:.04em">{{p.status}}</span></div><div class="dc" data-th="Joined" ><span class="sub">{{p.joined}}</span></div><div class="dc" data-th="Last sign-in" ><span class="sub">{{p.signin}}</span></div><div class="dc r" data-th="Documents" ><span class="num">{{p.docs}}</span></div><div class="dc r" data-th="Reviews" ><span class="num">{{p.reviews}}</span></div><div class="dc" data-th="Last active" ><span class="sub">{{p.active}}</span></div></div></sc-for>
+    </div></sc-if>
+  </div>
+</div>
+<div class="grid g2" style="margin-bottom:16px">
+  <div class="card"><div class="card-h"><h3>Recent sign-ins</h3><div class="search" style="width:190px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input class="input sm" placeholder="Search sign-ins…" aria-label="Search sign-ins…" value="{{qSign}}" onChange="{{setQSign}}"></div></div>
+    <div class="card-b" style="padding:6px 0;max-height:288px;overflow-y:auto">
+      <sc-if value="{{noSign}}" hint-placeholder-val="{{false}}"><p class="sub" style="font-size:13px;padding:8px 16px">No sign-ins recorded yet.</p></sc-if>
+      <sc-for list="{{signins}}" as="s" hint-placeholder-count="3"><div class="row between" style="padding:7px 16px;font-size:12.5px;border-bottom:1px solid var(--line)"><span><b>{{s.who}}</b> <span class="sub">· {{s.how}} · {{s.device}} · from {{s.ip}}</span></span><span class="faint num" style="white-space:nowrap">{{s.when}}</span></div></sc-for>
+    </div></div>
+  <div class="card"><div class="card-h"><h3>Recent activity</h3><div class="search" style="width:190px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input class="input sm" placeholder="Search activity…" aria-label="Search activity…" value="{{qAct}}" onChange="{{setQAct}}"></div></div>
+    <div class="card-b" style="padding:6px 0;max-height:288px;overflow-y:auto">
+      <sc-if value="{{noAct}}" hint-placeholder-val="{{false}}"><p class="sub" style="font-size:13px;padding:8px 16px">Nothing yet.</p></sc-if>
+      <sc-for list="{{activity}}" as="a" hint-placeholder-count="3"><div class="row between" style="padding:7px 16px;font-size:12.5px;border-bottom:1px solid var(--line)"><span><b>{{a.who}}</b> <span class="sub">— {{a.what}}</span></span><span class="faint num" style="white-space:nowrap">{{a.when}}</span></div></sc-for>
+    </div></div>
+</div>
+<div class="card"><div class="card-h"><h3>AI usage</h3></div><div class="card-b">
+  <div class="grid g6" style="gap:10px"><div class="kpi" ><span class="lbl">Reviews finished</span><span class="v num" style="color:var(--ink)">15</span><span class="faint" style="font-size:12px"></span></div><div class="kpi" ><span class="lbl">Reviews failed</span><span class="v num" style="color:var(--crit)">1</span><span class="faint" style="font-size:12px"></span></div><div class="kpi" ><span class="lbl">Checks per review</span><span class="v num" style="color:var(--ink)">6</span><span class="faint" style="font-size:12px"></span></div><div class="kpi" ><span class="lbl">AI calls (approx.)</span><span class="v num" style="color:var(--ink)">90</span><span class="faint" style="font-size:12px">finished reviews × checks</span></div><div class="kpi" ><span class="lbl">Average review time</span><span class="v num" style="color:var(--ink)">42s</span><span class="faint" style="font-size:12px"></span></div><div class="kpi" ><span class="lbl">Last review</span><span class="v num" style="color:var(--ink)">1 day ago</span><span class="faint" style="font-size:12px"></span></div></div>
+  <p class="faint" style="font-size:12px;margin-top:10px">AI models in use: z-ai/glm-5.2, minimax/minimax-m3, deepseek/deepseek-v4-flash</p>
+</div></div></sc-if></div></main>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview": {"width": 1440, "height": 900}, "view": {"editor": "enum", "options": ["default", "loading", "empty", "error", "gated"], "default": "default", "section": "State"}, "admin": {"editor": "boolean", "default": true, "section": "State"}}'>
+class Component extends DCLogic {
+  constructor(p){ super(p); this.state = {"shell": {"collapsed": false, "width": 224, "mobileOpen": false}, "sheets": {}, "sheetOrder": [], "dlg": null, "dlgArg": null, "menu": null, "listbox": null, "sort": {}, "filters": {}, "search": "", "rename": {"id": null, "value": ""}, "expanded": {}, "drop": {}, "tab": {}, "req": {"sent": false, "name": "", "email": "", "busy": false}, "busy": {}, "tiers": {}, "runs": {}, "drafts": {}}; this._drag = null; }
+  data(){ return {"orgs": [{"id": "o1", "name": "Default Org", "email": "manishjnvk@gmail.com · platform admin", "tier": "free", "members": 1, "created": "18/07/2026"}, {"id": "o2", "name": "starshrishail's Workspace", "email": "starshrishail@gmail.com", "tier": "free", "members": 1, "created": "21/07/2026"}, {"id": "o3", "name": "manishkumarjnvk's Workspace", "email": "manishkumarjnvk@gmail.com", "tier": "free", "members": 1, "created": "23/07/2026"}, {"id": "o4", "name": "manishjnvk1's Workspace", "email": "manishjnvk1@gmail.com", "tier": "free", "members": 1, "created": "23/07/2026"}, {"id": "o5", "name": "veena9jan's Workspace", "email": "veena9jan@gmail.com", "tier": "free", "members": 1, "created": "24/07/2026"}, {"id": "o6", "name": "urdineshnaidu's Workspace", "email": "urdineshnaidu@gmail.com", "tier": "free", "members": 1, "created": "04/08/2026"}, {"id": "o7", "name": "hemantsawant48's Workspace", "email": "hemantsawant48@gmail.com", "tier": "free", "members": 1, "created": "07/08/2026"}, {"id": "o8", "name": "talk2maq's Workspace", "email": "talk2maq@gmail.com", "tier": "free", "members": 1, "created": "12/09/2026"}, {"id": "o9", "name": "rajendra19sep's Workspace", "email": "rajendra19sep@gmail.com", "tier": "free", "members": 1, "created": "12/09/2026"}], "people": [{"name": "Manish Kumar", "email": "manishjnvk@gmail.com", "role": "Admin", "ws": "Default Org", "status": "Active", "joined": "1 month ago", "signin": "1 min ago", "docs": 11, "reviews": 15, "active": "1 min ago"}, {"name": "Shrishail Potadar", "email": "starshrishail@gmail.com", "role": "Admin", "ws": "starshrishail's Workspace", "status": "Active", "joined": "1 month ago", "signin": "1 month ago", "docs": 0, "reviews": 0, "active": "1 month ago"}, {"name": "Manish Kumar", "email": "manishkumarjnvk@gmail.com", "role": "Admin", "ws": "manishkumarjnvk's Workspace", "status": "Active", "joined": "1 month ago", "signin": "2 hours ago", "docs": 0, "reviews": 0, "active": "1 hour ago"}, {"name": "Manish Kumar", "email": "manishjnvk1@gmail.com", "role": "Admin", "ws": "manishjnvk1's Workspace", "status": "Active", "joined": "1 month ago", "signin": "1 month ago", "docs": 0, "reviews": 0, "active": "1 month ago"}, {"name": "Veena Kumari", "email": "veena9jan@gmail.com", "role": "Admin", "ws": "veena9jan's Workspace", "status": "Active", "joined": "1 month ago", "signin": "1 month ago", "docs": 0, "reviews": 0, "active": "1 month ago"}, {"name": "Dinesh Naidu", "email": "urdineshnaidu@gmail.com", "role": "Admin", "ws": "urdineshnaidu's Workspace", "status": "Active", "joined": "1 month ago", "signin": "29 days ago", "docs": 0, "reviews": 0, "active": "29 days ago"}, {"name": "Hemant Sawant (hems)", "email": "hemantsawant48@gmail.com", "role": "Admin", "ws": "hemantsawant48's Workspace", "status": "Active", "joined": "1 month ago", "signin": "1 month ago", "docs": 0, "reviews": 0, "active": "1 month ago"}, {"name": "Mohammed Shaik", "email": "talk2maq@gmail.com", "role": "Admin", "ws": "talk2maq's Workspace", "status": "Active", "joined": "5 hours ago", "signin": "5 hours ago", "docs": 0, "reviews": 0, "active": "5 hours ago"}, {"name": "Rajendra Sah", "email": "rajendra19sep@gmail.com", "role": "Admin", "ws": "rajendra19sep's Workspace", "status": "Suspended", "joined": "5 hours ago", "signin": "5 hours ago", "docs": 0, "reviews": 0, "active": "5 hours ago"}], "signins": [{"who": "Manish Kumar", "how": "Google", "device": "Chrome on Windows", "ip": "49.205.203.76", "when": "1 min ago"}, {"who": "Rajendra Sah", "how": "Email code", "device": "Chrome on Android", "ip": "103.21.58.14", "when": "5 hours ago"}, {"who": "Mohammed Shaik", "how": "Google", "device": "Safari on macOS", "ip": "182.73.44.9", "when": "5 hours ago"}, {"who": "Manish Kumar", "how": "Google", "device": "Chrome on Windows", "ip": "49.205.203.76", "when": "2 hours ago"}, {"who": "Dinesh Naidu", "how": "Google", "device": "Edge on Windows", "ip": "117.196.31.2", "when": "29 days ago"}], "activity": [{"who": "Manish Kumar", "what": "Signed in with Google", "when": "1 min ago"}, {"who": "Rajendra Sah", "what": "Was given access", "when": "5 hours ago"}, {"who": "Rajendra Sah", "what": "Created the workspace", "when": "5 hours ago"}, {"who": "Mohammed Shaik", "what": "Signed in with an email code", "when": "5 hours ago"}, {"who": "Manish Kumar", "what": "Uploaded a document", "when": "2 hours ago"}, {"who": "Manish Kumar", "what": "Ran an AI review", "when": "1 day ago"}]}; }
+  // ---- shared helpers (class methods so nothing lives at script top level) ----
+  setIn(path, val){ const s = JSON.parse(JSON.stringify(this.state)); let o = s;
+    for (let i = 0; i < path.length - 1; i++) { if (o[path[i]] == null) o[path[i]] = {}; o = o[path[i]]; }
+    o[path[path.length - 1]] = val; this.setState(s); }
+  vw(){ return (typeof window !== 'undefined' && window.innerWidth) ? window.innerWidth : 1440; }
+  viewFlags(){ const v = (this.props && this.props.view) || 'default';
+    return { default: v === 'default', loading: v === 'loading', empty: v === 'empty', error: v === 'error', gated: v === 'gated' }; }
+  closeAll(){ if (this.state.menu !== null || this.state.listbox !== null) this.setState({ menu: null, listbox: null }); }
+  shellVals(){ const s = this.state.shell; const c = s.collapsed; const w = c ? 56 : s.width;
+    return { sideW: w + 'px', cls: c ? 'c' : '', collapsed: c, expanded: !c, togLabel: c ? 'Expand sidebar' : 'Collapse sidebar',
+      admin: !(this.props && this.props.admin === false),
+      toggle: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setIn(['shell', 'collapsed'], !c); },
+      gDown: (e) => { e.currentTarget.setPointerCapture(e.pointerId); this._drag = { kind: 'side', x0: e.clientX, w0: s.width }; },
+      gMove: (e) => { if (!this._drag || this._drag.kind !== 'side') return; const nw = Math.max(180, Math.min(400, this._drag.w0 + (e.clientX - this._drag.x0))); this.setIn(['shell', 'width'], nw); },
+      gUp: () => { this._drag = null; },
+      mTx: s.mobileOpen ? 'translateX(0)' : 'translateX(-105%)', mOvOp: s.mobileOpen ? 1 : 0, mPe: s.mobileOpen ? 'auto' : 'none',
+      openMobile: () => this.setIn(['shell', 'mobileOpen'], true), closeMobile: () => this.setIn(['shell', 'mobileOpen'], false) }; }
+  tabVals(key, keys){ const cur = this.state.tab[key] || keys[0]; const o = {};
+    keys.forEach(k => { const on = cur === k; o[k] = { on: on, cls: on ? 'on' : '', aria: on ? 'true' : 'false', pick: () => this.setIn(['tab', key], k) }; });
+    o.current = cur; return o; }
+  sheetVals(name, def){ const s = this.state.sheets[name] || { open: false, id: null, width: def || 448 };
+    const w = Math.min(s.width, this.vw() * 0.95); const order = this.state.sheetOrder.indexOf(name); const z = 41 + (order < 0 ? 0 : order * 2);
+    return { open: s.open, id: s.id, w: w + 'px', tx: s.open ? 'translateX(0)' : 'translateX(105%)', ovOp: s.open ? 1 : 0, pe: s.open ? 'auto' : 'none', z: z, oz: z - 1,
+      close: (e) => { e && e.stopPropagation && e.stopPropagation(); this.closeSheet(name); },
+      gDown: (e) => { e.currentTarget.setPointerCapture(e.pointerId); this._drag = { kind: name, x0: e.clientX, w0: s.width }; },
+      gMove: (e) => { if (!this._drag || this._drag.kind !== name) return; const nw = Math.max(360, Math.min(this.vw() * 0.95, this._drag.w0 - (e.clientX - this._drag.x0))); this.setIn(['sheets', name, 'width'], nw); },
+      gUp: () => { this._drag = null; },
+      gKey: (e) => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); const d = e.key === 'ArrowLeft' ? 40 : -40;
+        this.setIn(['sheets', name, 'width'], Math.max(360, Math.min(this.vw() * 0.95, s.width + d))); } } }; }
+  openSheet(name, id, def){ const sheets = Object.assign({}, this.state.sheets);
+    sheets[name] = Object.assign({ width: def || 448 }, sheets[name] || {}, { open: true, id: id == null ? null : id });
+    this.setState({ sheets: sheets, sheetOrder: this.state.sheetOrder.filter(n => n !== name).concat([name]), menu: null, listbox: null }); }
+  closeSheet(name){ const sheets = Object.assign({}, this.state.sheets); if (sheets[name]) sheets[name] = Object.assign({}, sheets[name], { open: false });
+    this.setState({ sheets: sheets, sheetOrder: this.state.sheetOrder.filter(n => n !== name) }); }
+  dlgVals(name){ const on = this.state.dlg === name;
+    return { open: on, op: on ? 1 : 0, pe: on ? 'auto' : 'none', tx: on ? 'scale(1)' : 'scale(.96)',
+      close: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setState({ dlg: null, dlgArg: null }); },
+      key: (e) => { if (e.key === 'Escape') this.setState({ dlg: null, dlgArg: null }); } }; }
+  openDlg(name, arg){ this.setState({ dlg: name, dlgArg: arg == null ? null : arg, menu: null, listbox: null }); }
+  menuVals(id){ const on = this.state.menu === id;
+    return { cls: on ? 'open' : '', toggle: (e) => { e.stopPropagation(); this.setState({ menu: on ? null : id, listbox: null }); } }; }
+  lbVals(name){ const on = this.state.listbox === name;
+    return { open: on, cls: on ? 'open' : '', aria: on ? 'true' : 'false', toggle: (e) => { e.stopPropagation(); this.setState({ listbox: on ? null : name, menu: null }); } }; }
+  sortVals(name, rows, cols, defKey, defDir){ const st = this.state.sort[name] || { key: defKey, dir: defDir || 'asc' }; const col = cols.find(c => c.key === st.key);
+    const get = (r) => col && col.get ? col.get(r) : r[st.key];
+    const sorted = rows.slice().sort((a, b) => { const va = get(a), vb = get(b); if (va == null && vb == null) return 0; if (va == null) return 1; if (vb == null) return -1;
+      const r = (typeof va === 'number' && typeof vb === 'number') ? va - vb : String(va).localeCompare(String(vb)); return st.dir === 'asc' ? r : -r; });
+    const h = {}; cols.forEach(c => { const on = c.key === st.key; h[c.key] = { aria: on ? (st.dir === 'asc' ? 'ascending' : 'descending') : 'none', arrow: on ? (st.dir === 'asc' ? '↑' : '↓') : '↕', op: on ? 1 : .35,
+      pick: () => this.setIn(['sort', name], { key: c.key, dir: on && st.dir === 'asc' ? 'desc' : 'asc' }) }; });
+    return { rows: sorted, h: h, key: st.key, dir: st.dir }; }
+  dropVals(name, sample, size){ const d = this.state.drop[name] || { active: false, file: null };
+    return { cls: d.active ? 'on' : '', file: d.file || '', size: d.file ? (size || '') : '', has: !!d.file, none: !d.file,
+      over: (e) => { e.preventDefault(); if (!d.active) this.setIn(['drop', name, 'active'], true); },
+      leave: () => { if (d.active) this.setIn(['drop', name, 'active'], false); },
+      pick: (e) => { e && e.preventDefault && e.preventDefault(); this.setIn(['drop', name], { active: false, file: sample }); },
+      clear: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setIn(['drop', name], { active: false, file: null }); } }; }
+  reqVals(){ const r = this.state.req;
+    return { sent: r.sent, form: !r.sent, name: r.name, email: r.email, btn: r.busy ? 'Sending...' : 'Request access',
+      setName: (e) => this.setIn(['req', 'name'], e.target.value), setEmail: (e) => this.setIn(['req', 'email'], e.target.value),
+      submit: () => { this.setIn(['req', 'busy'], true); setTimeout(() => this.setState({ req: Object.assign({}, this.state.req, { busy: false, sent: true }) }), 700); } }; }
+  busy(key){ return !!this.state.busy[key]; }
+  runBusy(key, ms, after){ const b = Object.assign({}, this.state.busy); b[key] = true; this.setState({ busy: b });
+    setTimeout(() => { const b2 = Object.assign({}, this.state.busy); delete b2[key]; this.setState({ busy: b2 }); if (after) after(); }, ms || 900); }
+  isOpen(id){ return !!this.state.expanded[id]; }
+  toggleOpen(id){ this.setIn(['expanded', id], !this.state.expanded[id]); }
+  renameVals(id, current, onCommit){ const r = this.state.rename; const on = r.id === id;
+    return { on: on, off: !on, value: on ? r.value : current,
+      start: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setState({ rename: { id: id, value: current }, menu: null }); },
+      set: (e) => this.setIn(['rename', 'value'], e.target.value),
+      commit: (e) => { e && e.stopPropagation && e.stopPropagation(); const v = (this.state.rename.value || '').trim(); if (!v) return; if (onCommit) onCommit(v); this.setIn(['rename'], { id: null, value: '' }); },
+      cancel: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setIn(['rename'], { id: null, value: '' }); },
+      key: (e) => { if (e.key === 'Enter') { const v = (this.state.rename.value || '').trim(); if (!v) return; if (onCommit) onCommit(v); this.setIn(['rename'], { id: null, value: '' }); }
+        if (e.key === 'Escape') this.setIn(['rename'], { id: null, value: '' }); },
+      canSave: !on || !!(r.value || '').trim() }; }
+
+  renderVals(){
+    const S = this.state, D = this.data(), P = this.props || {};
+    const base = { ready:'1', stop:(e)=>{ e && e.stopPropagation && e.stopPropagation(); }, root:()=>this.closeAll(),
+      shell:this.shellVals(), is:this.viewFlags(), req:this.reqVals() };
+    const vals = (function(self){ 
+const tiers = S.tiers || {}, runs = S.runs || {}, drafts = S.drafts || {};
+const norm = s => (s || '').toLowerCase();
+const orgs = D.orgs.map(o => { const tier = tiers[o.id] || o.tier; const free = tier === 'free'; const granted = runs[o.id] == null ? 0 : runs[o.id];
+  return Object.assign({}, o, { tier, free, paid: !free, tierTone: free ? 'grey' : 'blue', tierAria: 'Tier for ' + o.name, members: String(o.members),
+    draft: drafts[o.id] != null ? drafts[o.id] : String(granted), runsNote: granted > 0 ? granted + ' granted' : '',
+    setDraft: e => self.setIn(['drafts', o.id], e.target.value),
+    setRuns: e => { e.stopPropagation(); const v = Math.max(0, Math.min(1000, Number(drafts[o.id] != null ? drafts[o.id] : granted) || 0)); const r = Object.assign({}, runs); r[o.id] = v; const d = Object.assign({}, drafts); d[o.id] = String(v); self.setState({ runs: r, drafts: d }); },
+    setTier: e => { const t = Object.assign({}, tiers); t[o.id] = e.target.value; self.setState({ tiers: t }); } }); });
+const qp = norm(S.qPeople), qs = norm(S.qSign), qa = norm(S.qAct);
+const people = D.people.filter(p => !qp || norm(p.name + ' ' + p.email + ' ' + p.role + ' ' + p.ws).includes(qp)).map(p => Object.assign({}, p, { docs: String(p.docs), reviews: String(p.reviews), tone: p.status === 'Active' ? 'ok' : 'grey' }));
+const signins = D.signins.filter(s => !qs || norm(s.who + ' ' + s.how + ' ' + s.device + ' ' + s.ip).includes(qs));
+const activity = D.activity.filter(a => !qa || norm(a.who + ' ' + a.what).includes(qa));
+return { orgs, showOrgs: P.view !== 'loading' && P.view !== 'empty', people, noPeople: people.length === 0, hasPeople: people.length > 0,
+  signins, noSign: signins.length === 0, activity, noAct: activity.length === 0,
+  qPeople: S.qPeople || '', setQPeople: e => self.setState({ qPeople: e.target.value }),
+  qSign: S.qSign || '', setQSign: e => self.setState({ qSign: e.target.value }), qAct: S.qAct || '', setQAct: e => self.setState({ qAct: e.target.value }),
+  updated: self.busy('refresh') ? 'Just now' : 'Just now', spinCls: self.busy('refresh') ? 'spin' : '', refresh: () => self.runBusy('refresh', 1200) };
+ }).call(this, this);
+    return Object.assign(base, vals);
+  }
+}
+</script>
+</body>
+</html>

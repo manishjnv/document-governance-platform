@@ -1,0 +1,9 @@
+[
+  "Admin", "Last updated", "Just now", "Refresh", "Could not load the admin overview.", "Loading…",
+  "Members", "active", "Sign-ins this week", "in the last 30 days", "Documents", "added this week", "AI reviews", "this week", "Issues found", "across all reviews",
+  "Organisations", "Free-tier organisations can upload and configure but cannot start reviews or MITRE assessments. Grant a number of runs, or set pro/enterprise for unlimited. Requests arrive by email with source assessment_request / review_request.",
+  "Could not load organisations.", "No organisations yet.", "Organisation", "Tier", "Runs", "Created", "Actions", "Runs to grant", "Set", "Unlimited", "Tier for", "free", "pro", "enterprise",
+  "People", "Search people…", "Name", "Email", "Role", "Workspace", "Status", "Joined", "Last sign-in", "Reviews", "Last active", "Active", "Suspended", "No people match your search.",
+  "Recent sign-ins", "Search sign-ins…", "No sign-ins recorded yet.", "Recent activity", "Search activity…", "Nothing yet.",
+  "AI usage", "Reviews finished", "Reviews failed", "Checks per review", "AI calls (approx.)", "finished reviews × checks", "Average review time", "Last review", "AI models in use:"
+]
