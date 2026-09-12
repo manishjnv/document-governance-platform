@@ -314,6 +314,194 @@ export const BLOG_POSTS: BlogPost[] = [
       },
     ],
   },
+  {
+    slug: 'how-much-mitre-attack-does-your-siem-cover',
+    title: 'How Much of MITRE ATT&CK Does Your SIEM Really Cover?',
+    dek: "Most detection rule sets cover a small slice of MITRE ATT&CK while the telemetry to cover far more already sits in the SIEM. Here is why the number is smaller than teams assume, and how a MITRE ATT&CK coverage assessment gets you an honest one.",
+    publishedDate: '2026-09-12',
+    author: 'ScopeWise Team',
+    pillar: 'mitre',
+    relatedUseCase: '/product/mitre-coverage',
+    pendingReview: true,
+    body: [
+      {
+        heading: 'The gap between what you log and what you detect',
+        content:
+          "CardinalOps' 2025 State of SIEM Detection Risk report found that enterprise SIEMs detect about 21% of MITRE ATT&CK techniques on average, even though the telemetry those same SIEMs already ingest could cover more than 90%. That is not a logging problem. The logs are there. What is missing is the mapping between the rules a team has written and the technique list those rules are supposed to defend against. Nobody sits down and decides to cover 21%. It happens because rule sets grow one alert at a time, tagging is optional, and no one re-checks the total against the full ATT&CK matrix once a quarter, let alone after every rule change. A MITRE ATT&CK coverage assessment exists to close that gap: take the rules as they are, take the ATT&CK matrix as published, and produce an honest count of what is actually covered instead of what a rule name implies.",
+      },
+      {
+        heading: 'Four states, not two',
+        content:
+          'A rule set does not sort cleanly into "covered" and "not covered." A technique is covered when at least one enabled rule maps to it with a confident mapping. It is partial when the only mapping is a disabled rule, or the mapping confidence is low, or a parent technique has no direct rule of its own but at least one of its sub-techniques is covered. It is not covered when nothing maps to it at all. And it is not applicable when the technique cannot occur in the environment being assessed in the first place. Collapsing partial into covered flatters the number; collapsing it into not-covered ignores real intent behind a disabled rule. Keeping all four states separate is what makes a coverage percentage mean something specific rather than something optimistic.',
+      },
+      {
+        heading: 'Why not-applicable has to leave the denominator, with a reason',
+        content:
+          'ATT&CK v19.1 lists 858 Enterprise techniques across 15 tactics, plus separate ICS and Mobile matrices. Not every technique applies to every environment: a macOS-specific technique is meaningless with no macOS in the inventory, and the ICS matrix should not be in play for an estate with no OT or industrial control assets. Marking those as not applicable and removing them from the denominator is correct, but only if the reason is visible. There are two kinds. Derived: the platform or domain the technique needs is absent from the declared inventory. Customer-declared: someone excluded the technique on purpose and gave a reason, printed verbatim in the report. An executive reading "78% coverage" needs to know whether that 78% is measured against the full 858 or against a narrowed set someone chose, and why it was narrowed. A coverage number with no visible N/A reasons is a number nobody can audit.',
+      },
+      {
+        heading: 'Two numbers, never one',
+        content:
+          'A second reporting discipline matters as much as the four states: the coverage a customer\'s own rules provide, and the coverage a security tool claims to provide natively, are always reported as two separate figures. Merging them produces a number that overstates what the customer team actually built and maintains, and understates what buying or enabling a vendor feature would add. Keeping them apart also protects the audit trail — a rule the customer wrote and owns behaves differently under a product update than a vendor-native detection does, and a report that blends the two loses that distinction the moment it is printed.',
+      },
+      {
+        heading: 'Coverage is presence, not efficacy',
+        content:
+          'A technique being "covered" only means a qualifying rule exists for it. It says nothing about whether that rule fires correctly, or at all. Detection strength is scored separately, from provenance (was the mapping written by a person, matched by keyword, or assigned by a language model), whether the rule is enabled, whether real detection logic is present rather than a placeholder, and whether the rule\'s log source actually matches the telemetry the technique requires. A disabled rule can satisfy the coverage state as partial, but it can never score as a strong detection — a rule nobody has turned on is not defending anything yet, no matter what it would catch if it were live. Splitting these two questions apart is why a report can honestly say "covered, but weak" instead of collapsing it into one comforting label.',
+      },
+      {
+        heading: 'A worked example',
+        content:
+          'Picture a hypothetical 120-rule Sentinel workspace covering Windows endpoints, Entra ID, and AWS, with no macOS and no OT in the inventory. Applicability first removes every macOS-only technique (derived, platform absent) and the entire ICS matrix (derived, no OT assets declared), which might shrink the denominator from 858 to something closer to 640 applicable techniques for that specific estate. Against that narrower denominator, the 120 rules might land at 96 covered, 40 partial (mostly disabled rules kept for tuning, plus a few low-confidence tags), and the rest not covered — a strict figure near 15% and a weighted figure, crediting partial at half value, closer to 21%. Of those 96 covered techniques, detection-strength scoring might flag a third as merely moderate because the rule\'s log source only loosely matches the technique\'s expected telemetry. None of these numbers are real; they are illustrative of how the four states and the two-number split turn a single "here is our coverage" claim into something a security lead can actually interrogate.',
+      },
+      {
+        heading: 'What to do with the gap list',
+        content:
+          'A list of not-covered and partial techniques is not useful until it is ordered. Gaps get ranked by how often real attackers use the technique and by whether it touches a declared crown jewel, then split by feasibility: short-term gaps are covered by telemetry already onboarded, mid-term gaps need tooling the team already owns but has not wired up, and long-term gaps need new capability entirely. That ranked list is the actual deliverable — a SIEM detection coverage percentage on its own tells you where you stand, but a feasibility-sorted gap list tells you what to build next quarter versus what to defer. If you want to see this run against your own rule export and environment inventory, [ScopeWise\'s MITRE ATT&CK coverage assessment](/product/mitre-coverage) produces the coverage numbers, the detection-strength scoring, and the ranked gap list from the same run.',
+      },
+    ],
+  },
+  {
+    slug: 'reading-an-attack-navigator-layer',
+    title: 'Reading an ATT&CK Navigator Layer Without Fooling Yourself',
+    dek: "A Navigator layer looks like a finished picture of your detection coverage, but the colors are a summary of choices someone made upstream -- here is what to check before you trust the grid.",
+    publishedDate: '2026-09-12',
+    author: 'ScopeWise Team',
+    pillar: 'mitre',
+    relatedUseCase: '/product/mitre-coverage',
+    pendingReview: true,
+    body: [
+      {
+        heading: 'What a layer file actually is',
+        content:
+          "An ATT&CK Navigator layer is a JSON file the MITRE ATT&CK Navigator loads to draw its grid. Current Navigator builds read layer format 4.5, which fixes the shape of the file: a name, a domain (enterprise-attack, ics-attack, or mobile-attack), a version block recording the ATT&CK version and the layer format itself, and a techniques array. Each entry in that array names a techniqueID, ties it to a tactic column, carries a color, and optionally a score, a comment, and an enabled flag. Everything the Navigator renders comes from those fields -- there is no hidden computation happening in the viewer, which is exactly why the file is worth reading on its own terms rather than trusting the picture it produces.",
+      },
+      {
+        heading: 'Color and score are two different mechanisms',
+        content:
+          "Navigator supports two ways of coloring cells. One is a gradient tied to a numeric score, useful when the underlying data is genuinely continuous, like a percentage or a count. The other is a fixed color assigned per state, useful when the data is categorical. ScopeWise writes fixed colors: covered, partial, not covered, and not applicable each get one color, matching the palette used in the PDF report, so a technique that reads amber in the Navigator reads amber on the page too. This matters because a gradient layer and a fixed-color layer can look superficially similar at a glance but mean different things -- a gradient answers 'how much,' a fixed-color layer answers 'which bucket,' and mixing up the two when reading someone else's layer is an easy way to misjudge what a shade is telling you.",
+      },
+      {
+        heading: 'Not applicable is a decision, not a blank',
+        content:
+          "A greyed-out, disabled cell in a layer is not a technique nobody looked at. The convention is enabled:false paired with a comment carrying the reason: either the technique needs a platform absent from the inventory (a derived exclusion) or the customer reviewed it and declared it out of scope with a stated reason. Reading a layer without opening the comment field turns a documented decision back into an unexplained gap, which defeats the purpose of recording it that way in the first place. If a layer you receive has disabled cells with empty or generic comments, that is worth asking about before treating the coverage percentage as final -- a real exclusion and a lazy default look identical without the comment.",
+      },
+      {
+        heading: 'Comparing two layers across runs',
+        content:
+          "The useful comparison is two layers from the same estate, generated against the same ATT&CK version, months apart. What changed at the per-technique level is the signal: a cell that moved from not covered to covered reflects a new or improved rule, and that is a real gain worth confirming, not just accepting on sight. But a cell can also change because ATT&CK itself re-mapped a technique between versions, split a technique into new sub-techniques, or revised a tactic assignment -- a shift that has nothing to do with your rules changing. Navigator has a built-in layer-comparison feature that overlays two layers and highlights the diff directly, which is faster than eyeballing two grids side by side, but it still will not tell you which of those two causes produced a given change -- that judgment call is still yours, usually by checking whether the rule set actually changed or only the ATT&CK version did.",
+      },
+      {
+        heading: 'Where a quick read goes wrong',
+        content:
+          "A handful of misreadings show up often enough to name. Sub-technique rollup is the most common: a parent technique can render as covered in the grid because one of its several sub-techniques is covered, while the rest sit uncovered -- a detection gap analysis that only counts parent techniques will systematically overstate coverage, so both levels need counting. Revoked and deprecated techniques cause a second kind of confusion: a revoked techniqueID is retired and redirected to its successor, so it will not appear in a current register at all, while a deprecated one is marked not applicable with that reason -- either way, a layer built against an older ATT&CK version will not line up cell for cell against one built against a newer one, and that mismatch is a version artifact, not a coverage change. A third trap is multi-tactic techniques, which legitimately appear in more than one tactic column, so counting the same colored cell twice across columns inflates the picture. And the broadest trap is reading color density as detection quality -- a covered cell means a rule exists for that technique, nothing about whether the rule is well-tuned, current, or would actually fire in a real intrusion.",
+      },
+      {
+        heading: 'A worked example',
+        content:
+          "Take a hypothetical mid-size estate assessed twice, three months apart, both runs against the same pinned ATT&CK version. The first layer shows the Lateral Movement and Credential Access tactics mostly red, with a scattering of amber. The second layer shows several of those same techniqueIDs shifted from not covered to partial, and two shifted all the way to covered -- that is the detection gap analysis doing its job, because the underlying rule set actually grew between runs. But the second layer also shows three techniqueIDs in Initial Access that flipped from covered to not applicable, each with a comment reading that the corresponding cloud platform was decommissioned during that quarter. Read superficially, the coverage percentage barely moved between the two layers. Read technique by technique with the comments open, the real story is a genuine detection improvement in two tactics plus a legitimate shrinking of the estate's applicable surface -- two different, both good, developments that a single headline number would have hidden from each other.",
+      },
+      {
+        heading: 'What the layer is for',
+        content:
+          "A Navigator layer is a picture of presence: which techniques have a rule, which do not, and which were excluded and why. It is not a verdict on how strong those rules are, and it is not a substitute for reading the gap list behind it. The gap list, ranked by what it says about your exposure, and the detection-strength notes attached to each covered cell are the parts of the assessment that turn into work -- the layer is just the map that points at where to look. See how ScopeWise builds this whole picture, from rule ingest through the layer export, on the [MITRE ATT&CK Coverage](/product/mitre-coverage) product page.",
+      },
+    ],
+  },
+  {
+    slug: 'what-a-code-security-review-deliverable-should-contain',
+    title: 'What a Code Security Review Deliverable Should Contain',
+    dek: 'A scanner produces a JSON file of raw hits. A code security review report is something else -- verified findings, exploit chains, and a fix plan a client can actually work.',
+    publishedDate: '2026-09-12',
+    author: 'ScopeWise Team',
+    pillar: 'codereview',
+    relatedUseCase: '/product/code-security-review',
+    pendingReview: true,
+    body: [
+      {
+        heading: 'A scanner output is not a deliverable',
+        content:
+          "Run any static analysis scanner against a real codebase and it hands back a JSON file with somewhere between a few dozen and a few hundred hits. Some are duplicates of the same underlying issue reported at three call sites. Some are false positives the scanner cannot tell from a real bug. None of them come pre-sorted by what actually matters, and none of them are written in language a product owner or a client's engineering lead can read and act on without translation. Handing that file over is not a code security review report -- it is the input to one. The consultant's actual value has always been the transformation from raw hits to a decision a client can make, and until that transformation is automated, it gets rebuilt by hand for every single engagement: the same triage spreadsheet, the same severity re-ranking, the same rewritten explanations, over and over.",
+      },
+      {
+        heading: 'The order a finding needs to be read in',
+        content:
+          "A finding that is useful to a reader has a fixed reading order, and most raw scanner output does not follow it. First, what is wrong -- a plain description of the defect, not a rule ID. Second, why it matters -- the actual consequence if left unfixed, not a generic severity label. Third, how to fix it -- a concrete, specific remediation, not \"sanitize input.\" Fourth, how it is exploited -- the attack path a real adversary would take through this specific piece of code. Fifth, the preconditions an attacker needs -- what has to be true for the exploit to work at all, since a lot of technically-real findings require conditions that never occur in practice. Every finding should also carry a severity rating, a verifier verdict (has this been checked against the actual code, or is it an unconfirmed candidate), and the exact file and line so a developer can go straight to the fix. Skip any one of these five and the reader has to reconstruct it themselves, which is the same manual work the review was supposed to remove.",
+      },
+      {
+        heading: 'Exploit chains change the fix order',
+        content:
+          "Individual findings rarely tell the full story. The more useful unit is the exploit chain -- a sequence of findings that, linked together, get an attacker somewhere a single finding would not. A moderate authentication weakness combined with an unrelated path traversal bug can add up to full account takeover, even though neither finding alone reads as critical. Once chains are mapped, the remediation question changes from \"what is the highest CVSS score\" to \"what is the fewest number of fixes that breaks every chain.\" That is a set-cover problem, and it has a deterministic answer: order fixes so the one that breaks the most chains goes first, not the one with the scariest score in isolation. A fix plan built this way collapses six chains down to a handful of fixes instead of a flat list of 29 items with no sense of which ones actually matter most.",
+      },
+      {
+        heading: 'The tracker and the deck have to agree',
+        content:
+          "None of this is useful if it lives only in a PDF nobody updates. The deliverable needs an editable tracker -- one row per finding, plus columns a team will actually use to run remediation: Owner, Status (Open, In progress, Fixed, Accepted risk, False positive), Target date, and Notes. That tracker is the source of truth, and any summary document built on top of it -- a briefing deck for a steering committee, say -- has to pull its numbers from the same rows rather than a separately hand-typed slide. The moment the deck and the tracker can drift apart, someone in a room quotes a stale number and the whole review loses credibility over something that was never actually wrong in the underlying data.",
+      },
+      {
+        heading: 'What this is not',
+        content:
+          "An AI code security review is worth using precisely because its limits are stated up front, not discovered later. The scanner behind this kind of review is LLM-driven static analysis: it is non-deterministic, and there are no published precision or recall figures for it, the way there might be for a mature rule-based tool. Its output is a set of triage candidates for a human reviewer to work through, not a completed security assessment on its own. It never tests a running system, which means it is not a DAST tool, not a vulnerability-management platform, and not a network scanner -- those check different things and none of them are substitutes here. And operationally, the scan runs on the consultant's own machine, against their own copy of the code; only the resulting findings file is uploaded anywhere, which is a meaningfully different data-handling story than a service that asks for repository access.",
+      },
+      {
+        heading: 'What this looks like on a real codebase',
+        content:
+          "The clearest way to see the transformation is on a codebase built to have bugs in it. OWASP NodeGoat is a deliberately vulnerable training application, released under Apache-2.0, designed to exercise the OWASP Top Ten. ScopeWise uses it as a golden benchmark: a scan run on 2026-09-11 against NodeGoat's 63 files took 103 minutes of wall-clock time and cost about $4 in model usage on the consultant's own OpenRouter key. The scanner returned 88 raw hits. After deduplication and verification, that came down to 29 confirmed findings, and those findings resolved into 6 distinct exploit chains -- six different ways an attacker could link individual weaknesses into something worse. That gap, 88 down to 29, plus six chains instead of a flat list, is the entire argument for why a code security review report has to be more than a scanner's raw file. For context on what this replaces: a manual internal penetration-test engagement typically costs $7,000 to $35,000 (Bright Defense, penetration testing pricing guide), which is the budget bracket this kind of automated triage is meant to sit ahead of, not replace.",
+      },
+      {
+        heading: 'Where this fits',
+        content:
+          "Built on Visa's open-source Vulnerability Agentic Harness (Apache-2.0). ScopeWise is not affiliated with or endorsed by Visa, Inc. Everything described here -- the findings register, the exploit chains, the editable tracker, and the briefing deck built from the same numbers -- is what ScopeWise generates once a consultant uploads a findings file from a scan they ran themselves. See the [Code Security Review](/product/code-security-review) product page for how the upload and export flow works end to end.",
+      },
+    ],
+  },
+  {
+    slug: 'sow-vs-rfp-review-what-changes',
+    title: 'SOW vs. RFP Review: What Changes and What Stays the Same',
+    dek: "An RFP and a SOW read like cousins but do different jobs -- one asks vendors to propose, the other defines what a winning vendor will deliver. Here is what a review has to check differently in each, and what stays identical.",
+    publishedDate: '2026-09-12',
+    author: 'ScopeWise Team',
+    pillar: 'sow',
+    relatedUseCase: '/use-cases/rfp-review',
+    pendingReview: true,
+    body: [
+      {
+        heading: 'Two documents, two jobs',
+        content:
+          "A [Statement of Work](/resources/glossary/sow) defines work that has already been agreed to: scope, deliverables, acceptance criteria, timeline, and price. A Request for Proposal does something earlier and different -- it asks vendors to propose a solution and tells them how their proposals will be judged. Nothing has been delivered yet when an RFP is reviewed; the question is whether the document is specific enough to get comparable responses and fair enough to survive a challenge from a losing bidder. A SOW review asks whether the work is defined well enough to execute. An RFP review asks whether the competition is defined well enough to judge.",
+      },
+      {
+        heading: 'What differs for an RFP',
+        content:
+          "An RFP's structure mirrors FAR Part 15, the part of the U.S. Federal Acquisition Regulation that governs contracting by negotiation: a statement of requirements, evaluation factors and their relative weights, submission instructions, and a stated basis for award. That structure is not a government-only convention -- it is the same discipline any RFP needs to produce responses that can actually be compared. So the review asks whether evaluation criteria are stated, weighted, and measurable rather than left implicit; whether the requirements are specific enough that two vendors answering them produce comparable proposals instead of two different documents; and whether the timeline and Q&A process are fair to every bidder rather than favoring whoever has an inside line to the buyer. ScopeWise runs 7 deterministic RFP rules against 20 SOW rules, and each of the six reviewer agents -- Scope, Delivery, Commercial, Security, PMO, Legal -- has an RFP-specific prompt branch, so the Commercial reviewer on an RFP asks about pricing-format requirements and evaluation weighting instead of the payment milestones it would check on a SOW.",
+      },
+      {
+        heading: 'What stays the same',
+        content:
+          "Underneath the different rule sets, the review discipline does not change by document type. Every finding quotes the clause it came from, with a confidence score attached to that quote, not to a general impression of the document. Risk is reported by area -- scope, delivery, commercial, security, PMO, legal -- on an RFP exactly as it is on a SOW. The rule engine checks presence deterministically -- is a required section there, is a required term mentioned -- and the model is asked to judge what a rule cannot: quality, mutuality, how one clause interacts with another, and ambiguity, never re-checking what a rule already checked. Ambiguous-language scanning runs on both document types for the same reason: vague evaluation language causes the same downstream dispute as vague scope language, just at a different stage of the relationship.",
+      },
+      {
+        heading: 'Common RFP failure modes',
+        content:
+          "The failure patterns that show up in RFP review are specific to the document's job. Evaluation criteria that are unweighted or unstated leave vendors guessing what actually wins, and leave the buyer with no defensible basis for the award if a losing bidder pushes back. Requirements written as vendor marketing copy rather than testable specifications produce proposals that are impossible to compare on equal terms. A missing or vague basis for award compounds both problems. Unrealistic response windows shrink the pool to whoever already had a draft ready, which quietly defeats the point of running a competition at all. And mandatory terms buried in an attachment rather than stated in the body of the RFP get missed by vendors who did not read every appendix, then become a dispute later when the buyer tries to enforce them.",
+      },
+      {
+        heading: 'The same engagement, two documents',
+        content:
+          "Take a hypothetical mid-size IT services engagement: a buyer wants a vendor to migrate an internal ticketing system to a new platform. As an RFP, the buyer's document states the migration requirements, lists evaluation factors -- technical approach, cost, past performance, transition plan -- and assigns each a weight, sets a submission deadline and a Q&A window, and states that award goes to the highest weighted score rather than lowest price. A review of that RFP checks whether those weights are actually stated (not just a line saying technical merit will be considered), whether the requirements are concrete enough that two vendors' technical approaches can be scored against the same yardstick, and whether the Q&A process gives every bidder access to the same answers. Once a vendor wins and the engagement moves to a SOW, the same migration now appears as defined deliverables -- data migrated with a stated record-count reconciliation, a cutover date, a rollback plan -- acceptance criteria for each, a payment schedule tied to milestones, and a liability cap. A review of that SOW checks a completely different set of things: are the deliverables testable, is there a change-control clause, does the liability cap have carve-outs, do payment milestones actually align with delivery. Same engagement, same vendor relationship, two documents that need two different reviews.",
+      },
+      {
+        heading: 'Re-review works the same way for both',
+        content:
+          "When a document comes back revised -- a buyer restates its evaluation criteria after vendor pushback, or a vendor redlines the SOW's liability section during negotiation -- the re-review runs against the previous findings rather than starting over. A fix is verified by the re-review actually confirming the clause changed, not by a reviewer checking a box that says it was addressed. That holds whether the document under revision is an RFP going back out to bidders or a SOW going back and forth between counsel on both sides.",
+      },
+      {
+        heading: 'The same discipline, applied elsewhere',
+        content:
+          "The evidence-first discipline behind this -- every finding quotes its source, every number is computed by code, and the model is asked to judge only what code structurally cannot -- is not specific to RFPs and SOWs. It is the same approach behind ScopeWise's MITRE ATT&CK coverage assessment and its code security review module: deterministic checks do what deterministic checks can do reliably, and judgment is reserved for the parts that actually require it. See [RFP review in practice](/use-cases/rfp-review) for how this plays out on a real evaluation-criteria gap.",
+      },
+    ],
+  },
 ];
 
 export function getBlogPost(slug: string): BlogPost | undefined {
