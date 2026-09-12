@@ -155,3 +155,16 @@ a single JSON source). Whoever owns that should finish and commit it.
 - Sonnet: backend gate (reworked: N) · frontend request-access form (reworked: N) · adversarial takeover (verdict accept).
 - Haiku: n/a — no bulk sweeps needed.
 - codex:rescue: n/a — companion MCP broken (memory 2026-07-23); Sonnet takeover used, verdict=accept.
+
+## Addendum 2026-09-12 night — run allowance (`606f6c3`, migration 040)
+
+Owner decision: no org gets `pro`. Instead the platform admin grants a
+fixed number of runs per free-tier org from `/admin` (Runs column). Backend
+in `app/entitlements.py` (`require_runs_enabled` consumes one via an atomic
+`UPDATE … WHERE run_allowance > 0 RETURNING`; `require_paid_runs` is the
+tier-only gate for bulk and scheduled pulls), `PATCH
+/api/v1/admin/orgs/{id}/run-allowance` in `routers/admin.py`,
+`runs_remaining` on `/me`. Tests `tests/test_run_allowance.py`. Adversarial
+(Sonnet takeover): accept; race is safe under READ COMMITTED row locking,
+commit precedes every LLM call. Migration 040 applied to all four sync
+points. Prod: all nine orgs at 0 until granted.

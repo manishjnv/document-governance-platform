@@ -1,6 +1,6 @@
 # EDGP Implementation Progress
 
-**Last Updated:** 2026-09-12 night (wrap-up deployed at `29dbd8c`)
+**Last Updated:** 2026-09-12 night (run allowance deployed at `606f6c3`, migration 040)
 **Current Phase:** Phase 1-2 core product complete + deployed live; pre-launch fix plan Steps 1-2 done, Step 3 pending SME. Document Lifecycle & Multi-Project plan (Projects/Versioning/Fix-verification) — all three phases implemented, deployed, mandatory-project + fuzzy name matching added on top. Auth is now seamless Google Sign-In + email-OTP only (no password anywhere in the real UI; unrecognized emails auto-create an account). New file types (.doc/.xlsx/.xls/.csv) supported. Enterprise SEO strategy written, a live Cloudflare misconfiguration blocking all AI crawlers was found and fixed, and **SEO Phase 1 (Foundation) is implemented and deployed live** (real marketing homepage/product/pricing/about/contact/sitemap/schema -- only GSC/GA4/Lighthouse remain, blocked on dashboard access). Full detail: `docs/phases/summaries/SESSION_HANDOFF_2026_07_20_LIFECYCLE_SSO_SEO.md`.
 
 > Previous version of this doc (dated 07-17 02:00, showing "14% overall") was
@@ -10,6 +10,21 @@
 ---
 
 ## ✅ Done
+
+**Run allowance deployed 2026-09-12 night, SHA `606f6c3`, migration 040 on
+prod:** owner decision "none gets pro": the platform admin instead grants a
+free-tier org a fixed number of runs from `/admin` (Runs column, 0..1000).
+`organizations.run_allowance`; single review trigger and MITRE run consume
+one atomically (`UPDATE … WHERE run_allowance > 0 RETURNING`, landed by
+the handler commit, so a failed run does not consume); bulk trigger and
+scheduled pulls stay tier-only. `PATCH /api/v1/admin/orgs/{id}/run-allowance`
+(platform admin, audited); `/me` exposes `runs_remaining` (null =
+unlimited); MITRE intake and dashboard show "N runs remaining". Migration
+040 applied to edgp_dev, edgp_test, scopewise_prod and the
+`test_insights_extra.py` hand-rolled schema. Tests: 40 green across the
+touched files; Sonnet adversarial takeover: accept. All nine prod orgs at
+allowance 0 until the owner grants. Design canvas sources committed under
+`docs/design/app-redesign-2026-09-12/` (`c6b4e53`).
 
 **Wrap-up deployed 2026-09-12 night, SHA `29dbd8c`:** admin organisation
 tier toggle (`22c88a9`), competitor comparison pages for SOWaudit, ATT&CK
