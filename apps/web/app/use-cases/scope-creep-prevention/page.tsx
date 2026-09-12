@@ -121,7 +121,7 @@ export default function ScopeCreepPreventionPage() {
           <li>
             Checks explicitly whether a change-control process is defined
             in the document at all, and flags its absence as a major risk
-            when it&apos;s missing -- this is the single highest-leverage
+            when it&apos;s missing -- this is the single highest-impact
             check for preventing creep once a project is underway.
           </li>
         </ul>

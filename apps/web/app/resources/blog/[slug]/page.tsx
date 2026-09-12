@@ -60,13 +60,27 @@ export default async function BlogPostPage({
   const post = getBlogPost(slug);
   if (!post) notFound();
 
+  const baseUrl = 'https://scopewise.assessiq.in';
+  const url = `${baseUrl}/resources/blog/${post.slug}`;
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
     headline: post.title,
     description: post.dek,
+    url,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+    image: [`${baseUrl}/og-default.png`],
     datePublished: post.publishedDate,
-    author: { '@type': 'Organization', name: 'ScopeWise' },
+    dateModified: post.updatedDate ?? post.publishedDate,
+    // TODO(author): switch to { '@type': 'Person', name, jobTitle } once the
+    // named author and title are confirmed -- do not invent one.
+    author: { '@type': 'Organization', name: 'ScopeWise', url: baseUrl },
+    publisher: {
+      '@type': 'Organization',
+      name: 'ScopeWise',
+      url: baseUrl,
+      logo: { '@type': 'ImageObject', url: `${baseUrl}/icons/icon-512.png` },
+    },
   };
 
   return (

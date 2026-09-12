@@ -58,7 +58,12 @@ export default async function GlossaryTermPage({
     '@type': 'DefinedTerm',
     name: entry.term,
     description: entry.shortDefinition,
-    inDefinedTermSet: 'ScopeWise Glossary',
+    url: `https://scopewise.assessiq.in/resources/glossary/${entry.slug}`,
+    inDefinedTermSet: {
+      '@type': 'DefinedTermSet',
+      name: 'ScopeWise Glossary',
+      url: 'https://scopewise.assessiq.in/resources/glossary',
+    },
   };
 
   return (

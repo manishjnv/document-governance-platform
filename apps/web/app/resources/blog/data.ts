@@ -8,6 +8,8 @@ export type BlogPost = {
   title: string;
   dek: string;
   publishedDate: string;
+  /** ISO date of the last substantive edit; feeds BlogPosting.dateModified. */
+  updatedDate?: string;
   author: string;
   body: BlogSection[];
   relatedUseCase: '/use-cases/sow-review' | '/use-cases/rfp-review' | '/use-cases/scope-creep-prevention';
@@ -262,7 +264,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         heading: 'What AI review cannot do',
         content:
-          "AI review cannot exercise legal judgment -- deciding whether a particular liability position is acceptable for your organization's specific risk tolerance is a business decision, not a pattern match, and it depends on context the document itself does not contain. It cannot supply business context it was not given -- whether a vendor's proposed timeline is realistic depends on things like your internal approval speed and prior experience with that vendor, not just what is on the page. It cannot set negotiation strategy -- what to push back on first, what to concede, and how hard to push are calls that depend on leverage and relationship, not document content. And it cannot reliably interpret a genuinely novel clause structure it has not seen a pattern for, the way an experienced lawyer reasoning from first principles can.",
+          "AI review cannot exercise legal judgment -- deciding whether a particular liability position is acceptable for your organization's specific risk tolerance is a business decision, not a pattern match, and it depends on context the document itself does not contain. It cannot supply business context it was not given -- whether a vendor's proposed timeline is realistic depends on things like your internal approval speed and prior experience with that vendor, not just what is on the page. It cannot set negotiation strategy -- what to push back on first, what to concede, and how hard to push are calls that depend on bargaining position and relationship, not document content. And it cannot reliably interpret a genuinely novel clause structure it has not seen a pattern for, the way an experienced lawyer reasoning from first principles can.",
       },
       {
         heading: 'Why the honest answer is a strength, not a weakness',
