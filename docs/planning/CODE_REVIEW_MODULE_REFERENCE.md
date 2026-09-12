@@ -193,11 +193,21 @@ lists as `FindingDrawer.tsx`); row heights estimated from text length;
 Exploit Chains gets an explanatory banner, numbered steps resolved to
 finding titles and a "Fix this first" column. `_guard` still applies to
 every plain string; rich-text cells start with a bullet so cannot be
-formulas. PPTX (~8 slides):
-cover, how to read, headline tiles, severity + class charts, top-10
-findings table, exploit chains, recommended next steps (derived:
-critical/high first, grouped by file), closing with the VVAH attribution
-and the "triage candidates, not confirmed vulnerabilities" caveat.
+formulas. PPTX (2026-09-12 rebuild, 12–17 slides depending on data, borrowing the
+MITRE deck's engine: keyword runs, auto-highlighted numbers, styled native
+charts with per-bar colours, section dividers with giant numbers): cover →
+Executive Summary (5 tiles + the 3 most severe findings with impact
+one-liners) → Risk Profile (severity column chart, type bar chart, top-5
+files bar strip) → Findings at a Glance (top 12, severity-tinted cells) →
+divider 01 + Critical Findings spotlights (two per slide: what / why / fix
+as highlighted bullets) → divider 02 + Exploit Chains drawn as pentagon →
+chevron step flows with "Break it: fix #N first" → divider 03 + Remediation
+Plan (table ordered by severity then chains broken; right column: greedy
+set cover "fewest fixes that break every chain", highs batched by file,
+verify) → Scan Coverage & Confidence (4 tiles, LOC-by-language chart,
+verifier note, limits) → Next Steps (4 numbered cards) → closing with the
+VVAH attribution and the "triage candidates" caveat. Body 9.5–11 pt, tile
+numbers 30 pt. The set-cover order is deterministic (ties → lowest idx).
 
 ## 6. Frontend — `apps/web/app/codereview/`
 
