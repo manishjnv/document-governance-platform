@@ -408,7 +408,7 @@
    "y": 2040,
    "w": 300,
    "page": "mitre",
-   "text": "Try on this screen:\n· Open a KPI tile -> DrillDownPanel\n· Open a matrix cell -> TechniqueDrawer (stacks over the drill sheet)\n· Open a status chip -> RuleListPanel\n· Past assessment runs\n· Legend toggle filters the matrix\n· Hide sub-techniques\n· Play advances the run timeline\n· Client confirmed — attest all 15 for Microsoft Defender for Endpoint\n· Gaps & Roadmap\n· Sort the gaps table by Technique\n· Assumptions & N/A\n· Compare\n· Native select — value change isn't click-simulatable, see codereview_list.py precedent\n· Search (preset query 'credential', 3+ chars) opens the drill sheet"
+   "text": "Try on this screen:\n· Open a KPI tile -> DrillDownPanel\n· Open a matrix cell -> TechniqueDrawer\n· Open a status chip -> RuleListPanel\n· Past assessment runs\n· Click anywhere outside to close the run picker\n· Legend toggle filters the matrix\n· Hide sub-techniques\n· Play advances the run timeline\n· Client confirmed — attest all 15 for Microsoft Defender for Endpoint\n· Gaps & Roadmap\n· Sort the gaps table by Technique\n· Assumptions & N/A\n· Native select — value change isn't click-simulatable, see codereview_list.py precedent\n· Search (preset query 'credential', 3+ chars) opens the drill sheet"
   },
   {
    "id": "n-mitreconnections",
@@ -440,7 +440,7 @@
    "y": 2040,
    "w": 300,
    "page": "code",
-   "text": "Try on this screen:\n· Eval injection (RCE)\n· Fewest fixes\n· Reset\n· Next\n· Rename NodeGoat golden scan (VVAH 1.3.0)\n· Save name\n· More actions\n· Dismiss"
+   "text": "Try on this screen:\n· Eval injection (RCE)\n· Fewest fixes\n· Reset\n· Row opens the drawer; the CWE link cell stops propagation on purpose\n· Next\n· Rename NodeGoat golden scan (VVAH 1.3.0)\n· Save name\n· More actions\n· Dismiss"
   },
   {
    "id": "n-admin",

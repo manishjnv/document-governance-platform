@@ -58,9 +58,10 @@ p{margin:0}button{font:inherit;color:inherit}
 input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent)}
 /* tooltip */
 .tip{position:relative}
-.tip::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 8px);transform:translate(-50%,4px);background:var(--ink);color:#fff;font:400 12px/1.4 "IBM Plex Sans",sans-serif;padding:7px 10px;border-radius:7px;white-space:pre-line;width:max-content;max-width:280px;opacity:0;pointer-events:none;transition:opacity .16s var(--ease),transform .16s var(--ease);z-index:60;text-align:left;font-weight:400;text-transform:none;letter-spacing:0}
-.tip::before{content:"";position:absolute;left:50%;bottom:calc(100% + 3px);transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--ink);opacity:0;transition:opacity .16s;z-index:60}
-.tip:hover::after,.tip:hover::before,.tip:focus-visible::after,.tip:focus-visible::before{opacity:1;transform:translate(-50%,0)}
+.tip::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 8px);transform:translate(-50%,4px);background:var(--ink);color:#fff;font:400 12px/1.4 "IBM Plex Sans",sans-serif;padding:7px 10px;border-radius:7px;white-space:pre-line;width:max-content;max-width:280px;display:none;pointer-events:none;animation:tipIn .16s var(--ease);z-index:60;text-align:left;font-weight:400;text-transform:none;letter-spacing:0}
+.tip::before{content:"";position:absolute;left:50%;bottom:calc(100% + 3px);transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--ink);display:none;animation:tipIn .16s var(--ease);z-index:60}
+@keyframes tipIn{from{opacity:0}to{opacity:1}}
+.tip:hover::after,.tip:hover::before,.tip:focus-visible::after,.tip:focus-visible::before{display:block;transform:translate(-50%,0)}
 .tip.left::after{left:0;transform:translate(0,4px)}.tip.left:hover::after{transform:translate(0,0)}.tip.left::before{left:14px}
 /* kpi */
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--rc);padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0;text-align:left;cursor:default}
@@ -358,7 +359,7 @@ pre.block{font-family:"IBM Plex Mono",Consolas,monospace;font-size:12px;backgrou
   </div>
   <sc-if value="{{d.open}}" hint-placeholder-val="{{true}}">
   <div style="padding:14px;overflow-x:auto">
-    <div style="display:grid;grid-template-columns:repeat({{d.ncols}},minmax(148px,1fr));gap:10px;min-width:max-content">
+    <div style="display:grid;grid-template-columns:repeat({{d.ncols}},minmax(148px,1fr));gap:10px">
       <sc-for list="{{d.tactics}}" as="t" hint-placeholder-count="6">
         <div style="min-width:0">
           <button class="btn ghost sm tip" style="width:100%;justify-content:space-between;padding:0 4px;height:26px;font-weight:600;font-size:12px" data-tip="{{t.tip}}" onClick="{{t.drill}}"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{t.name}}</span><span class="num faint" style="font-weight:500">{{t.count}}</span></button>

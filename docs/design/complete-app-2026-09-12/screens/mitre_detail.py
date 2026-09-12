@@ -518,7 +518,7 @@ DOMAIN_SECTION = T("""
   </div>
   <sc-if value="{{d.open}}" hint-placeholder-val="{{true}}">
   <div style="padding:14px;overflow-x:auto">
-    <div style="display:grid;grid-template-columns:repeat({{d.ncols}},minmax(148px,1fr));gap:10px;min-width:max-content">
+    <div style="display:grid;grid-template-columns:repeat({{d.ncols}},minmax(148px,1fr));gap:10px">
       <sc-for list="{{d.tactics}}" as="t" hint-placeholder-count="6">
         <div style="min-width:0">
           <button class="btn ghost sm tip" style="width:100%;justify-content:space-between;padding:0 4px;height:26px;font-weight:600;font-size:12px" data-tip="{{t.tip}}" onClick="{{t.drill}}"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{t.name}}</span><span class="num faint" style="font-weight:500">{{t.count}}</span></button>
@@ -1174,18 +1174,22 @@ DLG_CLOSED = "Array.from(document.querySelectorAll('.dlg-ov')).every(d => d.styl
 
 CLICKS = [
     {"css": ".kpi.click", "check": DRILL_OPEN, "note": "Open a KPI tile -> DrillDownPanel"},
-    {"css": "button[data-tid]", "check": TECH_OPEN, "note": "Open a matrix cell -> TechniqueDrawer (stacks over the drill sheet)"},
+    {"css": 'aside.sheet[aria-label="Technique drill-down"] .sheet-h .xbtn', "check": "!(" + DRILL_OPEN + ")"},
+    {"css": "button[data-tid]", "check": TECH_OPEN, "note": "Open a matrix cell -> TechniqueDrawer"},
+    {"css": 'aside.sheet[aria-label="Technique details"] .sheet-h .xbtn', "check": "!(" + TECH_OPEN + ")"},
     {"text": "tagged by you", "nth": 0, "check": RULES_OPEN, "note": "Open a status chip -> RuleListPanel"},
+    {"css": 'aside.sheet[aria-label="Detection rules"] .sheet-h .xbtn', "check": "!(" + RULES_OPEN + ")"},
     {"label": "Past assessment runs", "check": "document.querySelector('[role=\"listbox\"][aria-label=\"Past assessment runs\"]').className.includes('open')"},
+    {"css": "h1", "check": "!document.querySelector('[role=\"listbox\"][aria-label=\"Past assessment runs\"]').className.includes('open')", "note": "Click anywhere outside to close the run picker"},
     {"css": "button.chip[aria-pressed]", "check": "document.querySelector('button.chip[aria-pressed=\"true\"]') !== null", "note": "Legend toggle filters the matrix"},
     {"text": "Hide sub-techniques", "check": "Array.from(document.querySelectorAll('button')).some(b => b.textContent.trim() === 'Sub-techniques hidden')"},
     {"text": "Play timeline", "check": "document.querySelector('input[aria-label=\"Run timeline\"]').value !== '7'", "note": "Play advances the run timeline"},
     {"text": "Client confirmed — attest all 15 for Microsoft Defender for Endpoint", "check": DLG_OPEN},
     {"css": ".dlg-ov[style*='pointer-events: auto'] .dlg-f .btn:not(.primary)", "check": DLG_CLOSED},
     {"text": "Gaps & Roadmap", "check": "document.querySelector('.tab.on').textContent.includes('Gaps')"},
-    {"text": "Technique", "nth": 0, "check": "Array.from(document.querySelectorAll('.dt .dh > div')).some(d => d.textContent.includes('Technique') && d.getAttribute('aria-sort') !== 'none')", "note": "Sort the gaps table by Technique"},
+    {"css": '.dt .dh button:has-text("Technique")', "desktop_only": True, "check": "Array.from(document.querySelectorAll('.dt .dh > div')).some(d => d.textContent.includes('Technique') && d.getAttribute('aria-sort') !== 'none')", "note": "Sort the gaps table by Technique"},
     {"text": "Assumptions & N/A", "check": "document.querySelector('.tab.on').textContent.includes('Assumptions')"},
-    {"text": "Compare", "nth": 0, "check": "document.querySelector('.tab.on').textContent.trim() === 'Compare'"},
+    {"css": '.tab:has-text("Compare")', "check": "document.querySelector('.tab.on').textContent.trim() === 'Compare'"},
     {"label": "Compare with", "check": "true", "note": "Native select — value change isn't click-simulatable, see codereview_list.py precedent"},
     {"label": "Search this assessment", "check": DRILL_OPEN, "note": "Search (preset query 'credential', 3+ chars) opens the drill sheet"},
 ]

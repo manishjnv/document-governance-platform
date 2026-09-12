@@ -472,7 +472,7 @@ FINDROW = T("""<div class="dr link" role="button" tabindex="0" aria-label="{{r.a
   c5=dcell("CWE", '<a href="{{r.cweHref}}" target="_blank" rel="noopener" class="mono" onClick="{{stop}}">{{r.cwe}}</a>'),
   c6=dcell("CVSS", '<span class="mono num">{{r.cvss}}</span>', "r"),
   c7=dcell("Confidence", '<span class="row tip" data-tip="{{r.confTip}}" aria-label="{{r.confAria}}" style="gap:6px"><span class="bar" style="width:42px"><i style="width:{{r.conf}}%;background:var(--accent)"></i></span><span class="num" style="font-size:12px">{{r.conf}}%</span></span>'),
-  c8=dcell("File:lines", '<span class="mono tip" data-tip="{{r.fileLines}}" style="font-size:12px">{{r.fileLines}}</span>'),
+  c8=dcell("File:lines", '<span class="mono tip" data-tip="{{r.fileLines}}" style="font-size:12px;display:block;min-width:0;overflow-wrap:anywhere">{{r.fileLines}}</span>'),
   c9=dcell("Verdict", VERDICT_CELL))
 
 FILTERBAR = T("""<div class="row wrap" style="gap:8px;margin-bottom:12px">
@@ -508,14 +508,19 @@ EDGE_DEFS = [(0, 3, 7), (1, 4, 7), (2, 24, 5), (2, 5, 7), (3, 9, 1), (4, 21, 22)
 
 
 def _node_block(fid):
+    # Text inside SVG <text> must be static: the runtime renders holes as HTML spans, which SVG
+    # does not draw (labels came out zero-width). Only presentation attributes stay dynamic.
+    f = next(x for x in FINDINGS if x["id"] == fid)
     x, y = NODE_POS[fid]
     tx, ty1, ty2 = x + 12, y + 18, y + 35
     return T("""<g onClick="{{nodeState.[[k]].toggle}}" style="cursor:pointer">
         <rect x="[[x]]" y="[[y]]" width="150" height="46" rx="9" fill="{{nodeState.[[k]].fill}}" stroke="{{nodeState.[[k]].stroke}}" stroke-width="1.5" style="transition:fill .35s,stroke .35s"></rect>
-        <text x="[[tx]]" y="[[ty1]]" font-size="11" font-family="IBM Plex Mono" fill="{{nodeState.[[k]].idFill}}">#[[id]] &middot; {{nodeState.[[k]].sevLabel}}</text>
-        <text x="[[tx]]" y="[[ty2]]" font-size="12" font-family="IBM Plex Sans" font-weight="600" fill="{{nodeState.[[k]].tFill}}" style="text-decoration:{{nodeState.[[k]].deco}}">{{nodeState.[[k]].title}}</text>
-        <title>{{nodeState.[[k]].tip}}</title>
-      </g>""", k="n%d" % fid, x=x, y=y, tx=tx, ty1=ty1, ty2=ty2, id=fid)
+        <text x="[[tx]]" y="[[ty1]]" font-size="11" font-family="IBM Plex Mono" fill="{{nodeState.[[k]].idFill}}">#[[id]] &middot; [[sev]]</text>
+        <text x="[[tx]]" y="[[ty2]]" font-size="12" font-family="IBM Plex Sans" font-weight="600" fill="{{nodeState.[[k]].tFill}}" style="text-decoration:{{nodeState.[[k]].deco}}">[[title]]</text>
+        <title>#[[id]] [[title]]
+[[file]]
+Click to mark fixed or reopen</title>
+      </g>""", k="n%d" % fid, x=x, y=y, tx=tx, ty1=ty1, ty2=ty2, id=fid, sev=esc(f["sev"]), title=esc(f["title"]), file=esc(f["file"]))
 
 
 def _edge_path(idx, a, b):
@@ -797,12 +802,13 @@ CLICKS = [
     {"text": "Fewest fixes", "check": "document.body.textContent.includes('6 of 6 chains broken')"},
     {"text": "Reset", "check": "document.body.textContent.includes('0 of 6 chains broken')"},
     {"css": '.tab:has-text("Findings")', "check": "document.querySelector('.tab.on').textContent.includes('Findings')"},
-    {"css": '.dt .dh button:has-text("Title")',
+    {"css": '.dt .dh button:has-text("Title")', "desktop_only": True,
      "check": "Array.from(document.querySelectorAll('.dt .dh .dc')).find(d => d.textContent.includes('Title')).getAttribute('aria-sort') === 'ascending'"},
     {"css": '.pillbar .chip:has-text("Critical")', "check": "document.querySelectorAll('.dt .dr:not(.dh)').length === 6"},
     {"css": '.kpi:has-text("High")', "check": "document.querySelectorAll('.dt .dr:not(.dh)').length === 5"},
-    {"css": ".dt .dr.link", "check": SHEET_OPEN},
+    {"css": '.dt .dr.link .dc[data-th="Title"]', "check": SHEET_OPEN, "note": "Row opens the drawer; the CWE link cell stops propagation on purpose"},
     {"text": "Next", "check": "document.body.textContent.includes('2 of 5')"},
+    {"css": "aside.sheet .sheet-h .xbtn", "check": "!(" + SHEET_OPEN + ")"},
     {"label": "Rename NodeGoat golden scan (VVAH 1.3.0)", "check": "document.querySelector('input[aria-label=\"New review name\"]') !== null"},
     {"label": "Save name", "check": "document.querySelector('input[aria-label=\"New review name\"]') === null"},
     {"label": "More actions", "check": "document.querySelector('.menu.open') !== null"},

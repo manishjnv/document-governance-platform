@@ -342,6 +342,7 @@
   },
   {
    "css": ".dt .dh button:has-text(\"Title\")",
+   "desktop_only": true,
    "check": "Array.from(document.querySelectorAll('.dt .dh .dc')).find(d => d.textContent.includes('Title')).getAttribute('aria-sort') === 'ascending'"
   },
   {
@@ -353,12 +354,17 @@
    "check": "document.querySelectorAll('.dt .dr:not(.dh)').length === 5"
   },
   {
-   "css": ".dt .dr.link",
-   "check": "document.querySelector('aside.sheet').style.transform.startsWith('translateX(0')"
+   "css": ".dt .dr.link .dc[data-th=\"Title\"]",
+   "check": "document.querySelector('aside.sheet').style.transform.startsWith('translateX(0')",
+   "note": "Row opens the drawer; the CWE link cell stops propagation on purpose"
   },
   {
    "text": "Next",
    "check": "document.body.textContent.includes('2 of 5')"
+  },
+  {
+   "css": "aside.sheet .sheet-h .xbtn",
+   "check": "!(document.querySelector('aside.sheet').style.transform.startsWith('translateX(0'))"
   },
   {
    "label": "Rename NodeGoat golden scan (VVAH 1.3.0)",
@@ -388,9 +394,17 @@
    "note": "Open a KPI tile -> DrillDownPanel"
   },
   {
+   "css": "aside.sheet[aria-label=\"Technique drill-down\"] .sheet-h .xbtn",
+   "check": "!(document.querySelector('aside.sheet[aria-label=\"Technique drill-down\"]').style.transform.startsWith('translateX(0'))"
+  },
+  {
    "css": "button[data-tid]",
    "check": "document.querySelector('aside.sheet[aria-label=\"Technique details\"]').style.transform.startsWith('translateX(0')",
-   "note": "Open a matrix cell -> TechniqueDrawer (stacks over the drill sheet)"
+   "note": "Open a matrix cell -> TechniqueDrawer"
+  },
+  {
+   "css": "aside.sheet[aria-label=\"Technique details\"] .sheet-h .xbtn",
+   "check": "!(document.querySelector('aside.sheet[aria-label=\"Technique details\"]').style.transform.startsWith('translateX(0'))"
   },
   {
    "text": "tagged by you",
@@ -399,8 +413,17 @@
    "note": "Open a status chip -> RuleListPanel"
   },
   {
+   "css": "aside.sheet[aria-label=\"Detection rules\"] .sheet-h .xbtn",
+   "check": "!(document.querySelector('aside.sheet[aria-label=\"Detection rules\"]').style.transform.startsWith('translateX(0'))"
+  },
+  {
    "label": "Past assessment runs",
    "check": "document.querySelector('[role=\"listbox\"][aria-label=\"Past assessment runs\"]').className.includes('open')"
+  },
+  {
+   "css": "h1",
+   "check": "!document.querySelector('[role=\"listbox\"][aria-label=\"Past assessment runs\"]').className.includes('open')",
+   "note": "Click anywhere outside to close the run picker"
   },
   {
    "css": "button.chip[aria-pressed]",
@@ -429,8 +452,8 @@
    "check": "document.querySelector('.tab.on').textContent.includes('Gaps')"
   },
   {
-   "text": "Technique",
-   "nth": 0,
+   "css": ".dt .dh button:has-text(\"Technique\")",
+   "desktop_only": true,
    "check": "Array.from(document.querySelectorAll('.dt .dh > div')).some(d => d.textContent.includes('Technique') && d.getAttribute('aria-sort') !== 'none')",
    "note": "Sort the gaps table by Technique"
   },
@@ -439,8 +462,7 @@
    "check": "document.querySelector('.tab.on').textContent.includes('Assumptions')"
   },
   {
-   "text": "Compare",
-   "nth": 0,
+   "css": ".tab:has-text(\"Compare\")",
    "check": "document.querySelector('.tab.on').textContent.trim() === 'Compare'"
   },
   {

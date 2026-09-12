@@ -58,9 +58,10 @@ p{margin:0}button{font:inherit;color:inherit}
 input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent)}
 /* tooltip */
 .tip{position:relative}
-.tip::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 8px);transform:translate(-50%,4px);background:var(--ink);color:#fff;font:400 12px/1.4 "IBM Plex Sans",sans-serif;padding:7px 10px;border-radius:7px;white-space:pre-line;width:max-content;max-width:280px;opacity:0;pointer-events:none;transition:opacity .16s var(--ease),transform .16s var(--ease);z-index:60;text-align:left;font-weight:400;text-transform:none;letter-spacing:0}
-.tip::before{content:"";position:absolute;left:50%;bottom:calc(100% + 3px);transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--ink);opacity:0;transition:opacity .16s;z-index:60}
-.tip:hover::after,.tip:hover::before,.tip:focus-visible::after,.tip:focus-visible::before{opacity:1;transform:translate(-50%,0)}
+.tip::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 8px);transform:translate(-50%,4px);background:var(--ink);color:#fff;font:400 12px/1.4 "IBM Plex Sans",sans-serif;padding:7px 10px;border-radius:7px;white-space:pre-line;width:max-content;max-width:280px;display:none;pointer-events:none;animation:tipIn .16s var(--ease);z-index:60;text-align:left;font-weight:400;text-transform:none;letter-spacing:0}
+.tip::before{content:"";position:absolute;left:50%;bottom:calc(100% + 3px);transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--ink);display:none;animation:tipIn .16s var(--ease);z-index:60}
+@keyframes tipIn{from{opacity:0}to{opacity:1}}
+.tip:hover::after,.tip:hover::before,.tip:focus-visible::after,.tip:focus-visible::before{display:block;transform:translate(-50%,0)}
 .tip.left::after{left:0;transform:translate(0,4px)}.tip.left:hover::after{transform:translate(0,0)}.tip.left::before{left:14px}
 /* kpi */
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--rc);padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0;text-align:left;cursor:default}
@@ -238,7 +239,7 @@ pre.block{font-family:"IBM Plex Mono",Consolas,monospace;font-size:12px;backgrou
 </div><div class="dt">
   <div class="dr dh" style="grid-template-columns:48px 92px minmax(0,2.1fr) 152px 88px 60px 130px minmax(0,1.4fr) 118px"><div class="dc" aria-sort="{{tbl.h.idx.aria}}"><button onClick="{{tbl.h.idx.pick}}"># <span style="opacity:{{tbl.h.idx.op}}">{{tbl.h.idx.arrow}}</span></button></div><div class="dc" aria-sort="{{tbl.h.severity.aria}}"><button onClick="{{tbl.h.severity.pick}}">Severity <span style="opacity:{{tbl.h.severity.op}}">{{tbl.h.severity.arrow}}</span></button></div><div class="dc" aria-sort="{{tbl.h.title.aria}}"><button onClick="{{tbl.h.title.pick}}">Title <span style="opacity:{{tbl.h.title.op}}">{{tbl.h.title.arrow}}</span></button></div><div class="dc" aria-sort="{{tbl.h.cls.aria}}"><button onClick="{{tbl.h.cls.pick}}">Class <span style="opacity:{{tbl.h.cls.op}}">{{tbl.h.cls.arrow}}</span></button></div><div class="dc" aria-sort="{{tbl.h.cwe.aria}}"><button onClick="{{tbl.h.cwe.pick}}">CWE <span style="opacity:{{tbl.h.cwe.op}}">{{tbl.h.cwe.arrow}}</span></button></div><div class="dc r" aria-sort="{{tbl.h.cvss.aria}}"><button onClick="{{tbl.h.cvss.pick}}">CVSS <span style="opacity:{{tbl.h.cvss.op}}">{{tbl.h.cvss.arrow}}</span></button></div><div class="dc" aria-sort="{{tbl.h.confidence.aria}}"><button onClick="{{tbl.h.confidence.pick}}">Confidence <span style="opacity:{{tbl.h.confidence.op}}">{{tbl.h.confidence.arrow}}</span></button></div><div class="dc" aria-sort="{{tbl.h.file.aria}}"><button onClick="{{tbl.h.file.pick}}">File:lines <span style="opacity:{{tbl.h.file.op}}">{{tbl.h.file.arrow}}</span></button></div><div class="dc">Verdict</div></div>
   <sc-for list="{{tbl.rows}}" as="r" hint-placeholder-count="6"><div class="dr link" role="button" tabindex="0" aria-label="{{r.aria}}" style="grid-template-columns:48px 92px minmax(0,2.1fr) 152px 88px 60px 130px minmax(0,1.4fr) 118px" onClick="{{r.open}}" onKeyDown="{{r.key}}">
-  <div class="dc" data-th="#" ><span class="mono faint">{{r.id}}</span></div><div class="dc" data-th="Severity" ><span class="row" style="gap:6px;white-space:nowrap"><i class="dot" style="background:{{r.sevColor}}"></i>{{r.sev}}</span></div><div class="dc" data-th="Title" ><span style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{r.title}}</span></div><div class="dc" data-th="Class" ><span class="sub">{{r.cls}}</span></div><div class="dc" data-th="CWE" ><a href="{{r.cweHref}}" target="_blank" rel="noopener" class="mono" onClick="{{stop}}">{{r.cwe}}</a></div><div class="dc r" data-th="CVSS" ><span class="mono num">{{r.cvss}}</span></div><div class="dc" data-th="Confidence" ><span class="row tip" data-tip="{{r.confTip}}" aria-label="{{r.confAria}}" style="gap:6px"><span class="bar" style="width:42px"><i style="width:{{r.conf}}%;background:var(--accent)"></i></span><span class="num" style="font-size:12px">{{r.conf}}%</span></span></div><div class="dc" data-th="File:lines" ><span class="mono tip" data-tip="{{r.fileLines}}" style="font-size:12px">{{r.fileLines}}</span></div><div class="dc" data-th="Verdict" ><sc-if value="{{r.vConfirmed}}" hint-placeholder-val="{{false}}"><span class="chip ok xs tip" data-tip="Verifier: true positive">Confirmed</span></sc-if><sc-if value="{{r.vFalsePos}}" hint-placeholder-val="{{false}}"><span class="chip grey xs tip" data-tip="Verifier: false positive">False positive</span></sc-if><sc-if value="{{r.vNone}}" hint-placeholder-val="{{true}}">—</sc-if></div>
+  <div class="dc" data-th="#" ><span class="mono faint">{{r.id}}</span></div><div class="dc" data-th="Severity" ><span class="row" style="gap:6px;white-space:nowrap"><i class="dot" style="background:{{r.sevColor}}"></i>{{r.sev}}</span></div><div class="dc" data-th="Title" ><span style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{r.title}}</span></div><div class="dc" data-th="Class" ><span class="sub">{{r.cls}}</span></div><div class="dc" data-th="CWE" ><a href="{{r.cweHref}}" target="_blank" rel="noopener" class="mono" onClick="{{stop}}">{{r.cwe}}</a></div><div class="dc r" data-th="CVSS" ><span class="mono num">{{r.cvss}}</span></div><div class="dc" data-th="Confidence" ><span class="row tip" data-tip="{{r.confTip}}" aria-label="{{r.confAria}}" style="gap:6px"><span class="bar" style="width:42px"><i style="width:{{r.conf}}%;background:var(--accent)"></i></span><span class="num" style="font-size:12px">{{r.conf}}%</span></span></div><div class="dc" data-th="File:lines" ><span class="mono tip" data-tip="{{r.fileLines}}" style="font-size:12px;display:block;min-width:0;overflow-wrap:anywhere">{{r.fileLines}}</span></div><div class="dc" data-th="Verdict" ><sc-if value="{{r.vConfirmed}}" hint-placeholder-val="{{false}}"><span class="chip ok xs tip" data-tip="Verifier: true positive">Confirmed</span></sc-if><sc-if value="{{r.vFalsePos}}" hint-placeholder-val="{{false}}"><span class="chip grey xs tip" data-tip="Verifier: false positive">False positive</span></sc-if><sc-if value="{{r.vNone}}" hint-placeholder-val="{{true}}">—</sc-if></div>
 </div></sc-for>
 </div>
 <sc-if value="{{noRows}}" hint-placeholder-val="{{false}}"><p class="empty" style="padding:24px;margin-top:10px">No findings match your search or filter.</p></sc-if>
@@ -258,49 +259,67 @@ pre.block{font-family:"IBM Plex Mono",Consolas,monospace;font-size:12px;backgrou
     <path d="M180 71 C 465 71, 465 143, 750 143" fill="none" stroke="{{edgeState.e0.stroke}}" stroke-width="{{edgeState.e0.w}}" stroke-dasharray="{{edgeState.e0.dash}}" marker-end="url(#arr)" style="transition:stroke .4s,stroke-width .3s"></path><path d="M180 143 C 465 143, 465 143, 750 143" fill="none" stroke="{{edgeState.e1.stroke}}" stroke-width="{{edgeState.e1.w}}" stroke-dasharray="{{edgeState.e1.dash}}" marker-end="url(#arr)" style="transition:stroke .4s,stroke-width .3s"></path><path d="M180 215 C 285 215, 285 143, 390 143" fill="none" stroke="{{edgeState.e2.stroke}}" stroke-width="{{edgeState.e2.w}}" stroke-dasharray="{{edgeState.e2.dash}}" marker-end="url(#arr)" style="transition:stroke .4s,stroke-width .3s"></path><path d="M540 143 C 645 143, 645 143, 750 143" fill="none" stroke="{{edgeState.e3.stroke}}" stroke-width="{{edgeState.e3.w}}" stroke-dasharray="{{edgeState.e3.dash}}" marker-end="url(#arr)" style="transition:stroke .4s,stroke-width .3s"></path><path d="M180 287 C 465 287, 465 287, 750 287" fill="none" stroke="{{edgeState.e4.stroke}}" stroke-width="{{edgeState.e4.w}}" stroke-dasharray="{{edgeState.e4.dash}}" marker-end="url(#arr)" style="transition:stroke .4s,stroke-width .3s"></path><path d="M180 359 C 285 359, 285 287, 390 287" fill="none" stroke="{{edgeState.e5.stroke}}" stroke-width="{{edgeState.e5.w}}" stroke-dasharray="{{edgeState.e5.dash}}" marker-end="url(#arr)" style="transition:stroke .4s,stroke-width .3s"></path><path d="M540 287 C 645 287, 645 143, 750 143" fill="none" stroke="{{edgeState.e6.stroke}}" stroke-width="{{edgeState.e6.w}}" stroke-dasharray="{{edgeState.e6.dash}}" marker-end="url(#arr)" style="transition:stroke .4s,stroke-width .3s"></path><path d="M540 143 C 645 143, 645 143, 750 143" fill="none" stroke="{{edgeState.e7.stroke}}" stroke-width="{{edgeState.e7.w}}" stroke-dasharray="{{edgeState.e7.dash}}" marker-end="url(#arr)" style="transition:stroke .4s,stroke-width .3s"></path>
     <g onClick="{{nodeState.n3.toggle}}" style="cursor:pointer">
         <rect x="30" y="48" width="150" height="46" rx="9" fill="{{nodeState.n3.fill}}" stroke="{{nodeState.n3.stroke}}" stroke-width="1.5" style="transition:fill .35s,stroke .35s"></rect>
-        <text x="42" y="66" font-size="11" font-family="IBM Plex Mono" fill="{{nodeState.n3.idFill}}">#3 &middot; {{nodeState.n3.sevLabel}}</text>
-        <text x="42" y="83" font-size="12" font-family="IBM Plex Sans" font-weight="600" fill="{{nodeState.n3.tFill}}" style="text-decoration:{{nodeState.n3.deco}}">{{nodeState.n3.title}}</text>
-        <title>{{nodeState.n3.tip}}</title>
+        <text x="42" y="66" font-size="11" font-family="IBM Plex Mono" fill="{{nodeState.n3.idFill}}">#3 &middot; Critical</text>
+        <text x="42" y="83" font-size="12" font-family="IBM Plex Sans" font-weight="600" fill="{{nodeState.n3.tFill}}" style="text-decoration:{{nodeState.n3.deco}}">NoSQL injection in login</text>
+        <title>#3 NoSQL injection in login
+app/data/user-dao.js
+Click to mark fixed or reopen</title>
       </g><g onClick="{{nodeState.n4.toggle}}" style="cursor:pointer">
         <rect x="30" y="120" width="150" height="46" rx="9" fill="{{nodeState.n4.fill}}" stroke="{{nodeState.n4.stroke}}" stroke-width="1.5" style="transition:fill .35s,stroke .35s"></rect>
-        <text x="42" y="138" font-size="11" font-family="IBM Plex Mono" fill="{{nodeState.n4.idFill}}">#4 &middot; {{nodeState.n4.sevLabel}}</text>
-        <text x="42" y="155" font-size="12" font-family="IBM Plex Sans" font-weight="600" fill="{{nodeState.n4.tFill}}" style="text-decoration:{{nodeState.n4.deco}}">{{nodeState.n4.title}}</text>
-        <title>{{nodeState.n4.tip}}</title>
+        <text x="42" y="138" font-size="11" font-family="IBM Plex Mono" fill="{{nodeState.n4.idFill}}">#4 &middot; Critical</text>
+        <text x="42" y="155" font-size="12" font-family="IBM Plex Sans" font-weight="600" fill="{{nodeState.n4.tFill}}" style="text-decoration:{{nodeState.n4.deco}}">Hardcoded session secret</text>
+        <title>#4 Hardcoded session secret
+config/env/all.js
+Click to mark fixed or reopen</title>
       </g><g onClick="{{nodeState.n24.toggle}}" style="cursor:pointer">
         <rect x="30" y="192" width="150" height="46" rx="9" fill="{{nodeState.n24.fill}}" stroke="{{nodeState.n24.stroke}}" stroke-width="1.5" style="transition:fill .35s,stroke .35s"></rect>
-        <text x="42" y="210" font-size="11" font-family="IBM Plex Mono" fill="{{nodeState.n24.idFill}}">#24 &middot; {{nodeState.n24.sevLabel}}</text>
-        <text x="42" y="227" font-size="12" font-family="IBM Plex Sans" font-weight="600" fill="{{nodeState.n24.tFill}}" style="text-decoration:{{nodeState.n24.deco}}">{{nodeState.n24.title}}</text>
-        <title>{{nodeState.n24.tip}}</title>
+        <text x="42" y="210" font-size="11" font-family="IBM Plex Mono" fill="{{nodeState.n24.idFill}}">#24 &middot; Medium</text>
+        <text x="42" y="227" font-size="12" font-family="IBM Plex Sans" font-weight="600" fill="{{nodeState.n24.tFill}}" style="text-decoration:{{nodeState.n24.deco}}">Username enumeration</text>
+        <title>#24 Username enumeration
+app/routes/session.js
+Click to mark fixed or reopen</title>
       </g><g onClick="{{nodeState.n9.toggle}}" style="cursor:pointer">
         <rect x="30" y="264" width="150" height="46" rx="9" fill="{{nodeState.n9.fill}}" stroke="{{nodeState.n9.stroke}}" stroke-width="1.5" style="transition:fill .35s,stroke .35s"></rect>
-        <text x="42" y="282" font-size="11" font-family="IBM Plex Mono" fill="{{nodeState.n9.idFill}}">#9 &middot; {{nodeState.n9.sevLabel}}</text>
-        <text x="42" y="299" font-size="12" font-family="IBM Plex Sans" font-weight="600" fill="{{nodeState.n9.tFill}}" style="text-decoration:{{nodeState.n9.deco}}">{{nodeState.n9.title}}</text>
-        <title>{{nodeState.n9.tip}}</title>
+        <text x="42" y="282" font-size="11" font-family="IBM Plex Mono" fill="{{nodeState.n9.idFill}}">#9 &middot; High</text>
+        <text x="42" y="299" font-size="12" font-family="IBM Plex Sans" font-weight="600" fill="{{nodeState.n9.tFill}}" style="text-decoration:{{nodeState.n9.deco}}">Authenticated SSRF</text>
+        <title>#9 Authenticated SSRF
+app/routes/research.js
+Click to mark fixed or reopen</title>
       </g><g onClick="{{nodeState.n21.toggle}}" style="cursor:pointer">
         <rect x="30" y="336" width="150" height="46" rx="9" fill="{{nodeState.n21.fill}}" stroke="{{nodeState.n21.stroke}}" stroke-width="1.5" style="transition:fill .35s,stroke .35s"></rect>
-        <text x="42" y="354" font-size="11" font-family="IBM Plex Mono" fill="{{nodeState.n21.idFill}}">#21 &middot; {{nodeState.n21.sevLabel}}</text>
-        <text x="42" y="371" font-size="12" font-family="IBM Plex Sans" font-weight="600" fill="{{nodeState.n21.tFill}}" style="text-decoration:{{nodeState.n21.deco}}">{{nodeState.n21.title}}</text>
-        <title>{{nodeState.n21.tip}}</title>
+        <text x="42" y="354" font-size="11" font-family="IBM Plex Mono" fill="{{nodeState.n21.idFill}}">#21 &middot; Medium</text>
+        <text x="42" y="371" font-size="12" font-family="IBM Plex Sans" font-weight="600" fill="{{nodeState.n21.tFill}}" style="text-decoration:{{nodeState.n21.deco}}">Outdated marked (XSS)</text>
+        <title>#21 Outdated marked (XSS)
+package.json
+Click to mark fixed or reopen</title>
       </g><g onClick="{{nodeState.n5.toggle}}" style="cursor:pointer">
         <rect x="390" y="120" width="150" height="46" rx="9" fill="{{nodeState.n5.fill}}" stroke="{{nodeState.n5.stroke}}" stroke-width="1.5" style="transition:fill .35s,stroke .35s"></rect>
-        <text x="402" y="138" font-size="11" font-family="IBM Plex Mono" fill="{{nodeState.n5.idFill}}">#5 &middot; {{nodeState.n5.sevLabel}}</text>
-        <text x="402" y="155" font-size="12" font-family="IBM Plex Sans" font-weight="600" fill="{{nodeState.n5.tFill}}" style="text-decoration:{{nodeState.n5.deco}}">{{nodeState.n5.title}}</text>
-        <title>{{nodeState.n5.tip}}</title>
+        <text x="402" y="138" font-size="11" font-family="IBM Plex Mono" fill="{{nodeState.n5.idFill}}">#5 &middot; Critical</text>
+        <text x="402" y="155" font-size="12" font-family="IBM Plex Sans" font-weight="600" fill="{{nodeState.n5.tFill}}" style="text-decoration:{{nodeState.n5.deco}}">No rate limit on login</text>
+        <title>#5 No rate limit on login
+app/routes/session.js
+Click to mark fixed or reopen</title>
       </g><g onClick="{{nodeState.n22.toggle}}" style="cursor:pointer">
         <rect x="390" y="264" width="150" height="46" rx="9" fill="{{nodeState.n22.fill}}" stroke="{{nodeState.n22.stroke}}" stroke-width="1.5" style="transition:fill .35s,stroke .35s"></rect>
-        <text x="402" y="282" font-size="11" font-family="IBM Plex Mono" fill="{{nodeState.n22.idFill}}">#22 &middot; {{nodeState.n22.sevLabel}}</text>
-        <text x="402" y="299" font-size="12" font-family="IBM Plex Sans" font-weight="600" fill="{{nodeState.n22.tFill}}" style="text-decoration:{{nodeState.n22.deco}}">{{nodeState.n22.title}}</text>
-        <title>{{nodeState.n22.tip}}</title>
+        <text x="402" y="282" font-size="11" font-family="IBM Plex Mono" fill="{{nodeState.n22.idFill}}">#22 &middot; Medium</text>
+        <text x="402" y="299" font-size="12" font-family="IBM Plex Sans" font-weight="600" fill="{{nodeState.n22.tFill}}" style="text-decoration:{{nodeState.n22.deco}}">Cookie lacks httpOnly</text>
+        <title>#22 Cookie lacks httpOnly
+server.js
+Click to mark fixed or reopen</title>
       </g><g onClick="{{nodeState.n7.toggle}}" style="cursor:pointer">
         <rect x="750" y="120" width="150" height="46" rx="9" fill="{{nodeState.n7.fill}}" stroke="{{nodeState.n7.stroke}}" stroke-width="1.5" style="transition:fill .35s,stroke .35s"></rect>
-        <text x="762" y="138" font-size="11" font-family="IBM Plex Mono" fill="{{nodeState.n7.idFill}}">#7 &middot; {{nodeState.n7.sevLabel}}</text>
-        <text x="762" y="155" font-size="12" font-family="IBM Plex Sans" font-weight="600" fill="{{nodeState.n7.tFill}}" style="text-decoration:{{nodeState.n7.deco}}">{{nodeState.n7.title}}</text>
-        <title>{{nodeState.n7.tip}}</title>
+        <text x="762" y="138" font-size="11" font-family="IBM Plex Mono" fill="{{nodeState.n7.idFill}}">#7 &middot; High</text>
+        <text x="762" y="155" font-size="12" font-family="IBM Plex Sans" font-weight="600" fill="{{nodeState.n7.tFill}}" style="text-decoration:{{nodeState.n7.deco}}">Eval injection (RCE)</text>
+        <title>#7 Eval injection (RCE)
+app/routes/index.js
+Click to mark fixed or reopen</title>
       </g><g onClick="{{nodeState.n1.toggle}}" style="cursor:pointer">
         <rect x="750" y="264" width="150" height="46" rx="9" fill="{{nodeState.n1.fill}}" stroke="{{nodeState.n1.stroke}}" stroke-width="1.5" style="transition:fill .35s,stroke .35s"></rect>
-        <text x="762" y="282" font-size="11" font-family="IBM Plex Mono" fill="{{nodeState.n1.idFill}}">#1 &middot; {{nodeState.n1.sevLabel}}</text>
-        <text x="762" y="299" font-size="12" font-family="IBM Plex Sans" font-weight="600" fill="{{nodeState.n1.tFill}}" style="text-decoration:{{nodeState.n1.deco}}">{{nodeState.n1.title}}</text>
-        <title>{{nodeState.n1.tip}}</title>
+        <text x="762" y="282" font-size="11" font-family="IBM Plex Mono" fill="{{nodeState.n1.idFill}}">#1 &middot; Critical</text>
+        <text x="762" y="299" font-size="12" font-family="IBM Plex Sans" font-weight="600" fill="{{nodeState.n1.tFill}}" style="text-decoration:{{nodeState.n1.deco}}">Unauthenticated MongoDB</text>
+        <title>#1 Unauthenticated MongoDB
+docker-compose.yml
+Click to mark fixed or reopen</title>
       </g>
   </svg>
 </div>

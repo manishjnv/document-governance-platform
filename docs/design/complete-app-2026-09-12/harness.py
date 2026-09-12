@@ -75,18 +75,24 @@ def run(stems, phone, outdir):
                 time.sleep(0.6)
                 html = pg.content()
                 res["leak"] = "{{" in html
-                res["overflow"] = pg.evaluate("""() => { const w = document.documentElement.clientWidth;
+                res["overflow"] = pg.evaluate("""() => { const w = document.documentElement.clientWidth; const scr = (e) => { for (let p = e.parentElement; p && p !== document.body; p = p.parentElement) { const o = getComputedStyle(p).overflowX; if ((o === 'auto' || o === 'scroll') && p.getBoundingClientRect().right <= w + 1) return true; } return false; };
                     for (const el of document.querySelectorAll('body *')) { const r = el.getBoundingClientRect();
-                      if (r.right > w + 1 && r.width > 0 && r.width < 3000 && getComputedStyle(el).position !== 'fixed' && !el.closest('.sheet,.msheet,.dlg-ov,.ov,.side')) return true; }
+                      if (r.right > w + 1 && r.width > 0 && r.width < 3000 && getComputedStyle(el).position !== 'fixed' && !el.closest('.sheet,.msheet,.dlg-ov,.ov,.side') && !scr(el)) return true; }
                     return false; }""")
+                res["page_width"] = pg.evaluate("() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]")
+                if res["page_width"][0] > res["page_width"][1] + 1:
+                    res["overflow"] = True  # the page itself scrolls sideways (hidden tooltips did this once)
                 if res["overflow"]:
-                    res["overflow_culprits"] = pg.evaluate("""() => { const w = document.documentElement.clientWidth; const out = [];
+                    res["overflow_culprits"] = pg.evaluate("""() => { const w = document.documentElement.clientWidth; const out = []; const scr = (e) => { for (let p = e.parentElement; p && p !== document.body; p = p.parentElement) { const o = getComputedStyle(p).overflowX; if ((o === 'auto' || o === 'scroll') && p.getBoundingClientRect().right <= w + 1) return true; } return false; };
                         for (const el of document.querySelectorAll('body *')) { const r = el.getBoundingClientRect(); if (r.right > w + 1 && r.width > 0 && r.width < 3000) {
-                          const cs = getComputedStyle(el); if (cs.position === 'fixed' || el.closest('.sheet,.msheet,.dlg-ov,.ov,.side')) continue;
+                          const cs = getComputedStyle(el); if (cs.position === 'fixed' || el.closest('.sheet,.msheet,.dlg-ov,.ov,.side') && !scr(el)) continue;
                           out.push((el.tagName.toLowerCase()) + '.' + String(el.className).split(' ').slice(0,2).join('.') + ' right=' + Math.round(r.right)); if (out.length >= 8) break; } }
                         return out; }""")
                 base = stem[:-5] if stem.endswith("Phone") else stem
                 for step in clicks_all.get(base, []):
+                    if phone and step.get("desktop_only"):
+                        res["clicks"].append({"step": step, "ok": True, "skipped": "desktop_only"})
+                        continue
                     try:
                         if "label" in step or "text" in step or "css" in step:
                             if "css" in step:
