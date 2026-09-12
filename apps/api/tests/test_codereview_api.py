@@ -271,6 +271,31 @@ async def test_kit_zip_endpoint(client, db_session):
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/zip")
     names = zipfile.ZipFile(io.BytesIO(response.content)).namelist()
-    for name in ("README.md", "config.yaml", "scopewise-scan.ps1", "scopewise-scan.sh"):
+    for name in ("README.md", "config.yaml", "setup.cmd", "setup.sh", "scopewise-scan.cmd", "scopewise-scan.sh", "bin/setup.ps1", "bin/scopewise-scan.ps1"):
         assert f"scopewise-scan-kit/{name}" in names
     assert any(n.endswith(".whl") for n in names)
+
+
+async def test_demo_review_visible_read_only_to_other_org(client, db_session, monkeypatch):
+    """A review id listed in CODEREVIEW_DEMO_REVIEW_IDS is listed, viewable and
+    exportable by a user from another org, but not renamable or deletable."""
+    _, _, owner = await _make_user(db_session)
+    created = await _create(client, owner, with_manifest=False)
+    rid = created["review_id"]
+    _, _, other = await _make_user(db_session, role="viewer")
+
+    # not visible before the flag
+    assert (await client.get(f"/api/v1/codereview/reviews/{rid}", headers=other)).status_code == 404
+
+    monkeypatch.setenv("CODEREVIEW_DEMO_REVIEW_IDS", f" {rid} ,not-a-uuid")
+    listed = (await client.get("/api/v1/codereview/reviews", headers=other)).json()
+    match = [r for r in listed if r["review_id"] == rid]
+    assert match and match[0]["demo"] is True and match[0]["editable"] is False
+    detail = await client.get(f"/api/v1/codereview/reviews/{rid}", headers=other)
+    assert detail.status_code == 200 and detail.json()["editable"] is False
+    assert (await client.get(f"/api/v1/codereview/reviews/{rid}/export.xlsx", headers=other)).status_code == 200
+    # owner still sees it as editable; other org cannot change it
+    assert (await client.get(f"/api/v1/codereview/reviews/{rid}", headers=owner)).json()["editable"] is True
+    _, _, other_admin = await _make_user(db_session, role="admin")
+    assert (await client.patch(f"/api/v1/codereview/reviews/{rid}", json={"name": "x"}, headers=other_admin)).status_code == 404
+    assert (await client.delete(f"/api/v1/codereview/reviews/{rid}", headers=other_admin)).status_code == 404

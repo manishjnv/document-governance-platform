@@ -53,6 +53,9 @@ services:
       # Set by the deploy command (GIT_SHA=$(git rev-parse --short HEAD));
       # recorded in every review's audit_meta.
       GIT_SHA: ${GIT_SHA:-unknown}
+      # Comma-separated code_reviews.review_id values every signed-in user may
+      # view/export read-only (the NodeGoat demo). Set in .env; empty = none.
+      CODEREVIEW_DEMO_REVIEW_IDS: ${CODEREVIEW_DEMO_REVIEW_IDS:-}
       SMTP_SERVER: ${SMTP_SERVER}
       SMTP_PORT: ${SMTP_PORT}
       SMTP_USERNAME: ${SMTP_USERNAME}
@@ -105,6 +108,9 @@ services:
       # SMTP is needed since 13d: scheduled-failure admin notifications.
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       GIT_SHA: ${GIT_SHA:-unknown}
+      # Comma-separated code_reviews.review_id values every signed-in user may
+      # view/export read-only (the NodeGoat demo). Set in .env; empty = none.
+      CODEREVIEW_DEMO_REVIEW_IDS: ${CODEREVIEW_DEMO_REVIEW_IDS:-}
       SMTP_SERVER: ${SMTP_SERVER}
       SMTP_PORT: ${SMTP_PORT}
       SMTP_USERNAME: ${SMTP_USERNAME}

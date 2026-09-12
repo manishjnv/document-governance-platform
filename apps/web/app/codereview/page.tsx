@@ -252,6 +252,17 @@ export default function CodeReviewListPage() {
                         )}
                       </p>
                     </div>
+                    {item.demo && (
+                      <Tooltip delayDuration={150}>
+                        <TooltipTrigger asChild>
+                          <span className="shrink-0 rounded-full border border-sky-200 bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-800">
+                            Demo
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="text-xs">Shared sample review — visible to every signed-in user, read-only</TooltipContent>
+                      </Tooltip>
+                    )}
+                    {item.editable !== false && (
                     <span onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -281,6 +292,7 @@ export default function CodeReviewListPage() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </span>
+                    )}
                   </div>
 
                   <Tooltip delayDuration={150}>

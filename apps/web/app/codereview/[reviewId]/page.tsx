@@ -278,6 +278,15 @@ export default function CodeReviewResultsPage() {
                 <h1 className="flex items-center gap-2 text-lg font-semibold">
                   <Bug size={18} strokeWidth={2} className="text-primary" aria-hidden="true" />
                   {review.name}
+                  {review.demo && (
+                    <Tooltip delayDuration={150}>
+                      <TooltipTrigger asChild>
+                        <span className="rounded-full border border-sky-200 bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-800">Demo</span>
+                      </TooltipTrigger>
+                      <TooltipContent className="text-xs">Shared sample review — read-only for everyone</TooltipContent>
+                    </Tooltip>
+                  )}
+                  {review.editable !== false && (
                   <button
                     type="button"
                     aria-label={`Rename ${review.name}`}
@@ -289,6 +298,7 @@ export default function CodeReviewResultsPage() {
                   >
                     <Pencil size={13} aria-hidden="true" />
                   </button>
+                  )}
                 </h1>
               )}
               {renameError && <p className="mt-1 text-xs text-destructive">{renameError}</p>}

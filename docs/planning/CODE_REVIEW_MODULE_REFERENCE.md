@@ -169,7 +169,14 @@ cvssRating,confidence}`, `message.text`→description,
 | `GET /reviews/{id}/export.xlsx` | any | StreamingResponse, `<name>-code-review.xlsx` |
 | `GET /reviews/{id}/export.pptx` | any | StreamingResponse, `<name>-briefing-deck.pptx` |
 
-All queries org-scoped and `deleted_at IS NULL`. Audit actions:
+All queries org-scoped and `deleted_at IS NULL`. **Demo reviews (2026-09-12):** the env var
+`CODEREVIEW_DEMO_REVIEW_IDS` (comma-separated review ids, wired in
+`docker-compose.vps.yml` from the VPS `.env`) marks reviews every
+signed-in user may list, open and export read-only, regardless of org;
+`PATCH`/`DELETE` stay owner-org only. List/detail rows carry `demo` and
+`editable` so the UI hides rename/delete and shows a "Demo" chip. Read per
+request (`_demo_ids()`), so changing the list needs only a container
+recreate. Prod: the NodeGoat golden review `49e45724-…` is the demo. Audit actions:
 `codereview.review_created` / `codereview.review_deleted`, resource_type
 `code_review`. Upload trust boundary: reuse `_sanitize_filename` from
 `app/routers/documents.py`; storage key

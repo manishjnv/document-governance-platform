@@ -94,6 +94,10 @@ export interface CodeReviewReport {
 
 export interface CodeReviewListItem {
   review_id: string;
+  /** Shared read-only demo review (visible to every signed-in user). */
+  demo?: boolean;
+  /** False when the review belongs to another org (demo) — hide rename/delete. */
+  editable?: boolean;
   name: string;
   repo_label: string;
   git_sha: string | null;

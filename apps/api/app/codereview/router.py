@@ -7,13 +7,14 @@ and soft-delete-aware. No LLM anywhere — ingest is pure/deterministic
 
 import io
 import logging
+import os
 from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
@@ -32,11 +33,29 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/codereview", tags=["codereview"])
 
 
-def _list_item(row: CodeReview) -> dict:
+def _demo_ids() -> set:
+    """Reviews every signed-in user may view and export (read-only), e.g. the
+    NodeGoat demo. Comma-separated UUIDs in CODEREVIEW_DEMO_REVIEW_IDS; read
+    per request so a container restart is the only deploy step."""
+    raw = os.getenv("CODEREVIEW_DEMO_REVIEW_IDS", "")
+    out = set()
+    for part in raw.split(","):
+        part = part.strip()
+        if part:
+            try:
+                out.add(UUID(part))
+            except ValueError:
+                logger.warning("CODEREVIEW_DEMO_REVIEW_IDS: ignoring non-UUID %r", part)
+    return out
+
+
+def _list_item(row: CodeReview, org_id: UUID | None = None) -> dict:
     report = row.report or {}
     counts = report.get("counts") or {}
     return {
         "review_id": str(row.review_id),
+        "demo": row.review_id in _demo_ids(),
+        "editable": org_id is None or row.org_id == org_id,
         "name": row.name,
         "repo_label": row.repo_label,
         "git_sha": row.git_sha,
@@ -49,9 +68,11 @@ def _list_item(row: CodeReview) -> dict:
     }
 
 
-def _detail(row: CodeReview) -> dict:
+def _detail(row: CodeReview, org_id: UUID | None = None) -> dict:
     return {
         "review_id": str(row.review_id),
+        "demo": row.review_id in _demo_ids(),
+        "editable": org_id is None or row.org_id == org_id,
         "name": row.name,
         "repo_label": row.repo_label,
         "git_sha": row.git_sha,
@@ -62,14 +83,13 @@ def _detail(row: CodeReview) -> dict:
     }
 
 
-async def _get_review(db: AsyncSession, review_id: UUID, org_id: UUID) -> CodeReview:
-    result = await db.execute(
-        select(CodeReview).where(
-            CodeReview.review_id == review_id,
-            CodeReview.org_id == org_id,
-            CodeReview.deleted_at.is_(None),
-        )
-    )
+async def _get_review(db: AsyncSession, review_id: UUID, org_id: UUID, allow_demo: bool = False) -> CodeReview:
+    """Org-scoped lookup. With allow_demo (read-only endpoints only), a review
+    listed in CODEREVIEW_DEMO_REVIEW_IDS is visible to any org."""
+    conditions = [CodeReview.review_id == review_id, CodeReview.deleted_at.is_(None)]
+    if not (allow_demo and review_id in _demo_ids()):
+        conditions.append(CodeReview.org_id == org_id)
+    result = await db.execute(select(CodeReview).where(*conditions))
     row = result.scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
@@ -211,12 +231,16 @@ async def list_reviews(
     db: AsyncSession = Depends(get_db),
 ):
     org_id = UUID(str(current_user.org_id))
+    demo = _demo_ids()
+    scope = CodeReview.org_id == org_id
+    if demo:
+        scope = or_(scope, CodeReview.review_id.in_(demo))
     result = await db.execute(
         select(CodeReview)
-        .where(CodeReview.org_id == org_id, CodeReview.deleted_at.is_(None))
+        .where(scope, CodeReview.deleted_at.is_(None))
         .order_by(CodeReview.created_at.desc())
     )
-    return [_list_item(row) for row in result.scalars().all()]
+    return [_list_item(row, org_id) for row in result.scalars().all()]
 
 
 @router.get("/reviews/{review_id}", summary="Review detail")
@@ -226,8 +250,8 @@ async def get_review(
     db: AsyncSession = Depends(get_db),
 ):
     org_id = UUID(str(current_user.org_id))
-    row = await _get_review(db, review_id, org_id)
-    return _detail(row)
+    row = await _get_review(db, review_id, org_id, allow_demo=True)
+    return _detail(row, org_id)
 
 
 @router.patch("/reviews/{review_id}", summary="Rename a review")
@@ -280,7 +304,7 @@ async def export_xlsx(
     db: AsyncSession = Depends(get_db),
 ):
     org_id = UUID(str(current_user.org_id))
-    row = await _get_review(db, review_id, org_id)
+    row = await _get_review(db, review_id, org_id, allow_demo=True)
     content = await run_in_threadpool(report_xlsx.build_xlsx_export, row)
     filename = _sanitize_filename(row.name)[:80] or "review"
     return StreamingResponse(
@@ -297,7 +321,7 @@ async def export_pptx(
     db: AsyncSession = Depends(get_db),
 ):
     org_id = UUID(str(current_user.org_id))
-    row = await _get_review(db, review_id, org_id)
+    row = await _get_review(db, review_id, org_id, allow_demo=True)
     content = await run_in_threadpool(report_pptx.build_pptx_export, row)
     filename = _sanitize_filename(row.name)[:80] or "review"
     return StreamingResponse(
