@@ -10,8 +10,10 @@ KIT_DIR = Path(__file__).parent / "kit"
 KIT_FILES = (
     "README.md",
     "config.yaml",
+    "setup.cmd",
     "setup.ps1",
     "setup.sh",
+    "scopewise-scan.cmd",
     "scopewise-scan.ps1",
     "scopewise-scan.sh",
     "KIT_VERSION.json",

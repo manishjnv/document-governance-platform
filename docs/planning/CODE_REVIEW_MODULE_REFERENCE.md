@@ -233,6 +233,10 @@ input from the upload page, without reading VVAH docs.
     `scopewise-scan-<repo>-<yyyymmdd>.zip`. Both set `PYTHONUTF8=1` (VVAH
     prints UTF-8 glyphs; cp1252 consoles crash otherwise). The key is only
     ever read from `.env`.
+  - `setup.cmd` / `scopewise-scan.cmd` — Windows launchers that `Unblock-File`
+    the kit's `.ps1` files and run them with `-ExecutionPolicy Bypass`, because
+    a downloaded unsigned `.ps1` is refused by the default policy (hit by the
+    first real user on 2026-09-12).
   - `setup.ps1` / `setup.sh` — one-time install: creates `.venv` in the kit
     folder, pip-installs the vendored wheel, prompts for the OpenRouter key
     (hidden input) and writes `.env`. Added 2026-09-12 after the first user

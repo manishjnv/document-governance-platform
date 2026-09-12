@@ -9,20 +9,21 @@ and an OpenRouter API key (https://openrouter.ai/keys).
 
 ## Quick start (3 commands)
 
-Windows (PowerShell):
+Windows - double-click `setup.cmd`, or in a terminal:
 
     cd scopewise-scan-kit
-    .\setup.ps1                       # creates .venv, installs the scanner, asks for your key
-    .\scopewise-scan.ps1 C:\path\to\repo
+    .\setup.cmd                       # creates .venv, installs the scanner, asks for your key
+    .\scopewise-scan.cmd C:\path\to\repo
+
+(the .cmd launchers unblock the downloaded .ps1 files and bypass the
+execution policy for this kit only; `.\setup.ps1` also works after
+`Unblock-File .\*.ps1`)
 
 macOS / Linux:
 
     cd scopewise-scan-kit
     ./setup.sh
     ./scopewise-scan.sh /path/to/repo
-
-If PowerShell refuses to run scripts, run once:
-`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, then retry.
 
 The scan script shows a scope/cost estimate first; nothing is spent until you
 answer `y`. A small repo costs a few dollars and takes 30-120 minutes. It

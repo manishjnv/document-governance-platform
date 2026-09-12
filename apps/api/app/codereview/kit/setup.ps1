@@ -41,4 +41,4 @@ if (-not (Test-Path .env)) {
 & .\.venv\Scripts\vvaharness.exe --version
 Write-Host ""
 Write-Host "Setup done. Scan a repo with:"
-Write-Host "  .\scopewise-scan.ps1 C:\path\to\repo"
+Write-Host "  .\scopewise-scan.cmd C:\path\to\repo"

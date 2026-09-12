@@ -18,11 +18,11 @@ const KIT_VERSION = '1.3.0';
 
 const STEPS = [
   <>
-    Unzip the kit, then run <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[12px] text-slate-800 ring-1 ring-inset ring-slate-200">setup.ps1</code> (Windows) or{' '}
+    Unzip the kit, then run <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[12px] text-slate-800 ring-1 ring-inset ring-slate-200">.\setup.cmd</code> (Windows, double-click works) or{' '}
     <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[12px] text-slate-800 ring-1 ring-inset ring-slate-200">setup.sh</code> (macOS/Linux) — it installs the scanner and asks for your OpenRouter key
   </>,
   <>
-    Run <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[12px] text-slate-800 ring-1 ring-inset ring-slate-200">scopewise-scan.ps1 &lt;repo&gt;</code> /{' '}
+    Run <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[12px] text-slate-800 ring-1 ring-inset ring-slate-200">.\scopewise-scan.cmd &lt;repo&gt;</code> /{' '}
     <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[12px] text-slate-800 ring-1 ring-inset ring-slate-200">scopewise-scan.sh &lt;repo&gt;</code> — shows the cost estimate, then scans after you confirm
   </>,
   <>Upload the <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[12px] text-slate-800 ring-1 ring-inset ring-slate-200">scopewise-scan-*.zip</code> it produces here</>,
