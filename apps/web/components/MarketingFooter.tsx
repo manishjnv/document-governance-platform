@@ -25,7 +25,7 @@ const COLUMNS = [
       { href: '/resources/blog', label: 'Blog' },
       { href: '/resources/glossary', label: 'Glossary' },
       { href: '/resources/templates', label: 'Templates' },
-      { href: '/compare/scopewise-vs-manual-review', label: 'ScopeWise vs manual review' },
+      { href: '/compare', label: 'Compare' },
       { href: '/use-cases/sow-review', label: 'SOW review' },
       { href: '/use-cases/rfp-review', label: 'RFP review' },
       { href: '/use-cases/scope-creep-prevention', label: 'Scope creep prevention' },

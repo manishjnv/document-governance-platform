@@ -32,9 +32,9 @@ const RESOURCES = [
   { href: '/resources/blog', label: 'Blog', description: 'Guides across all three products' },
   { href: '/resources/glossary', label: 'Glossary', description: 'Plain-English contract terms' },
   {
-    href: '/compare/scopewise-vs-manual-review',
-    label: 'ScopeWise vs manual review',
-    description: 'Side-by-side comparison',
+    href: '/compare',
+    label: 'Compare',
+    description: 'ScopeWise vs manual review, SOWaudit, ATT&CK Navigator, Semgrep',
   },
 ];
 

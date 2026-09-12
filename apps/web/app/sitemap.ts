@@ -26,7 +26,11 @@ const PAGES: Record<string, string> = {
   '/solutions/for-appsec-consultants': '2026-09-12',
   '/resources/glossary': '2026-07-20',
   '/resources/templates': '2026-09-12',
+  '/compare': '2026-09-12',
   '/compare/scopewise-vs-manual-review': '2026-09-12',
+  '/compare/sowaudit-alternative': '2026-09-12',
+  '/compare/attack-navigator-alternative': '2026-09-12',
+  '/compare/semgrep-alternative': '2026-09-12',
   '/resources/blog': '2026-08-01',
 };
 
