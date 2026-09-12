@@ -59,6 +59,21 @@ this more leniently ("flag it as such, don't assume it's automatically
 critical the way an unsigned SOW clause would be") — SME should confirm the
 model is actually following that instruction in practice, not just stating it.
 
+**Pack:** `docs/planning/severity_calibration/` — `scripts/severity_calibration_run.py`
+harvests every LegalReviewer finding on six real documents (four USCIS
+federal contracts, the SOC SOW with ground truth, the AWS example SOWs) into
+`LEGAL_SEVERITY_SME_PACK_<date>.xlsx` (Findings sheet with SME dropdown
+columns, Summary, Read Me with the procedure and two open questions);
+`scripts/severity_calibration_ingest.py` turns the returned sheet into the
+per-type agreement and over/under table §4 asks for. See that folder's
+README for the exact commands.
+
+**Pack generation attempted 2026-09-12 (git `19ed616`): blocked.** OpenRouter
+returned 403 "Key limit exceeded (total limit)" for the ScopeWise key
+(`limit 2, remaining 0`); no document was reviewed, nothing spent. Re-run the
+two README commands once the key limit is raised; then replace this line with
+"Pack generated <date>" and link the XLSX.
+
 ## 4. What "done" looks like
 
 - [ ] SME fills in the table above against a real (not synthetic) sample
