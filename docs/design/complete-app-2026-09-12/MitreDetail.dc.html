@@ -1,0 +1,1061 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--paper:#FAF9F6;--card:#FFFFFF;--ink:#14181F;--ink2:#3B4453;--ink3:#5E6877;--line:#E6E3DD;--line2:#D5D1C9;
+--accent:#2457B8;--accent-soft:#E8EFFB;--crit:#A32D25;--crit-soft:#FBE7E4;--high:#9C4A0C;--high-soft:#FCEEDF;
+--med:#705708;--med-soft:#FAF1D2;--low:#2E6A42;--low-soft:#E3F1E7;--info:#1F5C85;--info-soft:#E3EEF7;--ok:#2A6F46;--ok-soft:#E3F1E7;
+--na:#ECE9E3;--violet:#4F3691;--violet-soft:#EFE9FA;--r:8px;--rc:10px;
+--crit-fill:#C0392B;--high-fill:#D97A1F;--med-fill:#D4A72C;--low-fill:#3E8A57;--info-fill:#2E86C1;
+--shadow:0 1px 2px rgba(20,24,31,.05),0 8px 24px -12px rgba(20,24,31,.16);--ease:cubic-bezier(.22,.61,.36,1);--side:224px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 14px/1.5 "IBM Plex Sans","Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}a:hover{color:#1B4494;text-decoration:underline}
+h1,h2,h3,h4{margin:0;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+h1{font-size:24px;line-height:1.2}h2{font-size:18px}h3{font-size:14px}
+p{margin:0}button{font:inherit;color:inherit}
+.mono{font-family:"IBM Plex Mono",Consolas,Menlo,monospace;font-size:12px}
+.num{font-variant-numeric:tabular-nums}
+.sub{color:var(--ink2)}.faint{color:var(--ink3)}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--rc);box-shadow:var(--shadow)}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.card-b{padding:16px}
+.row{display:flex;align-items:center;gap:8px}.row>*{min-width:0}.wrap{flex-wrap:wrap}.between{justify-content:space-between}.grow{flex:1;min-width:0}
+.stack{display:flex;flex-direction:column;gap:8px}
+.grid{display:grid;gap:12px}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}.g5{grid-template-columns:repeat(5,minmax(0,1fr))}.g6{grid-template-columns:repeat(6,minmax(0,1fr))}.g8{grid-template-columns:repeat(8,minmax(0,1fr))}
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 14px;border-radius:var(--r);border:1px solid var(--line2);background:#fff;color:var(--ink);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .16s var(--ease),border-color .16s,transform .16s var(--ease),opacity .16s}
+.btn:hover{background:#F3F1EC}.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{background:#1E4CA2}
+.btn.danger{background:var(--crit);border-color:var(--crit);color:#fff}.btn.danger:hover{background:#9C2A23}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--ink2)}.btn.ghost:hover{background:#F0EDE7;color:var(--ink)}
+.btn.link{background:transparent;border-color:transparent;color:var(--accent);padding:0;height:auto}.btn.link:hover{text-decoration:underline}
+.btn.sm{height:30px;padding:0 10px;font-size:12px}.btn.lg{height:40px;padding:0 18px}.btn.icon{width:36px;padding:0}.btn.icon.sm{width:30px}
+.btn[disabled],.btn.disabled{opacity:.5;pointer-events:none}
+/* chips */
+.chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;border:1px solid transparent;transition:background .2s,color .2s}
+.chip.crit{background:var(--crit-soft);color:var(--crit)}.chip.high{background:var(--high-soft);color:var(--high)}.chip.med{background:var(--med-soft);color:var(--med)}.chip.low{background:var(--low-soft);color:var(--low)}.chip.info{background:var(--info-soft);color:var(--info)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}.chip.grey{background:var(--na);color:var(--ink2)}.chip.blue{background:var(--accent-soft);color:var(--accent)}.chip.violet{background:var(--violet-soft);color:var(--violet)}
+.chip.outline{background:#fff;border-color:var(--line2);color:var(--ink2);font-weight:500}
+.chip.xs{height:18px;font-size:10.5px;padding:0 6px}
+.dot{width:8px;height:8px;border-radius:999px;display:inline-block;flex:none}
+/* inputs */
+.input,.select,textarea.input{height:36px;padding:0 10px;border:1px solid var(--line2);border-radius:var(--r);background:#fff;color:var(--ink);font:inherit;font-size:13px;outline:none;transition:border-color .16s,box-shadow .16s}
+.input:focus,.select:focus,textarea.input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.input.sm,.select.sm{height:30px;font-size:12px}textarea.input{height:auto;padding:8px 10px}
+.select{padding-right:28px;appearance:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%233B4453' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 8px center}
+.search{position:relative}.search .input{padding-left:30px;width:100%}.search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--ink3);pointer-events:none}
+.label{display:block;font-size:12px;font-weight:500;color:var(--ink2);margin-bottom:4px}
+.req{color:var(--crit)}
+input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent)}
+/* tooltip */
+.tip{position:relative}
+.tip::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 8px);transform:translate(-50%,4px);background:var(--ink);color:#fff;font:400 12px/1.4 "IBM Plex Sans",sans-serif;padding:7px 10px;border-radius:7px;white-space:pre-line;width:max-content;max-width:280px;opacity:0;pointer-events:none;transition:opacity .16s var(--ease),transform .16s var(--ease);z-index:60;text-align:left;font-weight:400;text-transform:none;letter-spacing:0}
+.tip::before{content:"";position:absolute;left:50%;bottom:calc(100% + 3px);transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--ink);opacity:0;transition:opacity .16s;z-index:60}
+.tip:hover::after,.tip:hover::before,.tip:focus-visible::after,.tip:focus-visible::before{opacity:1;transform:translate(-50%,0)}
+.tip.left::after{left:0;transform:translate(0,4px)}.tip.left:hover::after{transform:translate(0,0)}.tip.left::before{left:14px}
+/* kpi */
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--rc);padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0;text-align:left;cursor:default}
+.kpi.click{cursor:pointer;transition:border-color .16s,background .16s}.kpi.click:hover{border-color:var(--accent);background:#FBFBFF}
+.kpi .v{font-size:24px;font-weight:600;letter-spacing:-.02em;line-height:1.1}
+/* tables */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);padding:9px 12px;border-bottom:1px solid var(--line);background:#FBFAF8;white-space:nowrap}
+.tbl th button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:4px;text-transform:inherit;letter-spacing:inherit}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+.tbl tbody tr{transition:background .12s}.tbl tbody tr:hover{background:#F6F4EF}.tbl tbody tr.sel{background:var(--accent-soft)}
+.tbl .r{text-align:right}.tbl tr.band td{background:#F5F3EE;padding:7px 12px}
+.tbl .clickable{cursor:pointer}
+/* div tables (loop-safe; rows become cards on phones) */
+.dt{border:1px solid var(--line);border-radius:var(--rc);background:#fff;overflow:hidden}
+.dt .dr{display:grid;align-items:center;gap:12px;padding:0 12px;border-bottom:1px solid var(--line);min-height:44px;font-size:13px}
+.dt .dr:last-child{border-bottom:0}.dt .dc{min-width:0}
+.dt .dh{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);background:#FBFAF8;min-height:36px}
+.dt .dh button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:4px;text-transform:inherit;letter-spacing:inherit}
+.dt .dr:not(.dh):not(.band):hover{background:#F6F4EF}.dt .dr.sel{background:var(--accent-soft)}
+.dt .band{background:#F5F3EE;min-height:38px}.dt .child{background:#FCFBF9}
+.dt .r{text-align:right;justify-self:end}.dt .link{cursor:pointer}
+.dt .acts{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:12.5px;justify-content:flex-end}
+.dt .acts a,.dt .acts button.lnk{background:none;border:0;padding:0;font:inherit;font-size:12.5px;color:var(--accent);cursor:pointer}
+.dt .acts button.lnk.danger{color:var(--crit)}
+/* tabs */
+.tabs{display:flex;gap:20px;border-bottom:1px solid var(--line);align-items:flex-end}
+.tab{background:none;border:0;padding:0 2px 10px;font-size:13px;font-weight:500;color:var(--ink2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .16s,border-color .16s}
+.tab:hover{color:var(--ink)}.tab.on{color:var(--ink);font-weight:600;border-color:var(--accent)}
+.seg{display:inline-flex;gap:2px;padding:3px;background:var(--na);border-radius:7px}
+.seg button{border:0;background:transparent;padding:0 10px;height:28px;border-radius:5px;font-size:12.5px;font-weight:500;color:var(--ink2);cursor:pointer;transition:background .16s,color .16s}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(20,24,31,.14)}
+.pillbar{display:flex;flex-wrap:wrap;gap:6px}
+.pillbar .chip{cursor:pointer;opacity:.75}.pillbar .chip:hover{opacity:1}.pillbar .chip.on{opacity:1;box-shadow:0 0 0 2px var(--accent-soft);border-color:var(--accent)}
+/* sheets / dialogs / menus */
+.ov{position:fixed;inset:0;background:rgba(20,24,31,.35);z-index:40;transition:opacity .25s var(--ease)}
+.sheet{position:fixed;top:0;right:0;height:100%;background:#fff;box-shadow:-12px 0 40px -20px rgba(20,24,31,.35);z-index:41;display:flex;flex-direction:column;transition:transform .32s var(--ease);max-width:100vw}
+.sheet-h{padding:16px 20px 12px 24px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:10px}
+.sheet-b{padding:16px 20px 16px 24px;overflow-y:auto;flex:1}
+.sheet-f{position:sticky;bottom:0;padding:10px 20px;border-top:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.grip{position:absolute;left:0;top:0;height:100%;width:12px;cursor:ew-resize;touch-action:none;display:flex;align-items:center;justify-content:center}
+.grip i{width:4px;height:40px;border-radius:999px;background:var(--line2);transition:background .16s}.grip:hover i,.grip:focus-visible i{background:var(--accent)}
+.grip:focus-visible{outline:none}
+.xbtn{background:none;border:0;padding:4px;border-radius:6px;color:var(--ink3);cursor:pointer;display:inline-flex}.xbtn:hover{background:#F0EDE7;color:var(--ink)}
+.dlg-ov{position:fixed;inset:0;background:rgba(20,24,31,.45);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;transition:opacity .2s var(--ease)}
+.dlg{background:#fff;border-radius:12px;box-shadow:0 24px 60px -20px rgba(20,24,31,.4);width:100%;max-width:480px;transition:transform .22s var(--ease),opacity .22s;position:relative}
+.dlg-h{padding:18px 20px 6px}.dlg-b{padding:8px 20px 16px;color:var(--ink2);font-size:13.5px}.dlg-f{padding:12px 20px 18px;display:flex;justify-content:flex-end;gap:8px}
+.menu{position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);min-width:160px;padding:4px;z-index:30;display:none}
+.menu.open{display:block}.menu button{display:flex;width:100%;text-align:left;background:none;border:0;padding:8px 10px;border-radius:6px;font-size:13px;cursor:pointer;color:var(--ink);align-items:center;gap:8px}
+.menu button:hover{background:#F3F1EC}.menu button.danger{color:var(--crit)}
+.rel{position:relative}
+/* alerts, states */
+.alert{border-radius:var(--r);padding:12px 14px;font-size:13px;border:1px solid}
+.alert.err{background:var(--crit-soft);border-color:#F1C5BF;color:#8A2A23}
+.alert.warn{background:#FFF8E6;border-color:#F0DFA8;color:#6B5407}
+.alert.ok{background:var(--ok-soft);border-color:#BFE1CB;color:#256A40}
+.alert.info{background:var(--info-soft);border-color:#C6DBEA;color:#1F4E6E}
+.alert.blue{background:var(--accent-soft);border-color:#C9D9F5;color:#1F3F80}
+.err-line{font-size:12px;color:var(--crit)}
+.empty{border:1px dashed var(--line2);border-radius:var(--rc);padding:36px 20px;text-align:center;color:var(--ink2);background:#FCFBF9}
+.empty h3{margin-bottom:6px}
+.skel{background:linear-gradient(90deg,#EFECE6 25%,#F7F5F1 50%,#EFECE6 75%);background-size:400% 100%;animation:sh 1.3s ease infinite;border-radius:6px}
+@keyframes sh{0%{background-position:100% 0}100%{background-position:0 0}}
+.spin{animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+.rise{animation:rise .45s var(--ease) both}@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.drop{border:2px dashed var(--line2);border-radius:var(--rc);padding:26px 16px;text-align:center;cursor:pointer;transition:border-color .16s,background .16s;color:var(--ink2)}
+.drop:hover{background:#F6F4EF}.drop.on{border-color:var(--accent);background:var(--accent-soft)}
+.filerow{display:flex;align-items:center;gap:8px;border:1px solid #BFE1CB;background:var(--ok-soft);color:#256A40;border-radius:var(--r);padding:8px 10px;font-size:13px}
+.bar{height:6px;border-radius:999px;background:var(--na);overflow:hidden}.bar i{display:block;height:100%;border-radius:999px;transition:width .5s var(--ease)}
+.code{font-family:"IBM Plex Mono",Consolas,monospace;font-size:12px;background:#F5F3EE;border:1px solid var(--line);border-radius:6px;padding:1px 5px;color:var(--ink)}
+pre.block{font-family:"IBM Plex Mono",Consolas,monospace;font-size:12px;background:#F5F3EE;border:1px solid var(--line);border-radius:8px;padding:10px 12px;overflow:auto;margin:0;color:var(--ink);line-height:1.55}
+.kbd{font:500 11px "IBM Plex Mono",monospace;border:1px solid var(--line2);border-radius:5px;padding:1px 5px;color:var(--ink3);background:#fff}
+.hr{border:0;border-top:1px solid var(--line);margin:0}
+/* shell */
+.app{min-height:100vh;display:flex;background:var(--paper)}
+.side{position:fixed;inset:0 auto 0 0;width:var(--side);border-right:1px solid var(--line);background:#fff;display:flex;flex-direction:column;padding:14px 10px;z-index:20;transition:width .18s var(--ease)}
+.side .brand{display:flex;align-items:center;gap:10px;padding:4px 8px;min-width:0}
+.side .tag{padding:2px 8px 14px;font-size:11.5px;color:var(--ink3);white-space:nowrap;overflow:hidden}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;font-size:13.5px;font-weight:500;color:var(--ink2);white-space:nowrap;overflow:hidden;transition:background .16s,color .16s}
+.nav a:hover{background:#F3F1EC;color:var(--ink);text-decoration:none}.nav a.on{background:var(--accent);color:#fff}
+.nav a svg{flex:none}
+.side .foot{margin-top:auto}
+.side .tog{position:absolute;right:-14px;top:30px;width:28px;height:28px;border-radius:999px;border:2px solid var(--paper);background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow)}
+.side .sgrip{position:absolute;right:0;top:0;height:100%;width:6px;cursor:col-resize;touch-action:none}.side .sgrip:hover{background:var(--accent-soft)}
+.side.c .tag,.side.c .nav a span,.side.c .brand span,.side.c .foot span{display:none}.side.c .nav a{justify-content:center;padding:8px 0}.side.c .foot .btn{justify-content:center;padding:0}
+.topbar{display:none;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:20}
+.msheet{position:fixed;inset:0 auto 0 0;width:256px;background:#fff;z-index:45;padding:16px 12px;display:flex;flex-direction:column;transition:transform .28s var(--ease);box-shadow:12px 0 40px -20px rgba(20,24,31,.35)}
+.main{flex:1;min-width:0;padding-left:var(--side);transition:padding-left .18s var(--ease)}
+.page{max-width:1240px;margin:0 auto;padding:24px 28px 48px}.page.wide{max-width:none}
+.pagehead{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.pagehead .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.appbar{position:fixed;left:0;right:0;top:0;z-index:70;background:var(--accent);color:#fff;padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:13px}
+.install{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:400px;background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:8px 8px 8px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;z-index:70}
+@media (max-width:760px){
+ .app{flex-direction:column}.side{display:none}.topbar{display:flex;width:100%}.main{padding-left:0;width:100%}.page{padding:16px 16px 40px}
+ .g2,.g3{grid-template-columns:minmax(0,1fr)}.g4,.g5,.g6,.g8{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .chip{white-space:normal;height:auto;min-height:22px;padding:2px 8px}
+ .tbl.cards thead{display:none}.tbl.cards tr{display:block;border:1px solid var(--line);border-radius:var(--r);margin-bottom:8px;background:#fff;padding:4px 0}
+ .tbl.cards td{display:flex;justify-content:space-between;align-items:center;gap:12px;border:0;padding:6px 12px;text-align:left}
+ .tbl.cards td::before{content:attr(data-th);font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);flex:none}
+ .tbl.cards td.r{text-align:right}.tbl.cards tr.band td::before{content:none}
+ .dt .dr{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:10px 12px}.dt .dh{display:none}
+ .dt .dc{display:flex;justify-content:space-between;align-items:center;gap:12px}.dt .dc::before{content:attr(data-th);font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink3);flex:none}
+ .dt .dc.nolbl::before,.dt .band .dc::before{content:none}.dt .r{justify-self:auto}.dt .acts{justify-content:flex-start}
+ .kpi .v{font-size:20px}.sheet{width:100vw !important}.pagehead .actions{width:100%}
+ .tip::after{display:none}
+}
+</style>
+<style>@media (max-width:760px){[data-hide-phone]{display:none}} .menu label,.menu button{cursor:pointer}</style></helmet>
+
+<div class="app" style="--side:{{shell.sideW}}" data-screen="MitreDetail" data-ready="{{ready}}" onClick="{{root}}">
+  <aside class="side {{shell.cls}}" aria-label="Sidebar">
+    <div class="brand"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg><span style="font-weight:600;font-size:14px">ScopeWise</span></div>
+    <div class="tag">Catch contract risk before you sign.</div>
+    <nav class="nav" aria-label="Main"><a href="#" class="" title="SOW Review"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span>SOW Review</span></a><a href="#" class="on" title="MITRE Assessment"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg><span>MITRE Assessment</span></a><a href="#" class="" title="Code Security Review"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l1.5 2M16 2l-1.5 2"/><rect x="6" y="6" width="12" height="14" rx="6"/><path d="M12 6v14M2 13h4M18 13h4M3 20l3-2M21 20l-3-2M3 6l3 2M21 6l-3 2"/></svg><span>Code Security Review</span></a><sc-if value="{{shell.admin}}" hint-placeholder-val="{{true}}"><a href="#" class=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path d="M9 12l2 2 4-4"/></svg><span>Admin</span></a></sc-if></nav>
+    <div class="foot"><button class="btn ghost sm" style="width:100%;justify-content:flex-start"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M13 3h6v18h-6"/></svg><span>Log out</span></button></div>
+    <button class="tog" aria-label="{{shell.togLabel}}" onClick="{{shell.toggle}}"><sc-if value="{{shell.collapsed}}" hint-placeholder-val="{{false}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></sc-if><sc-if value="{{shell.expanded}}" hint-placeholder-val="{{true}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></sc-if></button>
+    <sc-if value="{{shell.expanded}}" hint-placeholder-val="{{true}}"><div class="sgrip" role="separator" aria-orientation="vertical" aria-label="Resize sidebar" onPointerDown="{{shell.gDown}}" onPointerMove="{{shell.gMove}}" onPointerUp="{{shell.gUp}}"></div></sc-if>
+  </aside>
+  <div class="topbar"><div class="brand"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg><span style="font-weight:600;font-size:14px">ScopeWise</span></div><button class="btn ghost icon sm" aria-label="Open navigation menu" onClick="{{shell.openMobile}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>
+  <div class="ov" style="opacity:{{shell.mOvOp}};pointer-events:{{shell.mPe}};z-index:44" onClick="{{shell.closeMobile}}"></div>
+  <div class="msheet" style="transform:{{shell.mTx}}" aria-label="Navigation">
+    <div class="row between" style="margin-bottom:14px"><div class="brand"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg><span style="font-weight:600;font-size:14px">ScopeWise</span></div><button class="xbtn" aria-label="Close" onClick="{{shell.closeMobile}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <nav class="nav" aria-label="Main"><a href="#" class=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span>SOW Review</span></a><a href="#" class="on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg><span>MITRE Assessment</span></a><a href="#" class=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l1.5 2M16 2l-1.5 2"/><rect x="6" y="6" width="12" height="14" rx="6"/><path d="M12 6v14M2 13h4M18 13h4M3 20l3-2M21 20l-3-2M3 6l3 2M21 6l-3 2"/></svg><span>Code Security Review</span></a><sc-if value="{{shell.admin}}" hint-placeholder-val="{{true}}"><a href="#" class=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/><path d="M9 12l2 2 4-4"/></svg><span>Admin</span></a></sc-if></nav>
+    <div class="foot" style="margin-top:auto"><button class="btn ghost sm" style="width:100%;justify-content:flex-start"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M13 3h6v18h-6"/></svg><span>Log out</span></button></div>
+  </div>
+  <main class="main"><div class="page wide">
+
+<div class="pagehead" style="margin-bottom:8px">
+  <div class="row wrap" style="gap:10px;align-items:center">
+    <span style="color:var(--accent)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>
+    <h1>{{h.name}}</h1>
+    <sc-if value="{{h.demo}}" hint-placeholder-val="{{true}}"><span class="chip info tip" data-tip="Shared sample assessment — read-only for everyone" >Demo</span></sc-if>
+    <span class="chip {{h.statusTone}}">{{h.statusLabel}}</span>
+  </div>
+  <div class="actions" style="align-items:center">
+    <sc-if value="{{h.showRuns}}" hint-placeholder-val="{{true}}">
+    <span class="rel">
+      <button class="btn sm" aria-haspopup="listbox" aria-label="Past assessment runs" onClick="{{h.runsToggle}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg> Past runs ({{h.runsN}})</button>
+      <div class="menu {{h.runsCls}}" role="listbox" aria-label="Past assessment runs" style="min-width:308px;right:0">
+        <sc-for list="{{h.runRows}}" as="rr" hint-placeholder-count="8">
+          <div class="row between" style="padding:7px 8px;border-radius:6px;gap:8px">
+            <div class="grow" style="min-width:0"><div style="font-size:13px;font-weight:{{rr.w}};color:{{rr.color}}">{{rr.label}}</div>
+              <div class="faint num" style="font-size:11.5px">{{rr.date}} · {{rr.pct}}% <span style="color:{{rr.dcolor}}">{{rr.delta}}</span></div></div>
+            <button class="btn ghost sm" style="height:24px;padding:0 8px;font-size:11.5px" onClick="{{rr.compare}}">Compare</button>
+          </div>
+        </sc-for>
+      </div>
+    </span>
+    </sc-if>
+    <button class="btn sm tip {{h.exp.execpdf.cls}}" data-tip="{{h.exp.execpdf.tip}}" onClick="{{h.exp.execpdf.click}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 11v7M9 15l3 3 3-3"/></svg> Exec PDF</button><button class="btn sm tip {{h.exp.fullpdf.cls}}" data-tip="{{h.exp.fullpdf.tip}}" onClick="{{h.exp.fullpdf.click}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 11v7M9 15l3 3 3-3"/></svg> Full PDF</button><button class="btn sm tip {{h.exp.xlsx.cls}}" data-tip="{{h.exp.xlsx.tip}}" onClick="{{h.exp.xlsx.click}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M12 13v4"/></svg> XLSX</button><button class="btn sm tip {{h.exp.ppt.cls}}" data-tip="{{h.exp.ppt.tip}}" onClick="{{h.exp.ppt.click}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18M5 4v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4M12 16v4M8 22l4-3 4 3"/></svg> PPT</button><button class="btn sm tip {{h.exp.nav.cls}}" data-tip="{{h.exp.nav.tip}}" onClick="{{h.exp.nav.click}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13c-1 0-1 1-1 1.5S8 16 9 16M15 13c1 0 1 1 1 1.5s0 1.5-1 1.5"/></svg> Navigator</button>
+    <span class="faint num" style="font-size:12px" data-hide-phone="1">created {{h.created}}</span>
+  </div>
+</div>
+<sc-if value="{{h.running}}" hint-placeholder-val="{{false}}"><div class="alert info row rise" style="align-items:flex-start;gap:10px;margin-bottom:14px"><svg class="spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg><div><b>Assessing your coverage…</b><div style="margin-top:4px">We're mapping rules to techniques, filtering to your environment, and computing the results. Untagged rules go through AI tagging, so this can take a few minutes. The page refreshes itself.</div></div></div></sc-if>
+<sc-if value="{{h.failed}}" hint-placeholder-val="{{false}}"><div class="alert err row rise" style="align-items:flex-start;gap:10px;margin-bottom:14px"><div class="grow"><b>This run didn't finish.</b><div style="margin-top:4px">The connection to your SIEM timed out while pulling rules. Nothing was scored.</div></div><button class="btn danger sm" ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg> Re-run assessment</button></div></sc-if>
+<sc-if value="{{h.pending}}" hint-placeholder-val="{{false}}"><div class="alert warn row rise" style="align-items:flex-start;gap:10px;margin-bottom:14px"><div class="grow">This assessment is uploaded and parsed, but hasn't been run yet.</div><button class="btn primary sm" ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg> Run assessment</button></div></sc-if>
+<div class="sub" style="font-size:12.5px;margin-bottom:3px">{{h.metaLine}}</div>
+<div class="faint" style="font-size:12px;margin-bottom:16px">{{h.siemLine}}</div>
+
+
+<div class="grid g8" style="gap:10px;margin-bottom:14px">
+  <sc-for list="{{kpis}}" as="k" hint-placeholder-count="8">
+    <button class="kpi click tip" data-tip="{{k.tip}}" onClick="{{k.open}}"><span class="lbl">{{k.label}}</span><span class="v num" style="color:{{k.color}}">{{k.value}}</span><span class="faint" style="font-size:12px">{{k.sub}}</span></button>
+  </sc-for>
+</div>
+<div class="row wrap" style="gap:8px;align-items:center;margin-bottom:10px">
+  <span style="font-size:13px">{{headline}} <button class="tip" style="background:none;border:0;padding:0;border-bottom:1px dotted var(--ink3);color:var(--ink2);cursor:pointer;font-size:13px" data-tip="Probably not as bad as it looks: early SIEM detection programs typically start under 10% strict coverage, because ATT&CK counts every known attacker technique. The point of this assessment is the roadmap — the short-term items raise this number fastest — not the grade itself.">Is {{pct}}% bad?</button></span>
+</div>
+<div class="row wrap" style="gap:8px;align-items:center;justify-content:space-between;margin-bottom:16px">
+  <div class="row wrap" style="gap:6px"><span class="faint" style="font-size:12.5px">Top gaps:</span>
+    <sc-for list="{{topGaps}}" as="g" hint-placeholder-count="5"><button class="chip crit tip" data-tip="{{g.tip}}" onClick="{{g.open}}">{{g.id}}</button></sc-for>
+  </div>
+  <span class="faint num" style="font-size:12px">ATT&amp;CK {{version}} · run {{bandRunDate}}</span>
+</div>
+
+<div class="alert blue rise" style="margin-bottom:14px">
+  <div class="row wrap" style="gap:10px;align-items:flex-start;justify-content:space-between">
+    <div class="grow">
+      <div><b>Including {{tools}}'s MITRE-evaluated detections: {{adjPct}}%</b></div>
+      <div class="faint" style="margin-top:2px">({{extra}} open techniques those tools were evaluated against · Vendor-evaluated in MITRE ATT&CK Evaluations — not proof the alerts are tuned, monitored, or reaching your SOC. Source: evals.mitre.org)</div>
+      <div style="margin-top:6px">Combined covered {{combN}} = {{rulesN}} by SIEM rules ({{rulesPct}}%) + {{toolsN}} via attested tools ({{toolsPct}}%)</div>
+    </div>
+    <button class="btn sm tip" data-tip="Records that your SOC receives and monitors this tool's alerts, creates one auditable rule per technique, and recomputes coverage." onClick="{{attestOpen}}">{{attestLabel}}</button>
+  </div>
+</div>
+
+<div class="card rise" style="margin-bottom:16px">
+  <div class="card-h"><h3>What this assessment is based on</h3></div>
+  <div class="card-b grid g2" style="gap:20px">
+    <div>
+      <div class="row" style="gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M12 13v4"/></svg><span style="font-weight:600">{{rulesFile}}</span><button class="chip blue xs tip" data-tip="All {{rulesTotal}} rules" onClick="{{openAllRules}}">{{rulesTotal}} rules</button></div>
+      <div class="row wrap" style="gap:6px;margin-top:8px">
+        <sc-for list="{{statusChips}}" as="s" hint-placeholder-count="6"><button class="chip {{s.tone}} xs tip" data-tip="{{s.tip}}" onClick="{{s.open}}">{{s.label}}</button></sc-for>
+      </div>
+      <div class="faint" style="font-size:12px;margin-top:10px">asset entries not mapped to ATT&amp;CK platforms (ignored for platform filtering): IOT Platform devices (105), Mainframe z/OS billing platform, Microsoft Exchange Server 2019 (hybrid, 4 nodes), …</div>
+      <button class="btn ghost sm" style="margin-top:8px;padding-left:2px" onClick="{{invToggle}}"><span style="display:inline-flex;transition:transform .15s;transform:{{invRot}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>How we read your inventory ({{invCount}} entries)</button>
+      <sc-if value="{{invOpen}}" hint-placeholder-val="{{false}}">
+        <div class="stack" style="gap:6px;margin-top:8px;font-size:12.5px" class="sub">
+          <sc-for list="{{invRows}}" as="ir" hint-placeholder-count="4"><div><b>{{ir.entry}}</b> ({{ir.sheet}}) → {{ir.interp}}</div></sc-for>
+        </div>
+      </sc-if>
+    </div>
+    <div>
+      <div class="row" style="gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M12 13v4"/></svg><span style="font-weight:600">{{envFile}}</span><span class="chip grey xs" >OT/ICS</span><span class="chip grey xs" >Managed mobile</span></div>
+      <div class="sub" style="font-size:12.5px;margin-top:8px">Platforms: {{platformList}} · <button class="btn link tip" style="font-size:12.5px" data-tip="See what each log source actually detects for you" onClick="{{srcToggle}}">{{srcCount}} log source(s)</button> · {{toolingN}} tooling · {{crownN}} crown jewel(s)</div>
+      <sc-if value="{{srcOpen}}" hint-placeholder-val="{{false}}">
+        <div class="row wrap" style="gap:6px;margin-top:8px">
+          <sc-for list="{{srcChips}}" as="lc" hint-placeholder-count="8"><button class="chip outline xs tip" data-tip="Open the rules mapped from {{lc.name}}" onClick="{{lc.open}}">{{lc.label}}</button></sc-for>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+
+<div class="row between wrap" style="gap:12px;margin-bottom:14px;align-items:center">
+  <div class="tabs" role="tablist" aria-label="Assessment result views"><button role="tab" class="tab {{t.coverage.cls}}" aria-selected="{{t.coverage.aria}}" onClick="{{t.coverage.pick}}">Coverage</button><button role="tab" class="tab {{t.gaps.cls}}" aria-selected="{{t.gaps.aria}}" onClick="{{t.gaps.pick}}">Gaps &amp; Roadmap</button><button role="tab" class="tab {{t.assumptions.cls}}" aria-selected="{{t.assumptions.aria}}" onClick="{{t.assumptions.pick}}">Assumptions &amp; N/A</button><button role="tab" class="tab {{t.compare.cls}}" aria-selected="{{t.compare.aria}}" onClick="{{t.compare.pick}}">Compare</button></div>
+  <div class="row" style="gap:8px;align-items:center">
+    <div class="search" style="width:280px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input class="input sm" type="search" placeholder="Is it covered? Try 'T1486', 'ransomware', 'linux', 'APT29'…" aria-label="Search techniques, attack stages, platforms, threat groups and rules" value="{{q}}" onChange="{{setQ}}" onKeyDown="{{qKey}}"></div>
+    <button class="btn ghost icon sm tip" data-tip="Search anything — a technique ID or name, an attack stage, a platform/asset type, a threat group, or one of your rules — and see its coverage state instantly." aria-label="Search this assessment" onClick="{{qSearch}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
+    <sc-if value="{{tabsShowExport}}" hint-placeholder-val="{{true}}">
+      <button class="btn ghost icon sm tip" data-tip="Download only this tab as PDF" aria-label="Download only this tab as PDF"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 11v7M9 15l3 3 3-3"/></svg></button>
+      <button class="btn ghost icon sm tip" data-tip="Download only this tab as Excel" aria-label="Download only this tab as Excel"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M12 13v4"/></svg></button>
+    </sc-if>
+  </div>
+</div>
+<sc-if value="{{t.coverage.on}}" hint-placeholder-val="{{true}}">
+<div class="row wrap" style="gap:10px;align-items:center;margin-bottom:10px">
+  <label class="row" style="gap:6px;font-size:13px">Threat group:
+    <select class="select sm" aria-label="Threat group" value="{{group}}" onChange="{{setGroup}}" style="min-width:170px">
+      <option value="">None — full matrix</option>
+      <sc-for list="{{groupOpts}}" as="go" hint-placeholder-count="3"><option value="{{go.id}}">{{go.label}}</option></sc-for>
+    </select>
+  </label>
+  <span class="rel">
+    <button class="btn sm" aria-haspopup="menu" onClick="{{runsOnToggle}}">Runs on{{runsOnSuffix}} <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="menu {{runsOnCls}}" role="menu" style="min-width:260px">
+      <div class="faint" style="padding:6px 8px;font-size:11.5px">Show only techniques that can run on… (% = coverage there)</div>
+      <div style="padding:0 6px 6px"><input class="input sm" style="width:100%" placeholder="Search platforms…" aria-label="Search platforms…" value="{{platformSearch}}" onChange="{{setPlatformSearch}}"></div>
+      <button onClick="{{runsOnClear}}">Clear — all platforms</button>
+      <sc-for list="{{platformItems}}" as="pi" hint-placeholder-count="10">
+        <button onClick="{{pi.toggle}}"><input type="checkbox" checked="{{pi.on}}" style="pointer-events:none" tabindex="-1"><span class="grow" style="text-align:left">{{pi.name}}</span><span class="faint num" style="font-size:11.5px">{{pi.c}}/{{pi.a}} · {{pi.pct}}%</span></button>
+      </sc-for>
+    </div>
+  </span>
+  <span class="rel">
+    <button class="btn sm" aria-haspopup="menu" onClick="{{detViaToggle}}">Detected via{{detViaSuffix}} <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="menu {{detViaCls}}" role="menu" style="min-width:260px">
+      <div class="faint" style="padding:6px 8px;font-size:11.5px">Show only what a log source's rules detect</div>
+      <div style="padding:0 6px 6px"><input class="input sm" style="width:100%" placeholder="Search sources…" aria-label="Search sources…" value="{{sourceSearch}}" onChange="{{setSourceSearch}}"></div>
+      <button onClick="{{detViaClear}}">Clear — all sources</button>
+      <sc-for list="{{sourceItems}}" as="si" hint-placeholder-count="10">
+        <button onClick="{{si.toggle}}"><input type="checkbox" checked="{{si.on}}" style="pointer-events:none" tabindex="-1"><span class="grow" style="text-align:left">{{si.name}}</span><span class="faint num" style="font-size:11.5px">{{si.n}} rule(s)</span></button>
+      </sc-for>
+    </div>
+  </span>
+  <sc-if value="{{hasGroup}}" hint-placeholder-val="{{false}}"><span class="faint" style="font-size:12.5px">{{groupStats}}</span></sc-if>
+  <button class="btn ghost sm tip" style="margin-left:auto" data-tip="CSV of exactly the techniques currently shown — your threat-group, platform, log-source and state filters all apply. The report buttons above always export the full assessment." onClick="{{downloadShown}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M6 11l6 6 6-6"/><path d="M4 21h16"/></svg> Download shown ({{shownN}})</button>
+</div>
+<div class="sub" style="font-size:12.5px;margin-bottom:10px">{{lensSentence}}</div>
+
+<div class="row wrap" style="gap:8px;align-items:center;margin-bottom:12px">
+  <button class="chip tip" aria-pressed="{{lgCov.p}}" style="opacity:{{lgCov.op}};background:linear-gradient(90deg,#BFE1CB,var(--ok) 55%,#1E5C36);color:#fff" data-tip="{{lgCov.tip}}" onClick="{{lgCov.toggle}}">Covered</button>
+  <button class="chip med tip" aria-pressed="{{lgPar.p}}" style="opacity:{{lgPar.op}}" data-tip="{{lgPar.tip}}" onClick="{{lgPar.toggle}}">Partial</button>
+  <button class="chip crit tip" aria-pressed="{{lgNo.p}}" style="opacity:{{lgNo.op}}" data-tip="{{lgNo.tip}}" onClick="{{lgNo.toggle}}">Not covered</button>
+  <button class="chip grey tip" aria-pressed="{{lgNa.p}}" style="opacity:{{lgNa.op}}" data-tip="{{lgNa.tip}}" onClick="{{lgNa.toggle}}">N/A</button>
+  <sc-if value="{{legendFiltered}}" hint-placeholder-val="{{false}}"><button class="btn link" style="font-size:12.5px" onClick="{{showAll}}">Show all</button></sc-if>
+  <button class="btn ghost sm tip" aria-pressed="{{hideSubsPressed}}" data-tip="Collapse the matrix to parent techniques only — each parent shows how many of its sub-techniques are covered. Coverage counts don't change." onClick="{{toggleHideSubs}}">{{hideSubsLabel}}</button>
+  <span class="faint" style="font-size:12px">Click any technique for details.</span>
+</div>
+
+<div class="card rise" style="padding:14px 16px;margin-bottom:14px">
+  <div class="row wrap" style="gap:16px;align-items:center">
+    <div class="tip" data-tip="Covered techniques divided by applicable techniques for the run shown below. N/A techniques leave the denominator with a printed reason." style="min-width:130px">
+      <div class="lbl">Coverage · run {{runNum}}</div>
+      <div class="num" style="font-size:28px;font-weight:600">{{runPct}}%</div>
+      <div class="faint" style="font-size:11.5px">{{runDate}} · <span style="color:{{runDeltaColor}}">{{runDelta}}</span></div>
+    </div>
+    <div class="grow" style="min-width:220px">
+      <div class="row between faint" style="font-size:11.5px;margin-bottom:4px"><span>{{firstDate}}</span><span>{{lastDate}}</span></div>
+      <input type="range" min="0" max="7" value="{{run}}" onInput="{{onSlide}}" onChange="{{onSlide}}" aria-label="Run timeline">
+      <div class="row between" style="margin-top:6px">
+        <sc-for list="{{ticks}}" as="tk" hint-placeholder-count="8"><span class="tip" data-tip="{{tk.tip}}" onClick="{{tk.pick}}" style="width:9px;height:9px;border-radius:999px;background:{{tk.bg}};cursor:pointer;transform:{{tk.scale}};transition:background .3s,transform .2s"></span></sc-for>
+      </div>
+    </div>
+    <button class="btn sm" onClick="{{togglePlay}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg> {{playLabel}}</button>
+  </div>
+</div><sc-for list="{{domainList}}" as="d" hint-placeholder-count="3">
+<div class="card rise" style="margin-bottom:14px;overflow:hidden">
+  <div class="row" style="gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);background:#FBFAF8">
+    <button class="xbtn" aria-expanded="{{d.open}}" aria-label="{{d.toggleAria}}" onClick="{{d.toggle}}"><span style="display:inline-flex;transition:transform .15s;transform:{{d.rot}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></button>
+    <span style="font-weight:600;font-size:13.5px">{{d.name}}</span>
+    <button class="btn link" style="font-size:12.5px" onClick="{{d.drill}}">— {{d.c}}/{{d.a}} covered ({{d.pct}}%){{d.filterSuffix}}</button>
+  </div>
+  <sc-if value="{{d.open}}" hint-placeholder-val="{{true}}">
+  <div style="padding:14px;overflow-x:auto">
+    <div style="display:grid;grid-template-columns:repeat({{d.ncols}},minmax(148px,1fr));gap:10px;min-width:max-content">
+      <sc-for list="{{d.tactics}}" as="t" hint-placeholder-count="6">
+        <div style="min-width:0">
+          <button class="btn ghost sm tip" style="width:100%;justify-content:space-between;padding:0 4px;height:26px;font-weight:600;font-size:12px" data-tip="{{t.tip}}" onClick="{{t.drill}}"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{t.name}}</span><span class="num faint" style="font-weight:500">{{t.count}}</span></button>
+          <div class="stack" style="gap:4px;margin-top:6px">
+            <sc-for list="{{t.rows}}" as="c" hint-placeholder-count="6">
+              <button class="tip" data-tid="{{c.id}}" data-tip="{{c.tip}}" onClick="{{c.open}}" style="text-align:left;border:1px solid {{c.border}};background:{{c.bg}};color:{{c.fg}};opacity:{{c.op}};border-radius:6px;padding:5px 7px;margin-left:{{c.indent}};font-size:11px;line-height:1.35;transition:background .4s,opacity .2s;cursor:pointer;display:block;width:calc(100% - {{c.indent}})">
+                <b class="mono">{{c.id}}</b> {{c.name}}{{c.badge}}
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  </sc-if>
+</div></sc-for></sc-if><sc-if value="{{t.gaps.on}}" hint-placeholder-val="{{true}}">
+<div class="row wrap" style="gap:10px;align-items:center;margin-bottom:12px">
+  <h2 style="font-size:16px">Gaps, ranked by priority</h2>
+  <span class="chip {{aiTone}} xs tip" data-tip="{{aiTip}}">{{aiLabel}}</span>
+</div>
+<div class="dt"><div class="dr dh" style="grid-template-columns:40px minmax(0,1.7fr) minmax(0,1fr) minmax(0,1.15fr) minmax(0,.9fr) minmax(0,1.35fr) minmax(0,2fr)"><div class="dc r" aria-sort="{{gaps.h.rank.aria}}"><button class="tip" data-tip="Sort by rank" onClick="{{gaps.h.rank.pick}}"># <span style="opacity:{{gaps.h.rank.op}}">{{gaps.h.rank.arrow}}</span></button></div><div class="dc" aria-sort="{{gaps.h.name.aria}}"><button onClick="{{gaps.h.name.pick}}">Technique <span style="opacity:{{gaps.h.name.op}}">{{gaps.h.name.arrow}}</span></button></div><div class="dc">Tactic</div><div class="dc" aria-sort="{{gaps.h.pri.aria}}"><button class="tip" data-tip="How commonly attackers use this technique in real intrusions, from independent threat reports: P1 near-universal, P2 very common, P3 common. A violet dot means it is also tied to your declared industry or threat actors." onClick="{{gaps.h.pri.pick}}">Priority <span style="opacity:{{gaps.h.pri.op}}">{{gaps.h.pri.arrow}}</span></button></div><div class="dc" aria-sort="{{gaps.h.strength.aria}}"><button onClick="{{gaps.h.strength.pick}}">Strength <span style="opacity:{{gaps.h.strength.op}}">{{gaps.h.strength.arrow}}</span></button></div><div class="dc" aria-sort="{{gaps.h.feas.aria}}"><button class="tip" data-tip="How soon you could realistically build this detection: build now = the needed logs are already onboarded; onboard first = your existing tooling can provide them; new capability = nothing you own produces this telemetry yet." onClick="{{gaps.h.feas.pick}}">Feasibility <span style="opacity:{{gaps.h.feas.op}}">{{gaps.h.feas.arrow}}</span></button></div><div class="dc">Recommendation</div></div><sc-for list="{{gaps.rows}}" as="r" hint-placeholder-count="12"><div class="dr" style="grid-template-columns:40px minmax(0,1.7fr) minmax(0,1fr) minmax(0,1.15fr) minmax(0,.9fr) minmax(0,1.35fr) minmax(0,2fr)"><div class="dc r" data-th="#" >{{r.rank}}</div><div class="dc" data-th="Technique" ><button class="btn link mono" style="font-size:12.5px;padding:0;height:auto" onClick="{{r.open}}">{{r.id}}</button> {{r.name}}</div><div class="dc" data-th="Tactic" >{{r.tactic}}</div><div class="dc" data-th="Priority" ><span class="row" style="gap:6px;flex-wrap:wrap"><i class="dot" style="background:{{r.priColor}}"></i>{{r.priLabel}}<sc-if value="{{r.threat}}" hint-placeholder-val="{{false}}"><span class="tip" style="color:var(--violet);font-weight:700" data-tip="Prioritized for your declared threat profile (Financial Services, Scattered Spider, LockBit affiliates, Asia-Pacific, APT41, Lazarus Group, Kimsuky, Mustang Panda): these threats are publicly reported to use this technique. Affects ordering only — never the coverage score.">▲</span></sc-if><sc-if value="{{r.crown}}" hint-placeholder-val="{{false}}"><span class="tip" style="color:var(--high);font-weight:700" data-tip="Relevant to an asset you declared as a crown jewel. Affects ordering only — never the coverage score.">♦</span></sc-if></span></div><div class="dc" data-th="Strength" >{{r.strengthText}}</div><div class="dc" data-th="Feasibility" ><span class="row" style="gap:6px"><i class="dot" style="background:{{r.feasColor}}"></i>{{r.feasLabel}}</span><div class="faint" style="font-size:11px">{{r.viaLine}}</div></div><div class="dc" data-th="Recommendation" ><span style="font-size:12.5px">{{r.rec}}</span></div></div></sc-for></div>
+<sc-if value="{{hasMore}}" hint-placeholder-val="{{true}}"><button class="btn link" style="margin-top:10px" onClick="{{toggleAll}}">{{showAllLabel}}</button></sc-if>
+<div class="grid g3" style="gap:12px;margin-top:20px">
+  <sc-for list="{{roadmap}}" as="rm" hint-placeholder-count="3">
+    <div class="card" style="padding:14px">
+      <div class="row between"><h3 style="font-size:14px">{{rm.label}}</h3><span class="faint num" style="font-size:12px">{{rm.window}}</span></div>
+      <div class="faint num" style="font-size:12px;margin:2px 0 8px">{{rm.count}} item(s)</div>
+      <p class="sub" style="font-size:12.5px">{{rm.narrative}}</p>
+      <sc-if value="{{rm.hasItems}}" hint-placeholder-val="{{true}}">
+        <div class="stack" style="gap:4px;margin-top:8px">
+          <sc-for list="{{rm.items}}" as="it" hint-placeholder-count="4"><button class="btn link" style="font-size:12.5px;justify-content:flex-start" onClick="{{it.open}}">{{it.id}} {{it.name}}</button></sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{rm.empty}}" hint-placeholder-val="{{false}}"><p class="faint" style="font-size:12.5px;margin-top:8px">Nothing in this bucket.</p></sc-if>
+    </div>
+  </sc-for>
+</div></sc-if><sc-if value="{{t.assumptions.on}}" hint-placeholder-val="{{true}}">
+<h2 style="font-size:16px;margin-bottom:4px">Assumptions made in this assessment</h2>
+<p class="sub" style="font-size:13px;margin-bottom:10px">Read these before trusting the numbers — they describe what we had to assume or could not verify.</p>
+<div class="row wrap" style="gap:6px;align-items:center;margin-bottom:10px">
+  <span class="faint" style="font-size:12.5px">Your {{rulesTotal}} rules:</span>
+  <sc-for list="{{ruleChips}}" as="rc" hint-placeholder-count="6"><button class="chip {{rc.tone}} xs tip" data-tip="{{rc.tip}}" onClick="{{rc.open}}">{{rc.label}}</button></sc-for>
+  <span class="chip violet xs tip" data-tip="Your declared industry and threat actors lifted these within their priority tier — ordering only, never the coverage score.">{{threatMatches}} threat-profile matches</span>
+</div>
+<div class="grid g2" style="gap:6px 20px;margin-bottom:22px">
+  <sc-for list="{{assumptions}}" as="a" hint-placeholder-count="9"><div class="sub" style="border-left:2px solid var(--line2);padding:2px 0 2px 10px;font-size:12.5px">{{a}}</div></sc-for>
+  <sc-if value="{{assumptionsEmpty}}" hint-placeholder-val="{{false}}"><p class="sub">No assumptions were needed.</p></sc-if>
+</div>
+<h2 style="font-size:16px;margin-bottom:4px">Not-applicable techniques ({{naTotal}})</h2>
+<p class="sub" style="font-size:13px;margin-bottom:10px">These leave the coverage denominator — the headline percentage makes no claim about them. Grouped by reason; click any technique for its details.</p>
+<div class="grid g2" style="gap:12px">
+  <sc-for list="{{naGroups}}" as="ng" hint-placeholder-count="4">
+    <div class="card" style="padding:12px 14px">
+      <div class="row between"><h3 style="font-size:13.5px">{{ng.title}}</h3><button class="btn link" style="font-size:12.5px" onClick="{{ng.drill}}">{{ng.n}} techniques</button></div>
+      <p class="faint" style="font-size:12px;margin:4px 0 8px">{{ng.blurb}}</p>
+      <div class="row wrap" style="gap:6px">
+        <sc-for list="{{ng.items}}" as="it" hint-placeholder-count="2"><button class="chip outline xs tip" data-tip="{{it.tip}}" onClick="{{it.open}}">{{it.label}}</button></sc-for>
+      </div>
+    </div>
+  </sc-for>
+</div></sc-if><sc-if value="{{t.compare.on}}" hint-placeholder-val="{{true}}">
+<div class="row" style="gap:10px;align-items:center;margin-bottom:14px">
+  <label class="row" style="gap:6px;font-size:13px">Compare with
+    <select class="select sm" aria-label="Compare with" value="{{cmpWith}}" onChange="{{setCmp}}" style="min-width:280px">
+      <option value="">Select an earlier completed run…</option>
+      <sc-for list="{{cmpOpts}}" as="co" hint-placeholder-count="7"><option value="{{co.idx}}">{{co.label}}</option></sc-for>
+    </select>
+  </label>
+</div>
+<sc-if value="{{cmpLoading}}" hint-placeholder-val="{{false}}"><p class="sub">Comparing…</p></sc-if>
+<sc-if value="{{cmpErr}}" hint-placeholder-val="{{false}}"><p class="err-line" role="alert">Comparison failed</p></sc-if>
+<sc-if value="{{cmpEmpty}}" hint-placeholder-val="{{true}}"><p class="sub" style="padding:24px 0">Nothing to compare against yet — run a second assessment later to see your coverage trend.</p></sc-if>
+<sc-if value="{{cmpHas}}" hint-placeholder-val="{{false}}">
+<div class="rise">
+  <h2 style="font-size:16px;margin-bottom:8px">{{cmpHeader}}</h2>
+  <sc-if value="{{cmpMismatch}}" hint-placeholder-val="{{false}}"><div class="alert warn" style="margin-bottom:12px">These runs used different ATT&amp;CK versions ({{cmpVerA}} vs {{cmpVerB}}) — techniques that exist in only one version are left out of this comparison.</div></sc-if>
+  <div class="grid g5" style="gap:10px;margin-bottom:16px">
+    <sc-for list="{{deltaChips}}" as="dch" hint-placeholder-count="5">
+      <div class="card tip" data-tip="{{dch.tip}}" style="padding:10px 12px"><div class="lbl">{{dch.label}}</div><div class="num" style="font-size:20px;font-weight:600;color:{{dch.color}}">{{dch.value}}</div></div>
+    </sc-for>
+  </div>
+  <div style="margin-bottom:16px"><div class="lbl" style="margin-bottom:6px">Tactics that moved</div>
+    <sc-if value="{{tacticsEmpty}}" hint-placeholder-val="{{false}}"><span class="faint" style="font-size:12.5px">No per-tactic changes.</span></sc-if>
+    <div class="row wrap" style="gap:6px"><sc-for list="{{tacticMoves}}" as="tm" hint-placeholder-count="3"><span class="chip outline xs tip" data-tip="{{tm.tip}}">{{tm.label}}</span></sc-for></div>
+  </div>
+  <div class="grid g3" style="gap:14px">
+    <div><div class="lbl" style="margin-bottom:6px">Newly covered</div><p class="faint" style="font-size:11.5px;margin-bottom:6px">Techniques you can detect now but couldn't in the older run.</p><sc-if value="{{l1.empty}}" hint-placeholder-val="{{false}}"><span class="faint" style="font-size:12.5px">None.</span></sc-if>
+<div class="stack" style="gap:4px"><sc-for list="{{l1.rows}}" as="x" hint-placeholder-count="2"><button class="btn ghost" style="justify-content:flex-start;height:auto;padding:3px 6px;font-size:12.5px;text-align:left" onClick="{{x.open}}">{{x.id}} {{x.name}} <span class="faint" style="margin-left:6px">{{x.change}}</span></button></sc-for></div></div>
+    <div><div class="lbl" style="margin-bottom:6px">Regressed</div><p class="faint" style="font-size:11.5px;margin-bottom:6px">Covered in the older run but not now — e.g. a rule was disabled or removed.</p><sc-if value="{{l2.empty}}" hint-placeholder-val="{{false}}"><span class="faint" style="font-size:12.5px">None.</span></sc-if>
+<div class="stack" style="gap:4px"><sc-for list="{{l2.rows}}" as="x" hint-placeholder-count="2"><button class="btn ghost" style="justify-content:flex-start;height:auto;padding:3px 6px;font-size:12.5px;text-align:left" onClick="{{x.open}}">{{x.id}} {{x.name}} <span class="faint" style="margin-left:6px">{{x.change}}</span></button></sc-for></div></div>
+    <div><div class="lbl" style="margin-bottom:6px">N/A changed</div><p class="faint" style="font-size:11.5px;margin-bottom:6px">Techniques that entered or left the applicable set — usually an environment or scope-exclusion change, not a detection change.</p><sc-if value="{{l3.empty}}" hint-placeholder-val="{{false}}"><span class="faint" style="font-size:12.5px">None.</span></sc-if>
+<div class="stack" style="gap:4px"><sc-for list="{{l3.rows}}" as="x" hint-placeholder-count="2"><button class="btn ghost" style="justify-content:flex-start;height:auto;padding:3px 6px;font-size:12.5px;text-align:left" onClick="{{x.open}}">{{x.id}} {{x.name}} <span class="faint" style="margin-left:6px">{{x.change}}</span></button></sc-for></div></div>
+  </div>
+</div>
+</sc-if></sc-if>
+
+<div class="ov" style="opacity:{{sheets.drill.ovOp}};pointer-events:{{sheets.drill.pe}};z-index:{{sheets.drill.oz}}" onClick="{{sheets.drill.close}}"></div>
+<aside class="sheet" role="dialog" aria-label="Technique drill-down" style="width:{{sheets.drill.w}};transform:{{sheets.drill.tx}};z-index:{{sheets.drill.z}}">
+  <div class="grip" role="separator" aria-orientation="vertical" aria-label="Resize panel (drag, or use arrow keys)" tabindex="0" title="Drag to resize"
+       onPointerDown="{{sheets.drill.gDown}}" onPointerMove="{{sheets.drill.gMove}}" onPointerUp="{{sheets.drill.gUp}}" onKeyDown="{{sheets.drill.gKey}}"><i></i></div>
+  <div class="sheet-h"><div class="grow"><h2 style="font-size:16px">{{drillTitle}}</h2><p class="sub" style="font-size:12.5px">{{drillSubtitle}}</p></div><button class="xbtn" aria-label="Close" onClick="{{sheets.drill.close}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+  <div class="sheet-b"><sc-for list="{{drillGroups}}" as="g" hint-placeholder-count="4">
+<div style="margin-bottom:14px">
+  <div class="lbl" style="margin-bottom:6px">{{g.label}} ({{g.n}})</div>
+  <div class="stack" style="gap:2px">
+    <sc-for list="{{g.rows}}" as="r" hint-placeholder-count="3">
+      <button class="btn ghost" style="justify-content:flex-start;height:auto;padding:6px 8px;text-align:left;gap:8px" onClick="{{r.open}}">
+        <i class="dot" style="background:{{r.color}};margin-top:5px;flex:none"></i>
+        <span class="grow" style="min-width:0"><span style="font-weight:600">{{r.id}}</span> {{r.name}}<div class="faint" style="font-size:11.5px;font-weight:400">{{r.sub}}</div></span>
+      </button>
+    </sc-for>
+  </div>
+</div></sc-for><sc-if value="{{drillEmpty}}" hint-placeholder-val="{{false}}"><p class="empty">Nothing to show here.</p></sc-if></div>
+  
+</aside>
+<div class="ov" style="opacity:{{sheets.tech.ovOp}};pointer-events:{{sheets.tech.pe}};z-index:{{sheets.tech.oz}}" onClick="{{sheets.tech.close}}"></div>
+<aside class="sheet" role="dialog" aria-label="Technique details" style="width:{{sheets.tech.w}};transform:{{sheets.tech.tx}};z-index:{{sheets.tech.z}}">
+  <div class="grip" role="separator" aria-orientation="vertical" aria-label="Resize panel (drag, or use arrow keys)" tabindex="0" title="Drag to resize"
+       onPointerDown="{{sheets.tech.gDown}}" onPointerMove="{{sheets.tech.gMove}}" onPointerUp="{{sheets.tech.gUp}}" onKeyDown="{{sheets.tech.gKey}}"><i></i></div>
+  <div class="sheet-h"><div class="grow"><span class="mono" style="font-weight:600">Technique details</span></div><button class="xbtn" aria-label="Close" onClick="{{sheets.tech.close}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+  <div class="sheet-b">
+<div class="row wrap" style="gap:8px;align-items:center;margin-bottom:4px">
+  <span class="mono" style="font-weight:600;font-size:15px">{{tId}}</span>
+  <span class="chip {{tTone}}">{{tStateLabel}}</span>
+  <sc-if value="{{tHasStrength}}" hint-placeholder-val="{{false}}"><span class="chip {{tStrengthTone}} tip" data-tip="Detection strength estimates how well the mapped rules would actually catch this technique (rule provenance, enabled state, and whether the logic references the telemetry the technique expects). It is separate from the coverage % — coverage only says whether a rule exists.">{{tStrengthLabel}} · {{tStrengthScore}}/100</span></sc-if>
+</div>
+<div class="sub" style="font-size:12.5px;margin-bottom:2px">{{tName}}</div>
+<div class="faint" style="font-size:12px;margin-bottom:10px">{{tTactics}}</div>
+<sc-if value="{{tHasToolCredit}}" hint-placeholder-val="{{false}}">
+<div class="card" style="padding:10px 12px;margin-bottom:12px;background:var(--accent-soft);border-color:#C9D9F5">
+  <div style="font-weight:600;font-size:12.5px">Tool credit — MITRE-evaluated</div>
+  <p style="font-size:12px;margin-top:4px">{{tToolBlurb}}</p>
+  <button class="btn sm" style="margin-top:8px" onClick="{{tToolAttest}}">{{tToolBtn}}</button>
+</div>
+</sc-if>
+<sc-if value="{{tIsNa}}" hint-placeholder-val="{{false}}">
+<div class="card" style="padding:10px 12px;margin-bottom:12px;background:var(--na)">
+  <div style="font-weight:600;font-size:12.5px">Why this doesn't count toward coverage</div>
+  <p style="font-size:12px;margin-top:4px">{{tNaReason}}</p>
+</div>
+</sc-if>
+<div class="stack" style="gap:12px">
+  <div><div class="lbl">What is this?</div><p style="font-size:13px">{{tDef}} Attackers use this to {{tUse}}.</p></div>
+  <div><div class="lbl">{{tFitLabel}}</div>
+    <p style="font-size:13px">This is a <b>{{tTactic1}}</b> technique — {{tFitLine}}.</p>
+    <sc-if value="{{tHasVia}}" hint-placeholder-val="{{false}}"><p style="font-size:13px;margin-top:4px">A log source you already collect — <b>{{tVia}}</b> — could see this activity.</p></sc-if>
+    <sc-if value="{{tNoVia}}" hint-placeholder-val="{{true}}"><p style="font-size:13px;margin-top:4px">Telemetry: {{tHint}}.</p></sc-if>
+    <p class="faint" style="font-size:12px;margin-top:4px">Applies to: {{tPlatforms}}</p>
+  </div>
+  <div><div class="lbl">{{tWhyLabel}}</div><p style="font-size:13px">{{tWhyText}}</p></div>
+  <div><div class="lbl">What would good look like?</div>
+    <p style="font-size:13px">{{tGoodText}}</p>
+    <sc-if value="{{tHasStarting}}" hint-placeholder-val="{{false}}"><p style="font-size:12.5px;margin-top:4px" class="sub">Starting point: copy your rule '{{tStartRule}}'.</p></sc-if>
+  </div>
+  <div class="card" style="padding:10px 12px;background:var(--info-soft);border-color:#C6DBEA"><div class="lbl" style="color:var(--info)">Recommendation</div><p style="font-size:13px;margin-top:4px">{{tRec}}</p></div>
+  <div>
+    <div class="lbl">Detection rules mapped here ({{tMapN}})</div>
+    <sc-if value="{{tMapEmpty}}" hint-placeholder-val="{{false}}"><p class="sub" style="font-size:12.5px;margin-top:6px">None of your uploaded rules map to this technique.</p></sc-if>
+    <div class="stack" style="gap:6px;margin-top:6px">
+      <sc-for list="{{tMaps}}" as="mp" hint-placeholder-count="2">
+        <div class="card" style="padding:8px 10px;box-shadow:none">
+          <div class="row between"><b style="font-size:12.5px">{{mp.name}}</b><button class="xbtn tip" data-tip="Remove this mapping — the rule's remaining mappings are kept and coverage is recomputed." aria-label="{{mp.removeAria}}" onClick="{{mp.remove}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+          <div class="faint" style="font-size:11.5px;margin-top:2px">{{mp.enabled}} · {{mp.source}} · <span class="tip" data-tip="How sure the mapping is (1.0 = your own tag)">confidence {{mp.conf}}</span> · {{mp.rationale}}</div>
+        </div>
+      </sc-for>
+    </div>
+    <p class="faint" style="font-size:11px;margin-top:6px">Showing mappings from the first 500 rules only.</p>
+    <sc-if value="{{tCanEdit}}" hint-placeholder-val="{{true}}">
+      <div class="lbl" style="margin-top:10px">Map another rule to this technique</div>
+      <div class="row" style="gap:6px;margin-top:4px">
+        <select class="select sm" aria-label="Rule to map to this technique" value="{{addRuleSel}}" onChange="{{setAddRule}}" style="min-width:0;flex:1">
+          <option value="">Choose a rule…</option>
+          <sc-for list="{{addRuleOpts}}" as="ao" hint-placeholder-count="4"><option value="{{ao.name}}">{{ao.name}}</option></sc-for>
+        </select>
+        <button class="btn sm" onClick="{{addRuleGo}}">Add</button>
+      </div>
+      <p class="faint" style="font-size:11px;margin-top:4px">The edit is recorded as "Edited by reviewer" and the coverage numbers update immediately.</p>
+      <sc-if value="{{addErr}}" hint-placeholder-val="{{false}}"><p class="err-line" role="alert">Could not save the mapping change</p></sc-if>
+    </sc-if>
+    <sc-if value="{{tCannotEdit}}" hint-placeholder-val="{{false}}"><p class="err-line" role="alert">Mappings can be edited once the assessment has completed</p></sc-if>
+  </div>
+</div>
+</div>
+  <div class="sheet-f"><button class="btn sm" onClick="{{tPrev}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg> Prev</button><span class="num faint" style="font-size:12px">{{tPos}}</span><button class="btn sm" onClick="{{tNext}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg> Next</button></div>
+</aside>
+<div class="ov" style="opacity:{{sheets.rules.ovOp}};pointer-events:{{sheets.rules.pe}};z-index:{{sheets.rules.oz}}" onClick="{{sheets.rules.close}}"></div>
+<aside class="sheet" role="dialog" aria-label="Detection rules" style="width:{{sheets.rules.w}};transform:{{sheets.rules.tx}};z-index:{{sheets.rules.z}}">
+  <div class="grip" role="separator" aria-orientation="vertical" aria-label="Resize panel (drag, or use arrow keys)" tabindex="0" title="Drag to resize"
+       onPointerDown="{{sheets.rules.gDown}}" onPointerMove="{{sheets.rules.gMove}}" onPointerUp="{{sheets.rules.gUp}}" onKeyDown="{{sheets.rules.gKey}}"><i></i></div>
+  <div class="sheet-h"><div class="grow"><h2 style="font-size:16px">{{rulesTitle}}</h2><p class="sub" style="font-size:12.5px">{{rulesSubtitle}}</p></div><button class="xbtn" aria-label="Close" onClick="{{sheets.rules.close}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+  <div class="sheet-b"><sc-for list="{{ruleRows}}" as="r" hint-placeholder-count="6">
+<div class="card" style="padding:10px 12px;margin-bottom:8px;box-shadow:none">
+  <div style="font-weight:600;font-size:13px">{{r.name}}</div>
+  <div class="faint" style="font-size:11.5px;margin-top:2px">{{r.meta}}</div>
+  <sc-if value="{{r.hasMaps}}" hint-placeholder-val="{{true}}">
+    <div class="stack" style="gap:4px;margin-top:8px">
+      <sc-for list="{{r.maps}}" as="mp" hint-placeholder-count="2">
+        <div class="row wrap" style="gap:6px;font-size:12px"><button class="chip blue xs" onClick="{{mp.open}}">{{mp.id}}</button><span class="faint">{{mp.sourceLabel}} at {{mp.pct}}% confidence — {{mp.rationale}}</span></div>
+      </sc-for>
+    </div>
+  </sc-if>
+</div></sc-for><sc-if value="{{rulesEmpty}}" hint-placeholder-val="{{false}}"><p class="empty">No rules in this group.</p></sc-if><p class="faint" style="font-size:11.5px;margin-top:10px">Showing the first 500 rules only — the XLSX export holds everything.</p></div>
+  
+</aside>
+<div class="dlg-ov" style="opacity:{{dlg.attest.op}};pointer-events:{{dlg.attest.pe}}" onClick="{{dlg.attest.close}}">
+  <div class="dlg" role="dialog" aria-modal="true" aria-label="Attest tool-evaluated coverage" style="max-width:460px;transform:{{dlg.attest.tx}}" onClick="{{stop}}" onKeyDown="{{dlg.attest.key}}" tabindex="-1">
+    <button class="xbtn" style="position:absolute;right:10px;top:10px" aria-label="Close" onClick="{{dlg.attest.close}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    <div class="dlg-h"><h2 style="font-size:16px">Attest tool-evaluated coverage</h2></div>
+    <div class="dlg-b"><p>{{attestQ}}</p><p style="margin-top:8px">{{attestBody}}</p></div>
+    <div class="dlg-f"><button class="btn sm" onClick="{{dlg.attest.close}}">Cancel</button><button class="btn primary sm" onClick="{{attestConfirm}}">{{attestConfirmLabel}}</button></div>
+  </div>
+</div>
+</div></main>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview": {"width": 1440, "height": 900}, "view": {"editor": "enum", "options": ["default", "loading", "empty", "error", "gated"], "default": "default", "section": "State"}, "admin": {"editor": "boolean", "default": true, "section": "State"}, "run": {"editor": "enum", "options": ["completed", "running", "failed", "pending"], "default": "completed", "section": "State"}}'>
+class Component extends DCLogic {
+  constructor(p){ super(p); this.state = {"shell": {"collapsed": false, "width": 224, "mobileOpen": false}, "sheets": {}, "sheetOrder": [], "dlg": null, "dlgArg": null, "menu": null, "listbox": null, "sort": {}, "filters": {}, "search": "", "rename": {"id": null, "value": ""}, "expanded": {"dom:enterprise": true}, "drop": {}, "tab": {"t": "coverage"}, "req": {"sent": false, "name": "", "email": "", "busy": false}, "busy": {}, "m": {"run": 7, "playing": false, "legend": {}, "hideSubs": false, "threatGroup": "", "runsOnSel": {}, "detectedViaSel": {}, "platformSearch": "", "sourceSearch": "", "compareWith": "", "search": "credential", "gapsAll": false, "addRuleSel": "", "removedMaps": {}}}; this._drag = null; }
+  data(){ return {"header": {"name": "abc ltd", "customer": "Cisco cdc", "attack_version": "v19.1", "prepared_by": "Wipro Practice", "project_name": "Cisco CDC SOC", "scope_label": "Global production estate", "purpose": "Quarterly detection-coverage review for SOC leadership.", "created": "Sep 8, 2026, 08:22 PM", "conn_name": "abc ltd Sentinel", "conn_workspace": "acme-sec-ops", "conn_rules": 175}, "runs": [{"date": "Jun 13, 2026, 09:05 AM", "pct": 2.2, "version": "v18.0"}, {"date": "Jun 27, 2026, 09:14 AM", "pct": 4.0, "version": "v18.0"}, {"date": "Jul 11, 2026, 08:40 AM", "pct": 6.1, "version": "v18.1"}, {"date": "Jul 25, 2026, 10:02 AM", "pct": 8.3, "version": "v18.1"}, {"date": "Aug 8, 2026, 08:55 AM", "pct": 10.0, "version": "v19.0"}, {"date": "Aug 22, 2026, 09:30 AM", "pct": 11.8, "version": "v19.0"}, {"date": "Sep 1, 2026, 07:48 AM", "pct": 13.0, "version": "v19.1"}, {"date": "Sep 8, 2026, 08:22 PM", "pct": 14.4, "version": "v19.1"}], "counts": {"covered": 132, "partial": 15, "not_covered": 771, "na": 37, "applicable": 918}, "domains": {"enterprise": {"name": "Enterprise", "c": 125, "a": 697, "pct": 17.9, "tactics": [{"key": "recon", "name": "Reconnaissance", "c": 3, "a": 46, "cells": [{"id": "T1595", "name": "Active Scanning", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1592", "name": "Gather Victim Host Information", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1589", "name": "Gather Victim Identity Information", "state": "covered", "since": 2, "rule": "Rule 4 · Phishing URL click", "source": "Secure email gateway", "subs": []}, {"id": "T1598", "name": "Phishing for Information", "state": "covered", "since": 5, "rule": "Rule 12 · Impossible travel sign-in", "source": "Entra sign-in logs", "subs": [{"id": "T1598.003", "name": "Spearphishing Link", "state": "partial", "since": 3, "rule": "Rule 4 (email gateway only, no click telemetry)", "source": "Secure email gateway", "subs": []}]}, {"id": "T1597", "name": "Search Closed Sources", "state": "na", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1596", "name": "Search Open Technical Databases", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}]}, {"key": "resdev", "name": "Resource Development", "c": 0, "a": 50, "cells": [{"id": "T1583", "name": "Acquire Infrastructure", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1586", "name": "Compromise Accounts", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1587", "name": "Develop Capabilities", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1608", "name": "Stage Capabilities", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1584", "name": "Compromise Infrastructure", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1585", "name": "Establish Accounts", "state": "na", "since": 9, "rule": null, "source": null, "subs": []}]}, {"key": "ia", "name": "Initial Access", "c": 7, "a": 22, "cells": [{"id": "T1133", "name": "External Remote Services", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1190", "name": "Exploit Public-Facing Application", "state": "covered", "since": 1, "rule": "Rule 33 · WAF exploit signature", "source": "WAF logs", "subs": []}, {"id": "T1566", "name": "Phishing", "state": "covered", "since": 1, "rule": "Rule 4 · Phishing URL click", "source": "Secure email gateway", "subs": [{"id": "T1566.001", "name": "Spearphishing Attachment", "state": "covered", "since": 4, "rule": "Rule 4 · Phishing URL click", "source": "Secure email gateway", "subs": []}]}, {"id": "T1078", "name": "Valid Accounts", "state": "covered", "since": 0, "rule": "Rule 12 · Impossible travel sign-in", "source": "Entra sign-in logs", "subs": [{"id": "T1078.004", "name": "Cloud Accounts", "state": "partial", "since": 5, "rule": "Rule 141 (Entra risk signal, no MFA context)", "source": "Entra sign-in logs", "subs": []}]}, {"id": "T1195", "name": "Supply Chain Compromise", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1091", "name": "Replication Through Removable Media", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}]}, {"key": "exec", "name": "Execution", "c": 15, "a": 64, "cells": [{"id": "T1059", "name": "Command and Scripting Interpreter", "state": "covered", "since": 0, "rule": "Rule 8 · PowerShell encoded command", "source": "Windows Event Logs (Sysmon)", "subs": [{"id": "T1059.001", "name": "PowerShell", "state": "covered", "since": 0, "rule": "Rule 8 · PowerShell encoded command", "source": "Windows Event Logs (Sysmon)", "subs": []}, {"id": "T1059.003", "name": "Windows Command Shell", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}]}, {"id": "T1053", "name": "Scheduled Task/Job", "state": "covered", "since": 1, "rule": "Rule 21 · Scheduled task created", "source": "Windows Event Logs", "subs": []}, {"id": "T1047", "name": "Windows Management Instrumentation", "state": "covered", "since": 3, "rule": "Rule 77 · WMI remote exec", "source": "Windows Event Logs (Sysmon)", "subs": []}, {"id": "T1204", "name": "User Execution", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1569", "name": "System Services", "state": "covered", "since": 6, "rule": "Rule 150 · Service installed", "source": "Windows Event Logs", "subs": []}, {"id": "T1129", "name": "Shared Modules", "state": "na", "since": 9, "rule": null, "source": null, "subs": []}]}, {"key": "persist", "name": "Persistence", "c": 22, "a": 113, "cells": [{"id": "T1098", "name": "Account Manipulation", "state": "covered", "since": 2, "rule": "Rule 40 · Account manipulation", "source": "Entra audit logs", "subs": []}, {"id": "T1136", "name": "Create Account", "state": "covered", "since": 2, "rule": "Rule 41 · Local account created", "source": "Windows Event Logs", "subs": [{"id": "T1136.001", "name": "Local Account", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}]}, {"id": "T1543", "name": "Create or Modify System Process", "state": "partial", "since": 4, "rule": "Rule 62 (disabled — Windows service only)", "source": "Windows Event Logs (Sysmon)", "subs": []}, {"id": "T1547", "name": "Boot or Logon Autostart Execution", "state": "covered", "since": 3, "rule": "Rule 62 · Run key added", "source": "Windows Event Logs (Sysmon)", "subs": []}, {"id": "T1546", "name": "Event Triggered Execution", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1037", "name": "Boot or Logon Initialization Scripts", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}]}, {"key": "privesc", "name": "Privilege Escalation", "c": 19, "a": 96, "cells": [{"id": "T1055", "name": "Process Injection", "state": "covered", "since": 1, "rule": "Rule 15 · Process injection (EDR)", "source": "EDR (CrowdStrike)", "subs": []}, {"id": "T1068", "name": "Exploitation for Privilege Escalation", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1548", "name": "Abuse Elevation Control Mechanism", "state": "partial", "since": 2, "rule": "Rule 90 (AI-mapped, confidence 0.5)", "source": "Windows Event Logs", "subs": []}, {"id": "T1484", "name": "Domain or Tenant Policy Modification", "state": "covered", "since": 4, "rule": "Rule 90 · GPO modified", "source": "Windows Event Logs", "subs": []}, {"id": "T1134", "name": "Access Token Manipulation", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1611", "name": "Escape to Host", "state": "na", "since": 9, "rule": null, "source": null, "subs": []}]}, {"key": "de", "name": "Defense Evasion", "c": 14, "a": 148, "cells": [{"id": "T1027", "name": "Obfuscated Files or Information", "state": "partial", "since": 2, "rule": "Rule 44 (keyword-matched, no entropy check)", "source": "Windows Event Logs (Sysmon)", "subs": []}, {"id": "T1070", "name": "Indicator Removal", "state": "covered", "since": 0, "rule": "Rule 2 · Event log cleared", "source": "Windows Event Logs", "subs": []}, {"id": "T1562", "name": "Impair Defenses", "state": "covered", "since": 5, "rule": "Rule 132 · Defender disabled", "source": "EDR (Microsoft Defender for Endpoint)", "subs": []}, {"id": "T1036", "name": "Masquerading", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1218", "name": "System Binary Proxy Execution", "state": "covered", "since": 6, "rule": "Rule 152 · Signed binary proxy execution", "source": "EDR (CrowdStrike)", "subs": []}, {"id": "T1557", "name": "Adversary-in-the-Middle", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}]}, {"key": "ca", "name": "Credential Access", "c": 16, "a": 67, "cells": [{"id": "T1003", "name": "OS Credential Dumping", "state": "covered", "since": 0, "rule": "Rule 1 · LSASS access", "source": "EDR (CrowdStrike)", "subs": []}, {"id": "T1110", "name": "Brute Force", "state": "covered", "since": 1, "rule": "Rule 9 · Brute force", "source": "Entra sign-in logs", "subs": []}, {"id": "T1552", "name": "Unsecured Credentials", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": [{"id": "T1552.001", "name": "Credentials In Files", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}]}, {"id": "T1555", "name": "Credentials from Password Stores", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1558", "name": "Steal or Forge Kerberos Tickets", "state": "covered", "since": 4, "rule": "Rule 88 · Kerberoasting", "source": "Windows Event Logs", "subs": []}, {"id": "T1621", "name": "Multi-Factor Authentication Request Generation", "state": "covered", "since": 7, "rule": "Rule 170 · MFA fatigue", "source": "Identity provider MFA logs", "subs": []}]}, {"key": "disc", "name": "Discovery", "c": 12, "a": 49, "cells": [{"id": "T1082", "name": "System Information Discovery", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1087", "name": "Account Discovery", "state": "covered", "since": 3, "rule": "Rule 40 · Account manipulation", "source": "Entra audit logs", "subs": []}, {"id": "T1018", "name": "Remote System Discovery", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1046", "name": "Network Service Scanning", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1057", "name": "Process Discovery", "state": "na", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1518", "name": "Software Discovery", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}]}, {"key": "lm", "name": "Lateral Movement", "c": 9, "a": 23, "cells": [{"id": "T1021", "name": "Remote Services", "state": "covered", "since": 0, "rule": "Rule 5 · RDP lateral", "source": "Windows Event Logs", "subs": []}, {"id": "T1080", "name": "Taint Shared Content", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1210", "name": "Exploitation of Remote Services", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1219", "name": "Remote Access Software", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1570", "name": "Lateral Tool Transfer", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1550", "name": "Use Alternate Authentication Material", "state": "covered", "since": 5, "rule": "Rule 139 · Pass-the-hash", "source": "Windows Event Logs (Sysmon)", "subs": []}]}, {"key": "coll", "name": "Collection", "c": 9, "a": 41, "cells": [{"id": "T1560", "name": "Archive Collected Data", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1005", "name": "Data from Local System", "state": "covered", "since": 4, "rule": "Rule 21 · Scheduled task created", "source": "Windows Event Logs", "subs": []}, {"id": "T1114", "name": "Email Collection", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1113", "name": "Screen Capture", "state": "na", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1074", "name": "Data Staged", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1119", "name": "Automated Collection", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}]}, {"key": "c2", "name": "Command and Control", "c": 5, "a": 70, "cells": [{"id": "T1071", "name": "Application Layer Protocol", "state": "covered", "since": 3, "rule": "Rule 44 (keyword-matched, no entropy check)", "source": "Windows Event Logs (Sysmon)", "subs": []}, {"id": "T1573", "name": "Encrypted Channel", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1090", "name": "Proxy", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1105", "name": "Ingress Tool Transfer", "state": "covered", "since": 6, "rule": "Rule 152 · Signed binary proxy execution", "source": "EDR (CrowdStrike)", "subs": []}, {"id": "T1102", "name": "Web Service", "state": "na", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1132", "name": "Data Encoding", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}]}, {"key": "exfil", "name": "Exfiltration", "c": 2, "a": 28, "cells": [{"id": "T1041", "name": "Exfiltration Over C2 Channel", "state": "covered", "since": 6, "rule": "Rule 155 · C2 exfil volume", "source": "Firewall / NetFlow", "subs": []}, {"id": "T1048", "name": "Exfiltration Over Alternative Protocol", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1567", "name": "Exfiltration Over Web Service", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1020", "name": "Automated Exfiltration", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1030", "name": "Data Transfer Size Limits", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1029", "name": "Scheduled Transfer", "state": "na", "since": 9, "rule": null, "source": null, "subs": []}]}, {"key": "impact", "name": "Impact", "c": 4, "a": 47, "cells": [{"id": "T1486", "name": "Data Encrypted for Impact", "state": "covered", "since": 2, "rule": "Rule 173 · Mass file rename/encrypt pattern", "source": "EDR (CrowdStrike)", "subs": []}, {"id": "T1490", "name": "Inhibit System Recovery", "state": "covered", "since": 5, "rule": "Rule 173 · Mass file rename/encrypt pattern", "source": "EDR (CrowdStrike)", "subs": []}, {"id": "T1489", "name": "Service Stop", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1499", "name": "Endpoint Denial of Service", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1485", "name": "Data Destruction", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1491", "name": "Defacement", "state": "na", "since": 9, "rule": null, "source": null, "subs": []}]}]}, "ics": {"name": "ICS / OT", "c": 5, "a": 96, "pct": 5.2, "tactics": [{"key": "ics_ia", "name": "Initial Access", "c": 1, "a": 21, "cells": [{"id": "T0817", "name": "Drive-by Compromise", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T0819", "name": "Exploit Public-Facing Application", "state": "covered", "since": 4, "rule": "Rule 33 · WAF exploit signature (OT DMZ)", "source": "WAF logs", "subs": []}, {"id": "T0822", "name": "External Remote Services", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}]}, {"key": "ics_ev", "name": "Evasion", "c": 0, "a": 18, "cells": [{"id": "T0849", "name": "Masquerading", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T0851", "name": "Rootkit", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T0872", "name": "Indicator Removal on Host", "state": "na", "since": 9, "rule": null, "source": null, "subs": []}]}, {"key": "ics_coll", "name": "Collection", "c": 1, "a": 15, "cells": [{"id": "T0802", "name": "Automated Collection", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T0801", "name": "Monitor Process State", "state": "covered", "since": 7, "rule": "Rule 190 · HMI process-state poll anomaly", "source": "OT historian logs", "subs": []}, {"id": "T0845", "name": "Program Upload", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}]}, {"key": "ics_impact", "name": "Impact", "c": 3, "a": 42, "cells": [{"id": "T0813", "name": "Denial of Control", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T0828", "name": "Loss of Productivity and Revenue", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T0831", "name": "Manipulation of Control", "state": "na", "since": 9, "rule": null, "source": null, "subs": []}]}]}, "mobile": {"name": "Mobile", "c": 2, "a": 125, "pct": 1.6, "tactics": [{"key": "mob_ia", "name": "Initial Access", "c": 0, "a": 24, "cells": [{"id": "T1660", "name": "Phishing", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1461", "name": "Lock Screen Bypass", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1456", "name": "Drive-By Compromise", "state": "na", "since": 9, "rule": null, "source": null, "subs": []}]}, {"key": "mob_persist", "name": "Persistence", "c": 1, "a": 30, "cells": [{"id": "T1633", "name": "Foreground Persistence", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1603", "name": "Scheduled Task/Job", "state": "covered", "since": 6, "rule": "Rule 205 · MDM scheduled-job anomaly", "source": "MDM (Intune)", "subs": []}, {"id": "T1624", "name": "Event Triggered Execution", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}]}, {"key": "mob_ca", "name": "Credential Access", "c": 0, "a": 26, "cells": [{"id": "T1417", "name": "Input Capture", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1414", "name": "Clipboard Data", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1634", "name": "Credentials from Password Store", "state": "na", "since": 9, "rule": null, "source": null, "subs": []}]}, {"key": "mob_disc", "name": "Discovery", "c": 1, "a": 45, "cells": [{"id": "T1418", "name": "Software Discovery", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1420", "name": "File and Directory Discovery", "state": "not_covered", "since": 9, "rule": null, "source": null, "subs": []}, {"id": "T1426", "name": "System Information Discovery", "state": "covered", "since": 7, "rule": "Rule 210 · MDM device-info exfil check", "source": "MDM (Intune)", "subs": []}]}]}}, "top_gaps": [{"id": "T1552.001", "name": "Credentials In Files", "hint": "often the fastest path to lateral movement once an attacker has an initial foothold"}, {"id": "T1219", "name": "Remote Access Software", "hint": "used by most ransomware affiliates to keep hands-on-keyboard access"}, {"id": "T1133", "name": "External Remote Services", "hint": "the most common initial-access vector for your declared threat profile"}, {"id": "T1136.001", "name": "Local Account", "hint": "used to establish backup persistence after the initial foothold"}, {"id": "T1557", "name": "Adversary-in-the-Middle", "hint": "can defeat MFA prompts if left undetected"}], "gaps": [{"id": "T1552.001", "name": "Credentials In Files", "tactic": "Credential Access", "pri": 1, "threat": true, "crown": false, "strength": null, "feas": "short", "via": "EDR (CrowdStrike) file-access telemetry", "rec": "Add a rule for bulk reads of files named *password*, *.pem, *id_rsa* by non-admin processes."}, {"id": "T1219", "name": "Remote Access Software", "tactic": "Lateral Movement", "pri": 1, "threat": true, "crown": true, "strength": null, "feas": "mid", "via": null, "rec": "Onboard your remote-access tool's own audit log, then alert on unapproved tools (AnyDesk, ScreenConnect) launching."}, {"id": "T1133", "name": "External Remote Services", "tactic": "Initial Access", "pri": 2, "threat": true, "crown": false, "strength": null, "feas": "short", "via": "VPN concentrator logs", "rec": "Alert on VPN/Citrix logons from ASNs outside your allow-listed ranges, stacked with the impossible-travel rule."}, {"id": "T1136.001", "name": "Local Account", "tactic": "Persistence", "pri": 2, "threat": false, "crown": true, "strength": null, "feas": "short", "via": "Windows Event Logs", "rec": "Alert on local account creation (4720) outside your patch-window change ticket."}, {"id": "T1557", "name": "Adversary-in-the-Middle", "tactic": "Defense Evasion", "pri": 2, "threat": false, "crown": false, "strength": null, "feas": "mid", "via": null, "rec": "Onboard DHCP/ARP logs, then alert on unexpected gateway MAC changes or duplicate DHCP servers."}, {"id": "T1027", "name": "Obfuscated Files or Information", "tactic": "Defense Evasion", "pri": 2, "threat": false, "crown": false, "strength": [48, "Moderate"], "feas": "short", "via": "Windows Event Logs (Sysmon)", "rec": "Add entropy scoring to Rule 44 instead of keyword-matching only — obfuscated PowerShell rarely contains plain keywords."}, {"id": "T1598.003", "name": "Spearphishing Link", "tactic": "Reconnaissance", "pri": 3, "threat": false, "crown": false, "strength": [28, "Weak"], "feas": "long", "via": null, "rec": "Onboard email-gateway click-through telemetry so the existing phishing rule can see whether the link was opened."}, {"id": "T1595", "name": "Active Scanning", "tactic": "Reconnaissance", "pri": 3, "threat": false, "crown": false, "strength": null, "feas": "long", "via": null, "rec": "Needs external attack-surface monitoring — no current log source sees pre-attack scanning of your perimeter."}, {"id": "T1583", "name": "Acquire Infrastructure", "tactic": "Resource Development", "pri": 3, "threat": false, "crown": false, "strength": null, "feas": "long", "via": null, "rec": "Threat-intel infrastructure correlation (newly-registered domains, bulletproof hosting) is not a capability you own yet."}, {"id": "T1608", "name": "Stage Capabilities", "tactic": "Resource Development", "pri": 4, "threat": false, "crown": false, "strength": null, "feas": "long", "via": null, "rec": "No visibility into attacker-side staging; only detectable indirectly once payloads are delivered."}, {"id": "T1596", "name": "Search Open Technical Databases", "tactic": "Reconnaissance", "pri": 4, "threat": false, "crown": false, "strength": null, "feas": "long", "via": null, "rec": "Passive OSINT recon against public records — not observable from your own telemetry."}, {"id": "T1070", "name": "Indicator Removal", "tactic": "Defense Evasion", "pri": 4, "threat": false, "crown": false, "strength": null, "feas": "mid", "via": "Windows Event Logs", "rec": "Forward Windows event logs to a write-once collector so local log clearing is itself the alert."}], "roadmap": {"short": "These build on log sources you already have onboarded — ship them first for the fastest coverage gain.", "mid": "Your existing tooling can already provide the telemetry; it just needs a new log source onboarded before the detection can be built.", "long": "Nothing you currently own produces this telemetry — treat these as capability investments, not quick wins."}, "platforms": [{"name": "Windows", "c": 96, "a": 420, "pct": 22.9}, {"name": "Linux", "c": 41, "a": 260, "pct": 15.8}, {"name": "ESXi", "c": 3, "a": 40, "pct": 7.5}, {"name": "IaaS", "c": 22, "a": 180, "pct": 12.2}, {"name": "Containers", "c": 9, "a": 95, "pct": 9.5}, {"name": "Office Suite", "c": 14, "a": 60, "pct": 23.3}, {"name": "Identity Provider", "c": 18, "a": 55, "pct": 32.7}, {"name": "Network Devices", "c": 6, "a": 110, "pct": 5.5}, {"name": "Android", "c": 1, "a": 62, "pct": 1.6}, {"name": "iOS", "c": 1, "a": 58, "pct": 1.7}, {"name": "macOS", "c": 4, "a": 70, "pct": 5.7}, {"name": "SaaS", "c": 11, "a": 90, "pct": 12.2}], "log_sources": [{"name": "EDR (CrowdStrike)", "rules": 34, "techs": 61}, {"name": "Windows Event Logs", "rules": 28, "techs": 40}, {"name": "Windows Event Logs (Sysmon)", "rules": 22, "techs": 35}, {"name": "Entra sign-in logs", "rules": 12, "techs": 9}, {"name": "Entra audit logs", "rules": 8, "techs": 7}, {"name": "Firewall / NetFlow", "rules": 9, "techs": 6}, {"name": "EDR (Microsoft Defender for Endpoint)", "rules": 15, "techs": 22}, {"name": "Secure email gateway", "rules": 6, "techs": 5}, {"name": "VPN concentrator logs", "rules": 4, "techs": 3}, {"name": "Identity provider MFA logs", "rules": 3, "techs": 2}], "rules": [{"name": "Rule 12 · Impossible travel sign-in", "status": "customer_tagged", "enabled": true, "source": "Entra sign-in logs", "ref": "Row 14", "techs": [["T1078", "Valid Accounts", 1.0, "Exact technique tag from your file"]]}, {"name": "Rule 141 · VPN from new geo", "status": "ai_tagged", "enabled": true, "source": "VPN concentrator logs", "ref": "Row 88", "techs": [["T1078.004", "Cloud Accounts", 0.62, "AI matched on ‘impossible travel’ plus cloud IdP context"]]}, {"name": "Rule 33 · WAF exploit signature", "status": "keyword_tagged", "enabled": true, "source": "WAF logs", "ref": "Row 22", "techs": [["T1190", "Exploit Public-Facing Application", 1.0, "Rule name references a known CVE exploited via this technique"]]}, {"name": "Rule 4 · Phishing URL click", "status": "customer_tagged", "enabled": true, "source": "Secure email gateway", "ref": "Row 3", "techs": [["T1566", "Phishing", 1.0, "Exact technique tag"], ["T1566.001", "Spearphishing Attachment", 1.0, "Exact technique tag"], ["T1598", "Phishing for Information", 0.7, "Reviewer added this second mapping"]]}, {"name": "Rule 8 · PowerShell encoded command", "status": "customer_tagged", "enabled": true, "source": "Windows Event Logs (Sysmon)", "ref": "Row 55", "techs": [["T1059", "Command and Scripting Interpreter", 1.0, "Exact technique tag"], ["T1059.001", "PowerShell", 1.0, "Exact technique tag"]]}, {"name": "Rule 21 · Scheduled task created", "status": "customer_tagged", "enabled": true, "source": "Windows Event Logs", "ref": "Row 61", "techs": [["T1053", "Scheduled Task/Job", 1.0, "Exact technique tag"], ["T1005", "Data from Local System", 0.5, "Disabled secondary mapping, lower confidence"]]}, {"name": "Rule 77 · WMI remote exec", "status": "keyword_tagged", "enabled": true, "source": "Windows Event Logs (Sysmon)", "ref": "Row 90", "techs": [["T1047", "Windows Management Instrumentation", 1.0, "Rule logic references wmic.exe / WMI remote execution"]]}, {"name": "Rule 150 · Service installed", "status": "customer_tagged", "enabled": false, "source": "Windows Event Logs", "ref": "Row 101", "techs": [["T1569", "System Services", 1.0, "Exact technique tag"]]}, {"name": "Rule 40 · Account manipulation", "status": "customer_tagged", "enabled": true, "source": "Entra audit logs", "ref": "Row 8", "techs": [["T1098", "Account Manipulation", 1.0, "Exact technique tag"], ["T1087", "Account Discovery", 0.8, "Reviewer added this second mapping"]]}, {"name": "Rule 41 · Local account created", "status": "customer_tagged", "enabled": true, "source": "Windows Event Logs", "ref": "Row 9", "techs": [["T1136", "Create Account", 1.0, "Exact technique tag"]]}, {"name": "Rule 62 · Run key added", "status": "customer_tagged", "enabled": true, "source": "Windows Event Logs (Sysmon)", "ref": "Row 70", "techs": [["T1547", "Boot or Logon Autostart Execution", 1.0, "Exact technique tag"], ["T1543", "Create or Modify System Process", 0.5, "Disabled rule, lower-confidence secondary mapping"]]}, {"name": "Rule 15 · Process injection (EDR)", "status": "customer_tagged", "enabled": true, "source": "EDR (CrowdStrike)", "ref": "Row 17", "techs": [["T1055", "Process Injection", 1.0, "Exact technique tag"]]}, {"name": "Rule 90 · GPO modified", "status": "ai_tagged", "enabled": true, "source": "Windows Event Logs", "ref": "Row 112", "techs": [["T1484", "Domain or Tenant Policy Modification", 1.0, "Exact technique tag"], ["T1548", "Abuse Elevation Control Mechanism", 0.5, "AI-mapped, confidence 0.5 — spot-check before relying on it"]]}, {"name": "Rule 44 · Obfuscated script block", "status": "keyword_tagged", "enabled": true, "source": "Windows Event Logs (Sysmon)", "ref": "Row 51", "techs": [["T1027", "Obfuscated Files or Information", 0.7, "Rule name references obfuscation, no entropy scoring"], ["T1071", "Application Layer Protocol", 1.0, "Exact technique tag"]]}, {"name": "Rule 2 · Event log cleared", "status": "customer_tagged", "enabled": true, "source": "Windows Event Logs", "ref": "Row 2", "techs": [["T1070", "Indicator Removal", 1.0, "Exact technique tag"]]}, {"name": "Rule 132 · Defender disabled", "status": "customer_tagged", "enabled": true, "source": "EDR (Microsoft Defender for Endpoint)", "ref": "Row 140", "techs": [["T1562", "Impair Defenses", 1.0, "Exact technique tag"]]}, {"name": "Rule 152 · Signed binary proxy execution", "status": "customer_tagged", "enabled": true, "source": "EDR (CrowdStrike)", "ref": "Row 149", "techs": [["T1218", "System Binary Proxy Execution", 1.0, "Exact technique tag"], ["T1105", "Ingress Tool Transfer", 0.6, "Reviewer added this second mapping"]]}, {"name": "Rule 1 · LSASS access", "status": "customer_tagged", "enabled": true, "source": "EDR (CrowdStrike)", "ref": "Row 1", "techs": [["T1003", "OS Credential Dumping", 1.0, "Exact technique tag"]]}, {"name": "Rule 9 · Brute force", "status": "customer_tagged", "enabled": true, "source": "Entra sign-in logs", "ref": "Row 11", "techs": [["T1110", "Brute Force", 1.0, "Exact technique tag"]]}, {"name": "Rule 88 · Kerberoasting", "status": "keyword_tagged", "enabled": true, "source": "Windows Event Logs", "ref": "Row 87", "techs": [["T1558", "Steal or Forge Kerberos Tickets", 1.0, "Rule name references Kerberoasting directly"]]}, {"name": "Rule 170 · MFA fatigue", "status": "manual", "enabled": true, "source": "Identity provider MFA logs", "ref": "Row 168", "techs": [["T1621", "Multi-Factor Authentication Request Generation", 1.0, "Edited by reviewer — overrides the original AI tag"]]}, {"name": "Rule 5 · RDP lateral", "status": "customer_tagged", "enabled": true, "source": "Windows Event Logs", "ref": "Row 5", "techs": [["T1021", "Remote Services", 1.0, "Exact technique tag"]]}, {"name": "Rule 139 · Pass-the-hash", "status": "keyword_tagged", "enabled": true, "source": "Windows Event Logs (Sysmon)", "ref": "Row 137", "techs": [["T1550", "Use Alternate Authentication Material", 1.0, "Rule name references pass-the-hash directly"]]}, {"name": "Rule 155 · C2 exfil volume", "status": "ai_tagged", "enabled": true, "source": "Firewall / NetFlow", "ref": "Row 153", "techs": [["T1041", "Exfiltration Over C2 Channel", 0.55, "AI-mapped from a traffic-volume heuristic — spot-check"]]}, {"name": "Rule 173 · Mass file rename/encrypt pattern", "status": "customer_tagged", "enabled": true, "source": "EDR (CrowdStrike)", "ref": "Row 171", "techs": [["T1486", "Data Encrypted for Impact", 1.0, "Exact technique tag"], ["T1490", "Inhibit System Recovery", 1.0, "Exact technique tag"]]}, {"name": "Rule 61 · Legacy proxy signature", "status": "invalid", "enabled": true, "source": "Proxy logs", "ref": "Row 60", "techs": []}, {"name": "Rule 118 · Custom SOAR alert", "status": "unmapped", "enabled": true, "source": "Custom SOAR playbook", "ref": "Row 116", "techs": []}, {"name": "Rule 97 · Legacy AV signature", "status": "customer_tagged", "enabled": false, "source": "Legacy AV", "ref": "Row 95", "techs": [["T1204", "User Execution", 1.0, "Exact technique tag, rule since disabled"]]}], "rule_status_counts": {"customer_tagged": 153, "keyword_tagged": 16, "ai_tagged": 1, "manual": 1, "unmapped": 4, "invalid": 0}, "na_groups": [{"title": "Whole matrix not applicable", "blurb": "These ATT&CK areas don't apply to your environment at all.", "items": [{"key": "T1490.001", "reason": "Reboot (ICS-only availability sub-technique not tracked outside OT)"}, {"key": "T1499.003", "reason": "Application Exhaustion Flood (no internet-facing service in scope)"}]}, {"title": "Platform not in your environment", "blurb": "These techniques only work on platforms your inventory doesn't include.", "items": [{"key": "T1547.009", "reason": "Shortcut Modification (mainframe z/OS billing platform has no ATT&CK platform mapping)"}, {"key": "T1218.014", "reason": "MMC (no environment entry mapped to this platform)"}]}, {"title": "Deprecated by MITRE", "blurb": "MITRE no longer maintains these techniques, so they aren't assessed.", "items": [{"key": "T1562.001 (old)", "reason": "Disable or Modify Tools — restructured to T1685 in ATT&CK v19.1"}]}, {"title": "Excluded by you", "blurb": "You asked us not to assess these — each reason is shown exactly as you gave it.", "items": [{"key": "T1200", "reason": "accepted risk, physical controls"}, {"key": "mobile: BYOD fleet", "reason": "BYOD fleet is unmanaged"}]}], "assumptions": ["asset entries not mapped to ATT&CK platforms (ignored for platform filtering): IOT Platform devices (105), Mainframe z/OS billing platform, Microsoft Exchange Server 2019 (hybrid, 4 nodes), …", "Consolidated Usecase Tracker:2: MITRE ATT&CK update: tag 'T1562' has been restructured and is now represented under T1685 (Disable or Modify Tools) in ATT&CK v19.1", "0 rules matched deterministically by ATT&CK technique or attacker-tool name (no AI involved); 5 sent to AI tagging", "1 rules were AI-tagged (confidence ≥ 0.4) — model-generated mappings, spot-check before operational use", "4 rules remain unmapped to ATT&CK — they do not count toward coverage", "detected columns: description→col 3, enabled→col 12, log_source→col 4, logic→col 8, name→col 2, severity→col 7, tags→col 10", "7 detection-strength scores were AI-assessed (optional quality pass) — all others use the deterministic heuristic", "gap ranking prioritizes techniques associated with your declared threat profile: Financial Services, Scattered Spider, LockBit affiliates, Asia-Pacific, APT41, Lazarus Group, Kimsuky, Mustang Panda", "2 crown-jewel entries didn't match a known platform/category and were not used for gap prioritization: Telco subscriber billing platform, CyberArk credential vault"], "groups": [{"id": "G0016", "name": "APT29", "aliases": "Cozy Bear, The Dukes", "ids": ["T1078", "T1566", "T1053", "T1003", "T1021"]}, {"id": "G1015", "name": "Scattered Spider", "aliases": "UNC3944, Muddled Libra", "ids": ["T1566", "T1078.004", "T1552.001", "T1219", "T1621"]}, {"id": "G0176", "name": "LockBit", "aliases": "LockBit Black", "ids": ["T1486", "T1490", "T1219", "T1133", "T1078"]}], "tool_eval": {"T1552.001": "Microsoft Defender for Endpoint", "T1219": "Cortex XDR"}, "tools_label": "Defender for Endpoint and Cortex XDR", "tool_overlay": {"tool": "Microsoft Defender for Endpoint", "n": 15, "rules_n": 117, "rules_pct": 12.7, "tools_pct": 1.6, "adjusted_pct": 14.4, "extra": 9}, "state_tip": {"covered": "At least one enabled detection rule maps here with high confidence.", "partial": "Only a disabled rule, a lower-confidence AI mapping, or a covered sub-technique reaches this — treat it as half-covered.", "not_covered": "No detection rule maps here — this technique is a gap.", "na": "Doesn't apply to your environment (or was excluded by you), so it doesn't count toward the coverage percentage."}, "state_label": {"covered": "Covered", "partial": "Partial", "not_covered": "Not covered", "na": "N/A"}, "state_plain": {"covered": "A rule detects this", "partial": "Half-covered", "not_covered": "No rule detects this", "na": "Doesn't apply to your environment"}, "rule_status_label": {"customer_tagged": "tagged by you", "keyword_tagged": "keyword-matched (no AI)", "ai_tagged": "AI-tagged", "manual": "reviewer-edited", "unmapped": "unmapped", "invalid": "with invalid tags"}}; }
+  // ---- shared helpers (class methods so nothing lives at script top level) ----
+  setIn(path, val){ const s = JSON.parse(JSON.stringify(this.state)); let o = s;
+    for (let i = 0; i < path.length - 1; i++) { if (o[path[i]] == null) o[path[i]] = {}; o = o[path[i]]; }
+    o[path[path.length - 1]] = val; this.setState(s); }
+  vw(){ return (typeof window !== 'undefined' && window.innerWidth) ? window.innerWidth : 1440; }
+  viewFlags(){ const v = (this.props && this.props.view) || 'default';
+    return { default: v === 'default', loading: v === 'loading', empty: v === 'empty', error: v === 'error', gated: v === 'gated' }; }
+  closeAll(){ if (this.state.menu !== null || this.state.listbox !== null) this.setState({ menu: null, listbox: null }); }
+  shellVals(){ const s = this.state.shell; const c = s.collapsed; const w = c ? 56 : s.width;
+    return { sideW: w + 'px', cls: c ? 'c' : '', collapsed: c, expanded: !c, togLabel: c ? 'Expand sidebar' : 'Collapse sidebar',
+      admin: !(this.props && this.props.admin === false),
+      toggle: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setIn(['shell', 'collapsed'], !c); },
+      gDown: (e) => { e.currentTarget.setPointerCapture(e.pointerId); this._drag = { kind: 'side', x0: e.clientX, w0: s.width }; },
+      gMove: (e) => { if (!this._drag || this._drag.kind !== 'side') return; const nw = Math.max(180, Math.min(400, this._drag.w0 + (e.clientX - this._drag.x0))); this.setIn(['shell', 'width'], nw); },
+      gUp: () => { this._drag = null; },
+      mTx: s.mobileOpen ? 'translateX(0)' : 'translateX(-105%)', mOvOp: s.mobileOpen ? 1 : 0, mPe: s.mobileOpen ? 'auto' : 'none',
+      openMobile: () => this.setIn(['shell', 'mobileOpen'], true), closeMobile: () => this.setIn(['shell', 'mobileOpen'], false) }; }
+  tabVals(key, keys){ const cur = this.state.tab[key] || keys[0]; const o = {};
+    keys.forEach(k => { const on = cur === k; o[k] = { on: on, cls: on ? 'on' : '', aria: on ? 'true' : 'false', pick: () => this.setIn(['tab', key], k) }; });
+    o.current = cur; return o; }
+  sheetVals(name, def){ const s = this.state.sheets[name] || { open: false, id: null, width: def || 448 };
+    const w = Math.min(s.width, this.vw() * 0.95); const order = this.state.sheetOrder.indexOf(name); const z = 41 + (order < 0 ? 0 : order * 2);
+    return { open: s.open, id: s.id, w: w + 'px', tx: s.open ? 'translateX(0)' : 'translateX(105%)', ovOp: s.open ? 1 : 0, pe: s.open ? 'auto' : 'none', z: z, oz: z - 1,
+      close: (e) => { e && e.stopPropagation && e.stopPropagation(); this.closeSheet(name); },
+      gDown: (e) => { e.currentTarget.setPointerCapture(e.pointerId); this._drag = { kind: name, x0: e.clientX, w0: s.width }; },
+      gMove: (e) => { if (!this._drag || this._drag.kind !== name) return; const nw = Math.max(360, Math.min(this.vw() * 0.95, this._drag.w0 - (e.clientX - this._drag.x0))); this.setIn(['sheets', name, 'width'], nw); },
+      gUp: () => { this._drag = null; },
+      gKey: (e) => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); const d = e.key === 'ArrowLeft' ? 40 : -40;
+        this.setIn(['sheets', name, 'width'], Math.max(360, Math.min(this.vw() * 0.95, s.width + d))); } } }; }
+  openSheet(name, id, def){ const sheets = Object.assign({}, this.state.sheets);
+    sheets[name] = Object.assign({ width: def || 448 }, sheets[name] || {}, { open: true, id: id == null ? null : id });
+    this.setState({ sheets: sheets, sheetOrder: this.state.sheetOrder.filter(n => n !== name).concat([name]), menu: null, listbox: null }); }
+  closeSheet(name){ const sheets = Object.assign({}, this.state.sheets); if (sheets[name]) sheets[name] = Object.assign({}, sheets[name], { open: false });
+    this.setState({ sheets: sheets, sheetOrder: this.state.sheetOrder.filter(n => n !== name) }); }
+  dlgVals(name){ const on = this.state.dlg === name;
+    return { open: on, op: on ? 1 : 0, pe: on ? 'auto' : 'none', tx: on ? 'scale(1)' : 'scale(.96)',
+      close: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setState({ dlg: null, dlgArg: null }); },
+      key: (e) => { if (e.key === 'Escape') this.setState({ dlg: null, dlgArg: null }); } }; }
+  openDlg(name, arg){ this.setState({ dlg: name, dlgArg: arg == null ? null : arg, menu: null, listbox: null }); }
+  menuVals(id){ const on = this.state.menu === id;
+    return { cls: on ? 'open' : '', toggle: (e) => { e.stopPropagation(); this.setState({ menu: on ? null : id, listbox: null }); } }; }
+  lbVals(name){ const on = this.state.listbox === name;
+    return { open: on, cls: on ? 'open' : '', aria: on ? 'true' : 'false', toggle: (e) => { e.stopPropagation(); this.setState({ listbox: on ? null : name, menu: null }); } }; }
+  sortVals(name, rows, cols, defKey, defDir){ const st = this.state.sort[name] || { key: defKey, dir: defDir || 'asc' }; const col = cols.find(c => c.key === st.key);
+    const get = (r) => col && col.get ? col.get(r) : r[st.key];
+    const sorted = rows.slice().sort((a, b) => { const va = get(a), vb = get(b); if (va == null && vb == null) return 0; if (va == null) return 1; if (vb == null) return -1;
+      const r = (typeof va === 'number' && typeof vb === 'number') ? va - vb : String(va).localeCompare(String(vb)); return st.dir === 'asc' ? r : -r; });
+    const h = {}; cols.forEach(c => { const on = c.key === st.key; h[c.key] = { aria: on ? (st.dir === 'asc' ? 'ascending' : 'descending') : 'none', arrow: on ? (st.dir === 'asc' ? '↑' : '↓') : '↕', op: on ? 1 : .35,
+      pick: () => this.setIn(['sort', name], { key: c.key, dir: on && st.dir === 'asc' ? 'desc' : 'asc' }) }; });
+    return { rows: sorted, h: h, key: st.key, dir: st.dir }; }
+  dropVals(name, sample, size){ const d = this.state.drop[name] || { active: false, file: null };
+    return { cls: d.active ? 'on' : '', file: d.file || '', size: d.file ? (size || '') : '', has: !!d.file, none: !d.file,
+      over: (e) => { e.preventDefault(); if (!d.active) this.setIn(['drop', name, 'active'], true); },
+      leave: () => { if (d.active) this.setIn(['drop', name, 'active'], false); },
+      pick: (e) => { e && e.preventDefault && e.preventDefault(); this.setIn(['drop', name], { active: false, file: sample }); },
+      clear: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setIn(['drop', name], { active: false, file: null }); } }; }
+  reqVals(){ const r = this.state.req;
+    return { sent: r.sent, form: !r.sent, name: r.name, email: r.email, btn: r.busy ? 'Sending...' : 'Request access',
+      setName: (e) => this.setIn(['req', 'name'], e.target.value), setEmail: (e) => this.setIn(['req', 'email'], e.target.value),
+      submit: () => { this.setIn(['req', 'busy'], true); setTimeout(() => this.setState({ req: Object.assign({}, this.state.req, { busy: false, sent: true }) }), 700); } }; }
+  busy(key){ return !!this.state.busy[key]; }
+  runBusy(key, ms, after){ const b = Object.assign({}, this.state.busy); b[key] = true; this.setState({ busy: b });
+    setTimeout(() => { const b2 = Object.assign({}, this.state.busy); delete b2[key]; this.setState({ busy: b2 }); if (after) after(); }, ms || 900); }
+  isOpen(id){ return !!this.state.expanded[id]; }
+  toggleOpen(id){ this.setIn(['expanded', id], !this.state.expanded[id]); }
+  renameVals(id, current, onCommit){ const r = this.state.rename; const on = r.id === id;
+    return { on: on, off: !on, value: on ? r.value : current,
+      start: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setState({ rename: { id: id, value: current }, menu: null }); },
+      set: (e) => this.setIn(['rename', 'value'], e.target.value),
+      commit: (e) => { e && e.stopPropagation && e.stopPropagation(); const v = (this.state.rename.value || '').trim(); if (!v) return; if (onCommit) onCommit(v); this.setIn(['rename'], { id: null, value: '' }); },
+      cancel: (e) => { e && e.stopPropagation && e.stopPropagation(); this.setIn(['rename'], { id: null, value: '' }); },
+      key: (e) => { if (e.key === 'Enter') { const v = (this.state.rename.value || '').trim(); if (!v) return; if (onCommit) onCommit(v); this.setIn(['rename'], { id: null, value: '' }); }
+        if (e.key === 'Escape') this.setIn(['rename'], { id: null, value: '' }); },
+      canSave: !on || !!(r.value || '').trim() }; }
+
+  renderVals(){
+    const S = this.state, D = this.data(), P = this.props || {};
+    const base = { ready:'1', stop:(e)=>{ e && e.stopPropagation && e.stopPropagation(); }, root:()=>this.closeAll(),
+      shell:this.shellVals(), is:this.viewFlags(), req:this.reqVals() };
+    const vals = (function(self){ 
+const M = Object.assign({ run: 7, playing: false, legend: {}, hideSubs: false, threatGroup: '',
+  runsOnSel: {}, detectedViaSel: {}, platformSearch: '', sourceSearch: '', compareWith: '', search: 'credential',
+  gapsAll: false, addRuleSel: '', removedMaps: {} }, S.m || {});
+const runCompleted = (P.run || 'completed') === 'completed';
+const runTweak = P.run || 'completed';
+
+// ---- flatten the matrix into one lookup used by the heatmap, drill panel, search and drawer ----
+const effState = (e, run) => { if (e.state === 'na') return 'na'; if (e.state === 'not_covered') return 'not_covered';
+  return (e.since <= run) ? e.state : 'not_covered'; };
+const ALL_TECH = [];
+Object.keys(D.domains).forEach(dk => { const dom = D.domains[dk];
+  dom.tactics.forEach(t => { t.cells.forEach(c => {
+    ALL_TECH.push({ id: c.id, name: c.name, state: c.state, since: c.since, rule: c.rule, source: c.source,
+      tactic: t.name, tacticKey: t.key, domain: dom.name, domainKey: dk, sub: false, subs: (c.subs || []).map(s => s.id) });
+    (c.subs || []).forEach(s => ALL_TECH.push({ id: s.id, name: s.name, state: s.state, since: s.since, rule: s.rule,
+      source: s.source, tactic: t.name, tacticKey: t.key, domain: dom.name, domainKey: dk, sub: true, subs: [] }));
+  }); });
+});
+const TECH_IX = {}; ALL_TECH.forEach(e => { e.finalEff = effState(e, 7); e.curEff = effState(e, M.run); TECH_IX[e.id] = e; });
+const GAPS_IX = {}; D.gaps.forEach(g => GAPS_IX[g.id] = g);
+const TOP_GAP_IDS = D.top_gaps.map(g => g.id);
+const STATE_COLOR = { covered: 'var(--ok)', partial: 'var(--med)', not_covered: 'var(--crit)', na: 'var(--ink3)' };
+const STATE_TONE_CLS = { covered: 'ok', partial: 'med', not_covered: 'crit', na: 'grey' };
+
+// ---- filters shared by the coverage matrix ----
+const legendActive = Object.keys(M.legend).filter(k => M.legend[k]);
+const groupSel = M.threatGroup;
+const groupDef = groupSel ? D.groups.find(g => g.id === groupSel) : null;
+const detSel = Object.keys(M.detectedViaSel).filter(k => M.detectedViaSel[k]);
+const runsOnSelKeys = Object.keys(M.runsOnSel).filter(k => M.runsOnSel[k]);
+const anyFilterActive = legendActive.length > 0 || !!groupSel || detSel.length > 0 || runsOnSelKeys.length > 0;
+const dimOf = (e) => {
+  if (legendActive.length && legendActive.indexOf(e.curEff) === -1) return true;
+  if (groupDef && groupDef.ids.indexOf(e.id) === -1 && e.tactic !== 'Reconnaissance' && e.tactic !== 'Resource Development') return true;
+  if (detSel.length && !(e.source && detSel.indexOf(e.source) !== -1)) return true;
+  return false;
+};
+const shownN = ALL_TECH.filter(e => !dimOf(e)).length;
+
+// ---- header ----
+const runRows = D.runs.map((r, i) => { const cur = i === 7; const d = Math.round((r.pct - D.runs[7].pct) * 10) / 10;
+  return { label: r.date.split(',')[0] + (cur ? ' — this run' : ''), w: cur ? 700 : 400, color: cur ? 'var(--ink3)' : 'var(--ink)',
+    date: r.date, pct: r.pct, delta: cur ? '' : ((d >= 0 ? '+' : '') + d + ' vs this'), dcolor: d > 0 ? 'var(--ok)' : d < 0 ? 'var(--crit)' : 'var(--ink3)',
+    compare: () => { self.setIn(['m', 'compareWith'], String(i)); self.setIn(['tab', 't'], 'compare'); self.setState({ listbox: null }); } }; });
+const expBtn = (key, label, tip) => ({ cls: runCompleted ? '' : 'disabled', tip: runCompleted ? tip : 'Available once the assessment completes.', click: () => {} });
+const statusTone = { completed: 'ok', running: 'info', failed: 'crit', pending: 'grey' }[runTweak];
+const statusLabel = { completed: 'Completed', running: 'Running', failed: 'Failed', pending: 'Not run yet' }[runTweak];
+const h = {
+  name: D.header.name, demo: true, statusTone, statusLabel,
+  showRuns: runCompleted, runsToggle: self.lbVals('runs').toggle, runsCls: self.lbVals('runs').cls, runsN: D.runs.length, runRows,
+  exp: { execpdf: expBtn('execpdf', 'Exec PDF', 'A 1–3 page executive summary — scorecard, top-5 fixes, roadmap and trend. Made for forwarding to leadership.'),
+    fullpdf: expBtn('fullpdf', 'Full PDF', 'The complete report: executive summary plus the detailed gap register, coverage tables and appendices.'),
+    xlsx: expBtn('xlsx', 'XLSX', 'Full gap register as a spreadsheet — every technique, rule, gap and assumption.'),
+    ppt: expBtn('ppt', 'PPT', 'A presentation-ready briefing deck: headline result, coverage chart, detection quality, top fixes and roadmap — for sharing with stakeholders.'),
+    nav: expBtn('nav', 'Navigator', "For your technical team: a machine-readable layer file (JSON) to open at attack.mitre.org/navigator — it paints your coverage onto MITRE's official interactive matrix. Not a readable document; use the PDFs for that.") },
+  created: D.header.created, running: runTweak === 'running', failed: runTweak === 'failed', pending: runTweak === 'pending',
+  metaLine: D.header.project_name + ' · ' + D.header.scope_label + ' · Prepared by ' + D.header.prepared_by + '. ' + D.header.purpose,
+  siemLine: 'Rules pulled read-only from Microsoft Sentinel by the automatic schedule · connection "' + D.header.conn_name + '" · workspace ' + D.header.conn_workspace + ' · ' + D.header.created + ' · ' + D.header.conn_rules + ' rules',
+};
+
+// ---- executive band ----
+const kpiDefs = [
+  { key: 'coverage', label: 'Coverage', value: D.domains.enterprise.pct + D.domains.ics.pct + D.domains.mobile.pct ? (Math.round(1000 * D.counts.covered / D.counts.applicable) / 10) + '%' : '0%', color: 'var(--accent)',
+    sub: D.counts.covered + ' of ' + D.counts.applicable + ' applicable',
+    tip: 'Strict coverage: ' + D.counts.covered + ' of ' + D.counts.applicable + ' applicable techniques have at least one qualifying detection. Weighted coverage (partial counts as half): ' + (Math.round(1000 * (D.counts.covered + D.counts.partial * 0.5) / D.counts.applicable) / 10) + '%. Click to see the techniques behind this number.' },
+  { key: 'enterprise', label: 'Enterprise', value: D.domains.enterprise.pct + '%', color: '', sub: D.domains.enterprise.c + ' of ' + D.domains.enterprise.a, tip: 'Enterprise-domain strict coverage. Click to see the techniques behind this number.' },
+  { key: 'ics', label: 'ICS / OT', value: D.domains.ics.pct + '%', color: '', sub: D.domains.ics.c + ' of ' + D.domains.ics.a, tip: 'ICS / OT-domain strict coverage. Click to see the techniques behind this number.' },
+  { key: 'mobile', label: 'Mobile', value: D.domains.mobile.pct + '%', color: '', sub: D.domains.mobile.c + ' of ' + D.domains.mobile.a, tip: 'Mobile-domain strict coverage. Click to see the techniques behind this number.' },
+  { key: 'covered', label: 'Covered', value: String(D.counts.covered), color: 'ok', sub: 'at least one qualifying rule', tip: D.state_tip.covered + ' Click to see the techniques behind this number.' },
+  { key: 'partial', label: 'Partial', value: String(D.counts.partial), color: 'med', sub: 'Each row shows why it only counts as half-covered.', tip: D.state_tip.partial + ' Click to see the techniques behind this number.' },
+  { key: 'notcovered', label: 'Not covered', value: String(D.counts.not_covered), color: 'crit', sub: 'ranked in Gaps & Roadmap', tip: D.state_tip.not_covered + ' Click to see the techniques behind this number.' },
+  { key: 'na', label: 'N/A', value: String(D.counts.na), color: 'grey', sub: 'left out of the denominator', tip: D.state_tip.na + ' Click to see the techniques behind this number.' },
+];
+const kpiColor = { ok: 'var(--ok)', med: 'var(--med)', crit: 'var(--crit)', grey: 'var(--ink3)', '': 'var(--ink)' };
+const kpis = kpiDefs.map(k => ({ label: k.label, value: k.value, color: kpiColor[k.color] || k.color, sub: k.sub, tip: k.tip, open: () => self.openSheet('drill', k.key, 480) }));
+const stemPct = Math.round(1000 * D.counts.covered / D.counts.applicable) / 10;
+const topGaps = D.top_gaps.map(g => ({ id: g.id, tip: g.name + ' — ' + g.hint, open: () => self.openSheet('tech', g.id, 480) }));
+
+// ---- tool overlay banner ----
+const ov = D.tool_overlay;
+const attestBusy = self.busy('attest');
+
+// ---- upload summary card ----
+const statusDefs = [
+  { key: 'tagged_by_you', label: 'tagged by you', tone: 'ok', n: D.rule_status_counts.customer_tagged, tip: 'This mapping comes from the MITRE technique tag in your uploaded file.', mode: 'status:customer_tagged' },
+  { key: 'keyword', label: 'keyword-matched', tone: 'blue', n: D.rule_status_counts.keyword_tagged, tip: "The rule's name or logic contains an exact ATT&CK technique name or a well-known attacker tool/command, so it was mapped automatically — no AI involved.", mode: 'status:keyword_tagged' },
+  { key: 'ai', label: 'AI-tagged', tone: 'violet', n: D.rule_status_counts.ai_tagged, tip: 'An AI model read the rule and suggested this technique — spot-check before relying on it.', mode: 'status:ai_tagged' },
+  { key: 'manual', label: 'reviewer-edited', tone: 'info', n: D.rule_status_counts.manual, tip: 'A reviewer manually set this mapping — it overrides the original tag, and coverage was recomputed from it.', mode: 'status:manual' },
+  { key: 'unmapped', label: 'unmapped', tone: 'grey', n: D.rule_status_counts.unmapped, tip: 'Not mapped to any technique.', mode: 'status:unmapped' },
+  { key: 'invalid', label: 'invalid tags', tone: 'crit', n: D.rule_status_counts.invalid, tip: 'Tags invalid — treated as untagged.', mode: 'status:invalid' },
+];
+const statusChips = statusDefs.map(s => ({ tone: s.tone, tip: s.tip, label: s.label, open: () => self.openSheet('rules', s.mode, 480) }))
+  .concat([{ tone: 'grey', tip: 'Rules present in the export but turned off — count as partial at best.', label: '3 disabled', open: () => self.openSheet('rules', 'all', 480) }]);
+const invRows = [
+  { entry: 'IOT Platform devices (105)', sheet: 'Assets', interp: 'no ATT&CK platform mapping — ignored for platform filtering' },
+  { entry: 'Mainframe z/OS billing platform', sheet: 'Assets', interp: "no ATT&CK platform mapping — treated as 'platform not in your environment'" },
+  { entry: 'Microsoft Exchange Server 2019 (hybrid, 4 nodes)', sheet: 'Assets', interp: 'mapped to Windows + Office Suite' },
+  { entry: 'CyberArk credential vault', sheet: 'Crown Jewels', interp: 'no known platform/category match — not used for gap prioritization' },
+];
+const srcChips = D.log_sources.map(s => ({ name: s.name, label: s.name + ': ' + s.rules + ' rule(s) → ' + s.techs + ' technique(s)', open: () => self.openSheet('rules', 'source:' + encodeURIComponent(s.name), 480) }));
+
+// ---- filter bar ----
+const groupOpts = D.groups.map(g => ({ id: g.id, label: g.name + ' (' + g.id + ')' }));
+const platformItems = D.platforms.filter(p => !M.platformSearch || p.name.toLowerCase().indexOf(M.platformSearch.toLowerCase()) !== -1)
+  .map(p => ({ name: p.name, on: !!M.runsOnSel[p.name], c: p.c, a: p.a, pct: p.pct, toggle: () => { const s = Object.assign({}, M.runsOnSel); s[p.name] = !s[p.name]; self.setIn(['m', 'runsOnSel'], s); } }));
+const sourceItems = D.log_sources.filter(s => !M.sourceSearch || s.name.toLowerCase().indexOf(M.sourceSearch.toLowerCase()) !== -1)
+  .map(s => ({ name: s.name, on: !!M.detectedViaSel[s.name], n: s.rules, toggle: () => { const sel = Object.assign({}, M.detectedViaSel); sel[s.name] = !sel[s.name]; self.setIn(['m', 'detectedViaSel'], sel); } }));
+const lensParts = [];
+if (groupDef) lensParts.push('used by **' + groupDef.name + '**');
+if (runsOnSelKeys.length) lensParts.push('that can run on **' + runsOnSelKeys.join(', ') + '**');
+if (detSel.length) lensParts.push('detected by rules using **' + detSel.join(', ') + '**');
+let lensSentence = lensParts.length ? ('Showing techniques ' + lensParts.join(' · ') + ' — counts update to match.') : 'Showing every applicable technique — counts update to match your filters.';
+lensSentence += runsOnSelKeys.length ? ' Platform-independent techniques (e.g. Reconnaissance) stay visible.' : (groupDef ? " Group technique lists are MITRE's directly-attributed set — tradecraft via the group's malware and tools may go further." : '');
+
+// ---- legend ----
+const lgTip = (key, extra) => D.state_tip[key] + (extra || '') + ' Click to show only these techniques.';
+const mkLegend = (key) => ({ p: legendActive.indexOf(key) !== -1 ? 'true' : 'false', op: (legendActive.length === 0 || legendActive.indexOf(key) !== -1) ? 1 : 0.4,
+  tip: key === 'covered' ? lgTip('covered', ' Darker green = more rules detect it (1, 2–3, 4+); the lightest shade means coverage rests on a single rule.') : lgTip(key),
+  toggle: () => { const l = Object.assign({}, M.legend); l[key] = !l[key]; self.setIn(['m', 'legend'], l); } });
+
+// ---- run timeline ----
+const dates = D.runs.map(r => r.date.split(',')[0]);
+const runCov = ALL_TECH.filter(e => e.curEff === 'covered').length;
+const runApp = ALL_TECH.filter(e => e.curEff !== 'na').length;
+const runPct = runApp ? Math.round(1000 * runCov / runApp) / 10 : 0;
+const prevCov = ALL_TECH.filter(e => effState(e, Math.max(0, M.run - 1)) === 'covered').length;
+const prevPct = runApp ? Math.round(1000 * prevCov / runApp) / 10 : 0;
+const runD = Math.round((runPct - prevPct) * 10) / 10;
+const ticks = dates.map((dt, i) => ({ tip: 'Run ' + (i + 1) + ' · ' + dt + (i === M.run ? ' (shown)' : ''), bg: i <= M.run ? 'var(--accent)' : 'var(--line2)', scale: i === M.run ? 'scale(1.4)' : 'scale(1)', pick: () => self.setIn(['m', 'run'], i) }));
+
+// ---- coverage matrix (per domain) ----
+const cellVM = (entry, depth, badge) => {
+  const eff = entry.curEff; const dim = dimOf(entry);
+  const tones = { covered: { bg: 'var(--ok)', fg: '#fff' }, partial: { bg: '#F5D879', fg: '#3A2E05' },
+    not_covered: { bg: 'var(--crit-soft)', fg: '#8A2A23' }, na: { bg: 'var(--na)', fg: 'var(--ink3)' } }[eff];
+  const border = eff === 'not_covered' ? '#F1C2BB' : 'transparent';
+  const ruleN = entry.rule ? 1 : 0;
+  let tip = entry.id + ' — ' + entry.name + '\n' + D.state_label[eff] + ': ' + D.state_tip[eff] + '. ' + ruleN + ' rule(s) map here.';
+  if (entry.subs.length && M.hideSubs) { const c = entry.subs.filter(id => TECH_IX[id].curEff === 'covered').length;
+    tip += ' ' + c + ' of ' + entry.subs.length + ' sub-techniques covered (hidden).'; }
+  tip += ' Click for details.';
+  return { id: entry.id, name: entry.name, bg: tones.bg, fg: tones.fg, border, op: dim ? 0.28 : 1,
+    indent: depth ? '16px' : '0px', badge: badge || '', tip, open: () => self.openSheet('tech', entry.id, 480) };
+};
+const buildDomain = (dk) => {
+  const dom = D.domains[dk];
+  const tactics = dom.tactics.map(t => {
+    const rows = [];
+    t.cells.forEach(c => {
+      const entry = TECH_IX[c.id];
+      let badge = '';
+      if (c.subs && c.subs.length && M.hideSubs) { const cn = c.subs.filter(s => TECH_IX[s.id].curEff === 'covered').length; badge = ' (' + cn + '/' + c.subs.length + ')'; }
+      rows.push(cellVM(entry, 0, badge));
+      if (!M.hideSubs) (c.subs || []).forEach(s => rows.push(cellVM(TECH_IX[s.id], 1, '')));
+    });
+    return { name: t.name, count: t.c + '/' + t.a,
+      tip: t.name + ': ' + t.c + ' covered of ' + t.a + ' applicable (strict ' + (Math.round(1000 * t.c / t.a) / 10) + '%). Click for the list.',
+      drill: () => self.openSheet('drill', 'domain:' + dk, 480), rows };
+  });
+  const domOpen = self.isOpen('dom:' + dk);
+  return { key: dk, name: dom.name, c: dom.c, a: dom.a, pct: dom.pct, tactics, ncols: tactics.length,
+    open: domOpen, toggle: () => self.toggleOpen('dom:' + dk), toggleAria: (domOpen ? 'Collapse ' : 'Expand ') + dom.name,
+    rot: domOpen ? 'rotate(90deg)' : 'none', drill: () => self.openSheet('drill', 'domain:' + dk, 480),
+    filterSuffix: anyFilterActive ? ' with current filters' : '' };
+};
+const domainList = ['enterprise', 'ics', 'mobile'].map(buildDomain);
+
+// ---- gaps & roadmap tab ----
+const priMeta = { 1: { label: 'P1 · Critical', color: 'var(--crit)' }, 2: { label: 'P2 · High', color: 'var(--high)' }, 3: { label: 'P3 · Medium', color: 'var(--info)' }, 4: { label: 'Unranked', color: 'var(--ink3)' } };
+const feasMeta = { short: { label: 'Build now', color: 'var(--ok)' }, mid: { label: 'Onboard logs first', color: 'var(--info)' }, long: { label: 'New capability', color: 'var(--ink3)' } };
+const gapsSource = D.gaps.map((g, i) => { const pm = priMeta[g.pri]; const fm = feasMeta[g.feas];
+  return { rank: i + 1, id: g.id, name: g.name, tactic: g.tactic, pri: g.pri,
+    priColor: pm.color, priLabel: pm.label, threat: !!g.threat, crown: !!g.crown,
+    strengthScore: g.strength ? g.strength[0] : -1, strengthText: g.strength ? (g.strength[0] + ' · ' + g.strength[1]) : '—',
+    feasOrder: { short: 0, mid: 1, long: 2 }[g.feas], feasColor: fm.color, feasLabel: fm.label,
+    viaLine: g.via ? ('via ' + g.via) : '', rec: g.rec,
+    open: () => self.openSheet('tech', g.id, 480) }; });
+const gapsSorted = self.sortVals('gaps', gapsSource, [{ key: 'rank' }, { key: 'name' }, { key: 'pri' }, { key: 'strength', get: r => r.strengthScore }, { key: 'feas', get: r => r.feasOrder }], 'rank', 'asc');
+const gapsShown = M.gapsAll ? gapsSorted.rows : gapsSorted.rows.slice(0, 6);
+const gapsVals = Object.assign({}, gapsSorted, { rows: gapsShown });
+const roadmapDefs = [{ key: 'short', label: 'Short term', window: '0–3 months' }, { key: 'mid', label: 'Mid term', window: '3–9 months' }, { key: 'long', label: 'Long term', window: '9–18 months' }];
+const roadmap = roadmapDefs.map(r => { const items = D.gaps.filter(g => g.feas === r.key);
+  return { label: r.label, window: r.window, count: items.length, narrative: D.roadmap[r.key], hasItems: items.length > 0, empty: items.length === 0,
+    items: items.map(g => ({ id: g.id, name: g.name, open: () => self.openSheet('tech', g.id, 480) })) }; });
+
+// ---- assumptions & N/A tab ----
+const ruleChipDefs = [
+  { key: 'customer_tagged', label: 'tagged by you', tone: 'ok' }, { key: 'keyword_tagged', label: 'keyword-matched (no AI)', tone: 'blue' },
+  { key: 'ai_tagged', label: 'AI-tagged', tone: 'violet' }, { key: 'manual', label: 'reviewer-edited', tone: 'info' },
+  { key: 'unmapped', label: 'unmapped', tone: 'grey' }, { key: 'invalid', label: 'with invalid tags', tone: 'crit' },
+];
+const ruleChips = ruleChipDefs.map(rc => ({ tone: rc.tone, label: D.rule_status_counts[rc.key] + ' ' + rc.label, tip: 'Open the rules in this group', open: () => self.openSheet('rules', 'status:' + rc.key, 480) }));
+const threatMatches = D.gaps.filter(g => g.threat).length;
+const naGroups = D.na_groups.map((ng, gi) => ({ title: ng.title, blurb: ng.blurb, n: ng.items.length,
+  drill: () => self.openSheet('drill', 'nagrp:' + gi, 480),
+  items: ng.items.map(it => ({ label: it.key + (ng.items.length > 1 ? '' : ''), tip: (ng.title) + ' — click for details', open: () => self.openSheet('tech', it.key, 480) })) }));
+
+// ---- compare tab ----
+const cmpIdx = M.compareWith === '' || M.compareWith == null ? null : +M.compareWith;
+const cmpOpts = D.runs.map((r, i) => ({ idx: i, label: r.date + ' (' + r.pct + '%)' })).filter(o => o.idx !== 7);
+const curRun = D.runs[7];
+const cmpBase = cmpIdx != null ? D.runs[cmpIdx] : null;
+const deltaOf = (a, b) => Math.round((a - b) * 10) / 10;
+let cmpHeader = '', cmpMismatch = false, deltaChips = [], tacticMoves = [], newCov = [], regressed = [], naChanged = [];
+if (cmpBase) {
+  cmpHeader = curRun.date.split(',')[0] + ' (' + curRun.pct + '%) vs ' + cmpBase.date.split(',')[0] + ' (' + cmpBase.pct + '%)';
+  cmpMismatch = curRun.version !== cmpBase.version;
+  const wPct = (r) => r === 7 ? (Math.round(1000 * (D.counts.covered + D.counts.partial * 0.5) / D.counts.applicable) / 10) : curRun.pct;
+  const dCov = deltaOf(curRun.pct, cmpBase.pct);
+  const chip = (label, val, tip, goodUp) => ({ label, tip, value: (val > 0 ? '▲ +' : val < 0 ? '▼ ' : '— ') + Math.abs(val), color: val === 0 ? 'var(--ink3)' : ((val > 0) === goodUp ? 'var(--ok)' : 'var(--crit)') });
+  deltaChips = [
+    chip('Coverage %', dCov, 'Change in strict coverage percentage since the older run. Up (green) is better.', true),
+    chip('Weighted %', Math.round((wPct(7) - wPct(cmpIdx)) * 10) / 10, 'Change in weighted coverage (partial counts as half).', true),
+    chip('Covered', ALL_TECH.filter(e => e.finalEff === 'covered').length - ALL_TECH.filter(e => effState(e, cmpIdx) === 'covered').length, 'Change in the number of covered techniques.', true),
+    chip('Not covered', ALL_TECH.filter(e => e.finalEff === 'not_covered').length - ALL_TECH.filter(e => effState(e, cmpIdx) === 'not_covered').length, 'Change in the number of uncovered techniques. Down (green) is better.', false),
+    chip('N/A', 0, 'Change in not-applicable techniques (environment or exclusion changes).', true),
+  ];
+  const tacticPct = (t, run) => { const covN = t.cells.filter(c => effState(TECH_IX[c.id], run) === 'covered').length; return Math.round(1000 * covN / t.cells.length) / 10; };
+  D.domains.enterprise.tactics.forEach(t => { const a = tacticPct(t, cmpIdx), b = tacticPct(t, 7); const d = Math.round((b - a) * 10) / 10;
+    if (d !== 0) tacticMoves.push({ label: t.name + ' ' + (d > 0 ? '▲ +' : '▼ ') + Math.abs(d) + ' pts', tip: 'Enterprise / ' + t.name + ': ' + a + '% → ' + b + '% strict coverage.' }); });
+  ALL_TECH.forEach(e => { const was = effState(e, cmpIdx), now = e.finalEff;
+    if (was !== 'covered' && now === 'covered') newCov.push({ id: e.id, name: e.name, change: D.state_label[was] + ' → Covered', open: () => self.openSheet('tech', e.id, 480) });
+    if (was === 'covered' && now !== 'covered') regressed.push({ id: e.id, name: e.name, change: 'Covered → ' + D.state_label[now], open: () => self.openSheet('tech', e.id, 480) }); });
+}
+const l1 = { empty: newCov.length === 0, rows: newCov.slice(0, 6) };
+const l2 = { empty: regressed.length === 0, rows: regressed.slice(0, 6) };
+const l3 = { empty: naChanged.length === 0, rows: naChanged.slice(0, 6) };
+
+// ---- drill-down sheet ----
+const drillMode = S.sheets && S.sheets.drill ? S.sheets.drill.id : null;
+const drillContent = (mode) => {
+  let title = 'All applicable techniques', subtitle = "Matches on technique ID/name, attack stage, platform, threat group, and your rule names — grouped by coverage state. Click any row for the full story.";
+  let list = ALL_TECH.slice(); let naRows = null;
+  if (!mode) { /* default: whole assessment */ }
+  else if (mode === 'enterprise' || mode === 'ics' || mode === 'mobile') { title = D.domains[mode].name + ' techniques'; list = list.filter(e => e.domainKey === mode); }
+  else if (mode.indexOf('domain:') === 0) { const dk = mode.slice(7); title = D.domains[dk].name + ' techniques'; list = list.filter(e => e.domainKey === dk); }
+  else if (mode === 'covered') { title = 'Covered techniques'; list = list.filter(e => e.finalEff === 'covered'); }
+  else if (mode === 'partial') { title = 'Partially covered techniques'; list = list.filter(e => e.finalEff === 'partial'); }
+  else if (mode === 'notcovered') { title = 'Not-covered techniques'; list = list.filter(e => e.finalEff === 'not_covered'); }
+  else if (mode === 'na') { title = 'Not-applicable techniques'; list = list.filter(e => e.finalEff === 'na'); }
+  else if (mode.indexOf('nagrp:') === 0) { const idx = +mode.slice(6); const grp = D.na_groups[idx]; title = grp.title; subtitle = grp.blurb;
+    naRows = grp.items.map(it => ({ id: it.key, name: it.reason, color: STATE_COLOR.na, sub: it.reason, open: () => self.openSheet('tech', it.key, 480) })); }
+  else if (mode.indexOf('search:') === 0) { const qv = mode.slice(7); const ql = qv.toLowerCase();
+    list = list.filter(e => (e.id + ' ' + e.name + ' ' + e.tactic + ' ' + e.domain + ' ' + (e.rule || '') + ' ' + (e.source || '')).toLowerCase().indexOf(ql) !== -1);
+    title = '"' + qv + '" — ' + list.length + ' technique(s)'; }
+  if (naRows) return { title, subtitle, groups: [{ label: 'N/A', n: naRows.length, rows: naRows }], empty: naRows.length === 0 };
+  const order = ['covered', 'partial', 'not_covered', 'na'];
+  const groups = order.map(st => { const rows = list.filter(e => e.finalEff === st); return { label: D.state_label[st], n: rows.length,
+    rows: rows.map(e => ({ id: e.id, name: e.name, color: STATE_COLOR[st],
+      sub: st === 'partial' ? ('— ' + D.state_tip.partial) : D.state_plain[st],
+      open: () => self.openSheet('tech', e.id, 480) })) }; }).filter(g => g.n > 0);
+  return { title, subtitle, groups, empty: list.length === 0 };
+};
+const drillC = drillContent(drillMode);
+
+// ---- rules sheet ----
+const rulesMode = (S.sheets && S.sheets.rules ? S.sheets.rules.id : null) || 'all';
+const buildRules = (mode) => {
+  let list = D.rules, title = 'All ' + D.header.conn_rules + ' rules';
+  if (mode.indexOf('status:') === 0) { const key = mode.slice(7); list = D.rules.filter(r => r.status === key); title = list.length + ' rule(s) ' + (D.rule_status_label[key] || key); }
+  else if (mode.indexOf('source:') === 0) { const src = decodeURIComponent(mode.slice(7)); list = D.rules.filter(r => r.source === src); title = 'What ' + src + ' gives you: ' + list.length + ' rule(s)'; }
+  const rows = list.map(r => ({ name: r.name, meta: (D.rule_status_label[r.status] || r.status) + ' · ' + (r.enabled ? 'Enabled' : 'Disabled') + ' · ' + r.source + ' · ' + r.ref,
+    hasMaps: r.techs.length > 0, maps: r.techs.map(tm => ({ id: tm[0], sourceLabel: D.rule_status_label[r.status] || 'Tagged', pct: Math.round(tm[2] * 100), rationale: tm[3], open: () => self.openSheet('tech', tm[0], 480) })) }));
+  return { rulesTitle: title, rulesSubtitle: 'Rules from your uploaded detection-rule export ' + D.header.conn_name + ' → ' + D.domains.enterprise.name + '/ICS/Mobile mappings.', ruleRows: rows, rulesEmpty: rows.length === 0 };
+};
+const rulesC = buildRules(rulesMode);
+
+// ---- technique drawer ----
+const techId = (S.sheets && S.sheets.tech && S.sheets.tech.id) || (ALL_TECH[0] && ALL_TECH[0].id) || 'T1078';
+const SHOWCASE = {
+  'T1552.001': { def: 'Adversaries search local file systems for files containing passwords, keys or tokens saved in plaintext.', use: 'harvest credentials left in config files, scripts or notes without ever touching LSASS memory', fit: 'no rule currently reads file-open/file-read events for common credential-file name patterns' },
+  'T1219': { def: 'Legitimate remote access or remote-monitoring software used by IT is repurposed by an attacker to keep persistent hands-on-keyboard access.', use: 'blend in with normal remote-support traffic while keeping a channel back into your environment', fit: 'your rules only look for a specific known-bad tool list, not for any unapproved remote-access tool launching' },
+  'T1133': { def: 'Adversaries log in through externally-facing remote access services (VPN, Citrix, RDP gateways) using valid or stolen credentials.', use: 'get an initial foothold without deploying any malware at all', fit: 'the VPN concentrator logs are collected but no rule yet correlates logons against your allow-listed ASN ranges' },
+  'T1136.001': { def: 'Adversaries create a new local account on a host to keep a login path independent of the account they first compromised.', use: 'keep backup access if the originally compromised account is disabled', fit: 'local account creation events are collected but not yet alerted on outside your change windows' },
+  'T1557': { def: 'Adversaries position themselves between two communicating systems to intercept, log or manipulate traffic — including defeating some MFA flows.', use: 'intercept authentication traffic or session tokens on the local network segment', fit: "DHCP/ARP telemetry needed to see rogue gateways or duplicate DHCP servers isn't onboarded yet" },
+  'T1078': { def: 'Adversaries obtain and abuse credentials of existing accounts to gain initial access, persistence or elevated access.', use: 'avoid deploying malware by simply logging in like anyone else', fit: 'your impossible-travel rule already correlates sign-in geo and velocity for this', good: 'Rule 12 already covers this well; the Cloud Accounts sub-technique is comparatively weaker (AI-mapped, no MFA context).' },
+  'T1003': { def: 'Adversaries dump credential material from the operating system (e.g. LSASS memory) to obtain account hashes or passwords.', use: 'harvest reusable credentials for lateral movement after gaining a foothold', fit: 'your EDR already flags LSASS access from non-system processes', good: 'Rule 1 already covers this; keep the EDR sensor policy from being tuned down.' },
+};
+const buildTech = (id) => {
+  const e = TECH_IX[id]; const g = GAPS_IX[id]; const sc = SHOWCASE[id] || {};
+  const name = e ? e.name : (g ? g.name : id);
+  const tactic = e ? e.tactic : (g ? g.tactic : '—');
+  const domain = e ? e.domain : 'Enterprise';
+  const eff = e ? e.finalEff : 'na';
+  const toolTool = D.tool_eval[id];
+  const strength = g && g.strength ? g.strength : null;
+  const via = g ? g.via : (e && e.source ? e.source : null);
+  const rule = e ? e.rule : null;
+  const def = sc.def || (name + ' is a technique in the ' + tactic + ' tactic of the ATT&CK ' + domain + ' matrix.');
+  const use = sc.use || ('carry out ' + tactic.toLowerCase() + '-stage activity as part of a broader intrusion');
+  const fitLine = sc.fit || (eff === 'covered' ? 'your rule set already maps to this technique' : eff === 'partial' ? 'only a partial signal reaches this technique today' : 'no rule in your set currently references the telemetry this technique needs');
+  const rec = g ? g.rec : (sc.good || ('Review whether an existing log source can be extended to cover ' + name + '.'));
+  const whyLabel = (eff === 'covered' || eff === 'partial') ? 'Why this counts as covered' : (eff === 'na' ? 'Why this doesn’t count toward coverage' : 'Why is it a gap?');
+  const whyText = eff === 'na' ? D.state_tip.na : (D.state_tip[eff] + (rule ? (' Mapped rule: ' + rule + '.') : ''));
+  const goodText = rule ? "Your existing rule already reaches this — keep it enabled and monitored." : (sc.good || ('No curated detection sketch for this technique — ' + (via ? ('your ‘' + via + '’ can provide some of the telemetry it needs.') : 'none of your onboarded log sources matches it yet.')));
+  const mapsSrc = [];
+  D.rules.forEach(r => r.techs.forEach(tm => { if (tm[0] === id) mapsSrc.push({ ruleName: r.name, enabled: r.enabled, source: r.source, conf: tm[2], rationale: tm[3] }); }));
+  const removedForId = M.removedMaps[id] || {};
+  const maps = mapsSrc.map((m, i) => Object.assign({}, m, { i })).filter(m => !removedForId[m.i]).map(m => ({ name: m.ruleName, removeAria: 'Remove the ' + id + ' mapping from ' + m.ruleName,
+    remove: () => { const rm = Object.assign({}, M.removedMaps); rm[id] = Object.assign({}, rm[id] || {}, {}); rm[id][m.i] = true; self.setIn(['m', 'removedMaps'], rm); },
+    enabled: m.enabled ? 'Enabled' : 'Disabled', source: m.source, conf: m.conf.toFixed(2), rationale: m.rationale }));
+  const idx = ALL_TECH.findIndex(x => x.id === id);
+  const alreadyMapped = {}; maps.forEach(m => { alreadyMapped[m.name] = true; });
+  return {
+    tId: id, tTone: STATE_TONE_CLS[eff] || 'grey', tStateLabel: D.state_label[eff] || eff,
+    tHasStrength: !!strength, tStrengthTone: strength ? (strength[0] >= 75 ? 'ok' : strength[0] >= 45 ? 'med' : 'crit') : '',
+    tStrengthLabel: strength ? strength[1] : '', tStrengthScore: strength ? strength[0] : '',
+    tName: name, tTactics: tactic + ' · ' + domain,
+    tHasToolCredit: !!toolTool, tToolBlurb: toolTool ? (toolTool + ' was evaluated against this technique in MITRE ATT&CK Evaluations (evals.mitre.org). Credit alone never changes the coverage score — attesting the alert path does.') : '',
+    tToolAttest: () => self.runBusy('toolattest-' + id, 900),
+    tToolBtn: self.busy('toolattest-' + id) ? 'Attesting…' : ('We monitor ' + (toolTool || '') + '’s alerts — count as covered'),
+    tIsNa: eff === 'na', tNaReason: eff === 'na' ? D.state_tip.na : '',
+    tDef: def, tUse: use,
+    tFitLabel: (eff === 'covered' || eff === 'partial') ? 'Where this fits' : 'Where is the gap?',
+    tTactic1: tactic, tFitLine: fitLine,
+    tHasVia: !!via, tVia: via || '', tNoVia: !via, tHint: 'process, file and network events consistent with this technique',
+    tPlatforms: domain === 'Enterprise' ? 'Windows, Linux, macOS, IaaS, SaaS' : (domain === 'Mobile' ? 'Android, iOS' : 'ICS / OT assets'),
+    tWhyLabel: whyLabel, tWhyText: whyText,
+    tGoodText: goodText, tHasStarting: !!rule, tStartRule: rule || '',
+    tRec: rec,
+    tMapN: maps.length, tMapEmpty: maps.length === 0, tMaps: maps,
+    tCanEdit: runCompleted, tCannotEdit: !runCompleted,
+    addRuleSel: M.addRuleSel || '', setAddRule: (ev) => self.setIn(['m', 'addRuleSel'], ev.target.value),
+    addRuleOpts: D.rules.filter(r => !alreadyMapped[r.name]).slice(0, 14).map(r => ({ name: r.name })),
+    addRuleGo: () => { if (!M.addRuleSel) return; self.setIn(['m', 'addRuleSel'], ''); },
+    addErr: false,
+    tPos: (idx >= 0 ? (idx + 1) : 1) + ' of ' + ALL_TECH.length,
+    tPrev: () => { const ni = idx > 0 ? idx - 1 : ALL_TECH.length - 1; self.openSheet('tech', ALL_TECH[ni].id, 480); },
+    tNext: () => { const ni = (idx >= 0 && idx < ALL_TECH.length - 1) ? idx + 1 : 0; self.openSheet('tech', ALL_TECH[ni].id, 480); },
+  };
+};
+const techC = buildTech(techId);
+
+// ---- assemble ----
+const groupStats = groupDef ? (() => { const a = groupDef.ids.length; const c = groupDef.ids.filter(id => TECH_IX[id] && TECH_IX[id].finalEff === 'covered').length;
+  return c + '/' + a + ' of their techniques covered (' + (a ? Math.round(1000 * c / a) / 10 : 0) + '%) · aka ' + groupDef.aliases; })() : '';
+const curTab = (S.tab && S.tab.t) || 'coverage';
+
+return Object.assign({}, {
+  h,
+  kpis, headline: 'Of the ' + D.counts.applicable + ' techniques that apply to your environment, your rules can detect ' + D.counts.covered + ' (plus ' + D.counts.partial + ' partially)',
+  pct: stemPct, topGaps, version: D.header.attack_version, bandRunDate: D.header.created,
+
+  tools: D.tools_label, adjPct: ov.adjusted_pct, extra: ov.extra, combN: ov.rules_n + ov.n, rulesN: ov.rules_n, rulesPct: ov.rules_pct, toolsN: ov.n, toolsPct: ov.tools_pct,
+  attestOpen: () => self.openDlg('attest'), attestLabel: self.busy('attest') ? 'Attesting…' : ('Client confirmed — attest all ' + ov.n + ' for ' + ov.tool),
+  dlg: { attest: self.dlgVals('attest') },
+  attestQ: 'Attest all ' + ov.n + ' credited techniques for ' + ov.tool + '?',
+  attestBody: 'This records that your SOC receives and monitors ' + ov.tool + '’s alerts for these techniques, creates one auditable tool-attested rule per technique in your name, and recomputes the coverage score.',
+  attestConfirmLabel: self.busy('attest') ? 'Attesting…' : 'Confirm', attestConfirm: () => self.runBusy('attest', 900, () => self.setState({ dlg: null, dlgArg: null })),
+
+  rulesFile: 'acme_sentinel_usecases_v2.xlsx', rulesTotal: D.header.conn_rules, openAllRules: () => self.openSheet('rules', 'all', 480),
+  statusChips, invToggle: () => self.toggleOpen('inv'), invRot: self.isOpen('inv') ? 'rotate(90deg)' : 'none', invCount: invRows.length, invOpen: self.isOpen('inv'), invRows,
+  envFile: 'acme_environment_v2.xlsx', platformList: D.platforms.map(p => p.name).join(', '), srcToggle: () => self.toggleOpen('src'), srcCount: 29, toolingN: 16, crownN: 7,
+  srcOpen: self.isOpen('src'), srcChips,
+
+  t: self.tabVals('t', ['coverage', 'gaps', 'assumptions', 'compare']),
+  q: M.search, setQ: (e) => self.setIn(['m', 'search'], e.target.value),
+  qKey: (e) => { if (e.key === 'Enter' && M.search.trim().length >= 3) self.openSheet('drill', 'search:' + M.search.trim(), 480); },
+  qSearch: () => { if (M.search.trim().length >= 3) self.openSheet('drill', 'search:' + M.search.trim(), 480); },
+  tabsShowExport: curTab !== 'compare',
+
+  group: M.threatGroup, setGroup: (e) => self.setIn(['m', 'threatGroup'], e.target.value), groupOpts,
+  runsOnToggle: self.lbVals('runson').toggle, runsOnCls: self.lbVals('runson').cls, runsOnSuffix: runsOnSelKeys.length ? (' (' + runsOnSelKeys.length + ')') : '',
+  platformSearch: M.platformSearch, setPlatformSearch: (e) => self.setIn(['m', 'platformSearch'], e.target.value), runsOnClear: () => self.setIn(['m', 'runsOnSel'], {}), platformItems,
+  detViaToggle: self.lbVals('detvia').toggle, detViaCls: self.lbVals('detvia').cls, detViaSuffix: detSel.length ? (' (' + detSel.length + ')') : '',
+  sourceSearch: M.sourceSearch, setSourceSearch: (e) => self.setIn(['m', 'sourceSearch'], e.target.value), detViaClear: () => self.setIn(['m', 'detectedViaSel'], {}), sourceItems,
+  hasGroup: !!groupDef, groupStats, downloadShown: () => {}, shownN, lensSentence,
+
+  lgCov: mkLegend('covered'), lgPar: mkLegend('partial'), lgNo: mkLegend('not_covered'), lgNa: mkLegend('na'),
+  legendFiltered: legendActive.length > 0, showAll: () => self.setIn(['m', 'legend'], {}),
+  hideSubsPressed: M.hideSubs ? 'true' : 'false', toggleHideSubs: () => self.setIn(['m', 'hideSubs'], !M.hideSubs), hideSubsLabel: M.hideSubs ? 'Sub-techniques hidden' : 'Hide sub-techniques',
+
+  runNum: M.run + 1, runPct, runDelta: (runD >= 0 ? '+' : '') + runD + ' pts vs previous run', runDeltaColor: runD > 0 ? 'var(--ok)' : runD < 0 ? 'var(--crit)' : 'var(--ink3)',
+  firstDate: dates[0], lastDate: dates[7], run: M.run, onSlide: (e) => self.setIn(['m', 'run'], +e.target.value), ticks,
+  togglePlay: () => { if (self._mitreTimer) { clearInterval(self._mitreTimer); self._mitreTimer = null; self.setIn(['m', 'playing'], false); return; }
+    self.setIn(['m', 'playing'], true); if (M.run >= 7) self.setIn(['m', 'run'], 0);
+    self._mitreTimer = setInterval(() => { const cur = self.state.m.run; if (cur >= 7) { clearInterval(self._mitreTimer); self._mitreTimer = null; self.setIn(['m', 'playing'], false); } else self.setIn(['m', 'run'], cur + 1); }, 700); },
+  playLabel: M.playing ? 'Pause' : 'Play timeline',
+
+  domainList,
+
+  aiTone: 'violet', aiTip: 'Recommendation wording was AI-generated (gpt-4o-mini). All numbers come from computed results, never from the AI.', aiLabel: 'AI-written text',
+  gaps: gapsVals, hasMore: D.gaps.length > 6, toggleAll: () => self.setIn(['m', 'gapsAll'], !M.gapsAll), showAllLabel: M.gapsAll ? 'Show top 6 only' : ('Show all ' + D.gaps.length + ' gaps'), roadmap,
+
+  ruleChips, threatMatches, assumptions: D.assumptions, assumptionsEmpty: D.assumptions.length === 0, naTotal: D.counts.na, naGroups,
+
+  cmpWith: M.compareWith || '', setCmp: (e) => self.setIn(['m', 'compareWith'], e.target.value), cmpOpts,
+  cmpLoading: false, cmpErr: false, cmpEmpty: cmpIdx == null, cmpHas: cmpIdx != null, cmpHeader,
+  cmpMismatch, cmpVerA: cmpBase ? cmpBase.version : '', cmpVerB: curRun.version, deltaChips,
+  tacticsEmpty: tacticMoves.length === 0, tacticMoves, l1, l2, l3,
+
+  sheets: { drill: self.sheetVals('drill', 480), tech: self.sheetVals('tech', 480), rules: self.sheetVals('rules', 480) },
+  drillTitle: drillC.title, drillSubtitle: drillC.subtitle, drillGroups: drillC.groups, drillEmpty: drillC.empty,
+}, rulesC, techC);
+ }).call(this, this);
+    return Object.assign(base, vals);
+  }
+}
+</script>
+</body>
+</html>

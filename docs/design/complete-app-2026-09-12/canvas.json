@@ -1,0 +1,482 @@
+{
+ "pages": [
+  {
+   "id": "system",
+   "name": "Shell & system"
+  },
+  {
+   "id": "sow",
+   "name": "SOW & RFP Review"
+  },
+  {
+   "id": "mitre",
+   "name": "MITRE ATT&CK Coverage"
+  },
+  {
+   "id": "code",
+   "name": "Code Security Review"
+  },
+  {
+   "id": "admin",
+   "name": "Admin & auth"
+  }
+ ],
+ "artboards": [
+  {
+   "file": "Main.dc.html",
+   "title": "Design system",
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "system",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "MainPhone.dc.html",
+   "title": "Design system · phone",
+   "x": 1540,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "page": "system",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "Dashboard.dc.html",
+   "title": "SOW Review dashboard",
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "sow",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "DashboardPhone.dc.html",
+   "title": "SOW Review dashboard · phone",
+   "x": 1540,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "page": "sow",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "Upload.dc.html",
+   "title": "Upload document",
+   "x": 0,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "page": "sow",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "UploadPhone.dc.html",
+   "title": "Upload document · phone",
+   "x": 1540,
+   "y": 1020,
+   "w": 390,
+   "h": 844,
+   "page": "sow",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "Results.dc.html",
+   "title": "Review results",
+   "x": 0,
+   "y": 2040,
+   "w": 1440,
+   "h": 900,
+   "page": "sow",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "ResultsPhone.dc.html",
+   "title": "Review results · phone",
+   "x": 1540,
+   "y": 2040,
+   "w": 390,
+   "h": 844,
+   "page": "sow",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "ProjectDetail.dc.html",
+   "title": "Project detail",
+   "x": 0,
+   "y": 3060,
+   "w": 1440,
+   "h": 900,
+   "page": "sow",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "ProjectDetailPhone.dc.html",
+   "title": "Project detail · phone",
+   "x": 1540,
+   "y": 3060,
+   "w": 390,
+   "h": 844,
+   "page": "sow",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "VersionsDiff.dc.html",
+   "title": "Version comparison",
+   "x": 0,
+   "y": 4080,
+   "w": 1440,
+   "h": 900,
+   "page": "sow",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "VersionsDiffPhone.dc.html",
+   "title": "Version comparison · phone",
+   "x": 1540,
+   "y": 4080,
+   "w": 390,
+   "h": 844,
+   "page": "sow",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "MitreList.dc.html",
+   "title": "MITRE assessments",
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "mitre",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "MitreListPhone.dc.html",
+   "title": "MITRE assessments · phone",
+   "x": 1540,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "page": "mitre",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "MitreNew.dc.html",
+   "title": "New MITRE assessment",
+   "x": 0,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "page": "mitre",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "MitreNewPhone.dc.html",
+   "title": "New MITRE assessment · phone",
+   "x": 1540,
+   "y": 1020,
+   "w": 390,
+   "h": 844,
+   "page": "mitre",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "MitreDetail.dc.html",
+   "title": "MITRE assessment results",
+   "x": 0,
+   "y": 2040,
+   "w": 1440,
+   "h": 900,
+   "page": "mitre",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "MitreDetailPhone.dc.html",
+   "title": "MITRE assessment results · phone",
+   "x": 1540,
+   "y": 2040,
+   "w": 390,
+   "h": 844,
+   "page": "mitre",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "MitreConnections.dc.html",
+   "title": "SIEM connections",
+   "x": 0,
+   "y": 3060,
+   "w": 1440,
+   "h": 900,
+   "page": "mitre",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "MitreConnectionsPhone.dc.html",
+   "title": "SIEM connections · phone",
+   "x": 1540,
+   "y": 3060,
+   "w": 390,
+   "h": 844,
+   "page": "mitre",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "CodeReviewList.dc.html",
+   "title": "Code Security Review · list",
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "code",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "CodeReviewListPhone.dc.html",
+   "title": "Code Security Review · list · phone",
+   "x": 1540,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "page": "code",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "CodeReviewNew.dc.html",
+   "title": "New code security review",
+   "x": 0,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "page": "code",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "CodeReviewNewPhone.dc.html",
+   "title": "New code security review · phone",
+   "x": 1540,
+   "y": 1020,
+   "w": 390,
+   "h": 844,
+   "page": "code",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "CodeReviewDetail.dc.html",
+   "title": "Code security review · detail",
+   "x": 0,
+   "y": 2040,
+   "w": 1440,
+   "h": 900,
+   "page": "code",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "CodeReviewDetailPhone.dc.html",
+   "title": "Code security review · detail · phone",
+   "x": 1540,
+   "y": 2040,
+   "w": 390,
+   "h": 844,
+   "page": "code",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "Admin.dc.html",
+   "title": "Admin",
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "admin",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "AdminPhone.dc.html",
+   "title": "Admin · phone",
+   "x": 1540,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "page": "admin",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "Login.dc.html",
+   "title": "Login",
+   "x": 0,
+   "y": 1020,
+   "w": 1440,
+   "h": 900,
+   "page": "admin",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  {
+   "file": "LoginPhone.dc.html",
+   "title": "Login · phone",
+   "x": 1540,
+   "y": 1020,
+   "w": 390,
+   "h": 844,
+   "page": "admin",
+   "expand": "fill",
+   "is_interactive": true
+  }
+ ],
+ "annotations": [
+  {
+   "id": "n-main",
+   "x": 1990,
+   "y": 0,
+   "w": 300,
+   "page": "system",
+   "text": "Try on this screen:\n· Open a sheet\n· Open a dialog\n· Exploit chains (6)\n· Drag & drop or click to select"
+  },
+  {
+   "id": "n-dashboard",
+   "x": 1990,
+   "y": 0,
+   "w": 300,
+   "page": "sow",
+   "text": "Try on this screen:\n· Collapse NovaRetail Software Solutions\n· Expand NovaRetail Software Solutions\n· Expand versions (chevron on a document)\n· Click a type to change it\n· Assign project\n· Cancel\n· Dismiss\n· Delete (destructive dialog)\n· Type in the search box to enter search mode"
+  },
+  {
+   "id": "n-upload",
+   "x": 1990,
+   "y": 1020,
+   "w": 300,
+   "page": "sow",
+   "text": "Try on this screen:\n· Change"
+  },
+  {
+   "id": "n-versionsdiff",
+   "x": 1990,
+   "y": 4080,
+   "w": 300,
+   "page": "sow",
+   "text": "Try on this screen:\n· Collapse Resolved\n· Expand Resolved\n· Collapse New\n· Expand New\n· Collapse Persisted\n· Expand Persisted"
+  },
+  {
+   "id": "n-mitrelist",
+   "x": 1990,
+   "y": 0,
+   "w": 300,
+   "page": "mitre",
+   "text": "Try on this screen:\n· Rename abc ltd\n· Save name\n· Archive abc ltd\n· Unarchive abc ltd\n· Search for text that matches nothing"
+  },
+  {
+   "id": "n-mitrenew",
+   "x": 1990,
+   "y": 1020,
+   "w": 300,
+   "page": "mitre",
+   "text": "Try on this screen:\n· Pull from Microsoft Sentinel\n· Upload a file\n· APT29 · G0016\n· Add exclusion\n· Upload & preview\n· Already tagged — click to see these rows\n· Adjust columns\n· Back — change files"
+  },
+  {
+   "id": "n-mitredetail",
+   "x": 1990,
+   "y": 2040,
+   "w": 300,
+   "page": "mitre",
+   "text": "Try on this screen:\n· Open a KPI tile -> DrillDownPanel\n· Open a matrix cell -> TechniqueDrawer (stacks over the drill sheet)\n· Open a status chip -> RuleListPanel\n· Past assessment runs\n· Legend toggle filters the matrix\n· Hide sub-techniques\n· Play advances the run timeline\n· Client confirmed — attest all 15 for Microsoft Defender for Endpoint\n· Gaps & Roadmap\n· Sort the gaps table by Technique\n· Assumptions & N/A\n· Compare\n· Native select — value change isn't click-simulatable, see codereview_list.py precedent\n· Search (preset query 'credential', 3+ chars) opens the drill sheet"
+  },
+  {
+   "id": "n-mitreconnections",
+   "x": 1990,
+   "y": 3060,
+   "w": 300,
+   "page": "mitre",
+   "text": "Try on this screen:\n· Add connection\n· Splunk\n· Cancel\n· Edit abc ltd Sentinel\n· Save changes\n· Wait for save to finish and the form to close\n· Delete Cisco CDC Splunk\n· Test\n· Pull now"
+  },
+  {
+   "id": "n-codereviewlist",
+   "x": 1990,
+   "y": 0,
+   "w": 300,
+   "page": "code",
+   "text": "Try on this screen:\n· Actions for Payments API · Q3 scan\n· Actions for Customer portal\n· Sort reviews"
+  },
+  {
+   "id": "n-codereviewnew",
+   "x": 1990,
+   "y": 1020,
+   "w": 300,
+   "page": "code",
+   "text": "Try on this screen:\n· Download scan kit\n· Scan report: choose a file or drag it here\n· + Add run_manifest_*.json (optional)\n· Copy command\n· Import and review →\n· Remove scopewise-scan-nodegoat.zip"
+  },
+  {
+   "id": "n-codereviewdetail",
+   "x": 1990,
+   "y": 2040,
+   "w": 300,
+   "page": "code",
+   "text": "Try on this screen:\n· Eval injection (RCE)\n· Fewest fixes\n· Reset\n· Next\n· Rename NodeGoat golden scan (VVAH 1.3.0)\n· Save name\n· More actions\n· Dismiss"
+  },
+  {
+   "id": "n-admin",
+   "x": 1990,
+   "y": 0,
+   "w": 300,
+   "page": "admin",
+   "text": "Try on this screen:\n· Change a tier (select) → Runs shows Unlimited\n· Set runs\n· Search people\n· Refresh"
+  },
+  {
+   "id": "n-login",
+   "x": 1990,
+   "y": 1020,
+   "w": 300,
+   "page": "admin",
+   "text": "Try on this screen:\n· Email me a sign-in code\n· Show code\n· Use a different email"
+  },
+  {
+   "id": "n-system",
+   "x": 1990,
+   "y": 0,
+   "w": 360,
+   "page": "system",
+   "text": "Calm light, one typeface.\nIBM Plex Sans for everything, IBM Plex Mono for ids and code. Ink #14181F on warm paper #FAF9F6; secondary #3B4453; labels #5E6877. One accent #2457B8. Severity and coverage colours only where they carry meaning; every chip text is at least 5.2:1 on its tint.\n\nReferences held against: Linear (restraint), Attio (light data density), Vercel (type and whitespace), Wiz (security views), Notion (annotated documents)."
+  },
+  {
+   "id": "n-unified",
+   "x": 1990,
+   "y": 420,
+   "w": 360,
+   "page": "system",
+   "text": "Unified on purpose (the live app has three of each today):\n· one severity ramp for chips, rows, dots and bars\n· one score band set\n· one resize grip (drag, ArrowLeft/Right, remembered) for sidebar, results split and every sheet\n· one destructive dialog instead of window.confirm\n· card rows on phone for every table\n· loading skeletons and empty states where the app has none\n\nEvery artboard has a State tweak: default · loading · empty · error · gated."
+  }
+ ],
+ "launch": {
+  "view": "canvas",
+  "page": "system"
+ }
+}

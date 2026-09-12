@@ -1,6 +1,6 @@
 # EDGP Implementation Progress
 
-**Last Updated:** 2026-09-12 night (run allowance deployed at `606f6c3`, migration 040)
+**Last Updated:** 2026-09-12 night (design canvas 12/15 screens; run allowance deployed at `606f6c3`)
 **Current Phase:** Phase 1-2 core product complete + deployed live; pre-launch fix plan Steps 1-2 done, Step 3 pending SME. Document Lifecycle & Multi-Project plan (Projects/Versioning/Fix-verification) — all three phases implemented, deployed, mandatory-project + fuzzy name matching added on top. Auth is now seamless Google Sign-In + email-OTP only (no password anywhere in the real UI; unrecognized emails auto-create an account). New file types (.doc/.xlsx/.xls/.csv) supported. Enterprise SEO strategy written, a live Cloudflare misconfiguration blocking all AI crawlers was found and fixed, and **SEO Phase 1 (Foundation) is implemented and deployed live** (real marketing homepage/product/pricing/about/contact/sitemap/schema -- only GSC/GA4/Lighthouse remain, blocked on dashboard access). Full detail: `docs/phases/summaries/SESSION_HANDOFF_2026_07_20_LIFECYCLE_SSO_SEO.md`.
 
 > Previous version of this doc (dated 07-17 02:00, showing "14% overall") was
@@ -10,6 +10,18 @@
 ---
 
 ## ✅ Done
+
+**Complete app design canvas (2026-09-12 night, design only, in progress):**
+interactive redesign of every authenticated screen in one calm-light system
+(IBM Plex Sans, darker ink, colour only where it carries meaning), built as a
+Claude Design canvas from `docs/design/complete-app-2026-09-12/` (generator,
+primitives, runtime helpers, verbatim inventories, label-completeness check,
+standalone Playwright harness). Live: https://claude.ai/code/artifact/9f120be7-d49e-4651-8ea3-a103269b5e24
+(12 of 15 screens, desktop + phone, all interactive). Still to finish: SOW
+review results, MITRE assessment results, Code Security Review detail (modules
+exist, harness failures listed in the handoff). Resume with
+`docs/phases/prompts/DESIGN_CANVAS_RESUME_PROMPT.md`. Handoff:
+`docs/phases/summaries/SESSION_HANDOFF_2026_09_12_DESIGN_CANVAS.md`.
 
 **Run allowance deployed 2026-09-12 night, SHA `606f6c3`, migration 040 on
 prod:** owner decision "none gets pro": the platform admin instead grants a

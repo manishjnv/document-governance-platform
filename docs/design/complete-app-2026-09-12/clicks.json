@@ -1,0 +1,516 @@
+{
+ "Main": [
+  {
+   "text": "Open a sheet",
+   "check": "document.querySelector('aside.sheet').style.transform.startsWith('translateX(0')"
+  },
+  {
+   "css": "aside.sheet .sheet-h .xbtn",
+   "check": "!document.querySelector('aside.sheet').style.transform.startsWith('translateX(0')"
+  },
+  {
+   "text": "Open a dialog",
+   "check": "document.querySelector('.dlg-ov').style.pointerEvents === 'auto'"
+  },
+  {
+   "css": ".dlg-ov[style*='pointer-events: auto'] .dlg-f .btn",
+   "check": "document.querySelector('.dlg-ov').style.pointerEvents === 'none'"
+  },
+  {
+   "text": "Exploit chains (6)",
+   "expect": "chain cards and the attack graph",
+   "check": "document.querySelector('.tab.on').textContent.includes('Exploit chains')"
+  },
+  {
+   "text": "Drag & drop or click to select",
+   "check": "document.querySelector('.filerow') !== null"
+  }
+ ],
+ "CodeReviewList": [
+  {
+   "label": "Actions for Payments API · Q3 scan",
+   "check": "document.querySelector('.menu.open') !== null"
+  },
+  {
+   "css": ".menu.open button:first-child",
+   "check": "Array.from(document.querySelectorAll('.dlg-ov')).some(d => d.style.pointerEvents === 'auto')"
+  },
+  {
+   "css": ".dlg-ov[style*='pointer-events: auto'] .dlg-f .btn:not(.primary):not(.danger)",
+   "check": "Array.from(document.querySelectorAll('.dlg-ov')).every(d => d.style.pointerEvents === 'none')"
+  },
+  {
+   "label": "Actions for Customer portal",
+   "check": "document.querySelector('.menu.open') !== null"
+  },
+  {
+   "css": ".menu.open button.danger",
+   "check": "Array.from(document.querySelectorAll('.dlg-ov')).some(d => d.style.pointerEvents === 'auto')"
+  },
+  {
+   "css": ".dlg-ov[style*='pointer-events: auto'] .dlg-f .btn:not(.primary):not(.danger)",
+   "check": "Array.from(document.querySelectorAll('.dlg-ov')).every(d => d.style.pointerEvents === 'none')"
+  },
+  {
+   "label": "Sort reviews",
+   "check": "true"
+  }
+ ],
+ "Dashboard": [
+  {
+   "label": "Collapse NovaRetail Software Solutions",
+   "check": "document.querySelector('[aria-label=\"Expand NovaRetail Software Solutions\"]') !== null"
+  },
+  {
+   "label": "Expand NovaRetail Software Solutions",
+   "check": "document.querySelector('[aria-label=\"Collapse NovaRetail Software Solutions\"]') !== null"
+  },
+  {
+   "label": "Expand versions",
+   "check": "document.querySelectorAll('.dt .dr.child').length >= 5",
+   "note": "Expand versions (chevron on a document)"
+  },
+  {
+   "css": ".dt .dr:not(.band) .dc[data-th='Type'] button",
+   "check": "document.querySelector('select[aria-label=\"Document type\"]') !== null",
+   "note": "Click a type to change it"
+  },
+  {
+   "text": "Assign project",
+   "check": "document.querySelector('input[list=\"dash-projects\"]') !== null"
+  },
+  {
+   "text": "Cancel",
+   "check": "document.querySelector('input[list=\"dash-projects\"]') === null"
+  },
+  {
+   "text": "Dismiss",
+   "check": "document.querySelector('.alert.blue') === null"
+  },
+  {
+   "css": ".dt .acts button.danger",
+   "check": "Array.from(document.querySelectorAll('.dlg-ov')).some(d => d.style.pointerEvents === 'auto')",
+   "note": "Delete (destructive dialog)"
+  },
+  {
+   "css": ".dlg-ov[style*='pointer-events: auto'] .dlg-f .btn:not(.danger)",
+   "check": "!(Array.from(document.querySelectorAll('.dlg-ov')).some(d => d.style.pointerEvents === 'auto'))"
+  },
+  {
+   "label": "Search all documents",
+   "check": "true",
+   "note": "Type in the search box to enter search mode"
+  }
+ ],
+ "Upload": [
+  {
+   "text": "Change",
+   "check": "document.querySelector('input[list=\"upload-projects\"]') !== null"
+  },
+  {
+   "css": "div[aria-label='Choose a document to upload, or drag and drop it here']",
+   "check": "document.querySelector('.filerow') !== null"
+  },
+  {
+   "css": "button.btn.primary",
+   "check": "document.querySelector('[role=\"status\"]') !== null"
+  }
+ ],
+ "ProjectDetail": [
+  {
+   "css": ".dt .dh button:has-text('Score')",
+   "check": "document.querySelector(\".dt .dh .dc[aria-sort='ascending'] button\") && document.querySelector(\".dt .dh .dc[aria-sort='ascending'] button\").textContent.includes('Score')"
+  },
+  {
+   "css": ".dt .dh button:has-text('Uploaded')",
+   "check": "document.querySelector(\".dt .dh .dc[aria-sort='ascending'] button\") && document.querySelector(\".dt .dh .dc[aria-sort='ascending'] button\").textContent.includes('Uploaded')"
+  },
+  {
+   "css": ".dt .dh button:has-text('Filename')",
+   "check": "document.querySelector(\".dt .dh .dc[aria-sort='ascending'] button\") && document.querySelector(\".dt .dh .dc[aria-sort='ascending'] button\").textContent.includes('Filename')"
+  }
+ ],
+ "VersionsDiff": [
+  {
+   "label": "Collapse Resolved",
+   "check": "document.querySelector('[aria-label=\"Expand Resolved\"]') !== null"
+  },
+  {
+   "label": "Expand Resolved",
+   "check": "document.querySelector('[aria-label=\"Collapse Resolved\"]') !== null"
+  },
+  {
+   "label": "Collapse New",
+   "check": "document.querySelector('[aria-label=\"Expand New\"]') !== null"
+  },
+  {
+   "label": "Expand New",
+   "check": "document.querySelector('[aria-label=\"Collapse New\"]') !== null"
+  },
+  {
+   "label": "Collapse Persisted",
+   "check": "document.querySelector('[aria-label=\"Expand Persisted\"]') !== null"
+  },
+  {
+   "label": "Expand Persisted",
+   "check": "document.querySelector('[aria-label=\"Collapse Persisted\"]') !== null"
+  }
+ ],
+ "Login": [
+  {
+   "text": "Email me a sign-in code",
+   "check": "document.querySelector('input[maxlength=\"4\"]') !== null"
+  },
+  {
+   "label": "Show code",
+   "check": "document.querySelector('[aria-label=\"Hide code\"]') !== null"
+  },
+  {
+   "text": "Use a different email",
+   "check": "document.querySelector('input[maxlength=\"4\"]') === null"
+  }
+ ],
+ "CodeReviewNew": [
+  {
+   "text": "Download scan kit",
+   "check": "document.querySelector('.spin') !== null"
+  },
+  {
+   "label": "Scan report: choose a file or drag it here",
+   "check": "document.querySelectorAll('.filerow').length === 1"
+  },
+  {
+   "text": "+ Add run_manifest_*.json (optional)",
+   "check": "document.querySelectorAll('.filerow').length === 2"
+  },
+  {
+   "label": "Copy command",
+   "check": "document.body.textContent.includes('Copied')"
+  },
+  {
+   "text": "Import and review →",
+   "check": "document.body.textContent.includes('Parsing')"
+  },
+  {
+   "label": "Remove scopewise-scan-nodegoat.zip",
+   "check": "document.querySelectorAll('.filerow').length === 1"
+  }
+ ],
+ "MitreList": [
+  {
+   "label": "Rename abc ltd",
+   "check": "document.querySelector('input[aria-label=\"New assessment name\"]') !== null"
+  },
+  {
+   "label": "Save name",
+   "check": "document.querySelector('input[aria-label=\"New assessment name\"]') === null"
+  },
+  {
+   "label": "Archive abc ltd",
+   "check": "document.querySelector('[aria-label=\"Open assessment abc ltd\"]') === null"
+  },
+  {
+   "css": "#mtl-show-archived",
+   "check": "document.querySelector('[aria-label=\"Open assessment abc ltd\"]') !== null && document.querySelector('[aria-label=\"Open assessment abc ltd\"]').textContent.includes('Archived')"
+  },
+  {
+   "label": "Unarchive abc ltd",
+   "check": "document.querySelector('[aria-label=\"Archive abc ltd\"]') !== null"
+  },
+  {
+   "css": "select[aria-label='Filter by status']",
+   "check": "(() => { const el = document.querySelector('select[aria-label=\"Filter by status\"]'); el.value = 'failed'; el.dispatchEvent(new Event('change', {bubbles:true})); return document.querySelectorAll('[role=\"link\"]').length === 1; })()"
+  },
+  {
+   "css": "input[aria-label='Search assessments by name, customer, or project']",
+   "check": "(() => { const el = document.querySelector('input[aria-label=\"Search assessments by name, customer, or project\"]'); const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set; setter.call(el, 'zzz-no-match'); el.dispatchEvent(new Event('input', {bubbles:true})); return document.querySelector('.empty') !== null; })()",
+   "note": "Search for text that matches nothing"
+  }
+ ],
+ "MitreNew": [
+  {
+   "text": "Pull from Microsoft Sentinel",
+   "check": "document.querySelector('.tab.on') && document.querySelector('.tab.on').textContent.trim() === 'Pull from Microsoft Sentinel'"
+  },
+  {
+   "text": "Upload a file",
+   "check": "document.querySelector('.tab.on') && document.querySelector('.tab.on').textContent.trim() === 'Upload a file'"
+  },
+  {
+   "css": "[aria-label=\"Detection rules export: choose a file or drag it here\"]",
+   "check": "document.body.textContent.includes('acme_sentinel_usecases_v2.xlsx')"
+  },
+  {
+   "text": "APT29 · G0016",
+   "check": "Array.from(document.querySelectorAll('[aria-pressed]')).some(e => e.getAttribute('aria-pressed') === 'true' && e.textContent.trim() === 'APT29 · G0016')"
+  },
+  {
+   "label": "Add exclusion",
+   "check": "document.querySelectorAll('[aria-label^=\"Exclusion \"]').length >= 2"
+  },
+  {
+   "text": "Upload & preview",
+   "check": "document.body.textContent.includes('Parse preview — check before running')"
+  },
+  {
+   "label": "Already tagged — click to see these rows",
+   "check": "document.querySelector('aside.sheet').style.transform.startsWith('translateX(0')"
+  },
+  {
+   "css": "aside.sheet .sheet-h .xbtn",
+   "check": "getComputedStyle(document.querySelector('aside.sheet').previousElementSibling).opacity === '0'"
+  },
+  {
+   "label": "Adjust columns",
+   "check": "document.body.textContent.includes('Map each field to the right column of your file')"
+  },
+  {
+   "text": "Back — change files",
+   "check": "!document.body.textContent.includes('Parse preview — check before running') && getComputedStyle(document.querySelector('.card.rise')).opacity === '1'"
+  }
+ ],
+ "MitreConnections": [
+  {
+   "text": "Add connection",
+   "check": "document.getElementById('mtc-form') !== null"
+  },
+  {
+   "text": "Splunk",
+   "check": "document.getElementById('mtc-form').textContent.includes('Host (e.g. acme.splunkcloud.com)')"
+  },
+  {
+   "css": "#mtc-form select",
+   "check": "(() => { const el = document.querySelector('#mtc-form select'); el.value = 'weekly'; el.dispatchEvent(new Event('change', {bubbles:true})); return document.querySelectorAll('#mtc-form select').length === 3; })()"
+  },
+  {
+   "text": "Cancel",
+   "check": "document.getElementById('mtc-form') === null"
+  },
+  {
+   "label": "Edit abc ltd Sentinel",
+   "check": "document.getElementById('mtc-form') !== null && document.getElementById('mtc-form').textContent.includes('blank = keep saved')"
+  },
+  {
+   "text": "Save changes",
+   "check": "document.body.innerText.includes('Saving…')"
+  },
+  {
+   "check": "document.getElementById('mtc-form') === null",
+   "note": "Wait for save to finish and the form to close"
+  },
+  {
+   "label": "Delete Cisco CDC Splunk",
+   "check": "Array.from(document.querySelectorAll('.dlg-ov')).some(d => d.style.pointerEvents === 'auto')"
+  },
+  {
+   "css": ".dlg-ov[style*='pointer-events: auto'] .dlg-f .btn:not(.primary):not(.danger)",
+   "check": "Array.from(document.querySelectorAll('.dlg-ov')).every(d => d.style.pointerEvents === 'none')"
+  },
+  {
+   "text": "Test",
+   "check": "document.body.innerText.includes('Testing…')"
+  },
+  {
+   "text": "Pull now",
+   "check": "document.body.innerText.includes('Pulling…')"
+  }
+ ],
+ "CodeReviewDetail": [
+  {
+   "css": ".tab:has-text(\"Scan details\")",
+   "check": "document.querySelector('.tab.on').textContent.includes('Scan details')"
+  },
+  {
+   "css": ".tab:has-text(\"Exploit chains\")",
+   "check": "document.querySelector('.tab.on').textContent.includes('Exploit chains')"
+  },
+  {
+   "text": "Eval injection (RCE)",
+   "check": "document.body.textContent.includes('5 of 6 chains broken')"
+  },
+  {
+   "text": "Fewest fixes",
+   "check": "document.body.textContent.includes('6 of 6 chains broken')"
+  },
+  {
+   "text": "Reset",
+   "check": "document.body.textContent.includes('0 of 6 chains broken')"
+  },
+  {
+   "css": ".tab:has-text(\"Findings\")",
+   "check": "document.querySelector('.tab.on').textContent.includes('Findings')"
+  },
+  {
+   "css": ".dt .dh button:has-text(\"Title\")",
+   "check": "Array.from(document.querySelectorAll('.dt .dh .dc')).find(d => d.textContent.includes('Title')).getAttribute('aria-sort') === 'ascending'"
+  },
+  {
+   "css": ".pillbar .chip:has-text(\"Critical\")",
+   "check": "document.querySelectorAll('.dt .dr:not(.dh)').length === 6"
+  },
+  {
+   "css": ".kpi:has-text(\"High\")",
+   "check": "document.querySelectorAll('.dt .dr:not(.dh)').length === 5"
+  },
+  {
+   "css": ".dt .dr.link",
+   "check": "document.querySelector('aside.sheet').style.transform.startsWith('translateX(0')"
+  },
+  {
+   "text": "Next",
+   "check": "document.body.textContent.includes('2 of 5')"
+  },
+  {
+   "label": "Rename NodeGoat golden scan (VVAH 1.3.0)",
+   "check": "document.querySelector('input[aria-label=\"New review name\"]') !== null"
+  },
+  {
+   "label": "Save name",
+   "check": "document.querySelector('input[aria-label=\"New review name\"]') === null"
+  },
+  {
+   "label": "More actions",
+   "check": "document.querySelector('.menu.open') !== null"
+  },
+  {
+   "css": ".menu.open button:has-text(\"Copy link\")",
+   "check": "document.body.textContent.includes('Copied')"
+  },
+  {
+   "label": "Dismiss",
+   "check": "document.querySelector('.alert.warn') === null"
+  }
+ ],
+ "MitreDetail": [
+  {
+   "css": ".kpi.click",
+   "check": "document.querySelector('aside.sheet[aria-label=\"Technique drill-down\"]').style.transform.startsWith('translateX(0')",
+   "note": "Open a KPI tile -> DrillDownPanel"
+  },
+  {
+   "css": "button[data-tid]",
+   "check": "document.querySelector('aside.sheet[aria-label=\"Technique details\"]').style.transform.startsWith('translateX(0')",
+   "note": "Open a matrix cell -> TechniqueDrawer (stacks over the drill sheet)"
+  },
+  {
+   "text": "tagged by you",
+   "nth": 0,
+   "check": "document.querySelector('aside.sheet[aria-label=\"Detection rules\"]').style.transform.startsWith('translateX(0')",
+   "note": "Open a status chip -> RuleListPanel"
+  },
+  {
+   "label": "Past assessment runs",
+   "check": "document.querySelector('[role=\"listbox\"][aria-label=\"Past assessment runs\"]').className.includes('open')"
+  },
+  {
+   "css": "button.chip[aria-pressed]",
+   "check": "document.querySelector('button.chip[aria-pressed=\"true\"]') !== null",
+   "note": "Legend toggle filters the matrix"
+  },
+  {
+   "text": "Hide sub-techniques",
+   "check": "Array.from(document.querySelectorAll('button')).some(b => b.textContent.trim() === 'Sub-techniques hidden')"
+  },
+  {
+   "text": "Play timeline",
+   "check": "document.querySelector('input[aria-label=\"Run timeline\"]').value !== '7'",
+   "note": "Play advances the run timeline"
+  },
+  {
+   "text": "Client confirmed — attest all 15 for Microsoft Defender for Endpoint",
+   "check": "Array.from(document.querySelectorAll('.dlg-ov')).some(d => d.style.pointerEvents === 'auto')"
+  },
+  {
+   "css": ".dlg-ov[style*='pointer-events: auto'] .dlg-f .btn:not(.primary)",
+   "check": "Array.from(document.querySelectorAll('.dlg-ov')).every(d => d.style.pointerEvents === 'none')"
+  },
+  {
+   "text": "Gaps & Roadmap",
+   "check": "document.querySelector('.tab.on').textContent.includes('Gaps')"
+  },
+  {
+   "text": "Technique",
+   "nth": 0,
+   "check": "Array.from(document.querySelectorAll('.dt .dh > div')).some(d => d.textContent.includes('Technique') && d.getAttribute('aria-sort') !== 'none')",
+   "note": "Sort the gaps table by Technique"
+  },
+  {
+   "text": "Assumptions & N/A",
+   "check": "document.querySelector('.tab.on').textContent.includes('Assumptions')"
+  },
+  {
+   "text": "Compare",
+   "nth": 0,
+   "check": "document.querySelector('.tab.on').textContent.trim() === 'Compare'"
+  },
+  {
+   "label": "Compare with",
+   "check": "true",
+   "note": "Native select — value change isn't click-simulatable, see codereview_list.py precedent"
+  },
+  {
+   "label": "Search this assessment",
+   "check": "document.querySelector('aside.sheet[aria-label=\"Technique drill-down\"]').style.transform.startsWith('translateX(0')",
+   "note": "Search (preset query 'credential', 3+ chars) opens the drill sheet"
+  }
+ ],
+ "Admin": [
+  {
+   "label": "Tier for talk2maq's Workspace",
+   "check": "true",
+   "note": "Change a tier (select) → Runs shows Unlimited"
+  },
+  {
+   "css": ".dt .dr .dc[data-th='Runs'] .btn",
+   "check": "document.querySelector('.dt .dr .dc[data-th=\"Runs\"] .faint') !== null",
+   "note": "Set runs"
+  },
+  {
+   "label": "Search people…",
+   "check": "true",
+   "note": "Search people"
+  },
+  {
+   "text": "Refresh",
+   "check": "document.querySelector('.spin') !== null"
+  }
+ ],
+ "Results": [
+  {
+   "css": "[data-finding-id=\"2\"] .frow-toggle",
+   "check": "document.querySelector('[data-finding-id=\"2\"] blockquote') !== null"
+  },
+  {
+   "css": "[data-finding-id=\"2\"] .fixbtn",
+   "check": "document.getElementById('risk-value').textContent.trim() === '73%'"
+  },
+  {
+   "css": "[data-sev-tile=\"Critical\"]",
+   "check": "document.querySelectorAll('.findingrow').length === 1"
+  },
+  {
+   "css": "#clear-sev-filter",
+   "check": "document.querySelectorAll('.findingrow').length === 6"
+  },
+  {
+   "css": "[data-area-row=\"Scope\"]",
+   "check": "document.querySelectorAll('.findingrow').length === 1"
+  },
+  {
+   "css": "#clear-area-filter",
+   "check": "document.querySelectorAll('.findingrow').length === 6"
+  },
+  {
+   "css": "[data-finding-id=\"2\"] .jumpbtn",
+   "check": "document.getElementById('sec-4.2').classList.contains('hl')"
+  },
+  {
+   "css": "#doc-toggle-btn",
+   "check": "document.querySelector('.docpane') === null"
+  },
+  {
+   "css": "#doc-toggle-btn",
+   "check": "document.querySelector('.findpane-wrap').style.flexGrow === '33'"
+  }
+ ]
+}

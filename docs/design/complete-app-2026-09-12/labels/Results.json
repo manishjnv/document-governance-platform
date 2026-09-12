@@ -1,0 +1,18 @@
+[
+  "Review Results", "Back to Dashboard", "Hide Document", "Show Document", "Download PDF", "View Full Report",
+  "Overall Score", "Risk Level", "Risk by Area", "Document X-Ray", "Findings Summary", "Findings",
+  "Sections Found (", "Gaps Detected (", "Document", "Description", "Document Text", "Recommendation", "Confidence", "Mark Fixed", "Reopen",
+  "What does this mean?", "Overall score", "Resize document pane (drag, or use arrow keys)",
+  "How complete and well-written this document is (0-100), across scope, clarity, commercial terms, delivery, and more. Higher is better.",
+  "How much this document could hurt you if signed as-is -- combines how severe the issues are and how many there are. Higher is worse.",
+  "The same risk score, split by area (Legal, Commercial, Delivery, etc.) so you can see what's actually driving it. Click an area to filter the findings below to just that area.",
+  "A quick scan of the document itself: which sections it has, and which required sections/checks are missing.",
+  "Every issue found, grouped by how serious it is. Click a number to filter the list below to just that severity.",
+  "High", "Medium", "Low", "Critical", "Major", "Info",
+  "Compliance", "Security", "Governance", "Scope", "Legal", "Commercial", "Delivery",
+  "clear filter", "No findings in this filter.", "None -- passes all rule checks.",
+  "Models:", "Rules", "Doc SHA-256", "Build",
+  "Loading review...", "Review not found",
+  "Jump to", "in the document",
+  "Project:", "Uploaded"
+]

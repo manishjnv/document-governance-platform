@@ -19,13 +19,21 @@ menus, filters, sorting, inline rename, drag resize) at desktop (1440) and phone
 
 ## What is on the canvas
 
-| Page | Artboards (desktop + phone) |
-|---|---|
-| Shell & system | `Main` — type ramp, colour/contrast, buttons, chips, inputs, dropzone, alerts, table, KPI tiles, sheet, dialog, tabs, tooltip, empty, skeleton, app bars |
-| SOW & RFP Review | `Dashboard`, `Upload`, `Results`, `ProjectDetail`, `VersionsDiff` |
-| MITRE ATT&CK Coverage | `MitreList`, `MitreNew`, `MitreDetail`, `MitreConnections` |
-| Code Security Review | `CodeReviewList`, `CodeReviewNew`, `CodeReviewDetail` (with the finding drawer) |
-| Admin & auth | `Admin`, `Login` |
+Status 2026-09-12 night: **12 of 15 screens published and passing**; `Results`, `MitreDetail`
+and `CodeReviewDetail` exist as modules but fail the harness (see the handoff
+`docs/phases/summaries/SESSION_HANDOFF_2026_09_12_DESIGN_CANVAS.md`) and are not on the
+canvas yet. Resume with `docs/phases/prompts/DESIGN_CANVAS_RESUME_PROMPT.md`.
+
+| Page | Artboards (desktop + phone) | Status |
+|---|---|---|
+| Shell & system | `Main` — type ramp, colour/contrast, buttons, chips, inputs, dropzone, alerts, table, KPI tiles, sheet, dialog, tabs, tooltip, empty, skeleton, app bars | done |
+| SOW & RFP Review | `Dashboard`, `Upload`, `ProjectDetail`, `VersionsDiff` | done |
+| SOW & RFP Review | `Results` | module written, overflow + filter clicks failing |
+| MITRE ATT&CK Coverage | `MitreList`, `MitreNew`, `MitreConnections` | done |
+| MITRE ATT&CK Coverage | `MitreDetail` | module written, matrix overflow + drawer clicks failing, 2 labels |
+| Code Security Review | `CodeReviewList`, `CodeReviewNew` | done |
+| Code Security Review | `CodeReviewDetail` (with the finding drawer) | module written, placeholder leak + 3 clicks failing |
+| Admin & auth | `Admin`, `Login` | done |
 
 Sticky notes on each page list the interactions to try on every screen.
 
