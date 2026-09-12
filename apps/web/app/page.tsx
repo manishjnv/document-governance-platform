@@ -29,8 +29,8 @@ const PRODUCTS = [
     iconClass: 'text-primary',
     title: 'SOW & RFP Review',
     desc: 'Six specialist AI reviewers plus a deterministic rule engine. Risk score, evidence quoted per finding, fix-verification on re-review.',
-    image: null,
-    imageAlt: '',
+    image: '/screens/sow-review-results-960.webp',
+    imageAlt: 'ScopeWise SOW review results for a sample SOC services statement of work: overall score, risk by area, document x-ray and the findings list',
   },
   {
     key: 'mitre',

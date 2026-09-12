@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { MarketingHeader } from '@/components/MarketingHeader';
 import { MarketingFooter } from '@/components/MarketingFooter';
 
@@ -111,6 +112,16 @@ export default function SowReviewProductPage() {
           parallel, and returns a risk-scored review with every finding tied
           back to the exact clause it came from.
         </p>
+        <Image
+          src="/screens/sow-review-results-960.webp"
+          alt="ScopeWise SOW review results for a sample SOC services statement of work: overall score, risk by area, document x-ray and the findings list"
+          width={960}
+          height={600}
+          sizes="(min-width: 1024px) 896px, 100vw"
+          priority
+          unoptimized
+          className="rounded-lg border mb-12 w-full h-auto"
+        />
 
         <h2 className="text-2xl font-bold mb-6">Six specialist AI reviewers</h2>
         <div className="grid sm:grid-cols-2 gap-6 mb-12">
