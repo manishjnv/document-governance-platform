@@ -49,6 +49,8 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-z-ai/glm-5.2}
+      OPENROUTER_FALLBACK_MODELS: ${OPENROUTER_FALLBACK_MODELS:-["deepseek/deepseek-chat","minimax/minimax-m3","qwen/qwen3.7-plus"]}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       # Set by the deploy command (GIT_SHA=$(git rev-parse --short HEAD));
       # recorded in every review's audit_meta.
@@ -108,6 +110,8 @@ services:
       # verifies tokens — least privilege (adversarial finding #2).
       # SMTP is needed since 13d: scheduled-failure admin notifications.
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-z-ai/glm-5.2}
+      OPENROUTER_FALLBACK_MODELS: ${OPENROUTER_FALLBACK_MODELS:-["deepseek/deepseek-chat","minimax/minimax-m3","qwen/qwen3.7-plus"]}
       GIT_SHA: ${GIT_SHA:-unknown}
       # Comma-separated code_reviews.review_id values every signed-in user may
       # view/export read-only (the NodeGoat demo). Set in .env; empty = none.
