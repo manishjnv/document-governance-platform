@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import { Sparkles } from 'lucide-react';
 import { MarketingHeader } from '@/components/MarketingHeader';
 import { MarketingFooter } from '@/components/MarketingFooter';
-import { BLOG_POSTS, getBlogPost } from '../data';
+import { BLOG_POSTS, RELATED_LABELS, getBlogPost } from '../data';
 
 type Params = { slug: string };
 
@@ -120,7 +120,7 @@ export default async function BlogPostPage({
             <h2 className="font-semibold">Related reading</h2>
           </div>
           <Link href={post.relatedUseCase} className="text-primary hover:underline">
-            See how ScopeWise reviews this in practice &rarr;
+            {RELATED_LABELS[post.relatedUseCase]} &rarr;
           </Link>
         </div>
 

@@ -12,9 +12,37 @@ export type BlogPost = {
   updatedDate?: string;
   author: string;
   body: BlogSection[];
-  relatedUseCase: '/use-cases/sow-review' | '/use-cases/rfp-review' | '/use-cases/scope-creep-prevention';
+  relatedUseCase: RelatedPath;
+  /** Product pillar the post belongs to; drives the blog index filter chips. */
+  pillar?: Pillar;
   /** True until an editor has reviewed the post for accuracy/tone. Blocks indexing. */
   pendingReview?: boolean;
+};
+
+export type Pillar = 'sow' | 'mitre' | 'codereview';
+
+export type RelatedPath =
+  | '/use-cases/sow-review'
+  | '/use-cases/rfp-review'
+  | '/use-cases/scope-creep-prevention'
+  | '/product/sow-review'
+  | '/product/mitre-coverage'
+  | '/product/code-security-review';
+
+export const PILLAR_LABELS: Record<Pillar, string> = {
+  sow: 'SOW & RFP Review',
+  mitre: 'MITRE ATT&CK Coverage',
+  codereview: 'Code Security Review',
+};
+
+/** Human label for the "related reading" link, derived from the path. */
+export const RELATED_LABELS: Record<RelatedPath, string> = {
+  '/use-cases/sow-review': 'See how ScopeWise reviews a SOW in practice',
+  '/use-cases/rfp-review': 'See how ScopeWise reviews an RFP in practice',
+  '/use-cases/scope-creep-prevention': 'See how ScopeWise catches scope creep in practice',
+  '/product/sow-review': 'See the SOW & RFP Review product',
+  '/product/mitre-coverage': 'See the MITRE ATT&CK Coverage product',
+  '/product/code-security-review': 'See the Code Security Review product',
 };
 
 export const BLOG_POSTS: BlogPost[] = [
@@ -24,6 +52,7 @@ export const BLOG_POSTS: BlogPost[] = [
     dek: 'SOWs and MSAs get used interchangeably in conversation but do very different jobs in a contract stack -- here is how each one works and why the distinction matters when you are reviewing either one.',
     publishedDate: '2026-07-20',
     author: 'ScopeWise Team',
+    pillar: 'sow',
     relatedUseCase: '/use-cases/sow-review',
     body: [
       {
@@ -54,6 +83,7 @@ export const BLOG_POSTS: BlogPost[] = [
     dek: 'A Statement of Work usually gets reviewed by whoever needs the project started, not a lawyer -- this checklist covers the ten places risk most often hides.',
     publishedDate: '2026-07-20',
     author: 'ScopeWise Team',
+    pillar: 'sow',
     relatedUseCase: '/use-cases/sow-review',
     body: [
       {
@@ -84,6 +114,7 @@ export const BLOG_POSTS: BlogPost[] = [
     dek: 'A liability cap bounds how much one party can be forced to pay the other if something goes wrong -- here is what it covers, what it typically excludes, and why the exclusions matter as much as the number.',
     publishedDate: '2026-07-20',
     author: 'ScopeWise Team',
+    pillar: 'sow',
     relatedUseCase: '/use-cases/sow-review',
     body: [
       {
@@ -119,6 +150,7 @@ export const BLOG_POSTS: BlogPost[] = [
     dek: 'Scope creep rarely starts with a dramatic ask -- it starts with five specific clause patterns that quietly leave the door open. Here is how to spot each one before you sign.',
     publishedDate: '2026-07-20',
     author: 'ScopeWise Team',
+    pillar: 'sow',
     relatedUseCase: '/use-cases/scope-creep-prevention',
     body: [
       {
@@ -154,6 +186,7 @@ export const BLOG_POSTS: BlogPost[] = [
     dek: 'Scoring a stack of RFP responses against each other is harder than it looks -- vendors format pricing differently, answer questions selectively, and write proposals to sound compliant. Here is a practical way to evaluate them.',
     publishedDate: '2026-07-20',
     author: 'ScopeWise Team',
+    pillar: 'sow',
     relatedUseCase: '/use-cases/rfp-review',
     body: [
       {
@@ -184,6 +217,7 @@ export const BLOG_POSTS: BlogPost[] = [
     dek: 'Some vendor responses signal trouble before the project even starts. Here are eight concrete warning signs worth checking for in every RFP response you evaluate.',
     publishedDate: '2026-07-20',
     author: 'ScopeWise Team',
+    pillar: 'sow',
     relatedUseCase: '/use-cases/rfp-review',
     body: [
       {
@@ -219,6 +253,7 @@ export const BLOG_POSTS: BlogPost[] = [
     dek: 'Certain phrases show up in contract after contract because they sound reasonable and commit to almost nothing. Here are 12 of the most common, what makes each one risky, and what to write instead.',
     publishedDate: '2026-07-20',
     author: 'ScopeWise Team',
+    pillar: 'sow',
     relatedUseCase: '/use-cases/sow-review',
     body: [
       {
@@ -254,6 +289,7 @@ export const BLOG_POSTS: BlogPost[] = [
     dek: "AI-assisted contract review is genuinely useful and genuinely limited -- here is an honest breakdown of what it catches reliably, what it cannot do, and why that gap is worth designing around rather than ignoring.",
     publishedDate: '2026-07-20',
     author: 'ScopeWise Team',
+    pillar: 'sow',
     relatedUseCase: '/use-cases/sow-review',
     body: [
       {
