@@ -131,7 +131,7 @@ function RichText({ text, fixTone }: { text: string; fixTone?: boolean }) {
       text
         .replace(/\s+/g, ' ')
         .replace(/(e\.g|i\.e|etc|vs|cf)\.\s/gi, '$1․ ') // protect abbreviations from the sentence split
-        .split(/(?<=[.!?])\s+(?=[A-Z`(])/)
+        .split(/(?<=[.!?])(?<!\.\.)\s+(?=[A-Z`(])/) // (?<!\.\.) = ellipsis is not a sentence end
         .map((s) => s.replace(/․/g, '.').trim())
         .filter(Boolean),
     [text]

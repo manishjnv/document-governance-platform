@@ -29,9 +29,12 @@ Legal) + a rule engine, per `docs/planning/4_AI_AGENT_SPECS.md`.
 
 - `docs/IMPLEMENTATION_PROGRESS.md` — master index of what's done/pending.
   Update at the end of any session that changes project state.
-- `docs/RCA_LOG.md` — root-cause log for every bug found in live testing.
-  **Check this before touching a file it mentions** — several entries are
-  copy-pasted patterns that recur (see Migrations section below).
+- `docs/RCA_LOG.md` — root-cause log for **every bug fixed in any session**
+  (live testing, review critique, agent output, deploy smoke). Append an
+  entry (symptom / cause / fix file:line / prevention) before the session
+  ends — a fix without an RCA entry is incomplete. **Check this before
+  touching a file it mentions** — several entries are copy-pasted patterns
+  that recur (see Migrations section below).
 - `docs/planning/` — durable reference docs, not session logs: specs,
   launch criteria, scoring methodology, and **feature design/spec +
   implementation-plan documents** (e.g. `MITRE_ASSESSMENT_PLAN.md`). This

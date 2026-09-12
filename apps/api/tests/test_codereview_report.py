@@ -174,3 +174,15 @@ def test_highlight_words_web_mirror_is_current():
     import re
     for frag in words["risk"] + words["fix"]:
         re.compile(frag)
+
+
+def test_sentences_keep_ellipsis_inside_code():
+    """Slide 10 'Fix in one line' once rendered 'Use `SELECT ...' because the
+    ellipsis in `SELECT ... FOR UPDATE` was split as a sentence end."""
+    from app.codereview.report_xlsx import _sentences
+
+    text = "Use `SELECT ... FOR UPDATE` or an atomic `F()` update. Then add a test."
+    assert _sentences(text) == [
+        "Use `SELECT ... FOR UPDATE` or an atomic `F()` update.",
+        "Then add a test.",
+    ]

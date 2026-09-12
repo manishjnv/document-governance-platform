@@ -62,7 +62,8 @@ _CODE_RE = re.compile(
     r"\b[\w.-]+\.(?:js|ts|py|json|yml|yaml|html|env)\b|\b\w+\(\)|/(?:[\w\-]+/)+[\w\-.]*"
 )
 _ABBREV_RE = re.compile(r"^(e\.g|i\.e|etc|vs|cf)$", re.I)
-_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-Z`(])")
+# (?<!\.\.) keeps an ellipsis ("SELECT ... FOR UPDATE") from ending a sentence.
+_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])(?<!\.\.)\s+(?=[A-Z`(])")
 
 
 def _guard(value):
