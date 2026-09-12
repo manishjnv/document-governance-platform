@@ -1,0 +1,18 @@
+{
+  "_shell": [
+    "ScopeWise", "Catch contract risk before you sign.", "SOW Review", "MITRE Assessment", "Code Security Review", "Admin", "Log out",
+    "Collapse sidebar", "Expand sidebar", "Open navigation menu", "Close"
+  ],
+  "Main": [
+    "Skip to main content", "A new version is available.", "Reload", "Install ScopeWise for offline access", "Install", "Dismiss",
+    "Resize panel (drag, or use arrow keys)", "No documents uploaded yet", "Upload Your First Document"
+  ],
+  "CodeReviewList": [
+    "Code Security Reviews", "Get scanner", "New review", "Search by name or repo…", "Search reviews by name or repo", "Sort reviews",
+    "Newest", "Oldest", "Most findings", "Name", "Failed to load reviews", "No reviews match your search.",
+    "Run the Visa Vulnerability Agentic Harness scan on your repo and upload its findings.json to get a reviewable findings register plus client-ready XLSX and PPTX deliverables.",
+    "Built on Visa's open-source Vulnerability Agentic Harness (Apache-2.0). ScopeWise is not affiliated with or endorsed by Visa, Inc.",
+    "Demo", "Shared sample review — visible to every signed-in user, read-only", "Rename", "Delete", "Import source format",
+    "Rename review", "New review name", "Cancel", "Save", "Delete review", "This can't be undone.", "findings.json", "SARIF"
+  ]
+}
