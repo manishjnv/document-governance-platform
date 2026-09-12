@@ -41,7 +41,7 @@ function renderContent(text: string): ReactNode {
   while ((match = pattern.exec(text)) !== null) {
     if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
     parts.push(
-      <Link key={i++} href={match[2]} className="text-primary hover:underline">
+      <Link key={i++} href={match[2]} className="text-primary underline hover:no-underline">
         {match[1]}
       </Link>
     );
