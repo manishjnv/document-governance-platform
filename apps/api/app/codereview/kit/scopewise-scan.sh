@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ScopeWise consultant scan kit runner.
-# Usage: scopewise-scan.sh <path-to-repo>
-set -euo pipefail
+# Usage: ./scopewise-scan.sh <path-to-repo>
+set -uo pipefail
 export PYTHONUTF8=1
 
 if [ "${1:-}" = "" ]; then
@@ -17,6 +17,10 @@ if [ ! -f ".env" ]; then
   echo "Missing .env in $SCRIPT_DIR - run ./setup.sh first (see README.md)." >&2
   exit 1
 fi
+if [ ! -d "$REPO" ]; then
+  echo "Repo path not found: $REPO" >&2
+  exit 1
+fi
 
 # Prefer the kit's own .venv (created by setup.sh); fall back to a PATH install.
 if [ -x ".venv/bin/vvaharness" ]; then
@@ -28,26 +32,46 @@ else
   exit 1
 fi
 
-echo "== Estimating scan scope/cost (no spend yet) =="
-"$VVA" estimate --repo "$REPO" --config config.yaml
+# One transcript per run: logs/scan-<repo>-<timestamp>.log (kept locally, never uploaded).
+REPO_NAME="$(basename "$REPO")"
+mkdir -p logs
+LOG="$SCRIPT_DIR/logs/scan-${REPO_NAME}-$(date +%Y%m%d-%H%M%S).log"
+mark() { local line; line="[$(date '+%Y-%m-%d %H:%M:%S')] $*"; echo "$line"; echo "$line" >> "$LOG"; }
+explain_failure() {  # explain_failure <what> <code>
+  mark "$1 FAILED (exit $2)"
+  echo
+  echo "  Where to look:"
+  echo "    transcript : $LOG"
+  ls "$REPO"/security-scan/*_errors.jsonl 2>/dev/null | sed 's/^/    traceback  : /'
+  MF="$(ls -t run_manifest_*.json 2>/dev/null | head -n1 || true)"
+  [ -n "$MF" ] && echo "    stage timeline (per-stage start/end/outcome): $SCRIPT_DIR/$MF"
+  echo "  Common causes: bad or unfunded OpenRouter key (401/402), no internet, repo path inside the kit folder."
+  exit "$2"
+}
+
+mark "scan kit run started - repo=$REPO scanner=$VVA log=$LOG"
+mark "estimate: started (no spend)"
+"$VVA" estimate --repo "$REPO" --config config.yaml 2>&1 | tee -a "$LOG"
+rc=${PIPESTATUS[0]}; [ "$rc" -eq 0 ] || explain_failure "estimate" "$rc"
+mark "estimate: done"
 
 read -r -p "Continue with the scan? [y/N] " REPLY
 case "$REPLY" in
   [yY]) ;;
-  *) echo "Aborted."; exit 1 ;;
+  *) mark "aborted by user before scan"; exit 1 ;;
 esac
 
-"$VVA" scan --repo "$REPO" --stop-after s9 --config config.yaml
+mark "scan: started (detection only, --stop-after s9) - progress lines below are also written to the log"
+"$VVA" scan --repo "$REPO" --stop-after s9 --config config.yaml 2>&1 | tee -a "$LOG"
+rc=${PIPESTATUS[0]}; [ "$rc" -eq 0 ] || explain_failure "scan" "$rc"
+mark "scan: done"
 
-REPO_NAME="$(basename "$REPO")"
 DATE="$(date -u +%Y%m%d)"
 ZIP_NAME="scopewise-scan-${REPO_NAME}-${DATE}.zip"
 
 MANIFEST="$(ls -t run_manifest_*.json 2>/dev/null | head -n1 || true)"
-if [ -z "$MANIFEST" ]; then
-  echo "No run_manifest_*.json found in $SCRIPT_DIR — scan may have failed." >&2
-  exit 1
-fi
+[ -n "$MANIFEST" ] || explain_failure "packaging (no run_manifest_*.json written)" 1
+[ -f "$REPO/security-scan/findings.json" ] || explain_failure "packaging (no security-scan/findings.json)" 1
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -61,7 +85,13 @@ if command -v zip >/dev/null 2>&1; then
 else
   python3 -m zipfile -c "$ZIP_NAME" "$TMP_DIR"/*
 fi
+mark "packaged: $SCRIPT_DIR/$ZIP_NAME"
 
-echo ""
-echo "Created: $SCRIPT_DIR/$ZIP_NAME"
-echo "Upload this file at ScopeWise -> Code Security Review -> New review"
+echo
+echo "  +--------------------------------------------------------------+"
+echo "  |  Scan complete                                               |"
+echo "  +--------------------------------------------------------------+"
+echo "  Results : $SCRIPT_DIR/$ZIP_NAME"
+echo "  Log     : $LOG"
+echo "  Upload the zip at ScopeWise -> Code Security Review -> New review"
+echo

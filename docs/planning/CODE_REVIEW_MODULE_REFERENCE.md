@@ -232,7 +232,11 @@ input from the upload page, without reading VVAH docs.
     `*.sarif` + newest `run_manifest_*.json` (all at zip root) as
     `scopewise-scan-<repo>-<yyyymmdd>.zip`. Both set `PYTHONUTF8=1` (VVAH
     prints UTF-8 glyphs; cp1252 consoles crash otherwise). The key is only
-    ever read from `.env`.
+    ever read from `.env`. Each run tees its full console output plus
+    timestamped phase markers into `logs/scan-<repo>-<timestamp>.log` in the
+    kit folder (local only, not in the zip); on a non-zero exit the script
+    names the transcript, VVAH's `*_errors.jsonl` traceback and the
+    `run_manifest` stage timeline (added 2026-09-12 on user request).
   - Kit root shows one entry per platform: `setup.cmd` + `scopewise-scan.cmd`
     (Windows), `setup.sh` + `scopewise-scan.sh` (macOS/Linux). The
     PowerShell internals and `KIT_VERSION.json` live under `bin/` (user

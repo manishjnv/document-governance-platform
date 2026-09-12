@@ -25,7 +25,10 @@ macOS / Linux:
     ./scopewise-scan.sh /path/to/repo
 
 The scan script shows a scope/cost estimate first; nothing is spent until you
-answer `y`. A small repo costs a few dollars and takes 30-120 minutes. It
+answer `y`. Every run writes a timestamped transcript to `logs/scan-<repo>-<time>.log`
+(kept on your machine, never uploaded); if a stage fails the script prints the
+transcript path, VVAH's `<repo>/security-scan/*_errors.jsonl` traceback and the
+`run_manifest_*.json` stage timeline to look at. A small repo costs a few dollars and takes 30-120 minutes. It
 writes `scopewise-scan-<repo>-<date>.zip` next to the scripts - upload that at
 ScopeWise -> Code Security Review -> New review.
 
