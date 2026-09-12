@@ -14,17 +14,22 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 if [ ! -f ".env" ]; then
-  echo "Missing .env in $SCRIPT_DIR — create one with OPENAI_API_KEY (see README.md)." >&2
+  echo "Missing .env in $SCRIPT_DIR - run ./setup.sh first (see README.md)." >&2
   exit 1
 fi
 
-if ! command -v vvaharness >/dev/null 2>&1; then
-  echo "vvaharness is not on PATH — install it first (see README.md)." >&2
+# Prefer the kit's own .venv (created by setup.sh); fall back to a PATH install.
+if [ -x ".venv/bin/vvaharness" ]; then
+  VVA=".venv/bin/vvaharness"
+elif command -v vvaharness >/dev/null 2>&1; then
+  VVA="vvaharness"
+else
+  echo "Scanner not installed - run ./setup.sh first (see README.md)." >&2
   exit 1
 fi
 
 echo "== Estimating scan scope/cost (no spend yet) =="
-vvaharness estimate --repo "$REPO" --config config.yaml
+"$VVA" estimate --repo "$REPO" --config config.yaml
 
 read -r -p "Continue with the scan? [y/N] " REPLY
 case "$REPLY" in
@@ -32,7 +37,7 @@ case "$REPLY" in
   *) echo "Aborted."; exit 1 ;;
 esac
 
-vvaharness scan --repo "$REPO" --stop-after s9 --config config.yaml
+"$VVA" scan --repo "$REPO" --stop-after s9 --config config.yaml
 
 REPO_NAME="$(basename "$REPO")"
 DATE="$(date -u +%Y%m%d)"

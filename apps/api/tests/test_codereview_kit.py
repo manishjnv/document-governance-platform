@@ -28,6 +28,8 @@ def test_kit_zip_contains_expected_files_and_wheel_hash():
     expected = {
         "scopewise-scan-kit/README.md",
         "scopewise-scan-kit/config.yaml",
+        "scopewise-scan-kit/setup.ps1",
+        "scopewise-scan-kit/setup.sh",
         "scopewise-scan-kit/scopewise-scan.ps1",
         "scopewise-scan-kit/scopewise-scan.sh",
         "scopewise-scan-kit/KIT_VERSION.json",

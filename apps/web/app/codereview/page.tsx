@@ -308,7 +308,7 @@ export default function CodeReviewListPage() {
                             .join(' · ')}
                     </TooltipContent>
                   </Tooltip>
-                  <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  <p className="mt-1.5 text-[11px] text-slate-700">
                     {total === 0 ? (
                       'No findings'
                     ) : (

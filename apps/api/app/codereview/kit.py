@@ -7,7 +7,15 @@ import zipfile
 from pathlib import Path
 
 KIT_DIR = Path(__file__).parent / "kit"
-KIT_FILES = ("README.md", "config.yaml", "scopewise-scan.ps1", "scopewise-scan.sh", "KIT_VERSION.json")
+KIT_FILES = (
+    "README.md",
+    "config.yaml",
+    "setup.ps1",
+    "setup.sh",
+    "scopewise-scan.ps1",
+    "scopewise-scan.sh",
+    "KIT_VERSION.json",
+)
 
 
 def build_kit_zip() -> bytes:

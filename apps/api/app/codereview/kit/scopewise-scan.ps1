@@ -11,17 +11,22 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $ScriptDir
 
 if (-not (Test-Path (Join-Path $ScriptDir ".env"))) {
-    Write-Error "Missing .env in $ScriptDir - create one with OPENAI_API_KEY (see README.md)."
+    Write-Error "Missing .env in $ScriptDir - run .\setup.ps1 first (see README.md)."
     exit 1
 }
 
-if (-not (Get-Command vvaharness -ErrorAction SilentlyContinue)) {
-    Write-Error "vvaharness is not on PATH - install it first (see README.md)."
+# Prefer the kit's own .venv (created by setup.ps1); fall back to a PATH install.
+if (Test-Path ".\.venv\Scripts\vvaharness.exe") {
+    $Vva = ".\.venv\Scripts\vvaharness.exe"
+} elseif (Get-Command vvaharness -ErrorAction SilentlyContinue) {
+    $Vva = "vvaharness"
+} else {
+    Write-Error "Scanner not installed - run .\setup.ps1 first (see README.md)."
     exit 1
 }
 
 Write-Host "== Estimating scan scope/cost (no spend yet) =="
-vvaharness estimate --repo $RepoPath --config config.yaml
+& $Vva estimate --repo $RepoPath --config config.yaml
 
 $reply = Read-Host "Continue with the scan? [y/N]"
 if ($reply -notmatch '^[yY]$') {
@@ -29,7 +34,7 @@ if ($reply -notmatch '^[yY]$') {
     exit 1
 }
 
-vvaharness scan --repo $RepoPath --stop-after s9 --config config.yaml
+& $Vva scan --repo $RepoPath --stop-after s9 --config config.yaml
 
 $repoName = Split-Path -Leaf (Resolve-Path $RepoPath)
 $date = Get-Date -Format "yyyyMMdd"

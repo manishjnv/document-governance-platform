@@ -18,12 +18,14 @@ const KIT_VERSION = '1.3.0';
 
 const STEPS = [
   <>
-    <code className="rounded bg-muted px-1 py-0.5">pip install</code> the kit wheel
+    Unzip the kit, then run <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[12px] text-slate-800 ring-1 ring-inset ring-slate-200">setup.ps1</code> (Windows) or{' '}
+    <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[12px] text-slate-800 ring-1 ring-inset ring-slate-200">setup.sh</code> (macOS/Linux) — it installs the scanner and asks for your OpenRouter key
   </>,
-  <>put your OpenRouter API key in <code className="rounded bg-muted px-1 py-0.5">.env</code></>,
   <>
-    run <code className="rounded bg-muted px-1 py-0.5">scopewise-scan --repo &lt;path&gt;</code>
+    Run <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[12px] text-slate-800 ring-1 ring-inset ring-slate-200">scopewise-scan.ps1 &lt;repo&gt;</code> /{' '}
+    <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[12px] text-slate-800 ring-1 ring-inset ring-slate-200">scopewise-scan.sh &lt;repo&gt;</code> — shows the cost estimate, then scans after you confirm
   </>,
+  <>Upload the <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[12px] text-slate-800 ring-1 ring-inset ring-slate-200">scopewise-scan-*.zip</code> it produces here</>,
 ];
 
 function FileRow({ file, onRemove }: { file: File; onRemove: () => void }) {
@@ -177,7 +179,7 @@ export default function NewCodeReviewPage() {
                       Download scan kit
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent className="text-xs">Zip with the pinned VVAH wheel, config, run scripts and README (~1 MB)</TooltipContent>
+                  <TooltipContent className="text-xs">Zip with the scanner, setup + run scripts and README (~1 MB). Unzip it, do not pip install it.</TooltipContent>
                 </Tooltip>
                 <Tooltip delayDuration={150}>
                   <TooltipTrigger asChild>
@@ -189,7 +191,7 @@ export default function NewCodeReviewPage() {
                 </Tooltip>
               </div>
 
-              <ol className="space-y-2 text-sm">
+              <ol className="space-y-2 text-sm text-slate-800">
                 {STEPS.map((step, i) => (
                   <li key={i} className="flex items-start gap-2">
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-medium text-primary">
@@ -288,8 +290,8 @@ export default function NewCodeReviewPage() {
                       )}
                     >
                       <UploadCloud className="mx-auto mb-1.5 h-6 w-6 text-muted-foreground" aria-hidden="true" />
-                      <p className="text-sm">Drag &amp; drop or click to select</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
+                      <p className="text-sm text-slate-800">Drag &amp; drop or click to select</p>
+                      <p className="mt-0.5 text-xs text-slate-600">
                         findings.json, .sarif or the scan zip · up to 10 MB
                       </p>
                     </div>

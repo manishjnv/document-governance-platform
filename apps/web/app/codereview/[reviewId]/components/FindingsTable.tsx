@@ -221,7 +221,7 @@ export function FindingsTable({
                 <TableCell className="max-w-xs px-2.5 py-1.5 font-medium">
                   <span className="line-clamp-2">{f.title}</span>
                 </TableCell>
-                <TableCell className="px-2.5 py-1.5 text-muted-foreground">{f.vuln_class_label}</TableCell>
+                <TableCell className="px-2.5 py-1.5 text-slate-700">{f.vuln_class_label}</TableCell>
                 <TableCell className="px-2.5 py-1.5">
                   <CweCell cwe={f.cwe} />
                 </TableCell>
@@ -232,7 +232,7 @@ export function FindingsTable({
                 <TableCell className="max-w-xs px-2.5 py-1.5">
                   <Tooltip delayDuration={150}>
                     <TooltipTrigger asChild>
-                      <span className="block truncate font-mono text-xs text-muted-foreground">
+                      <span className="block truncate font-mono text-xs text-slate-700">
                         {f.file}:{f.line_start}-{f.line_end}
                       </span>
                     </TooltipTrigger>
@@ -279,7 +279,7 @@ export function FindingsTable({
               <span className="line-clamp-2 text-sm font-medium">{f.title}</span>
               <SeverityCell severity={f.severity} />
             </div>
-            <div className="mt-1 truncate font-mono text-xs text-muted-foreground">
+            <div className="mt-1 truncate font-mono text-xs text-slate-700">
               {f.file}:{f.line_start}-{f.line_end}
             </div>
           </div>

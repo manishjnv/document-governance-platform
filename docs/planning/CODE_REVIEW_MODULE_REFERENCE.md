@@ -233,7 +233,13 @@ input from the upload page, without reading VVAH docs.
     `scopewise-scan-<repo>-<yyyymmdd>.zip`. Both set `PYTHONUTF8=1` (VVAH
     prints UTF-8 glyphs; cp1252 consoles crash otherwise). The key is only
     ever read from `.env`.
-  - `README.md` — install / key / run / upload, ≤ 40 lines.
+  - `setup.ps1` / `setup.sh` — one-time install: creates `.venv` in the kit
+    folder, pip-installs the vendored wheel, prompts for the OpenRouter key
+    (hidden input) and writes `.env`. Added 2026-09-12 after the first user
+    tried `pip install <kit>.zip` (the zip is not a Python package).
+  - `README.md` — "Quick start (3 commands)" + "Manual install (plain pip)"
+    + upload, ~45 lines. The scan scripts prefer `.venv` when present and
+    fall back to `vvaharness` on PATH.
 - **Upload accepts the kit zip** (`ingest.unpack_scan_zip`, pure): detected
   by `.zip` suffix or `PK` magic. Guards, all → 422: ≤ 50 entries,
   ≤ 10 MB declared per member, ≤ 30 MB declared total (checked before any
