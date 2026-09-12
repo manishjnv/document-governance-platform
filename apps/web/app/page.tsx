@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   FileSearch,
   Crosshair,
@@ -28,6 +29,8 @@ const PRODUCTS = [
     iconClass: 'text-primary',
     title: 'SOW & RFP Review',
     desc: 'Six specialist AI reviewers plus a deterministic rule engine. Risk score, evidence quoted per finding, fix-verification on re-review.',
+    image: null,
+    imageAlt: '',
   },
   {
     key: 'mitre',
@@ -36,6 +39,8 @@ const PRODUCTS = [
     iconClass: 'text-violet-700',
     title: 'MITRE ATT&CK Coverage',
     desc: 'Upload your detection rules and environment inventory. Get coverage by tactic, ranked gaps, a 90-day roadmap, and the PPTX, XLSX and Navigator layer to present it.',
+    image: '/screens/mitre-coverage-heatmap-960.webp',
+    imageAlt: 'ScopeWise MITRE ATT&CK assessment results: coverage tiles, top gaps and the per-tactic technique heatmap for the ACME sample workspace',
   },
   {
     key: 'codereview',
@@ -44,8 +49,10 @@ const PRODUCTS = [
     iconClass: 'text-amber-700',
     title: 'Code Security Review',
     desc: 'Run the open-source scanner on your side. Upload findings only. Get a plain-language register, exploit chains and the fewest fixes that break every chain.',
+    image: '/screens/code-review-findings-drawer-960.webp',
+    imageAlt: 'ScopeWise Code Security Review: the NodeGoat findings register with a finding drawer open showing what is wrong, why it matters and how to fix it',
   },
-] as const;
+];
 
 const STEPS = [
   {
@@ -216,6 +223,18 @@ export default function HomePage() {
                 className="rounded-lg border p-6 hover:border-primary transition-colors"
               >
                 <p.icon className={`h-8 w-8 mb-4 ${p.iconClass}`} />
+                {p.image && (
+                  <Image
+                    src={p.image}
+                    alt={p.imageAlt}
+                    width={960}
+                    height={600}
+                    sizes="(min-width: 768px) 33vw, 100vw"
+                    loading="lazy"
+            unoptimized
+                    className="rounded-md border mb-4 w-full h-auto"
+                  />
+                )}
                 <h2 className="font-semibold text-lg mb-2">{p.title}</h2>
                 <p className="text-sm text-muted-foreground mb-3">{p.desc}</p>
                 <span className="text-sm font-medium text-primary">Learn more &rarr;</span>

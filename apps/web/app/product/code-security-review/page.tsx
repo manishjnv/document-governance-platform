@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { MarketingHeader } from '@/components/MarketingHeader';
 import { MarketingFooter } from '@/components/MarketingFooter';
 
@@ -124,6 +125,16 @@ export default function CodeSecurityReviewPage() {
           exploit chains that link findings together, and the fewest fixes
           that break every chain.
         </p>
+        <Image
+          src="/screens/code-review-findings-drawer-960.webp"
+          alt="ScopeWise Code Security Review of OWASP NodeGoat: 29 findings, 6 exploit chains, and the finding drawer open on a critical finding"
+          width={960}
+          height={600}
+          sizes="(min-width: 1024px) 896px, 100vw"
+          priority
+          unoptimized
+          className="rounded-lg border mb-12 w-full h-auto"
+        />
 
         <h2 className="text-2xl font-bold mb-4">The problem</h2>
         <p className="text-muted-foreground mb-4">
