@@ -24,7 +24,7 @@ export const GLOSSARY_ENTRIES: GlossaryEntry[] = [
       'Sets a ceiling on how much a vendor or client can be forced to pay in damages.',
       'Usually a multiple of fees paid (e.g. 12 months) or a fixed dollar amount.',
       'Almost always has carve-outs -- categories that stay uncapped.',
-      'One of the highest-leverage clauses to check in a SOW or MSA.',
+      'One of the highest-impact clauses to check in a SOW or MSA.',
     ],
     sections: [
       {
