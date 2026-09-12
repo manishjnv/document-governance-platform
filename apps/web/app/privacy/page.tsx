@@ -18,6 +18,7 @@ const SECTIONS = [
       'Documents you upload for review (SOWs, RFPs, and similar), and the review results generated from them.',
       'For the MITRE coverage module: detection-rule metadata pulled read-only from your SIEM (rule names, descriptions, queries, ATT&CK tags, enabled state) or uploaded as a file, and optional environment inventory you provide.',
       'Basic usage analytics (page views, feature usage) via standard analytics cookies.',
+      'If you request a template download, the name and work email you enter are sent to us by email so we can follow up once; they are not stored in a database or shared with anyone else.',
     ],
   },
   {

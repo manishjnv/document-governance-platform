@@ -25,6 +25,7 @@ const COLUMNS = [
     links: [
       { href: '/resources/blog', label: 'Blog' },
       { href: '/resources/glossary', label: 'Glossary' },
+      { href: '/resources/templates', label: 'Templates' },
       { href: '/compare/scopewise-vs-manual-review', label: 'ScopeWise vs manual review' },
       { href: '/use-cases/sow-review', label: 'SOW review' },
       { href: '/use-cases/rfp-review', label: 'RFP review' },
