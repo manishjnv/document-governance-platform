@@ -26,6 +26,7 @@ const PAGES: Record<string, string> = {
   '/solutions/for-security-consultancies': '2026-09-12',
   '/solutions/for-appsec-consultants': '2026-09-12',
   '/resources/glossary': '2026-07-20',
+  '/compare/scopewise-vs-manual-review': '2026-09-12',
   '/resources/blog': '2026-08-01',
 };
 
