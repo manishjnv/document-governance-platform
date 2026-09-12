@@ -1,15 +1,202 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Copy } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight, Copy, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { CodeReviewFinding, SEVERITY_META, VERDICT_META, Verdict } from '../../lib';
-import { useSheetResize } from '../../../mitre/components/useSheetResize';
 
 const CWE_RE = /^CWE-(\d+)$/i;
+const MIN_WIDTH = 380;
+const WIDTH_KEY = 'codereview-sheet-width';
+
+/* ---------- resizable width (copy of mitre/useSheetResize with a visible grip) ---------- */
+function useDrawerWidth() {
+  const [width, setWidth] = useState<number | null>(null);
+  useEffect(() => {
+    try {
+      const stored = Number(localStorage.getItem(WIDTH_KEY));
+      if (stored >= MIN_WIDTH) setWidth(stored);
+    } catch {
+      // ponytail: storage unavailable -> default width
+    }
+  }, []);
+  const apply = useCallback((next: number) => {
+    const clamped = Math.round(Math.min(Math.max(next, MIN_WIDTH), window.innerWidth * 0.95));
+    setWidth(clamped);
+    try {
+      localStorage.setItem(WIDTH_KEY, String(clamped));
+    } catch {
+      // ignore
+    }
+  }, []);
+  const onPointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      e.preventDefault();
+      const onMove = (ev: PointerEvent) => apply(window.innerWidth - ev.clientX);
+      const onUp = () => window.removeEventListener('pointermove', onMove);
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp, { once: true });
+    },
+    [apply]
+  );
+  const onKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      apply((width ?? 560) + (e.key === 'ArrowLeft' ? 40 : -40));
+    },
+    [width, apply]
+  );
+  const style = width ? { width: `min(${width}px, 100vw)`, maxWidth: `min(${width}px, 100vw)` } : undefined;
+  // ponytail: native title instead of a Tooltip — the sheet auto-focuses this handle on open, which would pop a Radix tooltip every time
+  const handle = (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize panel (drag, or use arrow keys)"
+      title="Drag to resize"
+      tabIndex={0}
+      onPointerDown={onPointerDown}
+      onKeyDown={onKeyDown}
+      className="group absolute left-0 top-0 z-10 flex h-full w-3 cursor-ew-resize touch-none items-center justify-center transition-colors hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:outline-none"
+    >
+      <span className="h-10 w-1 rounded-full bg-border transition-colors group-hover:bg-primary group-focus-visible:bg-primary" />
+    </div>
+  );
+  return { style, handle };
+}
+
+/* ---------- rich text: highlight keywords, code tokens, links; bullet long prose ---------- */
+const RISK_RE =
+  /\b(unauthenticated|unauthorized|attacker[s]?|brute-?force|credential[- ]stuffing|remote code execution|RCE|injection|bypass(?:ed|es)?|exfiltrat\w*|takeover|forg(?:e|ed|ing)|hijack\w*|arbitrary|plaintext|hard-?coded|no rate limiting|without any|exposed|enumerat\w*|escalat\w*|tamper\w*|spoof\w*|leak\w*|weak|insecure|unsafe|unvalidated|unsanitized|eval)\b/gi;
+const FIX_RE =
+  /\b(rate[- ]limit\w*|lockout|CAPTCHA|parameteri[sz]ed|prepared statements?|sanitiz\w*|validat\w*|encrypt\w*|hash\w*|middleware|allow-?list\w*|deny-?list\w*|escap\w*|CSRF tokens?|HttpOnly|Secure flag|SameSite|least privilege|upgrade|patch\w*|rotate\w*|remove|disable)\b/gi;
+const ABBREV_RE = /^(e\.g|i\.e|etc|vs|cf)$/i;
+const CODE_RE =
+  /`[^`]+`|https?:\/\/[^\s)]+|\b(?:GET|POST|PUT|PATCH|DELETE)\s+\/[\w\-./:?=&{}]*|\b(?:[A-Za-z_$][\w$]*\.)+[A-Za-z_$][\w$]*(?:\(\))?|\b[a-z][\w$]*[A-Z][\w$]*(?:\(\))?|\b[\w.-]+\.(?:js|ts|py|json|yml|yaml|html|env)\b|\b\w+\(\)|\/(?:[\w\-]+\/)+[\w\-.]*|\/[a-z][\w\-]+\b/g;
+
+function Code({ children }: { children: string }) {
+  return (
+    <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[12px] text-slate-800 ring-1 ring-inset ring-slate-200">
+      {children}
+    </code>
+  );
+}
+
+/** Colour a sentence: code chips, links, risk words (rose) and fix words (emerald). */
+function Highlight({ text, fixTone }: { text: string; fixTone?: boolean }) {
+  const parts: React.ReactNode[] = [];
+  let last = 0;
+  let key = 0;
+  const words = (chunk: string) => {
+    const re = fixTone ? FIX_RE : RISK_RE;
+    const cls = fixTone ? 'font-semibold text-emerald-700' : 'font-semibold text-rose-700';
+    let l = 0;
+    re.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(chunk)) !== null) {
+      if (m.index > l) parts.push(chunk.slice(l, m.index));
+      parts.push(<span key={`w${key++}`} className={cls}>{m[0]}</span>);
+      l = m.index + m[0].length;
+    }
+    if (l < chunk.length) parts.push(chunk.slice(l));
+  };
+  CODE_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = CODE_RE.exec(text)) !== null) {
+    if (m.index > last) words(text.slice(last, m.index));
+    const tok = m[0];
+    if (ABBREV_RE.test(tok)) {
+      words(tok);
+    } else if (/^https?:\/\//.test(tok)) {
+      parts.push(
+        <a key={`l${key++}`} href={tok} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 text-primary hover:underline">
+          {tok}
+          <ExternalLink size={11} aria-hidden="true" />
+        </a>
+      );
+    } else {
+      parts.push(<Code key={`c${key++}`}>{tok.replace(/^`|`$/g, '')}</Code>);
+    }
+    last = m.index + tok.length;
+  }
+  if (last < text.length) words(text.slice(last));
+  return <>{parts}</>;
+}
+
+/** Split prose into short sentences and render as bullets when there are several. */
+function RichText({ text, fixTone }: { text: string; fixTone?: boolean }) {
+  const sentences = useMemo(
+    () =>
+      text
+        .replace(/\s+/g, ' ')
+        .replace(/(e\.g|i\.e|etc|vs|cf)\.\s/gi, '$1․ ') // protect abbreviations from the sentence split
+        .split(/(?<=[.!?])\s+(?=[A-Z`(])/)
+        .map((s) => s.replace(/․/g, '.').trim())
+        .filter(Boolean),
+    [text]
+  );
+  if (sentences.length <= 1) {
+    return (
+      <p className="text-[13.5px] leading-relaxed text-slate-800">
+        <Highlight text={text} fixTone={fixTone} />
+      </p>
+    );
+  }
+  return (
+    <ul className="space-y-1 text-[13.5px] leading-relaxed text-slate-800">
+      {sentences.map((s, i) => (
+        <li key={i} className="flex gap-2">
+          <span className={cn('mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full', fixTone ? 'bg-emerald-500' : 'bg-slate-400')} aria-hidden="true" />
+          <span className="min-w-0">
+            <Highlight text={s} fixTone={fixTone} />
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Section({ label, tone, hint, children }: { label: string; tone: string; hint: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <Tooltip delayDuration={200}>
+        <TooltipTrigger asChild>
+          <h3 className="mb-1.5 flex w-fit cursor-default items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+            <span className={cn('h-2 w-2 rounded-sm', tone)} aria-hidden="true" />
+            {label}
+          </h3>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="max-w-xs text-xs">{hint}</TooltipContent>
+      </Tooltip>
+      {children}
+    </section>
+  );
+}
+
+function Fact({ label, tip, children, className }: { label: string; tip: string; children: React.ReactNode; className?: string }) {
+  return (
+    <Tooltip delayDuration={150}>
+      <TooltipTrigger asChild>
+        <div className={cn('min-w-0 cursor-default rounded-md border bg-muted/30 px-2.5 py-1.5 transition-colors hover:bg-muted/60', className)}>
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</div>
+          <div className="mt-0.5 text-xs text-slate-800">{children}</div>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs text-xs">{tip}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function cvssTone(score: number) {
+  if (score >= 9) return 'text-rose-700';
+  if (score >= 7) return 'text-orange-600';
+  if (score >= 4) return 'text-amber-600';
+  return 'text-emerald-700';
+}
 
 function SeverityChip({ severity }: { severity: CodeReviewFinding['severity'] }) {
   const meta = SEVERITY_META[severity] ?? SEVERITY_META.info;
@@ -22,15 +209,6 @@ function SeverityChip({ severity }: { severity: CodeReviewFinding['severity'] })
       </TooltipTrigger>
       <TooltipContent className="text-xs">{meta.label} severity (scanner-assigned)</TooltipContent>
     </Tooltip>
-  );
-}
-
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="whitespace-pre-wrap text-sm leading-snug">{children}</div>
-    </div>
   );
 }
 
@@ -48,7 +226,7 @@ export function FindingDrawer({
   selectedIdx: number | null;
   onSelect: (idx: number | null) => void;
 }) {
-  const resize = useSheetResize();
+  const resize = useDrawerWidth();
   const [copied, setCopied] = useState(false);
 
   // Deep link: open ?finding=N once on mount.
@@ -85,133 +263,192 @@ export function FindingDrawer({
 
   return (
     <Sheet open={selected !== null} onOpenChange={(open) => !open && onSelect(null)}>
-      <SheetContent side="right" style={resize.style} className="flex w-full flex-col overflow-y-auto p-5 sm:max-w-lg">
+      <SheetContent side="right" style={resize.style} className="flex w-full flex-col overflow-y-auto p-5 pl-6 sm:max-w-xl">
         {resize.handle}
         {selected && (
           <>
-            <SheetTitle className="flex flex-wrap items-center gap-2 text-base">
-              <span className="font-mono text-muted-foreground">#{selected.idx}</span>
+            <SheetTitle className="flex flex-wrap items-center gap-2 text-base leading-snug text-slate-900">
+              <span className="font-mono text-sm text-slate-500">#{selected.idx}</span>
               <SeverityChip severity={selected.severity} />
               {selected.title}
             </SheetTitle>
+            <p className="mt-1 text-xs text-slate-600">{selected.vuln_class_label}</p>
 
-            <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground sm:grid-cols-3">
-              {selected.cwe && (
-                <div>
-                  <div className="font-semibold text-foreground">CWE</div>
-                  <CweRef cwe={selected.cwe} match={cweMatch} />
-                </div>
-              )}
-              {selected.cvss_score != null && (
-                <div>
-                  <div className="font-semibold text-foreground">CVSS</div>
-                  {selected.cvss_score} {selected.cvss_rating ? `(${selected.cvss_rating})` : ''}
-                  {selected.cvss_vector && <div className="break-all font-mono text-[11px]">{selected.cvss_vector}</div>}
-                </div>
-              )}
-              <div>
-                <div className="font-semibold text-foreground">Confidence</div>
-                {Math.round(selected.confidence * 100)}% · {selected.votes} vote{selected.votes === 1 ? '' : 's'}
-              </div>
-              {selected.verdict && (
-                <div>
-                  <div className="font-semibold text-foreground">Verdict</div>
+            {/* Quick facts */}
+            <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+              <Fact label="CWE" tip="Common Weakness Enumeration entry — opens the MITRE definition.">
+                {selected.cwe ? (
+                  cweMatch ? (
+                    <a
+                      href={`https://cwe.mitre.org/data/definitions/${cweMatch[1]}.html`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                    >
+                      {selected.cwe}
+                      <ExternalLink size={11} aria-hidden="true" />
+                    </a>
+                  ) : (
+                    selected.cwe
+                  )
+                ) : (
+                  '—'
+                )}
+              </Fact>
+              <Fact label="CVSS" tip={selected.cvss_vector ? `Vector: ${selected.cvss_vector}` : 'CVSS 3.1 base score'}>
+                {selected.cvss_score != null ? (
+                  <span className={cn('font-semibold', cvssTone(selected.cvss_score))}>
+                    {selected.cvss_score} {selected.cvss_rating ? `· ${selected.cvss_rating}` : ''}
+                  </span>
+                ) : (
+                  '—'
+                )}
+              </Fact>
+              <Fact label="Confidence" tip={`${Math.round(selected.confidence * 100)}% from ${selected.votes} model vote${selected.votes === 1 ? '' : 's'}`}>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-1.5 w-12 rounded-full bg-muted">
+                    <span className="block h-1.5 rounded-full bg-primary" style={{ width: `${Math.round(selected.confidence * 100)}%` }} />
+                  </span>
+                  {Math.round(selected.confidence * 100)}%
+                </span>
+              </Fact>
+              <Fact label="Verdict" tip={selected.verdict ? `${VERDICT_META[selected.verdict as Verdict].tooltip}${selected.verdict_confidence != null ? ` (${selected.verdict_confidence}/10)` : ''}` : 'Not reviewed by the verifier'}>
+                {selected.verdict ? (
                   <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[11px] font-medium', VERDICT_META[selected.verdict as Verdict].chip)}>
                     {VERDICT_META[selected.verdict as Verdict].label}
                   </span>
-                  {selected.verdict_confidence != null && ` ${selected.verdict_confidence}%`}
-                  {selected.verdict_reason && <div className="mt-0.5">{selected.verdict_reason}</div>}
-                </div>
-              )}
-              <div>
-                <div className="font-semibold text-foreground">File</div>
-                <span className="break-all font-mono">
-                  {selected.file}:{selected.line_start}-{selected.line_end}
+                ) : (
+                  '—'
+                )}
+              </Fact>
+              <Fact label="File" tip={`${selected.file} lines ${selected.line_start}–${selected.line_end}`} className="col-span-2">
+                <span className="block truncate font-mono text-[12px]">
+                  {selected.file}
+                  <span className="text-slate-500">:{selected.line_start}-{selected.line_end}</span>
                 </span>
-              </div>
+              </Fact>
               {(selected.source_ref || selected.sink_ref) && (
-                <div>
-                  <div className="font-semibold text-foreground">Source → Sink</div>
-                  <span className="break-all font-mono text-[11px]">{selected.source_ref ?? '?'} {'->'} {selected.sink_ref ?? '?'}</span>
-                </div>
+                <Fact label="Source → Sink" tip="Where attacker-controlled data enters (source) and where it does damage (sink)." className="col-span-2 sm:col-span-3">
+                  <span className="flex flex-wrap items-center gap-1 font-mono text-[12px]">
+                    <span className="text-sky-700">{selected.source_ref ?? '?'}</span>
+                    <span className="text-slate-400">→</span>
+                    <span className="text-rose-700">{selected.sink_ref ?? '?'}</span>
+                  </span>
+                </Fact>
               )}
             </div>
 
+            {selected.verdict_reason && (
+              <div className="mt-2 rounded-md border-l-2 border-emerald-400 bg-emerald-50/60 px-3 py-2">
+                <RichText text={selected.verdict_reason} />
+              </div>
+            )}
+
             <div className="mt-4 flex-1 space-y-4">
-              {selected.description && <Section label="Description">{selected.description}</Section>}
-              {selected.impact && <Section label="Impact">{selected.impact}</Section>}
-              {selected.exploit_scenario && <Section label="Exploit scenario">{selected.exploit_scenario}</Section>}
+              {selected.description && (
+                <Section label="What is wrong" tone="bg-rose-500" hint="The weakness the scanner found, in plain words.">
+                  <RichText text={selected.description} />
+                </Section>
+              )}
+              {selected.impact && (
+                <Section label="Why it matters" tone="bg-orange-500" hint="What an attacker gains if this is real.">
+                  <RichText text={selected.impact} />
+                </Section>
+              )}
+              {selected.recommendation && (
+                <Section label="How to fix" tone="bg-emerald-500" hint="Suggested remediation — verify before applying.">
+                  <RichText text={selected.recommendation} fixTone />
+                </Section>
+              )}
+              {selected.exploit_scenario && (
+                <Section label="How it is exploited" tone="bg-amber-500" hint="A concrete attack path the scanner reasoned about.">
+                  <RichText text={selected.exploit_scenario} />
+                </Section>
+              )}
               {selected.preconditions.length > 0 && (
-                <div>
-                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Preconditions</div>
-                  <ul className="list-disc space-y-0.5 pl-4 text-sm">
+                <Section label="Preconditions" tone="bg-slate-400" hint="What must already be true for the attack to work.">
+                  <ul className="space-y-1 text-[13.5px] leading-relaxed text-slate-800">
                     {selected.preconditions.map((p, i) => (
-                      <li key={i}>{p}</li>
+                      <li key={i} className="flex gap-2">
+                        <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" aria-hidden="true" />
+                        <span className="min-w-0"><Highlight text={p} /></span>
+                      </li>
                     ))}
                   </ul>
-                </div>
+                </Section>
               )}
               {selected.code_snippet && (
-                <div>
-                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Code</div>
-                  <pre className="overflow-x-auto rounded-md bg-muted/60 p-2.5 font-mono text-xs">
+                <Section label="Code" tone="bg-slate-700" hint={`${selected.file}, starting at line ${selected.line_start}`}>
+                  <pre className="overflow-x-auto rounded-md border bg-slate-50 p-2.5 font-mono text-xs leading-5 text-slate-800">
                     {selected.code_snippet.split('\n').map((line, i) => (
-                      <div key={i}>
-                        <span className="mr-3 select-none text-muted-foreground/60">{selected.line_start + i}</span>
+                      <div key={i} className="whitespace-pre">
+                        <span className="mr-3 inline-block w-8 select-none text-right text-slate-400">{selected.line_start + i}</span>
                         {line}
                       </div>
                     ))}
                   </pre>
-                </div>
+                </Section>
               )}
-              {selected.recommendation && <Section label="How to fix">{selected.recommendation}</Section>}
-              {selected.exploitability_notes && <Section label="Exploitability">{selected.exploitability_notes}</Section>}
-              {selected.verifier_reasoning && <Section label="Verifier reasoning">{selected.verifier_reasoning}</Section>}
+              {selected.exploitability_notes && (
+                <Section label="Exploitability" tone="bg-amber-300" hint="How easy the scanner thinks this is to exploit in practice.">
+                  <RichText text={selected.exploitability_notes} />
+                </Section>
+              )}
+              {selected.verifier_reasoning && (
+                <Section label="Verifier reasoning" tone="bg-emerald-300" hint="The second-pass model's reasoning for its verdict.">
+                  <RichText text={selected.verifier_reasoning} />
+                </Section>
+              )}
               {selected.duplicates.length > 0 && (
-                <div>
-                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Also at</div>
-                  <ul className="list-disc space-y-0.5 pl-4 font-mono text-xs">
+                <Section label="Also at" tone="bg-slate-300" hint="Other locations with the same pattern.">
+                  <ul className="space-y-0.5 font-mono text-xs text-slate-700">
                     {selected.duplicates.map((d, i) => (
                       <li key={i}>
                         {d.file}:{d.line_start}-{d.line_end}
                       </li>
                     ))}
                   </ul>
-                </div>
+                </Section>
               )}
             </div>
 
             <div className="sticky bottom-0 -mx-5 mt-4 flex items-center justify-between gap-2 border-t bg-background px-5 py-3">
-              <Button size="sm" variant="outline" disabled={position <= 0} onClick={() => goTo(-1)}>
-                <ChevronLeft size={14} className="mr-1" aria-hidden="true" />
-                Prev
-              </Button>
-              <span className="text-xs text-muted-foreground">
+              <Tooltip delayDuration={200}>
+                <TooltipTrigger asChild>
+                  <Button size="sm" variant="outline" disabled={position <= 0} onClick={() => goTo(-1)}>
+                    <ChevronLeft size={14} className="mr-1" aria-hidden="true" />
+                    Prev
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="text-xs">Previous finding in the current list</TooltipContent>
+              </Tooltip>
+              <span className="text-xs text-slate-600">
                 {position + 1} of {list.length}
               </span>
               <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" onClick={copyLink}>
-                  <Copy size={14} className="mr-1" aria-hidden="true" />
-                  {copied ? 'Copied' : 'Copy link'}
-                </Button>
-                <Button size="sm" variant="outline" disabled={position < 0 || position >= list.length - 1} onClick={() => goTo(1)}>
-                  Next
-                  <ChevronRight size={14} className="ml-1" aria-hidden="true" />
-                </Button>
+                <Tooltip delayDuration={200}>
+                  <TooltipTrigger asChild>
+                    <Button size="sm" variant="outline" onClick={copyLink}>
+                      <Copy size={14} className="mr-1" aria-hidden="true" />
+                      {copied ? 'Copied' : 'Copy link'}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="text-xs">Copy a link that opens this finding directly</TooltipContent>
+                </Tooltip>
+                <Tooltip delayDuration={200}>
+                  <TooltipTrigger asChild>
+                    <Button size="sm" variant="outline" disabled={position < 0 || position >= list.length - 1} onClick={() => goTo(1)}>
+                      Next
+                      <ChevronRight size={14} className="ml-1" aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="text-xs">Next finding in the current list</TooltipContent>
+                </Tooltip>
               </div>
             </div>
           </>
         )}
       </SheetContent>
     </Sheet>
-  );
-}
-
-function CweRef({ cwe, match }: { cwe: string; match: RegExpMatchArray | null | undefined }) {
-  if (!match) return <span>{cwe}</span>;
-  return (
-    <a href={`https://cwe.mitre.org/data/definitions/${match[1]}.html`} target="_blank" rel="noreferrer" className="text-primary hover:underline">
-      {cwe}
-    </a>
   );
 }
