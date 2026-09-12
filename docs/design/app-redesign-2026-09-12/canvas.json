@@ -1,0 +1,123 @@
+{
+ "pages": [
+  {
+   "id": "page-1",
+   "name": "Redesign (Direction A)"
+  },
+  {
+   "id": "page-2",
+   "name": "Alternate directions"
+  }
+ ],
+ "artboards": [
+  {
+   "file": "Main.dc.html",
+   "title": "SOW & RFP Review",
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "page-1"
+  },
+  {
+   "file": "MitreList.dc.html",
+   "title": "MITRE list",
+   "x": 1560,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "page-1"
+  },
+  {
+   "file": "MitreDetail.dc.html",
+   "title": "MITRE detail",
+   "x": 0,
+   "y": 1060,
+   "w": 1440,
+   "h": 900,
+   "page": "page-1"
+  },
+  {
+   "file": "CodeReviewDetail.dc.html",
+   "title": "Code Security Review detail",
+   "x": 1560,
+   "y": 1060,
+   "w": 1440,
+   "h": 900,
+   "page": "page-1"
+  },
+  {
+   "file": "Admin.dc.html",
+   "title": "Admin",
+   "x": 0,
+   "y": 2120,
+   "w": 1440,
+   "h": 900,
+   "page": "page-1"
+  },
+  {
+   "file": "DirectionB.dc.html",
+   "title": "Direction B \u00b7 dark ops console (low-fi)",
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "page-2"
+  },
+  {
+   "file": "DirectionC.dc.html",
+   "title": "Direction C \u00b7 airy editorial (low-fi)",
+   "x": 1560,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "page": "page-2"
+  }
+ ],
+ "annotations": [
+  {
+   "id": "a-system",
+   "x": 1560,
+   "y": 2120,
+   "w": 420,
+   "page": "page-1",
+   "text": "Direction A: quiet operations console.\nKept: Inter, brand blue #0066CC, slate #0F1729, 8px radius, 224px sidebar, shadcn card/badge/button anatomy.\nAdded: 48px utility bar (breadcrumb, global search \u2318K, environment chip), grouped sidebar with org + AI-credit meter, KPI strip with deltas and sparklines, toolbar row (segmented filter + search + filter chips + density toggle), tables with uppercase 11px headers, tabular numerals, status dots and soft pills, one consolidated Export action per page."
+  },
+  {
+   "id": "a-sow",
+   "x": 0,
+   "y": -150,
+   "w": 460,
+   "page": "page-1",
+   "text": "SOW dashboard, what changed and why:\n1. Red 0/12/29 numbers read as errors; risk score now has a neutral value + trend arrow, completeness shows '\u2013' when not reviewed.\n2. Five text links per row (Review \u00b7 View \u00b7 New version \u00b7 Compare \u00b7 Delete) became one Review button + overflow menu; destructive action moves into the menu.\n3. Project groups get summary chips (avg score, critical count) in a real header row instead of right-aligned loose text.\n4. Counts row (Total 11 \u00b7 SOW 9 \u2026) became a segmented filter that actually filters.\n5. KPI strip gives the page a purpose above the table."
+  },
+  {
+   "id": "a-mitre",
+   "x": 1560,
+   "y": -150,
+   "w": 460,
+   "page": "page-1",
+   "text": "MITRE list: cards hid comparison. A table with inline coverage bars per domain, covered/applicable, trend delta and last run lets a consultant scan four customers at once. Card view stays as a toggle.\nMITRE detail: eight equal tiles flattened the story. Now 6 tiles with hierarchy, the tool-overlay banner reads as 'two numbers, never one', inputs sit in two cards with a chip vocabulary (tagged / AI-tagged / unmapped / disabled), Exec PDF \u00b7 Full PDF \u00b7 XLSX \u00b7 PPT \u00b7 Navigator collapse into one Export menu. Heatmap unchanged in logic, legend moved into the toolbar."
+  },
+  {
+   "id": "a-code2",
+   "x": 2020,
+   "y": 2120,
+   "w": 420,
+   "page": "page-1",
+   "text": "Code Security Review detail: added a 'where to start' strip (the set-cover result the PPTX already computes), 'in N chains' pill on findings that matter most, a Remediation plan tab, and the VVAH attribution moved to the table footer. Severity became a pill, confidence a bar, file:lines mono.\nAdmin: organisations table now leads with the decision (Enable pro), shows access requests inline with age, and the AI provider card surfaces the OpenRouter key state that caused today's outage."
+  },
+  {
+   "id": "a-alt",
+   "x": 0,
+   "y": -150,
+   "w": 520,
+   "page": "page-2",
+   "text": "Two genuinely different directions, sketched low-fi so the choice is about structure, not polish. Direction A (page 1) is the recommendation: it keeps every existing token and component, so it can be built incrementally page by page."
+  }
+ ],
+ "launch": {
+  "view": "canvas",
+  "page": "page-1"
+ }
+}
