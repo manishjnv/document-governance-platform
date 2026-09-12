@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { MarketingHeader } from '@/components/MarketingHeader';
 import { MarketingFooter } from '@/components/MarketingFooter';
 
 export const metadata: Metadata = {
   title: 'About',
-  description: 'Why ScopeWise exists: catching contract risk before signature, not managing it after.',
+  description: 'Why ScopeWise exists and what the name means: scope is what is in and out of a contract, a detection estate and a codebase.',
   alternates: { canonical: '/about' },
 };
 
@@ -24,10 +25,25 @@ export default function AboutPage() {
         </p>
         <p className="text-lg text-muted-foreground mb-6">
           ScopeWise exists to catch that risk before signature, not manage it
-          after. It&apos;s built specifically for the pre-signature review of SOWs
-          and RFPs -- not as a general contract-lifecycle-management tool,
-          and not as a tool for drafting or responding to an RFP. Just: is
-          this document safe to sign, and if not, exactly where is the risk.
+          after. It started as a pre-signature review of SOWs and RFPs -- not
+          a contract-lifecycle-management tool, and not a tool for drafting
+          or responding to an RFP. Just: is this document safe to sign, and
+          if not, exactly where is the risk.
+        </p>
+        <p className="text-lg text-muted-foreground mb-6">
+          The name stuck because the same question kept coming up in two
+          other assessments consultancies deliver by hand. &quot;Scope&quot; is
+          what is in and out of a contract; it is also what is in and out of a
+          detection estate (which ATT&amp;CK techniques your SIEM rules cover,
+          and which are out of scope for your platforms) and of a codebase
+          (which files a security scan read, and which findings an attacker
+          can chain). ScopeWise now covers all three:{' '}
+          <Link href="/product/sow-review" className="text-primary underline hover:no-underline">SOW &amp; RFP Review</Link>,{' '}
+          <Link href="/product/mitre-coverage" className="text-primary underline hover:no-underline">MITRE ATT&amp;CK Coverage</Link>{' '}
+          and{' '}
+          <Link href="/product/code-security-review" className="text-primary underline hover:no-underline">Code Security Review</Link>.
+          In each one the numbers are computed by code, every finding quotes
+          its evidence, and a model is used only where judgment is honest.
         </p>
         <p className="text-lg text-muted-foreground">
           ScopeWise is built by a small team and is in early access -- if
