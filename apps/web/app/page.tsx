@@ -14,7 +14,7 @@ import { MarketingFooter } from '@/components/MarketingFooter';
 import { BLOG_POSTS } from '@/app/resources/blog/data';
 
 export const metadata: Metadata = {
-  title: 'Evidence-based risk reviews for contracts, detections and code',
+  title: 'ScopeWise: risk reviews for contracts, detections and code',
   description:
     'ScopeWise scores SOWs and RFPs, MITRE ATT&CK detection coverage, and code-scanner findings against named frameworks and produces the client-ready report.',
   alternates: { canonical: '/' },
