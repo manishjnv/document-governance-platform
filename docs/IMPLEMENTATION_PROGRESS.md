@@ -1,6 +1,6 @@
 # EDGP Implementation Progress
 
-**Last Updated:** 2026-08-20 15:40 GMT+5:30
+**Last Updated:** 2026-09-12 (homepage branding + SEO plan implemented, steps 1-6)
 **Current Phase:** Phase 1-2 core product complete + deployed live; pre-launch fix plan Steps 1-2 done, Step 3 pending SME. Document Lifecycle & Multi-Project plan (Projects/Versioning/Fix-verification) — all three phases implemented, deployed, mandatory-project + fuzzy name matching added on top. Auth is now seamless Google Sign-In + email-OTP only (no password anywhere in the real UI; unrecognized emails auto-create an account). New file types (.doc/.xlsx/.xls/.csv) supported. Enterprise SEO strategy written, a live Cloudflare misconfiguration blocking all AI crawlers was found and fixed, and **SEO Phase 1 (Foundation) is implemented and deployed live** (real marketing homepage/product/pricing/about/contact/sitemap/schema -- only GSC/GA4/Lighthouse remain, blocked on dashboard access). Full detail: `docs/phases/summaries/SESSION_HANDOFF_2026_07_20_LIFECYCLE_SSO_SEO.md`.
 
 > Previous version of this doc (dated 07-17 02:00, showing "14% overall") was
@@ -10,6 +10,24 @@
 ---
 
 ## ✅ Done
+
+**Homepage branding + SEO plan IMPLEMENTED, steps 1-6 of 8 (2026-09-12,
+10 commits `2608b7d`…`0384a46`, committed, NOT pushed/deployed):** public
+site is now a three-product umbrella. Darker body token (8.4:1), Inter
+self-hosted via `next/font`, OG image (`scripts/generate_og_image.py`),
+robots disallows `/mitre` `/codereview` `/admin` `/login` `/api`, sitemap
+with real lastmod (42 URLs). New homepage; `/product/sow-review` (308 from
+`/product`), `/product/mitre-coverage`, `/product/code-security-review`
+(FAQPage + SoftwareApplication + BreadcrumbList, VVAH attribution line);
+Products dropdown header (Radix, aria-expanded) + mobile menu, 4-column
+footer, `/terms`, `/pricing` indexed; `/solutions/for-security-consultancies`,
+`/solutions/for-appsec-consultants`; BlogPosting gains image/dateModified/
+publisher, DefinedTermSet object. Local build green, Lighthouse 12
+SEO/A11y/Best-practices 100/100/100 on `/`, three product pages, `/about`.
+Open: blog `Person` author (needs a real name + title from the user), first
+four blog posts, `/compare/*`, per-pillar OG images, product screenshots.
+Plan + step ticks: `docs/planning/HOMEPAGE_BRANDING_SEO_PLAN.md`; handoff:
+`docs/phases/summaries/SESSION_HANDOFF_2026_09_12_HOMEPAGE_BRANDING.md`.
 
 **Code Security Review — post-launch polish from live use (2026-09-12,
 9 commits `f2ffe3e`…`0db4a86`, all deployed):** plain-language finding

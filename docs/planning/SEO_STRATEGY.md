@@ -1,6 +1,9 @@
 # ScopeWise — Enterprise-Grade SEO Strategy
 
-**Status:** Planning only — nothing in this doc is implemented yet.
+**Status:** Phases 1–2 implemented (see `seo/IMPLEMENTATION_ROADMAP.md`). Homepage
+positioning and site architecture superseded 2026-09-12 by
+`HOMEPAGE_BRANDING_SEO_PLAN.md` (three-product umbrella); Phase 3+ items here
+still stand.
 **Date:** 2026-07-20
 **Site:** https://scopewise.assessiq.in
 **Prepared via:** `seo-plan` skill (SaaS template) + live-site baseline check. No
