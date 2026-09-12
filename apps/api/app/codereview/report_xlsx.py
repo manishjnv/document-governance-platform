@@ -13,6 +13,7 @@ highlighted (rich text), and an Exploit Chains sheet that explains itself.
 
 import io
 import re
+from datetime import datetime
 
 from app.mitre.report_common import resolve_branding
 
@@ -456,7 +457,27 @@ def build_xlsx_export(review) -> bytes:
 
     wb.properties.title = f"{review.name} - Code Security Review"
     wb.properties.creator = branding.get("report_display_name") or "ScopeWise"
+    # openpyxl stamps "now" into core.xml, which broke byte-level determinism
+    # whenever two builds straddled a second boundary; pin it.
+    wb.properties.created = wb.properties.modified = datetime(2026, 1, 1)
 
     buf = io.BytesIO()
     wb.save(buf)
-    return buf.getvalue()
+    return _normalize_zip(buf.getvalue())
+
+
+def _normalize_zip(data: bytes) -> bytes:
+    """openpyxl stamps every zip entry with 'now' (2-second resolution), so two
+    builds a moment apart differ byte-for-byte. Rewrite entries with a fixed
+    timestamp so the same review always yields identical bytes."""
+    import zipfile
+
+    src = zipfile.ZipFile(io.BytesIO(data))
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as dst:
+        for info in src.infolist():
+            fixed = zipfile.ZipInfo(info.filename, date_time=(2026, 1, 1, 0, 0, 0))
+            fixed.compress_type = zipfile.ZIP_DEFLATED
+            fixed.external_attr = info.external_attr
+            dst.writestr(fixed, src.read(info.filename))
+    return out.getvalue()
