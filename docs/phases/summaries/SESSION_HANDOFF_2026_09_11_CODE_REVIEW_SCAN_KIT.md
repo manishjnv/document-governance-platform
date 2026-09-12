@@ -1,5 +1,7 @@
 # Session handoff — 2026-09-11 (evening): Code Security Review UI pass + scan kit + golden scan
 
+> Superseded for current state by `docs/planning/CODE_REVIEW_MODULE_REFERENCE.md` (feature doc, kept current). This file is a point-in-time session log.
+
 **Headline:** the Code Security Review module went from "built, uncommitted"
 to shipped in ONE commit: professional UI pass on all three pages
 (`CODE_REVIEW_UI_PLAN.md` §2–6), consultant scan kit hosted in ScopeWise

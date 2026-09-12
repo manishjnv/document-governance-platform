@@ -11,6 +11,12 @@
 
 ## ✅ Done
 
+**Docs consolidated feature-wise (2026-09-12):** Code Security Review now
+has a single living reference
+(`docs/planning/CODE_REVIEW_MODULE_REFERENCE.md`, §0 changelog replaces
+per-session summaries); UI plan merged and deleted; kickoff prompt
+stubbed; three handoffs marked superseded.
+
 **Code Security Review hardening (2026-09-12, uncommitted):** highlight
 word lists reduced to one source (`highlight_words.json` → generated
 `highlightWords.ts`, drift test) and VVAH 1.3.0 schema coverage pinned by

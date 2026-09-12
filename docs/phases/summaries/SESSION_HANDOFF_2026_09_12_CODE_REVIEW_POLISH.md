@@ -1,5 +1,7 @@
 # Session handoff — 2026-09-12: Code Security Review shipped, then polished from live use
 
+> Superseded for current state by `docs/planning/CODE_REVIEW_MODULE_REFERENCE.md` (feature doc, kept current). This file is a point-in-time session log.
+
 **Headline:** the Code Security Review module went live in the morning
 (commit `ef18ab8`: module + UI pass + hosted scan kit + real NodeGoat golden
 scan; migration 039 applied to prod). The rest of the day was driven by the

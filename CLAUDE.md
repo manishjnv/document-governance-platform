@@ -51,7 +51,19 @@ Legal) + a rule engine, per `docs/planning/4_AI_AGENT_SPECS.md`.
   directory** — scratch is for throwaway session-local files (test
   scripts, one-off debug output), not for anything meant to persist or be
   read by a future session.
-- `docs/phases/summaries/` — session handoff summaries.
+- `docs/phases/summaries/` — session handoff summaries. **≤ 30 lines each**
+  (headline, commit list, agent-utilization footer) and they point at the
+  feature reference — they are point-in-time logs, never the place a fact
+  lives.
+- **One living reference per feature** in `docs/planning/<FEATURE>_MODULE_REFERENCE.md`
+  (`MITRE_MODULE_REFERENCE.md`, `CODE_REVIEW_MODULE_REFERENCE.md`, …), with a
+  dated **§0 Status & changelog** at the top. Every session that changes a
+  feature updates that one file — it does NOT create a new planning doc, a
+  new "plan" or "polish" doc, or a new summary that restates the feature.
+  Design plans that get built are merged into the reference and deleted;
+  completed kickoff prompts are stubbed to a pointer. A fact that lives in
+  two docs is a bug (rule set 2026-09-12 after three overlapping Code
+  Review docs went stale within a day).
 - `docs/sample/` — sample SOW/RFP documents. Useful for more than manual
   UI testing: also the real-document source for AI-accuracy work (see
   `docs/planning/PROMPT_ENGINEERING_GUIDE.md`'s "Real test set" section

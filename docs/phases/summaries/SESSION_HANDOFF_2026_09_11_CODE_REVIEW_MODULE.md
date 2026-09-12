@@ -1,5 +1,7 @@
 # Session handoff — 2026-09-11: Code Security Review module (VVAH import)
 
+> Superseded for current state by `docs/planning/CODE_REVIEW_MODULE_REFERENCE.md` (feature doc, kept current). This file is a point-in-time session log.
+
 **Headline:** reviewed github.com/visa/visa-vulnerability-agentic-harness
 (VVAH, Apache-2.0, v1.3.0), judged it feasible only as an *import* feature
 (never server-side scanning on the shared VPS), then built the third
