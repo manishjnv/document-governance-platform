@@ -35,7 +35,8 @@ def main():
         raw = open(path, encoding="utf-8").read()
         hay_raw = norm(raw)
         hay_txt = norm(re.sub(r"<[^>]+>", " ", raw))
-        for lab in (shell if stem != "Main" else []) + items:
+        has_shell = 'aria-label="Sidebar"' in raw
+        for lab in (shell if has_shell else []) + items:
             n = norm(lab)
             if n not in hay_raw and n not in hay_txt:
                 print('MISSING %s: "%s"' % (stem, lab))

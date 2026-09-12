@@ -66,6 +66,10 @@ def main():
             txt = "Try on this screen:\n" + "\n".join("· " + x for x in labels)
             notes.append({"id": "n-" + stem.lower(), "x": W + 100 + PW + 60, "y": y, "w": 300, "page": page, "text": txt})
         slot[page] += 1
+    notes.append({"id": "n-system", "x": W + 100 + PW + 60, "y": 0, "w": 360, "page": "system", "text":
+                  "Calm light, one typeface.\nIBM Plex Sans for everything, IBM Plex Mono for ids and code. Ink #14181F on warm paper #FAF9F6; secondary #3B4453; labels #5E6877. One accent #2457B8. Severity and coverage colours only where they carry meaning; every chip text is at least 5.2:1 on its tint.\n\nReferences held against: Linear (restraint), Attio (light data density), Vercel (type and whitespace), Wiz (security views), Notion (annotated documents)."})
+    notes.append({"id": "n-unified", "x": W + 100 + PW + 60, "y": 420, "w": 360, "page": "system", "text":
+                  "Unified on purpose (the live app has three of each today):\n· one severity ramp for chips, rows, dots and bars\n· one score band set\n· one resize grip (drag, ArrowLeft/Right, remembered) for sidebar, results split and every sheet\n· one destructive dialog instead of window.confirm\n· card rows on phone for every table\n· loading skeletons and empty states where the app has none\n\nEvery artboard has a State tweak: default · loading · empty · error · gated."})
     if not only:
         canvas = {"pages": [{"id": p, "name": n} for p, n in PAGES], "artboards": artboards, "annotations": notes,
                   "launch": {"view": "canvas", "page": "system"}}

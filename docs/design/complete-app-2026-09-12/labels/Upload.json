@@ -1,0 +1,12 @@
+[
+  "Back to SOW Review", "Upload Document", "Upload New Version",
+  "Upload a SOW, Proposal, or other document for review", "This file will be linked as the next version of the source document.",
+  "Project", "Selected project", "Change", "Select existing or type a new project name",
+  "Pick an existing project from the list, or type a new name to create one.",
+  "Choose a document to upload, or drag and drop it here", "Drag and drop your document", "or click to select",
+  "PDF, DOCX, DOC, XLSX, XLS, or CSV • up to 50MB", "Selected:",
+  "Only PDF, DOCX, DOC, XLSX, XLS, and CSV files are supported", "File size must be less than 50MB",
+  "Please select a file", "Unable to determine your organization -- try refreshing the page",
+  "Choose an existing project or type a new project name", "Failed to load user info", "Upload failed",
+  "Uploaded as version", "Document uploaded successfully:", "Uploading..."
+]
