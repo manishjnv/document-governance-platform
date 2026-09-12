@@ -199,6 +199,10 @@ export default function CodeReviewListPage() {
               findings.json to get a reviewable findings register plus client-ready XLSX and
               PPTX deliverables.
             </p>
+            <p className="mx-auto mt-2 max-w-md text-xs text-muted-foreground">
+              Built on Visa&apos;s open-source Vulnerability Agentic Harness (Apache-2.0).
+              ScopeWise is not affiliated with or endorsed by Visa, Inc.
+            </p>
             <div className="mt-4 flex justify-center gap-2">
               <Button asChild size="sm" variant="outline">
                 <Link href="/codereview/new">Get scanner</Link>

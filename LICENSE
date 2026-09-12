@@ -1,0 +1,25 @@
+ScopeWise — Proprietary License
+
+Copyright (c) 2026 Foxfiber Retail LLP. All rights reserved.
+
+This repository and its contents (the "Software"), including source code,
+documentation, prompts, sample data and generated assets, are the property
+of Foxfiber Retail LLP. The Software is made publicly readable for
+transparency and review. No licence is granted to use, copy, modify,
+merge, publish, distribute, sublicense, sell or host the Software, in whole
+or in part, without prior written permission from Foxfiber Retail LLP.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE.
+
+Third-party code. The directory apps/api/app/codereview/kit/vendor/
+contains the Visa Vulnerability Agentic Harness (VVAH), which is
+third-party software distributed under the Apache License, Version 2.0,
+under its own LICENSE and NOTICE files in that directory and as listed in
+THIRD_PARTY_LICENSES.md there. That code is not covered by this proprietary
+licence and is redistributed in the downloadable scan kit unchanged, with
+its licence and notice files included. ScopeWise is not affiliated with or
+endorsed by Visa, Inc.
