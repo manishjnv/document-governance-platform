@@ -19,20 +19,16 @@ menus, filters, sorting, inline rename, drag resize) at desktop (1440) and phone
 
 ## What is on the canvas
 
-Status 2026-09-12 night: **12 of 15 screens published and passing**; `Results`, `MitreDetail`
-and `CodeReviewDetail` exist as modules but fail the harness (see the handoff
-`docs/phases/summaries/SESSION_HANDOFF_2026_09_12_DESIGN_CANVAS.md`) and are not on the
-canvas yet. Resume with `docs/phases/prompts/DESIGN_CANVAS_RESUME_PROMPT.md`.
+Status 2026-09-13: **all 15 screens (30 artboards) published and passing** the harness at 1440 and
+390 (mounted, no placeholder leak, no runtime errors, no element or page-level horizontal overflow,
+every scripted interaction asserts real state) and the label-completeness check.
 
 | Page | Artboards (desktop + phone) | Status |
 |---|---|---|
 | Shell & system | `Main` — type ramp, colour/contrast, buttons, chips, inputs, dropzone, alerts, table, KPI tiles, sheet, dialog, tabs, tooltip, empty, skeleton, app bars | done |
-| SOW & RFP Review | `Dashboard`, `Upload`, `ProjectDetail`, `VersionsDiff` | done |
-| SOW & RFP Review | `Results` | module written, overflow + filter clicks failing |
-| MITRE ATT&CK Coverage | `MitreList`, `MitreNew`, `MitreConnections` | done |
-| MITRE ATT&CK Coverage | `MitreDetail` | module written, matrix overflow + drawer clicks failing, 2 labels |
-| Code Security Review | `CodeReviewList`, `CodeReviewNew` | done |
-| Code Security Review | `CodeReviewDetail` (with the finding drawer) | module written, placeholder leak + 3 clicks failing |
+| SOW & RFP Review | `Dashboard`, `Upload`, `Results` (annotated document + split pane), `ProjectDetail`, `VersionsDiff` | done |
+| MITRE ATT&CK Coverage | `MitreList`, `MitreNew`, `MitreDetail` (4 tabs, 3 stacked sheets, run timeline, matrix), `MitreConnections` | done |
+| Code Security Review | `CodeReviewList`, `CodeReviewNew`, `CodeReviewDetail` (findings table, exploit-chain graph, finding drawer) | done |
 | Admin & auth | `Admin`, `Login` | done |
 
 Sticky notes on each page list the interactions to try on every screen.
@@ -79,6 +75,10 @@ set PYTHONUTF8=1
 python gen.py && python check_labels.py
 set DC_RUNTIME=<folder with reactUmd.js reactDomUmd.js supportJs.js extracted from the design payload>
 python harness.py --screens Dashboard,MitreDetail --out <scratch>   (add --phone for 390px)
+
+Steps flagged `desktop_only` in a screen's CLICKS are skipped at phone size (table-header sort
+buttons, which the card layout hides). Content inside a genuine `overflow-x:auto` scroller is not
+counted as overflow; the page's own scrollWidth is.
 ```
 
 The runtime files are extracted from the design skill's payload (`extract_runtime.py` in the

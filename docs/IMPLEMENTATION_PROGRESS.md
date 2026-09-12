@@ -11,17 +11,17 @@
 
 ## ✅ Done
 
-**Complete app design canvas (2026-09-12 night, design only, in progress):**
-interactive redesign of every authenticated screen in one calm-light system
-(IBM Plex Sans, darker ink, colour only where it carries meaning), built as a
-Claude Design canvas from `docs/design/complete-app-2026-09-12/` (generator,
+**Complete app design canvas (finished 2026-09-13, design only):** interactive
+redesign of every authenticated screen in one calm-light system (IBM Plex
+Sans, darker ink, colour only where it carries meaning), built as a Claude
+Design canvas from `docs/design/complete-app-2026-09-12/` (generator,
 primitives, runtime helpers, verbatim inventories, label-completeness check,
 standalone Playwright harness). Live: https://claude.ai/code/artifact/9f120be7-d49e-4651-8ea3-a103269b5e24
-(12 of 15 screens, desktop + phone, all interactive). Still to finish: SOW
-review results, MITRE assessment results, Code Security Review detail (modules
-exist, harness failures listed in the handoff). Resume with
-`docs/phases/prompts/DESIGN_CANVAS_RESUME_PROMPT.md`. Handoff:
-`docs/phases/summaries/SESSION_HANDOFF_2026_09_12_DESIGN_CANVAS.md`.
+(15 screens, 30 artboards, desktop + phone, all interactive, all passing the
+harness). Next: owner review on the live canvas, then build page by page
+under `apps/web` (README lists what the design unifies). Handoffs:
+`docs/phases/summaries/SESSION_HANDOFF_2026_09_12_DESIGN_CANVAS.md`,
+`SESSION_HANDOFF_2026_09_13_DESIGN_CANVAS.md`.
 
 **Run allowance deployed 2026-09-12 night, SHA `606f6c3`, migration 040 on
 prod:** owner decision "none gets pro": the platform admin instead grants a

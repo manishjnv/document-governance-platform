@@ -645,3 +645,25 @@ keep chronological.)*
   same de-markdown step; prefer routing through `rich_runs` when the cell
   can hold runs.
 
+
+### 27. Design canvas: invisible SVG labels and hidden tooltips that widened pages (2026-09-13, design toolchain, no product code)
+
+- **Symptom:** In the Code Security Review detail artboard the exploit-chain
+  graph drew node boxes with no titles, and three artboards (SOW results,
+  MITRE list and detail) scrolled sideways by 50–90 px although no visible
+  element crossed the right edge.
+- **Root cause:** (a) the Design Components runtime renders every `{{hole}}`
+  as an HTML `<span>`; inside an SVG `<text>` a span is not drawn, so the
+  labels were zero-width. (b) The CSS tooltip (`.tip::after`, `opacity:0`)
+  is still laid out; tooltips on controls near the right edge extended the
+  document's scrollable overflow. The harness only checked elements, not the
+  page's own `scrollWidth`, and pseudo-elements are not elements.
+- **Fix:** `screens/codereview_detail.py::_node_block` emits the id, severity
+  and title as static SVG text (only fill/stroke/decoration stay dynamic);
+  `dc.py` tooltips are `display:none` until hover/focus with a fade-in
+  keyframe; `harness.py` fails on `documentElement.scrollWidth > clientWidth`
+  and ignores content inside a genuine `overflow-x:auto` scroller.
+- **Prevention:** when this design is built in `apps/web`, keep tooltip
+  content out of layout until shown (shadcn `Tooltip` portals already do);
+  never put dynamic text inside SVG `<text>` through a template hole; assert
+  page width, not just element bounds, in any visual harness.
