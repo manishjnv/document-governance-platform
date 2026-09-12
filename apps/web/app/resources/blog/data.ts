@@ -322,7 +322,6 @@ export const BLOG_POSTS: BlogPost[] = [
     author: 'ScopeWise Team',
     pillar: 'mitre',
     relatedUseCase: '/product/mitre-coverage',
-    pendingReview: true,
     body: [
       {
         heading: 'The gap between what you log and what you detect',
@@ -369,7 +368,6 @@ export const BLOG_POSTS: BlogPost[] = [
     author: 'ScopeWise Team',
     pillar: 'mitre',
     relatedUseCase: '/product/mitre-coverage',
-    pendingReview: true,
     body: [
       {
         heading: 'What a layer file actually is',
@@ -416,7 +414,6 @@ export const BLOG_POSTS: BlogPost[] = [
     author: 'ScopeWise Team',
     pillar: 'codereview',
     relatedUseCase: '/product/code-security-review',
-    pendingReview: true,
     body: [
       {
         heading: 'A scanner output is not a deliverable',
@@ -463,7 +460,6 @@ export const BLOG_POSTS: BlogPost[] = [
     author: 'ScopeWise Team',
     pillar: 'sow',
     relatedUseCase: '/use-cases/rfp-review',
-    pendingReview: true,
     body: [
       {
         heading: 'Two documents, two jobs',
