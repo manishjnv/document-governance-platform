@@ -11,14 +11,8 @@ import axios from 'axios';
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { PageHeader, Chip, EmptyState, AlertBanner, KpiTile } from '@/components/app';
+import { cn } from '@/lib/utils';
 
 interface ProjectSummary {
   project_id: string;
@@ -95,7 +89,7 @@ export default function ProjectDetailPage() {
   if (loading) {
     return (
       <AppShell>
-        <p className="text-muted-foreground">Loading project...</p>
+        <p className="py-12 text-center text-sm text-muted-foreground">Loading project...</p>
       </AppShell>
     );
   }
@@ -103,74 +97,82 @@ export default function ProjectDetailPage() {
   if (error || !project) {
     return (
       <AppShell>
-        <div role="alert" className="bg-destructive/10 border border-destructive/30 rounded-md p-4">
-          <p className="text-destructive">{error || 'Project not found'}</p>
-        </div>
+        <AlertBanner kind="error">{error || 'Project not found'}</AlertBanner>
       </AppShell>
     );
   }
 
+  const uploadHref = `/upload?project_id=${project.project_id}`;
+  const uploadButton = (
+    <Button asChild>
+      <Link href={uploadHref}>Upload to this project</Link>
+    </Button>
+  );
+
   return (
     <AppShell>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <Link href="/dashboard" className="text-sm text-primary hover:underline">
-            &larr; Dashboard
-          </Link>
-          <h1 className="text-2xl font-bold mt-1">{project.name}</h1>
-        </div>
-        <Button asChild>
-          <Link href={`/upload?project_id=${project.project_id}`}>Upload to this project</Link>
-        </Button>
+      <PageHeader
+        title={project.name}
+        back={{ href: '/dashboard', label: 'Dashboard' }}
+        actions={uploadButton}
+      />
+
+      <div className="mb-[18px] grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <KpiTile label="Documents" value={project.document_count} />
+        <KpiTile
+          label="Average score"
+          value={project.average_latest_score !== null ? project.average_latest_score.toFixed(0) : '-'}
+        />
+        <KpiTile label="Open critical findings" value={project.open_critical_count} tone="crit" />
       </div>
 
-      <div className="flex flex-wrap gap-3 mb-6">
-        <div className="rounded-lg border px-4 py-2">
-          <p className="text-xs text-muted-foreground">Documents</p>
-          <p className="text-lg font-semibold">{project.document_count}</p>
+      {documents.length === 0 ? (
+        <EmptyState title="No documents in this project yet." action={uploadButton} />
+      ) : (
+        <div className="overflow-hidden rounded-lg border border-border">
+          <table className="tbl cards">
+            <thead>
+              <tr>
+                <th>Filename</th>
+                <th>Type</th>
+                <th className="r">Score</th>
+                <th>Uploaded</th>
+              </tr>
+            </thead>
+            <tbody>
+              {documents.map((doc) => {
+                const score = doc.latest_overall_score;
+                const scoreClass =
+                  score == null
+                    ? 'text-ink3'
+                    : score >= 80
+                      ? 'text-ok'
+                      : score >= 50
+                        ? 'text-sev-med'
+                        : 'text-sev-crit';
+                return (
+                  <tr key={doc.doc_id}>
+                    <td data-th="Filename" className="font-medium text-foreground">
+                      {doc.original_filename || doc.filename}
+                    </td>
+                    <td data-th="Type">
+                      <Chip tone="neutral" xs>
+                        {doc.document_type || 'Unknown'}
+                      </Chip>
+                    </td>
+                    <td data-th="Score" className={cn('r font-medium tabular-nums', scoreClass)}>
+                      {score !== null ? score.toFixed(0) : '-'}
+                    </td>
+                    <td data-th="Uploaded" className="tabular-nums text-muted-foreground">
+                      {new Date(doc.created_at).toLocaleDateString()}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-        <div className="rounded-lg border px-4 py-2">
-          <p className="text-xs text-muted-foreground">Average score</p>
-          <p className="text-lg font-semibold">
-            {project.average_latest_score !== null
-              ? project.average_latest_score.toFixed(0)
-              : '-'}
-          </p>
-        </div>
-        <div className="rounded-lg border px-4 py-2">
-          <p className="text-xs text-muted-foreground">Open critical findings</p>
-          <p className="text-lg font-semibold">{project.open_critical_count}</p>
-        </div>
-      </div>
-
-      <div className="rounded-lg border overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Filename</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Score</TableHead>
-              <TableHead>Uploaded</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {documents.map((doc) => (
-              <TableRow key={doc.doc_id}>
-                <TableCell className="font-medium">
-                  {doc.original_filename || doc.filename}
-                </TableCell>
-                <TableCell>{doc.document_type || 'Unknown'}</TableCell>
-                <TableCell>
-                  {doc.latest_overall_score !== null
-                    ? doc.latest_overall_score.toFixed(0)
-                    : '-'}
-                </TableCell>
-                <TableCell>{new Date(doc.created_at).toLocaleDateString()}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      )}
     </AppShell>
   );
 }
