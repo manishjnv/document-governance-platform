@@ -163,7 +163,7 @@ export default function NewCodeReviewPage() {
       <div className="mx-auto max-w-3xl space-y-4">
         <PageHeader title="New code security review" />
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 [&>*]:min-w-0">
           <div className="rounded-[10px] border border-border bg-card">
             <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
               <h3 className="text-sm font-semibold">1 · Get the scanner</h3>
@@ -184,7 +184,7 @@ export default function NewCodeReviewPage() {
                 </Chip>
               </div>
 
-              <ol className="space-y-2 text-sm text-foreground">
+              <ol className="space-y-2 text-sm text-foreground [overflow-wrap:anywhere]">
                 {STEPS.map((step, i) => (
                   <li key={i} className="flex items-start gap-2">
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[11px] font-medium text-primary">
