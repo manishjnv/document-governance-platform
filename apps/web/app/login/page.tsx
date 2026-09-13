@@ -231,7 +231,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
 
   return (
-    <div className="min-h-screen bg-muted flex items-center justify-center p-4">
+    <div className="app-theme font-app min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-1">
           <div className="flex items-center justify-center gap-2">

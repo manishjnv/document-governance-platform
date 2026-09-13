@@ -137,7 +137,7 @@ export function AppShell({
   const effectiveWidth = collapsed ? COLLAPSED_WIDTH : width;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="app-theme font-app min-h-screen bg-background">
       {/* Desktop sidebar */}
       <aside
         style={{ width: effectiveWidth }}
