@@ -19,6 +19,7 @@ Gates: `tsc` clean; per-screen label check (all misses are pre-existing design s
 Playwright 1440/390 on every route, no page overflow, `/` untouched. RCA #28-#30 added.
 
 ## Also this session (outside the repo)
+Hostinger: `contact@scopesense.in` mailbox live (MX/SPF/DKIM/DMARC in Cloudflare, SPF+DKIM+DMARC pass at Gmail), forwarder to the owner's Gmail and catch-all set in hPanel (catch-all awaiting its confirmation mail). Five Hostinger MCP servers (hosting, wordpress, agency-hosting, domains, dns) are registered in Claude Code and healthy but load only in a new session; they cover registrar/DNS, not email. Hostinger REST key is `Hostinger_API_KEY` in the local `.env` (memory `hostinger-api`).
 User-level skill `~/.claude/skills/ui-design-workflow/SKILL.md` (project-agnostic UI workflow), a global-playbook rule to load it on every UI task, a Desktop copy for Claude Design web, and project memories `ui-redesign-status-2026-09-13` + `feedback-ui-design-workflow-skill`.
 
 ## Next action
