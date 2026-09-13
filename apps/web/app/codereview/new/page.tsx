@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation';
 import { Copy, Download, FileJson, Info, Loader2, UploadCloud, X } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { PageHeader, Chip, AlertBanner } from '@/components/app';
 import { cn } from '@/lib/utils';
 
 const MAX_SIZE = 10 * 1024 * 1024;
@@ -18,30 +18,28 @@ const KIT_VERSION = '1.3.0';
 
 const STEPS = [
   <>
-    Unzip the kit, then run <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[12px] text-slate-800 ring-1 ring-inset ring-slate-200">.\setup.cmd</code> (Windows, double-click works) or{' '}
-    <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[12px] text-slate-800 ring-1 ring-inset ring-slate-200">setup.sh</code> (macOS/Linux) — it installs the scanner and asks for your OpenRouter key
+    Unzip the kit, then run <code className="rounded-md border border-border bg-muted/50 px-1 font-mono text-xs">.\setup.cmd</code> (Windows, double-click works) or{' '}
+    <code className="rounded-md border border-border bg-muted/50 px-1 font-mono text-xs">setup.sh</code> (macOS/Linux) — it installs the scanner and asks for your OpenRouter key
   </>,
   <>
-    Run <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[12px] text-slate-800 ring-1 ring-inset ring-slate-200">.\scopewise-scan.cmd &lt;repo&gt;</code> /{' '}
-    <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[12px] text-slate-800 ring-1 ring-inset ring-slate-200">scopewise-scan.sh &lt;repo&gt;</code> — shows the cost estimate, then scans after you confirm
+    Run <code className="rounded-md border border-border bg-muted/50 px-1 font-mono text-xs">.\scopewise-scan.cmd &lt;repo&gt;</code> /{' '}
+    <code className="rounded-md border border-border bg-muted/50 px-1 font-mono text-xs">scopewise-scan.sh &lt;repo&gt;</code> — shows the cost estimate, then scans after you confirm
   </>,
-  <>Upload the <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[12px] text-slate-800 ring-1 ring-inset ring-slate-200">scopewise-scan-*.zip</code> it produces here</>,
+  <>Upload the <code className="rounded-md border border-border bg-muted/50 px-1 font-mono text-xs">scopewise-scan-*.zip</code> it produces here</>,
 ];
 
 function FileRow({ file, onRemove }: { file: File; onRemove: () => void }) {
   const kb = file.size / 1024;
   const size = kb > 1024 ? `${(kb / 1024).toFixed(2)} MB` : `${kb.toFixed(0)} KB`;
   return (
-    <div className="flex items-center justify-between rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm">
-      <span className="flex min-w-0 items-center gap-2 text-emerald-800">
-        <FileJson size={15} className="shrink-0" aria-hidden="true" />
-        <span className="truncate">{file.name}</span>
-        <span className="shrink-0 text-xs text-emerald-700/70">{size}</span>
-      </span>
+    <div className="flex items-center gap-2 rounded-lg border border-ok bg-ok-soft px-2.5 py-2 text-[13px] text-ok">
+      <FileJson size={15} className="shrink-0" aria-hidden="true" />
+      <span className="min-w-0 flex-1 truncate">{file.name}</span>
+      <span className="shrink-0 tabular-nums">{size}</span>
       <button
         type="button"
         aria-label={`Remove ${file.name}`}
-        className="text-emerald-800 hover:text-emerald-950"
+        className="shrink-0 text-ok hover:opacity-75"
         onClick={onRemove}
       >
         <X size={15} />
@@ -163,14 +161,14 @@ export default function NewCodeReviewPage() {
     <AppShell>
       <TooltipProvider>
       <div className="mx-auto max-w-3xl space-y-4">
-        <h1 className="text-lg font-semibold">New code security review</h1>
+        <PageHeader title="New code security review" />
 
         <div className="grid gap-4 md:grid-cols-2">
-          <Card className="rounded-md">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">1 · Get the scanner</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3.5 p-3.5 pt-0">
+          <div className="rounded-[10px] border border-border bg-card">
+            <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+              <h3 className="text-sm font-semibold">1 · Get the scanner</h3>
+            </div>
+            <div className="space-y-3.5 p-4">
               <div className="flex items-center gap-2">
                 <Tooltip delayDuration={150}>
                   <TooltipTrigger asChild>
@@ -181,20 +179,15 @@ export default function NewCodeReviewPage() {
                   </TooltipTrigger>
                   <TooltipContent className="text-xs">Zip with the scanner, setup + run scripts and README (~1 MB). Unzip it, do not pip install it.</TooltipContent>
                 </Tooltip>
-                <Tooltip delayDuration={150}>
-                  <TooltipTrigger asChild>
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-                      VVAH v{KIT_VERSION}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent className="text-xs">Pinned Visa Vulnerability Agentic Harness release inside the kit</TooltipContent>
-                </Tooltip>
+                <Chip tone="neutral" xs tip="Pinned Visa Vulnerability Agentic Harness release inside the kit">
+                  VVAH v{KIT_VERSION}
+                </Chip>
               </div>
 
-              <ol className="space-y-2 text-sm text-slate-800">
+              <ol className="space-y-2 text-sm text-foreground">
                 {STEPS.map((step, i) => (
                   <li key={i} className="flex items-start gap-2">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-medium text-primary">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[11px] font-medium text-primary">
                       {i + 1}
                     </span>
                     <span className="pt-0.5">{step}</span>
@@ -209,19 +202,26 @@ export default function NewCodeReviewPage() {
               </div>
 
               <div className="relative">
-                <pre className="overflow-x-auto rounded-md bg-muted/60 p-3 pr-9 font-mono text-xs">
+                <pre className="overflow-auto rounded-lg border border-border bg-muted/50 p-3 pr-9 font-mono text-xs leading-[1.55]">
                   <code>vvaharness scan --repo /path/to/repo --stop-after s9</code>
                 </pre>
-                <button
-                  type="button"
-                  aria-label="Copy command"
-                  onClick={copyCommand}
-                  className="absolute right-2 top-2 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  <Copy size={14} aria-hidden="true" />
-                </button>
+                <Tooltip delayDuration={150}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      aria-label="Copy command"
+                      onClick={copyCommand}
+                      className="absolute right-2 top-2 h-7 w-7 p-0"
+                    >
+                      <Copy size={14} aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="text-xs">Copy command</TooltipContent>
+                </Tooltip>
                 {copied && (
-                  <span className="absolute right-9 top-2.5 text-[11px] text-primary">Copied</span>
+                  <span className="absolute right-11 top-2.5 text-[11px] text-primary">Copied</span>
                 )}
               </div>
 
@@ -235,18 +235,18 @@ export default function NewCodeReviewPage() {
               </a>
 
               <div className="hidden md:block">{footerNote}</div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card className="rounded-md">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">2 · Upload the results</CardTitle>
-            </CardHeader>
-            <CardContent className="p-3.5 pt-0">
+          <div className="rounded-[10px] border border-border bg-card">
+            <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+              <h3 className="text-sm font-semibold">2 · Upload the results</h3>
+            </div>
+            <div className="p-4">
               <form onSubmit={handleSubmit} className="space-y-3.5">
                 <div>
-                  <label htmlFor="review-name" className="mb-1.5 block text-sm font-medium">
-                    Name <span className="font-normal text-muted-foreground">(optional)</span>
+                  <label htmlFor="review-name" className="mb-1 block text-xs font-medium text-muted-foreground">
+                    Name <span className="font-normal">(optional)</span>
                   </label>
                   <input
                     id="review-name"
@@ -254,7 +254,7 @@ export default function NewCodeReviewPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Q3 backend security scan"
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="h-9 w-full rounded-lg border border-input bg-card px-2.5 text-[13px] focus:border-primary focus:outline-none focus:ring-[3px] focus:ring-accent"
                   />
                 </div>
 
@@ -285,13 +285,13 @@ export default function NewCodeReviewPage() {
                         acceptReport(e.dataTransfer.files?.[0]);
                       }}
                       className={cn(
-                        'cursor-pointer rounded-md border-2 border-dashed p-5 text-center transition-colors',
-                        dragActive ? 'border-primary bg-primary/5' : 'border-input hover:bg-muted/50'
+                        'cursor-pointer rounded-[10px] border-2 border-dashed px-4 py-[26px] text-center text-muted-foreground transition-[border-color,background-color] duration-150 ease-app',
+                        dragActive ? 'border-primary bg-accent-soft' : 'border-line2 hover:bg-muted/60'
                       )}
                     >
-                      <UploadCloud className="mx-auto mb-1.5 h-6 w-6 text-muted-foreground" aria-hidden="true" />
-                      <p className="text-sm text-slate-800">Drag &amp; drop or click to select</p>
-                      <p className="mt-0.5 text-xs text-slate-600">
+                      <UploadCloud className="mx-auto mb-1.5 h-[26px] w-[26px] text-ink3" aria-hidden="true" />
+                      <p className="text-sm">Drag &amp; drop or click to select</p>
+                      <p className="mt-0.5 text-xs">
                         findings.json, .sarif or the scan zip · up to 10 MB
                       </p>
                     </div>
@@ -306,9 +306,9 @@ export default function NewCodeReviewPage() {
                     onChange={(e) => acceptReport(e.target.files?.[0])}
                   />
                   {error && (
-                    <p role="alert" className="mt-1.5 text-xs text-destructive">
+                    <AlertBanner kind="error" className="mt-1.5">
                       {error}
-                    </p>
+                    </AlertBanner>
                   )}
                 </div>
 
@@ -322,7 +322,7 @@ export default function NewCodeReviewPage() {
                     <button
                       type="button"
                       onClick={() => manifestInputRef.current?.click()}
-                      className="w-full rounded-md border border-dashed border-input px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-muted/50"
+                      className="w-full rounded-lg border border-dashed border-line2 px-2.5 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-muted/60"
                     >
                       + Add run_manifest_*.json (optional)
                     </button>
@@ -342,7 +342,7 @@ export default function NewCodeReviewPage() {
                   <Button
                     type="submit"
                     disabled={!reportFile || submitting}
-                    className="w-full gap-1.5 md:w-auto"
+                    className="h-10 w-full gap-1.5 max-[760px]:w-full md:w-auto"
                   >
                     {submitting ? (
                       <>
@@ -357,8 +357,8 @@ export default function NewCodeReviewPage() {
               </form>
 
               <div className="mt-3.5 md:hidden">{footerNote}</div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
       </TooltipProvider>
