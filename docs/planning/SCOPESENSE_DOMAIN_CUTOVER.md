@@ -80,3 +80,26 @@ Rollback: restore `Caddyfile.bak.<ts>` by truncate-write + reload; restore `.env
 - Origin CA Key is deprecated; the `/certificates` endpoint works with a Bearer token that has Zone → SSL and Certificates → Edit, but **only for active zones**.
 - IP-filtered tokens: force IPv4 on the VPS (`curl -4`); Python `urllib` picks IPv6 and fails with a misleading generic 401.
 - The dashboard's "Add site" pre-creates DNS records from the parking page (an A record to `2.57.91.91`); always re-check records after adding a zone.
+
+## Email: contact@scopesense.in on Hostinger (2026-09-13)
+
+The mailbox was created in Hostinger hPanel. Hostinger's own DNS panel is not authoritative
+(nameservers are Cloudflare's), so the records were added to the Cloudflare zone via the API
+from the VPS (token over stdin, `curl -4`). All verified at `ethan.ns.cloudflare.com` and on
+1.1.1.1 / 8.8.8.8 the same evening:
+
+| Type | Name | Content | Note |
+|---|---|---|---|
+| MX | `@` | `mx1.hostinger.com` (5), `mx2.hostinger.com` (10) | DNS only |
+| TXT | `@` | `v=spf1 include:_spf.mail.hostinger.com ~all` | only SPF on the apex |
+| CNAME | `hostingermail-a/b/c._domainkey` | `hostingermail-a/b/c.dkim.mail.hostinger.com` | DNS only; keys resolve |
+| TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:contact@scopesense.in` | monitor first; tighten to `quarantine` after a few clean weeks |
+| CNAME | `autoconfig`, `autodiscover` | `*.mail.hostinger.com` | mail-client setup |
+
+Zone status was still `pending` in Cloudflare although the public NS already point there
+(records are served regardless); the token lacks the `activation_check` permission, Cloudflare
+re-checks on its own. If a resolver shows no DKIM/DMARC, it is negative caching from lookups
+made before the records existed; query the authoritative NS to confirm. Hostinger hPanel:
+Emails > contact@scopesense.in > DNS status should show all green; if its DKIM values ever
+differ from the generic `hostingermail-*` ones, replace the three CNAMEs with the shown values.
+
