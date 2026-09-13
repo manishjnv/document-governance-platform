@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Chip } from '@/components/app';
 import {
   Table,
   TableBody,
@@ -38,9 +39,9 @@ function Dot({ className }: { className: string }) {
 }
 
 const TIER_WORDS: Record<number, { word: string; dot: string }> = {
-  1: { word: 'Critical', dot: 'bg-rose-500' },
-  2: { word: 'High', dot: 'bg-amber-500' },
-  3: { word: 'Medium', dot: 'bg-sky-500' },
+  1: { word: 'Critical', dot: 'bg-sev-crit' },
+  2: { word: 'High', dot: 'bg-sev-high' },
+  3: { word: 'Medium', dot: 'bg-sev-med' },
 };
 
 function TierBadge({ tier }: { tier: number }) {
@@ -64,9 +65,9 @@ function TierBadge({ tier }: { tier: number }) {
 }
 
 const FEAS_DOTS: Record<string, string> = {
-  short: 'bg-emerald-500',
-  mid: 'bg-sky-500',
-  long: 'bg-slate-400',
+  short: 'bg-ok',
+  mid: 'bg-sev-info',
+  long: 'bg-ink3',
 };
 /** What the bucket means in action terms — "Short term" alone says little. */
 const FEAS_WORDS: Record<string, string> = {
@@ -182,29 +183,20 @@ export function GapsRoadmap({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-sm font-semibold">Gaps, ranked by priority</h3>
-        <Tooltip delayDuration={150}>
-          <TooltipTrigger asChild>
-            <span
-              className={cn(
-                'inline-flex cursor-default items-center rounded-full border px-2 py-0.5 text-[11px] font-medium',
-                narrative.generated_by === 'ai'
-                  ? 'bg-violet-100 text-violet-800 border-violet-200'
-                  : 'bg-muted text-muted-foreground border-transparent'
-              )}
-            >
-              {narrative.generated_by === 'ai' ? 'AI-written text' : 'Standard text'}
-            </span>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-xs text-xs">
-            {narrative.generated_by === 'ai'
+        <Chip
+          tone={narrative.generated_by === 'ai' ? 'violet' : 'neutral'}
+          tip={
+            narrative.generated_by === 'ai'
               ? `Recommendation wording was AI-generated${narrative.model_used ? ` (${narrative.model_used})` : ''}. All numbers come from computed results, never from the AI.`
-              : 'The AI narrative was unavailable for this run, so recommendations use standard template wording. All numbers are computed either way.'}
-          </TooltipContent>
-        </Tooltip>
+              : 'The AI narrative was unavailable for this run, so recommendations use standard template wording. All numbers are computed either way.'
+          }
+        >
+          {narrative.generated_by === 'ai' ? 'AI-written text' : 'Standard text'}
+        </Chip>
       </div>
 
-      <div className="overflow-x-auto rounded-md border">
-        <Table>
+      <div className="overflow-x-auto rounded-[10px] border border-border">
+        <Table className="cards">
           <TableHeader>
             <TableRow>
               <TableHead className="h-8 w-8 px-2 text-[11px]">
@@ -280,10 +272,10 @@ export function GapsRoadmap({
           <TableBody>
             {gaps.map((gap) => (
               <TableRow key={gap.technique_id}>
-                <TableCell className="px-2 py-1.5 text-[11px] font-medium tabular-nums">
+                <TableCell data-th="#" className="px-2 py-1.5 text-[11px] font-medium tabular-nums">
                   {gap.rank}
                 </TableCell>
-                <TableCell className="px-2 py-1.5">
+                <TableCell data-th="Technique" className="px-2 py-1.5">
                   <button
                     type="button"
                     onClick={() => onSelectTechnique(gap.technique_id)}
@@ -293,17 +285,17 @@ export function GapsRoadmap({
                   </button>{' '}
                   <span className="text-xs text-muted-foreground">{gap.name}</span>
                 </TableCell>
-                <TableCell className="hidden px-2 py-1.5 text-xs text-muted-foreground md:table-cell">
+                <TableCell data-th="Tactic" className="hidden px-2 py-1.5 text-xs text-muted-foreground md:table-cell">
                   {tacticName(gap)}
                 </TableCell>
-                <TableCell className="whitespace-nowrap px-2 py-1.5">
+                <TableCell data-th="Priority" className="whitespace-nowrap px-2 py-1.5">
                   <span className="inline-flex items-center gap-1.5">
                     <TierBadge tier={gap.tier} />
                     {gap.threat_relevance && gap.threat_relevance.length > 0 && (
                       <Tooltip delayDuration={150}>
                         <TooltipTrigger asChild>
-                          <span className="inline-flex cursor-default items-center gap-1 text-[11px] text-violet-700">
-                            <Dot className="bg-violet-500" />
+                          <span className="inline-flex cursor-default items-center gap-1 text-[11px] text-violet">
+                            <Dot className="bg-violet" />
                             Threat
                           </span>
                         </TooltipTrigger>
@@ -318,8 +310,8 @@ export function GapsRoadmap({
                     {gap.crown_jewel_relevant && (
                       <Tooltip delayDuration={150}>
                         <TooltipTrigger asChild>
-                          <span className="inline-flex cursor-default items-center gap-1 text-[11px] text-amber-700">
-                            <Dot className="bg-amber-500" />
+                          <span className="inline-flex cursor-default items-center gap-1 text-[11px] text-sev-high">
+                            <Dot className="bg-sev-high" />
                             Crown jewel
                           </span>
                         </TooltipTrigger>
@@ -331,7 +323,7 @@ export function GapsRoadmap({
                     )}
                   </span>
                 </TableCell>
-                <TableCell className="hidden whitespace-nowrap px-2 py-1.5 lg:table-cell">
+                <TableCell data-th="Strength" className="hidden whitespace-nowrap px-2 py-1.5 lg:table-cell">
                   {strengthById.has(gap.technique_id) ? (
                     <span
                       className="inline-flex cursor-default items-center gap-1.5 text-xs"
@@ -340,9 +332,9 @@ export function GapsRoadmap({
                       <Dot
                         className={
                           {
-                            strong: 'bg-emerald-500',
-                            moderate: 'bg-amber-500',
-                            weak: 'bg-rose-500',
+                            strong: 'bg-ok',
+                            moderate: 'bg-sev-med',
+                            weak: 'bg-sev-crit',
                           }[strengthBucket(strengthById.get(gap.technique_id)!)]
                         }
                       />
@@ -353,10 +345,10 @@ export function GapsRoadmap({
                     <span className="text-xs text-muted-foreground">—</span>
                   )}
                 </TableCell>
-                <TableCell className="px-2 py-1.5">
+                <TableCell data-th="Feasibility" className="px-2 py-1.5">
                   <FeasibilityBadge gap={gap} />
                 </TableCell>
-                <TableCell className="px-2 py-1.5 text-xs leading-snug">
+                <TableCell data-th="Recommendation" className="px-2 py-1.5 text-xs leading-snug">
                   {narrative.gap_recommendations[gap.technique_id] ?? gap.hint}
                 </TableCell>
               </TableRow>

@@ -1,31 +1,31 @@
 'use client';
 
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
-import { STATE_META } from '../lib';
+import { Chip, type ChipTone } from '@/components/app';
+import { STATE_META, STATUS_META } from '../lib';
+
+/** Tone per state string this badge might receive — technique coverage
+ * states (covered/partial/not_covered/not_applicable) and assessment run
+ * states (pending/running/completed/failed) share this one component. */
+const STATE_TONE: Record<string, ChipTone> = {
+  covered: 'ok',
+  partial: 'med',
+  not_covered: 'crit',
+  not_applicable: 'neutral',
+  pending: 'neutral',
+  running: 'info',
+  completed: 'ok',
+  failed: 'crit',
+};
 
 /** State chip with the plain-English hover explanation (locked UI rule:
- * every state badge gets a tooltip). Assumes a TooltipProvider ancestor. */
+ * every state badge gets a tooltip). Self-contained tooltip (Chip carries
+ * its own TooltipProvider), so no ancestor is required. */
 export function StateBadge({ state, className }: { state: string; className?: string }) {
-  const meta = STATE_META[state] ?? {
-    label: state,
-    chip: 'bg-muted text-muted-foreground border-transparent',
-    tip: '',
-  };
+  const meta = STATE_META[state] ?? STATUS_META[state];
+  const tip = meta && 'tip' in meta ? meta.tip : undefined;
   return (
-    <Tooltip delayDuration={150}>
-      <TooltipTrigger asChild>
-        <span
-          className={cn(
-            'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium cursor-default',
-            meta.chip,
-            className
-          )}
-        >
-          {meta.label}
-        </span>
-      </TooltipTrigger>
-      {meta.tip && <TooltipContent className="max-w-xs text-xs">{meta.tip}</TooltipContent>}
-    </Tooltip>
+    <Chip tone={STATE_TONE[state] ?? 'neutral'} dot tip={tip} className={className}>
+      {meta?.label ?? state}
+    </Chip>
   );
 }

@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useParams, useRouter } from 'next/navigation';
 import { FileDown, FileJson, FileSpreadsheet, History, Loader2, Play, Presentation, Search as SearchIcon, Target } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
+import { AlertBanner, Chip, ConfirmDialog, PageHeader } from '@/components/app';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -12,7 +13,6 @@ import {
   Assessment,
   AssessmentListItem,
   CompareResult,
-  STATUS_META,
   TechniqueExplain,
   TechniqueResult,
   ThreatGroup,
@@ -28,6 +28,7 @@ import { CompareView } from '../components/CompareView';
 import { CoverageHeatmap } from '../components/CoverageHeatmap';
 import { ExecutiveBand } from '../components/ExecutiveBand';
 import { GapsRoadmap } from '../components/GapsRoadmap';
+import { StateBadge } from '../components/StateBadge';
 import { TechniqueDrawer } from '../components/TechniqueDrawer';
 
 const POLL_MS = 5_000;
@@ -65,6 +66,10 @@ export default function MitreResultsPage() {
   const [runError, setRunError] = useState('');
   const [bulkAttesting, setBulkAttesting] = useState<string | null>(null);
   const [bulkAttestError, setBulkAttestError] = useState('');
+  // Sanctioned change: the bulk tool-attest confirm is a ConfirmDialog now
+  // (previously a native confirm popup) — this holds which tool/technique
+  // set is pending confirmation.
+  const [pendingAttest, setPendingAttest] = useState<{ label: string; credited: string[] } | null>(null);
   const [downloadError, setDownloadError] = useState('');
   const [compareOptions, setCompareOptions] = useState<AssessmentListItem[] | null>(null);
   const [compareWith, setCompareWith] = useState('');
@@ -437,7 +442,6 @@ export default function MitreResultsPage() {
     }
   };
 
-  const status = assessment ? STATUS_META[assessment.status] ?? STATUS_META.pending : null;
   const summary = assessment?.summary ?? null;
   const techniques = assessment?.technique_results ?? [];
 
@@ -479,28 +483,34 @@ export default function MitreResultsPage() {
   return (
     <AppShell fullWidth>
       <TooltipProvider>
-        {error && (
-          <div role="alert" className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-            {error}
-          </div>
-        )}
+        {error && <AlertBanner kind="error" className="mb-4">{error}</AlertBanner>}
 
         {assessment && (
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="flex min-w-0 items-center gap-2 text-lg font-semibold">
-                <Target size={18} strokeWidth={2} className="shrink-0 text-primary" aria-hidden="true" />
-                <span className="truncate">{assessment.name}</span>
-                {assessment.demo && (
-                  <span title="Shared sample assessment — read-only for everyone" className="shrink-0 rounded-full border border-sky-200 bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-800">Demo</span>
-                )}
-              </h1>
-              {status && (
-                <span className={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium', status.chip)}>
-                  {status.label}
+            <PageHeader
+              className="mb-0"
+              title={
+                <span className="flex min-w-0 items-center gap-2">
+                  <Target size={18} strokeWidth={2} className="shrink-0 text-primary" aria-hidden="true" />
+                  <span className="truncate">{assessment.name}</span>
+                  {assessment.demo && (
+                    <Chip tone="info" xs tip="Shared sample assessment — read-only for everyone">
+                      Demo
+                    </Chip>
+                  )}
+                  <StateBadge state={assessment.status} />
                 </span>
-              )}
-              <div className="ml-auto flex flex-wrap items-center gap-1.5">
+              }
+              meta={
+                (metaLine || intakeMeta.purpose_note) && (
+                  <>
+                    {metaLine && <p>{metaLine}</p>}
+                    {intakeMeta.purpose_note && <p>{intakeMeta.purpose_note}</p>}
+                  </>
+                )
+              }
+              actions={
+                <>
                 {/* Phase 14f: jump to any past run without going back to the list */}
                 {completed && pastRuns !== null && pastRuns.length > 1 && (
                   <div className="relative">
@@ -551,7 +561,7 @@ export default function MitreResultsPage() {
                                 <span className="text-muted-foreground">
                                   {fmtDate(run.completed_at)} · {run.strict_pct}%
                                   {!isCurrent && delta !== null && delta !== 0 && (
-                                    <span className={delta > 0 ? 'text-emerald-600' : 'text-rose-600'}>
+                                    <span className={delta > 0 ? 'text-ok' : 'text-sev-crit'}>
                                       {' '}({delta > 0 ? '+' : ''}{delta} vs this)
                                     </span>
                                   )}
@@ -650,19 +660,10 @@ export default function MitreResultsPage() {
                 <span className="hidden text-xs text-muted-foreground sm:inline">
                   created {fmtDate(assessment.created_at)}
                 </span>
-              </div>
-            </div>
-            {(metaLine || intakeMeta.purpose_note) && (
-              <div className="text-xs text-muted-foreground">
-                {metaLine && <p>{metaLine}</p>}
-                {intakeMeta.purpose_note && <p>{intakeMeta.purpose_note}</p>}
-              </div>
-            )}
-            {downloadError && (
-              <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                {downloadError}
-              </div>
-            )}
+                </>
+              }
+            />
+            {downloadError && <AlertBanner kind="error">{downloadError}</AlertBanner>}
 
             {(() => {
               // Phase 13d provenance line: only for SIEM-pulled assessments
@@ -681,40 +682,46 @@ export default function MitreResultsPage() {
             })()}
 
             {assessment.status === 'running' && (
-              <div className="flex items-center gap-3 rounded-md bg-sky-50 p-5 text-sm text-sky-900">
-                <Loader2 size={18} className="animate-spin" aria-hidden="true" />
-                <div>
-                  <p className="font-medium">Assessing your coverage…</p>
-                  <p className="text-xs">
-                    We&apos;re mapping rules to techniques, filtering to your environment,
-                    and computing the results. Untagged rules go through AI tagging, so
-                    this can take a few minutes. The page refreshes itself.
-                  </p>
+              <AlertBanner kind="info">
+                <div className="flex items-center gap-3">
+                  <Loader2 size={18} className="animate-spin" aria-hidden="true" />
+                  <div>
+                    <p className="font-medium">Assessing your coverage…</p>
+                    <p className="text-xs">
+                      We&apos;re mapping rules to techniques, filtering to your environment,
+                      and computing the results. Untagged rules go through AI tagging, so
+                      this can take a few minutes. The page refreshes itself.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              </AlertBanner>
             )}
 
             {assessment.status === 'failed' && (
-              <div className="space-y-3 rounded-md border border-rose-200 bg-rose-50 p-5 text-sm text-rose-900">
-                <p className="font-medium">This run didn&apos;t finish.</p>
-                <p>{assessment.error_message}</p>
-                <Button size="sm" onClick={handleRun}>
-                  <Play size={14} className="mr-1.5" aria-hidden="true" /> Re-run assessment
-                </Button>
-                {runError && <p className="text-xs text-rose-700">{runError}</p>}
-              </div>
+              <AlertBanner kind="error">
+                <div className="space-y-3">
+                  <p className="font-medium">This run didn&apos;t finish.</p>
+                  <p>{assessment.error_message}</p>
+                  <Button size="sm" onClick={handleRun}>
+                    <Play size={14} className="mr-1.5" aria-hidden="true" /> Re-run assessment
+                  </Button>
+                  {runError && <p className="text-xs text-sev-crit">{runError}</p>}
+                </div>
+              </AlertBanner>
             )}
 
             {assessment.status === 'pending' && (
-              <div className="space-y-3 rounded-md bg-muted/40 p-5 text-sm">
-                <p>
-                  This assessment is uploaded and parsed, but hasn&apos;t been run yet.
-                </p>
-                <Button size="sm" onClick={handleRun}>
-                  <Play size={14} className="mr-1.5" aria-hidden="true" /> Run assessment
-                </Button>
-                {runError && <p className="text-xs text-destructive">{runError}</p>}
-              </div>
+              <AlertBanner kind="warn">
+                <div className="space-y-3">
+                  <p>
+                    This assessment is uploaded and parsed, but hasn&apos;t been run yet.
+                  </p>
+                  <Button size="sm" onClick={handleRun}>
+                    <Play size={14} className="mr-1.5" aria-hidden="true" /> Run assessment
+                  </Button>
+                  {runError && <p className="text-xs text-sev-med">{runError}</p>}
+                </div>
+              </AlertBanner>
             )}
 
             {assessment.status === 'completed' && summary && (
@@ -729,8 +736,8 @@ export default function MitreResultsPage() {
 
                 {assessment.tool_coverage &&
                   assessment.tool_coverage.adjusted_pct !== null && (
-                    <div className="rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-sm dark:border-blue-900 dark:bg-blue-950/40">
-                      <span className="font-semibold text-blue-700 dark:text-blue-300">
+                    <AlertBanner kind="blue">
+                      <span className="font-semibold text-primary">
                         Including{' '}
                         {assessment.tool_coverage.matched_tools
                           .map((t) => t.label)
@@ -756,7 +763,7 @@ export default function MitreResultsPage() {
                               {split.rules} by SIEM rules ({pct(split.rules)}%)
                             </span>{' '}
                             +{' '}
-                            <span className="font-medium text-blue-700 dark:text-blue-300">
+                            <span className="font-medium text-primary">
                               {split.tools} via attested tools ({pct(split.tools)}%)
                             </span>
                           </div>
@@ -776,27 +783,8 @@ export default function MitreResultsPage() {
                                 key={t.label}
                                 type="button"
                                 disabled={bulkAttesting !== null}
-                                onClick={async () => {
-                                  const ok = window.confirm(
-                                    `Attest all ${credited.length} credited techniques for ${t.label}?\n\n` +
-                                      `This records that your SOC receives and monitors ${t.label}'s alerts ` +
-                                      `for these techniques, creates one auditable tool-attested rule per ` +
-                                      `technique in your name, and recomputes the coverage score.`
-                                  );
-                                  if (!ok) return;
-                                  setBulkAttesting(t.label);
-                                  setBulkAttestError('');
-                                  try {
-                                    await attestIds(t.label, credited);
-                                  } catch (err) {
-                                    setBulkAttestError(
-                                      err instanceof Error ? err.message : 'Attestation failed'
-                                    );
-                                  } finally {
-                                    setBulkAttesting(null);
-                                  }
-                                }}
-                                className="rounded-md border border-blue-400 bg-white px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:bg-transparent dark:text-blue-300 dark:hover:bg-blue-900/40"
+                                onClick={() => setPendingAttest({ label: t.label, credited })}
+                                className="rounded-md border border-primary bg-card px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-accent-soft disabled:opacity-50"
                               >
                                 {bulkAttesting === t.label
                                   ? 'Attesting…'
@@ -805,11 +793,11 @@ export default function MitreResultsPage() {
                             );
                           })}
                           {bulkAttestError && (
-                            <p className="text-xs text-destructive">{bulkAttestError}</p>
+                            <p className="text-xs text-sev-crit">{bulkAttestError}</p>
                           )}
                         </div>
                       )}
-                    </div>
+                    </AlertBanner>
                   )}
 
                 <UploadSummaryCard
@@ -819,7 +807,7 @@ export default function MitreResultsPage() {
                   onDrillRules={openRuleDrillRules}
                 />
 
-                <div className="flex flex-wrap items-center gap-1 border-b" role="tablist" aria-label="Assessment result views">
+                <div className="flex flex-wrap items-center gap-5 border-b border-border" role="tablist" aria-label="Assessment result views">
                   {TABS.map((t) => (
                     <button
                       key={t.key}
@@ -828,9 +816,9 @@ export default function MitreResultsPage() {
                       aria-selected={tab === t.key}
                       onClick={() => setTab(t.key)}
                       className={cn(
-                        '-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors',
+                        '-mb-px border-b-2 px-0.5 pb-2.5 text-[13px] font-medium transition-colors',
                         tab === t.key
-                          ? 'border-primary text-foreground'
+                          ? 'border-primary font-semibold text-foreground'
                           : 'border-transparent text-muted-foreground hover:text-foreground'
                       )}
                     >
@@ -965,6 +953,35 @@ export default function MitreResultsPage() {
                   onEditMappings={handleEditMappings}
                   toolCoverage={assessment.tool_coverage?.by_technique ?? null}
                   onAttest={handleAttest}
+                />
+                <ConfirmDialog
+                  open={pendingAttest !== null}
+                  onOpenChange={(open) => !open && setPendingAttest(null)}
+                  title={
+                    pendingAttest &&
+                    `Attest all ${pendingAttest.credited.length} credited techniques for ${pendingAttest.label}?`
+                  }
+                  description={
+                    pendingAttest &&
+                    `This records that your SOC receives and monitors ${pendingAttest.label}'s alerts for these techniques, creates one auditable tool-attested rule per technique in your name, and recomputes the coverage score.`
+                  }
+                  confirmLabel="Confirm"
+                  destructive={false}
+                  busy={bulkAttesting !== null}
+                  onConfirm={async () => {
+                    if (!pendingAttest) return;
+                    const { label, credited } = pendingAttest;
+                    setBulkAttesting(label);
+                    setBulkAttestError('');
+                    try {
+                      await attestIds(label, credited);
+                    } catch (err) {
+                      setBulkAttestError(err instanceof Error ? err.message : 'Attestation failed');
+                    } finally {
+                      setBulkAttesting(null);
+                      setPendingAttest(null);
+                    }
+                  }}
                 />
               </>
             )}

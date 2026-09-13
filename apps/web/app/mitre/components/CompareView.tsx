@@ -1,5 +1,6 @@
 'use client';
 
+import { AlertBanner, Chip, KpiTile, type KpiTone } from '@/components/app';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { AssessmentListItem, CompareEntry, CompareResult, DOMAIN_LABELS, STATE_META, fmtDate } from '../lib';
@@ -18,26 +19,9 @@ function DeltaChip({
   tip: string;
 }) {
   const improved = value === 0 ? null : goodWhenUp === value > 0;
-  return (
-    <Tooltip delayDuration={150}>
-      <TooltipTrigger asChild>
-        <div className="cursor-default rounded-md bg-muted/40 px-3 py-2 text-center">
-          <div
-            className={cn(
-              'text-lg font-bold leading-tight',
-              improved === true && 'text-emerald-600',
-              improved === false && 'text-rose-600'
-            )}
-          >
-            {value > 0 ? '▲ +' : value < 0 ? '▼ ' : '— '}
-            {value !== 0 && `${value}${suffix}`}
-          </div>
-          <div className="text-[11px] text-muted-foreground">{label}</div>
-        </div>
-      </TooltipTrigger>
-      <TooltipContent className="max-w-xs text-xs">{tip}</TooltipContent>
-    </Tooltip>
-  );
+  const tone: KpiTone = improved === true ? 'ok' : improved === false ? 'crit' : 'grey';
+  const text = `${value > 0 ? '▲ +' : value < 0 ? '▼ ' : '— '}${value !== 0 ? `${value}${suffix}` : ''}`;
+  return <KpiTile label={label} value={text} tone={tone} tip={tip} />;
 }
 
 function EntryList({
@@ -136,11 +120,7 @@ export function CompareView({
           coverage trend.
         </p>
       )}
-      {error && (
-        <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
+      {error && <AlertBanner kind="error">{error}</AlertBanner>}
 
       {result && !loading && (
         <>
@@ -149,11 +129,11 @@ export function CompareView({
             {result.baseline.name} ({fmtDate(result.baseline.completed_at)})
           </p>
           {result.attack_version_mismatch && (
-            <p className="rounded-md bg-amber-50 p-3 text-xs text-amber-800">
+            <AlertBanner kind="warn">
               These runs used different ATT&CK versions ({result.current.attack_version} vs{' '}
               {result.baseline.attack_version}) — techniques that exist in only one version
               are left out of this comparison.
-            </p>
+            </AlertBanner>
           )}
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
@@ -179,24 +159,13 @@ export function CompareView({
                   .slice()
                   .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
                   .map((t) => (
-                    <Tooltip key={`${t.domain}:${t.id}`} delayDuration={150}>
-                      <TooltipTrigger asChild>
-                        <span
-                          className={cn(
-                            'cursor-default rounded-full border px-2 py-0.5 text-[11px] font-medium',
-                            t.delta > 0
-                              ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                              : 'border-rose-200 bg-rose-50 text-rose-800'
-                          )}
-                        >
-                          {t.name} {t.delta > 0 ? '▲' : '▼'} {Math.abs(t.delta)} pts
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-xs text-xs">
-                        {DOMAIN_LABELS[t.domain] ?? t.domain} / {t.name}: {t.baseline_strict_pct}% →{' '}
-                        {t.current_strict_pct}% strict coverage.
-                      </TooltipContent>
-                    </Tooltip>
+                    <Chip
+                      key={`${t.domain}:${t.id}`}
+                      tone={t.delta > 0 ? 'ok' : 'crit'}
+                      tip={`${DOMAIN_LABELS[t.domain] ?? t.domain} / ${t.name}: ${t.baseline_strict_pct}% → ${t.current_strict_pct}% strict coverage.`}
+                    >
+                      {t.name} {t.delta > 0 ? '▲' : '▼'} {Math.abs(t.delta)} pts
+                    </Chip>
                   ))}
               </div>
             )}
@@ -207,14 +176,14 @@ export function CompareView({
               title="Newly covered"
               blurb="Techniques you can detect now but couldn't in the older run."
               entries={result.newly_covered}
-              accent="text-emerald-700"
+              accent="text-ok"
               onSelectTechnique={onSelectTechnique}
             />
             <EntryList
               title="Regressed"
               blurb="Covered in the older run but not now — e.g. a rule was disabled or removed."
               entries={result.regressed}
-              accent="text-rose-700"
+              accent="text-sev-crit"
               onSelectTechnique={onSelectTechnique}
             />
             <EntryList

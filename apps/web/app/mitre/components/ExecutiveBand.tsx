@@ -1,9 +1,8 @@
 'use client';
 
 import { Info } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Chip, KpiTile, type KpiTone } from '@/components/app';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
 import {
   Assessment,
   DOMAIN_LABELS,
@@ -25,48 +24,23 @@ function Tile({
   value,
   label,
   tip,
-  accent,
+  tone,
   onClick,
 }: {
   value: string | number;
   label: string;
   tip: string;
-  accent?: string;
+  tone?: KpiTone;
   onClick?: () => void;
 }) {
-  const content = (
-    <CardContent className="px-3 py-2.5 text-center">
-      <div className={cn('text-xl font-bold leading-tight', accent)}>{value}</div>
-      <div className="text-[11px] font-medium text-muted-foreground">{label}</div>
-    </CardContent>
-  );
   return (
-    <Tooltip delayDuration={150}>
-      <TooltipTrigger asChild>
-        {onClick ? (
-          <Card
-            role="button"
-            tabIndex={0}
-            onClick={onClick}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onClick();
-              }
-            }}
-            className="cursor-pointer transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {content}
-          </Card>
-        ) : (
-          <Card className="cursor-default">{content}</Card>
-        )}
-      </TooltipTrigger>
-      <TooltipContent className="max-w-xs text-xs">
-        {tip}
-        {onClick ? ' Click to see the techniques behind this number.' : ''}
-      </TooltipContent>
-    </Tooltip>
+    <KpiTile
+      label={label}
+      value={value}
+      tone={tone}
+      onClick={onClick}
+      tip={`${tip}${onClick ? ' Click to see the techniques behind this number.' : ''}`}
+    />
   );
 }
 
@@ -98,7 +72,7 @@ export function ExecutiveBand({
         <Tile
           value={`${o.strict_pct}%`}
           label="Coverage"
-          accent="text-primary"
+          tone="accent"
           tip={`Strict coverage: ${o.covered} of ${o.applicable} applicable techniques have at least one qualifying detection. Weighted coverage (partial counts as half): ${o.weighted_pct}%.`}
           onClick={() =>
             onDrill('All applicable techniques', applicable, {
@@ -112,6 +86,7 @@ export function ExecutiveBand({
             key={key}
             value={`${d.strict_pct}%`}
             label={DOMAIN_LABELS[key] ?? key}
+            tone="accent"
             tip={`${DOMAIN_LABELS[key] ?? key}: ${d.covered} of ${d.applicable} applicable techniques covered (weighted ${d.weighted_pct}%).`}
             onClick={() =>
               onDrill(
@@ -131,14 +106,14 @@ export function ExecutiveBand({
               key={state}
               value={o[state]}
               label={STATE_META[state].label}
-              accent={
+              tone={
                 state === 'covered'
-                  ? 'text-emerald-600'
+                  ? 'ok'
                   : state === 'partial'
-                    ? 'text-amber-600'
+                    ? 'med'
                     : state === 'not_covered'
-                      ? 'text-rose-600'
-                      : undefined
+                      ? 'crit'
+                      : 'grey'
               }
               tip={STATE_META[state].tip}
               onClick={() =>
@@ -188,20 +163,16 @@ export function ExecutiveBand({
           <span className="flex flex-wrap items-center gap-1.5">
             <span className="font-medium text-foreground">Top gaps:</span>
             {topGaps.map((g) => (
-              <Tooltip key={g.technique_id} delayDuration={150}>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => onSelectTechnique(g.technique_id)}
-                    className="rounded-full border bg-rose-50 px-2 py-0.5 font-medium text-rose-800 transition-colors hover:bg-rose-100"
-                  >
-                    {g.technique_id}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs text-xs">
-                  {g.name} — {g.hint}
-                </TooltipContent>
-              </Tooltip>
+              <button
+                key={g.technique_id}
+                type="button"
+                className="cursor-pointer border-0 bg-transparent p-0"
+                onClick={() => onSelectTechnique(g.technique_id)}
+              >
+                <Chip tone="crit" tip={`${g.name} — ${g.hint}`} className="transition-colors hover:brightness-95">
+                  {g.technique_id}
+                </Chip>
+              </button>
             ))}
           </span>
         )}

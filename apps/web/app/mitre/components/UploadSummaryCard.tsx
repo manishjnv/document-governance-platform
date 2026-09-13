@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, FileSpreadsheet } from 'lucide-react';
+import { Chip } from '@/components/app';
 import { Assessment, LogSourceCoverageGroup, Summary, UseCaseItem } from '../lib';
 
 /** Phase 14g: one parsed environment entry's evidence line. */
@@ -72,12 +73,9 @@ export function UploadSummaryCard({
     { key: 'invalid', label: 'invalid tags', status: 'invalid' },
   ].filter((c) => (counts[c.key] ?? 0) > 0);
 
-  const chipCls =
-    'rounded-full border bg-background px-2 py-0.5 text-[11px] font-medium transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
-
   return (
-    <div className="rounded-md border bg-muted/20 p-3 text-sm">
-      <div className="mb-2 text-xs font-semibold text-muted-foreground">
+    <div className="rounded-[10px] border border-border bg-card p-4 text-sm">
+      <div className="mb-2 text-xs font-semibold text-ink3">
         What this assessment is based on
       </div>
       <div className="grid gap-3 lg:grid-cols-2">
@@ -90,10 +88,11 @@ export function UploadSummaryCard({
             <button
               type="button"
               onClick={() => onDrillRules(`All ${counts.use_cases ?? useCases.length} rules`, useCases)}
-              className={chipCls}
             >
-              {counts.use_cases ?? useCases.length} rule
-              {(counts.use_cases ?? useCases.length) === 1 ? '' : 's'}
+              <Chip tone="info" xs className="transition-colors hover:brightness-95">
+                {counts.use_cases ?? useCases.length} rule
+                {(counts.use_cases ?? useCases.length) === 1 ? '' : 's'}
+              </Chip>
             </button>
           </div>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -107,9 +106,10 @@ export function UploadSummaryCard({
                     useCases.filter((uc) => uc.mapping_status === c.status)
                   )
                 }
-                className={chipCls}
               >
-                {counts[c.key]} {c.label}
+                <Chip tone="neutral" xs className="transition-colors hover:brightness-95">
+                  {counts[c.key]} {c.label}
+                </Chip>
               </button>
             ))}
             {disabledRules.length > 0 && (
@@ -121,9 +121,10 @@ export function UploadSummaryCard({
                     disabledRules
                   )
                 }
-                className={chipCls}
               >
-                {disabledRules.length} disabled
+                <Chip tone="med" xs className="transition-colors hover:brightness-95">
+                  {disabledRules.length} disabled
+                </Chip>
               </button>
             )}
           </div>
@@ -135,12 +136,8 @@ export function UploadSummaryCard({
               <div className="flex flex-wrap items-center gap-1.5">
                 <FileSpreadsheet size={14} className="shrink-0 text-muted-foreground" aria-hidden="true" />
                 <span className="truncate font-medium">{envFile.filename}</span>
-                {env.has_ics_assets && (
-                  <span className="rounded-full border px-2 py-0.5 text-[11px]">OT/ICS</span>
-                )}
-                {env.has_managed_mobile && (
-                  <span className="rounded-full border px-2 py-0.5 text-[11px]">Managed mobile</span>
-                )}
+                {env.has_ics_assets && <Chip tone="neutral" xs>OT/ICS</Chip>}
+                {env.has_managed_mobile && <Chip tone="neutral" xs>Managed mobile</Chip>}
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
                 Platforms: {(env.platforms ?? []).join(', ') || 'none detected'}
@@ -185,23 +182,24 @@ export function UploadSummaryCard({
                             useCases.filter((uc) => g.row_refs.includes(uc.row_ref))
                           )
                         }
-                        className={chipCls}
                       >
-                        {g.log_source}: {g.rule_count} rule{g.rule_count === 1 ? '' : 's'} → {g.techniques_covered}{' '}
-                        technique{g.techniques_covered === 1 ? '' : 's'}
+                        <Chip tone="neutral" xs className="transition-colors hover:brightness-95">
+                          {g.log_source}: {g.rule_count} rule{g.rule_count === 1 ? '' : 's'} → {g.techniques_covered}{' '}
+                          technique{g.techniques_covered === 1 ? '' : 's'}
+                        </Chip>
                       </button>
                     </li>
                   ))}
                 </ul>
               )}
               {unmatchedNote && (
-                <p className="mt-1 text-xs text-amber-700">{unmatchedNote}</p>
+                <p className="mt-1 text-xs text-sev-med">{unmatchedNote}</p>
               )}
               {unmonitoredFindings.map((finding, i) => (
                 <p
                   key={i}
                   title="Declared devices whose main telemetry was never onboarded — no claim is made about anything not in your own sheets"
-                  className="mt-1 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800"
+                  className="mt-1 rounded border border-sev-med bg-amber-bg px-2 py-1 text-xs text-sev-med"
                 >
                   {finding}
                 </p>
@@ -237,7 +235,7 @@ export function UploadSummaryCard({
               )}
             </>
           ) : (
-            <p className="text-xs text-amber-700">
+            <p className="text-xs text-sev-med">
               No environment workbook was uploaded — the full ATT&CK matrices
               were assessed, so the coverage score is a lower bound.
             </p>

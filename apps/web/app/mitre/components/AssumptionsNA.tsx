@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { Chip } from '@/components/app';
 import { DOMAIN_LABELS, NaEntry, Summary, TechniqueResult } from '../lib';
 import type { DrillHandler } from './ExecutiveBand';
 
@@ -128,9 +129,10 @@ export function AssumptionsNA({
                       `${count} rule${count === 1 ? '' : 's'} ${label}`
                     )
                   }
-                  className="rounded-full border bg-muted/40 px-2 py-0.5 font-medium transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  {count} {label}
+                  <Chip tone="neutral" className="transition-colors hover:brightness-95">
+                    {count} {label}
+                  </Chip>
                 </button>
               );
             })}
@@ -147,9 +149,10 @@ export function AssumptionsNA({
                     }
                   )
                 }
-                className="rounded-full border border-violet-200 bg-violet-100 px-2 py-0.5 font-medium text-violet-800 transition-colors hover:bg-violet-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                {threatIds.size} threat-profile matches
+                <Chip tone="violet" className="transition-colors hover:brightness-95">
+                  {threatIds.size} threat-profile matches
+                </Chip>
               </button>
             )}
           </div>
@@ -158,7 +161,7 @@ export function AssumptionsNA({
           {summary.assumptions.map((assumption, i) => (
             <div
               key={i}
-              className="rounded-md border-l-2 border-primary/50 bg-muted/30 px-3 py-1.5 text-xs leading-snug"
+              className="rounded-md border-l-2 border-primary bg-muted/30 px-3 py-1.5 text-xs leading-snug"
             >
               {assumption}
             </div>
@@ -182,7 +185,7 @@ export function AssumptionsNA({
             const entries = grouped.get(group.key) ?? [];
             if (entries.length === 0) return null;
             return (
-              <div key={group.key} className="flex flex-col rounded-md border p-3">
+              <div key={group.key} className="flex flex-col rounded-[10px] border border-border bg-card p-3">
                 <div className="mb-0.5 flex items-baseline justify-between gap-2">
                   <h4 className="text-xs font-semibold">{group.title}</h4>
                   <button
@@ -228,9 +231,10 @@ export function AssumptionsNA({
                             type="button"
                             onClick={() => onSelectTechnique(e.technique_id)}
                             title={`${DOMAIN_LABELS[e.domain] ?? e.domain} — click for details`}
-                            className="rounded border bg-muted/30 px-1.5 py-0.5 text-[10px] font-medium transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
-                            {e.technique_id}
+                            <Chip tone="neutral" xs className="font-mono transition-colors hover:brightness-95">
+                              {e.technique_id}
+                            </Chip>
                           </button>
                         ))}
                       </div>
