@@ -5,7 +5,15 @@ import { useRouter } from 'next/navigation';
 import { RefreshCw, Search, ShieldCheck } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { PageHeader, KpiTile, Chip, SkeletonRows, AlertBanner } from '@/components/app';
 import { cn } from '@/lib/utils';
 
 interface Org {
@@ -81,17 +89,19 @@ function SearchBox({
   value,
   onChange,
   placeholder,
+  className,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder: string;
+  className?: string;
 }) {
   return (
-    <div className="relative">
+    <div className={cn('relative', className)}>
       <Search
-        size={13}
+        size={14}
         strokeWidth={2}
-        className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+        className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
         aria-hidden="true"
       />
       <input
@@ -100,21 +110,9 @@ function SearchBox({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="h-7 w-44 rounded-md border border-input bg-background pl-7 pr-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+        className="h-9 w-full rounded-lg border border-input bg-card pl-8 pr-2.5 text-[13px] text-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-[3px] focus:ring-accent"
       />
     </div>
-  );
-}
-
-function StatTile({ value, label, sub }: { value: number | string; label: string; sub?: string }) {
-  return (
-    <Card>
-      <CardContent className="py-3 text-center">
-        <div className="text-2xl font-bold">{value}</div>
-        <div className="text-xs font-medium text-foreground">{label}</div>
-        {sub && <div className="text-[11px] text-muted-foreground">{sub}</div>}
-      </CardContent>
-    </Card>
   );
 }
 
@@ -256,28 +254,30 @@ export default function AdminPage() {
 
   return (
     <AppShell>
-      <div className="flex items-center justify-between mb-3">
-        <h1 className="flex items-center gap-2 text-lg font-semibold">
-          <ShieldCheck size={18} strokeWidth={2} className="text-primary" aria-hidden="true" />
-          Admin
-        </h1>
-        <div className="flex items-center gap-2">
-          {data && (
-            <span className="text-[11px] text-muted-foreground">
-              Last updated {timeAgo(data.generated_at)}
-            </span>
-          )}
-          <Button size="sm" variant="outline" onClick={load} disabled={loading}>
-            <RefreshCw size={14} strokeWidth={2} className={cn('mr-1.5', loading && 'animate-spin')} aria-hidden="true" />
-            Refresh
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title={
+          <span className="flex items-center gap-2">
+            <ShieldCheck size={18} strokeWidth={2} className="text-primary" aria-hidden="true" />
+            Admin
+          </span>
+        }
+        actions={
+          <>
+            {data && (
+              <span className="text-xs text-ink3">Last updated {timeAgo(data.generated_at)}</span>
+            )}
+            <Button size="sm" variant="outline" onClick={load} disabled={loading}>
+              <RefreshCw size={14} strokeWidth={2} className={cn('mr-1.5', loading && 'animate-spin')} aria-hidden="true" />
+              Refresh
+            </Button>
+          </>
+        }
+      />
 
       {error && (
-        <div role="alert" className="bg-destructive/10 border border-destructive/30 rounded-md p-3 mb-3 text-sm">
+        <AlertBanner kind="error" className="mb-3">
           {error}
-        </div>
+        </AlertBanner>
       )}
 
       {!data && loading && <p className="text-sm text-muted-foreground">Loading…</p>}
@@ -285,79 +285,76 @@ export default function AdminPage() {
       {data && (
         <>
           {/* Headline numbers */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5 mb-3">
-            <StatTile
+          <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <KpiTile
               value={data.totals.members}
               label="Members"
               sub={`${data.totals.active_members} active`}
             />
-            <StatTile
+            <KpiTile
               value={data.totals.sign_ins_last_7_days}
               label="Sign-ins this week"
               sub={`${data.totals.sign_ins_last_30_days} in the last 30 days`}
             />
-            <StatTile
+            <KpiTile
               value={data.totals.documents}
               label="Documents"
               sub={`${data.totals.documents_last_7_days} added this week`}
             />
-            <StatTile
+            <KpiTile
               value={data.totals.reviews}
               label="AI reviews"
               sub={`${data.totals.reviews_last_7_days} this week`}
             />
-            <StatTile value={data.totals.findings} label="Issues found" sub="across all reviews" />
+            <KpiTile value={data.totals.findings} label="Issues found" sub="across all reviews" />
           </div>
 
           {/* Organisations */}
-          <Card className="mb-3">
-            <CardHeader className="pb-1 pt-3">
-              <CardTitle className="text-sm">Organisations</CardTitle>
-              <p className="text-[11px] text-muted-foreground">
+          <div className="mb-3 rounded-[10px] border border-border bg-card">
+            <div className="border-b border-border px-4 py-3">
+              <h2 className="text-sm font-semibold">Organisations</h2>
+              <p className="mt-1 max-w-2xl text-[12.5px] text-muted-foreground">
                 Free-tier organisations can upload and configure but cannot start reviews or MITRE
                 assessments. Grant a number of runs, or set pro/enterprise for unlimited. Requests
                 arrive by email with source assessment_request / review_request.
               </p>
-            </CardHeader>
-            <CardContent className="pb-3 overflow-x-auto">
               {orgError && (
-                <div role="alert" className="text-[11px] text-destructive mb-2">
+                <p role="alert" className="mt-1.5 text-xs text-sev-crit">
                   {orgError}
-                </div>
+                </p>
               )}
+            </div>
+            <div className="p-0">
               {!orgs ? (
-                <p className="text-xs text-muted-foreground">Loading…</p>
+                <div className="p-4">
+                  <SkeletonRows rows={3} />
+                </div>
               ) : orgs.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No organisations yet.</p>
+                <p className="p-4 text-xs text-muted-foreground">No organisations yet.</p>
               ) : (
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="text-left text-muted-foreground border-b">
-                      <th className="py-1.5 pr-3 font-medium">Organisation</th>
-                      <th className="py-1.5 pr-3 font-medium">Tier</th>
-                      <th className="py-1.5 pr-3 font-medium">Runs</th>
-                      <th className="py-1.5 pr-3 font-medium text-right">Members</th>
-                      <th className="py-1.5 pr-3 font-medium">Created</th>
-                      <th className="py-1.5 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table className="cards">
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead>Organisation</TableHead>
+                      <TableHead>Tier</TableHead>
+                      <TableHead>Runs</TableHead>
+                      <TableHead className="text-right">Members</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {orgs.map((org) => (
-                      <tr key={org.org_id} className="border-b last:border-0">
-                        <td className="py-1.5 pr-3 font-medium">{org.name}</td>
-                        <td className="py-1.5 pr-3">
-                          <span
-                            className={cn(
-                              'px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide',
-                              org.subscription_tier === 'free'
-                                ? 'border'
-                                : 'bg-primary/10 text-primary'
-                            )}
-                          >
+                      <TableRow key={org.org_id}>
+                        <TableCell className="nolbl font-medium" data-th="Organisation">
+                          {org.name}
+                        </TableCell>
+                        <TableCell data-th="Tier">
+                          <Chip tone={org.subscription_tier === 'free' ? 'neutral' : 'pro'} xs className="uppercase tracking-wide">
                             {org.subscription_tier}
-                          </span>
-                        </td>
-                        <td className="py-1.5 pr-3">
+                          </Chip>
+                        </TableCell>
+                        <TableCell data-th="Runs">
                           {org.subscription_tier === 'free' ? (
                             <span className="flex items-center gap-1.5">
                               <input
@@ -370,7 +367,7 @@ export default function AdminPage() {
                                 onChange={(e) =>
                                   setRunDrafts((prev) => ({ ...prev, [org.org_id]: e.target.value }))
                                 }
-                                className="h-7 w-[72px] rounded-md border bg-background px-1.5 text-xs"
+                                className="h-[30px] w-20 rounded-lg border border-input bg-card px-2 text-xs tabular-nums text-right"
                               />
                               <Button
                                 size="sm"
@@ -388,12 +385,16 @@ export default function AdminPage() {
                           ) : (
                             <span className="text-muted-foreground">Unlimited</span>
                           )}
-                        </td>
-                        <td className="py-1.5 pr-3 text-right">{org.user_count}</td>
-                        <td className="py-1.5 pr-3 text-muted-foreground">
-                          {new Date(org.created_at).toLocaleDateString('en-GB')}
-                        </td>
-                        <td className="py-1.5">
+                        </TableCell>
+                        <TableCell className="text-right" data-th="Members">
+                          <span className="font-semibold tabular-nums text-foreground">{org.user_count}</span>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground" data-th="Created">
+                          <span className="tabular-nums">
+                            {new Date(org.created_at).toLocaleDateString('en-GB')}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right" data-th="Actions">
                           <select
                             value={org.subscription_tier}
                             aria-label={`Tier for ${org.name}`}
@@ -401,156 +402,182 @@ export default function AdminPage() {
                             onChange={(e) =>
                               updateOrgTier(org.org_id, e.target.value as Org['subscription_tier'])
                             }
-                            className="rounded-md border bg-background px-2 py-1 text-xs"
+                            className="h-[30px] rounded-lg border border-input bg-card px-2 text-xs"
                           >
                             <option value="free">free</option>
                             <option value="pro">pro</option>
                             <option value="enterprise">enterprise</option>
                           </select>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* People */}
-          <Card className="mb-3">
-            <CardHeader className="flex-row items-center justify-between space-y-0 pb-1 pt-3">
-              <CardTitle className="text-sm">People</CardTitle>
-              <SearchBox value={peopleQuery} onChange={setPeopleQuery} placeholder="Search people…" />
-            </CardHeader>
-            <CardContent className="pb-3 overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-left text-muted-foreground border-b">
-                    <th className="py-1.5 pr-3 font-medium">Name</th>
-                    <th className="py-1.5 pr-3 font-medium">Email</th>
-                    <th className="py-1.5 pr-3 font-medium">Role</th>
-                    {data.people.some((p) => p.workspace) && (
-                      <th className="py-1.5 pr-3 font-medium">Workspace</th>
-                    )}
-                    <th className="py-1.5 pr-3 font-medium">Status</th>
-                    <th className="py-1.5 pr-3 font-medium">Joined</th>
-                    <th className="py-1.5 pr-3 font-medium">Last sign-in</th>
-                    <th className="py-1.5 pr-3 font-medium text-right">Documents</th>
-                    <th className="py-1.5 pr-3 font-medium text-right">Reviews</th>
-                    <th className="py-1.5 font-medium">Last active</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.people.filter((p) =>
-                    `${p.name} ${p.email} ${p.role} ${p.workspace ?? ''}`
-                      .toLowerCase()
-                      .includes(peopleQuery.toLowerCase())
-                  ).map((p) => (
-                    <tr key={p.email} className="border-b last:border-0">
-                      <td className="py-1.5 pr-3 font-medium">{p.name}</td>
-                      <td className="py-1.5 pr-3 text-muted-foreground">{p.email}</td>
-                      <td className="py-1.5 pr-3 capitalize">{p.role}</td>
-                      {data.people.some((x) => x.workspace) && (
-                        <td className="py-1.5 pr-3 text-muted-foreground">{p.workspace ?? '—'}</td>
-                      )}
-                      <td className="py-1.5 pr-3">
-                        <span
-                          className={cn(
-                            'px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide',
-                            p.active ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'
-                          )}
-                        >
-                          {p.active ? 'Active' : 'Suspended'}
-                        </span>
-                      </td>
-                      <td className="py-1.5 pr-3 text-muted-foreground">{timeAgo(p.joined)}</td>
-                      <td className="py-1.5 pr-3">{timeAgo(p.last_sign_in)}</td>
-                      <td className="py-1.5 pr-3 text-right">{p.documents_uploaded}</td>
-                      <td className="py-1.5 pr-3 text-right">{p.reviews_run}</td>
-                      <td className="py-1.5">{timeAgo(p.last_activity)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
-
-          <div className="grid lg:grid-cols-2 gap-3 mb-3">
-            {/* Recent sign-ins */}
-            <Card>
-              <CardHeader className="flex-row items-center justify-between space-y-0 pb-1 pt-3">
-                <CardTitle className="text-sm">Recent sign-ins</CardTitle>
-                <SearchBox value={signInQuery} onChange={setSignInQuery} placeholder="Search sign-ins…" />
-              </CardHeader>
-              <CardContent className="pb-3">
-                {data.recent_sign_ins.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No sign-ins recorded yet.</p>
-                ) : (
-                  <ul className="space-y-1.5 text-xs max-h-72 overflow-y-auto">
-                    {data.recent_sign_ins.filter((s) =>
-                      `${s.who} ${s.how} ${s.device ?? ''} ${s.from_ip ?? ''}`
+          <div className="mb-3 rounded-[10px] border border-border bg-card">
+            <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+              <h2 className="text-sm font-semibold">People</h2>
+              <SearchBox
+                value={peopleQuery}
+                onChange={setPeopleQuery}
+                placeholder="Search people…"
+                className="w-full max-w-[220px]"
+              />
+            </div>
+            <div className="p-0">
+              <Table className="cards">
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    {data.people.some((p) => p.workspace) && <TableHead>Workspace</TableHead>}
+                    <TableHead>Status</TableHead>
+                    <TableHead>Joined</TableHead>
+                    <TableHead>Last sign-in</TableHead>
+                    <TableHead className="text-right">Documents</TableHead>
+                    <TableHead className="text-right">Reviews</TableHead>
+                    <TableHead>Last active</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.people
+                    .filter((p) =>
+                      `${p.name} ${p.email} ${p.role} ${p.workspace ?? ''}`
                         .toLowerCase()
-                        .includes(signInQuery.toLowerCase())
-                    ).map((s, i) => (
-                      <li key={i} className="flex justify-between gap-2">
-                        <span className="min-w-0 truncate">
-                          <span className="font-medium">{s.who}</span>
-                          <span className="text-muted-foreground"> · {s.how}</span>
-                          {s.device && <span className="text-muted-foreground"> · {s.device}</span>}
-                          {s.from_ip && <span className="text-muted-foreground"> · from {s.from_ip}</span>}
-                        </span>
-                        <span className="shrink-0 text-muted-foreground">{timeAgo(s.when)}</span>
-                      </li>
+                        .includes(peopleQuery.toLowerCase())
+                    )
+                    .map((p) => (
+                      <TableRow key={p.email}>
+                        <TableCell className="nolbl font-medium" data-th="Name">
+                          {p.name}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground" data-th="Email">
+                          {p.email}
+                        </TableCell>
+                        <TableCell className="capitalize" data-th="Role">
+                          {p.role}
+                        </TableCell>
+                        {data.people.some((x) => x.workspace) && (
+                          <TableCell className="text-muted-foreground" data-th="Workspace">
+                            {p.workspace ?? '—'}
+                          </TableCell>
+                        )}
+                        <TableCell data-th="Status">
+                          <Chip tone={p.active ? 'ok' : 'neutral'} xs className="uppercase tracking-wide">
+                            {p.active ? 'Active' : 'Suspended'}
+                          </Chip>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground" data-th="Joined">
+                          {timeAgo(p.joined)}
+                        </TableCell>
+                        <TableCell data-th="Last sign-in">{timeAgo(p.last_sign_in)}</TableCell>
+                        <TableCell className="text-right" data-th="Documents">
+                          <span className="font-semibold tabular-nums text-foreground">{p.documents_uploaded}</span>
+                        </TableCell>
+                        <TableCell className="text-right" data-th="Reviews">
+                          <span className="font-semibold tabular-nums text-foreground">{p.reviews_run}</span>
+                        </TableCell>
+                        <TableCell data-th="Last active">{timeAgo(p.last_activity)}</TableCell>
+                      </TableRow>
                     ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          <div className="mb-3 grid gap-3 lg:grid-cols-2">
+            {/* Recent sign-ins */}
+            <div className="rounded-[10px] border border-border bg-card">
+              <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+                <h2 className="text-sm font-semibold">Recent sign-ins</h2>
+                <SearchBox
+                  value={signInQuery}
+                  onChange={setSignInQuery}
+                  placeholder="Search sign-ins…"
+                  className="w-full max-w-[190px]"
+                />
+              </div>
+              <div className="p-0">
+                {data.recent_sign_ins.length === 0 ? (
+                  <p className="p-4 text-xs text-muted-foreground">No sign-ins recorded yet.</p>
+                ) : (
+                  <ul className="max-h-72 divide-y divide-border overflow-y-auto">
+                    {data.recent_sign_ins
+                      .filter((s) =>
+                        `${s.who} ${s.how} ${s.device ?? ''} ${s.from_ip ?? ''}`
+                          .toLowerCase()
+                          .includes(signInQuery.toLowerCase())
+                      )
+                      .map((s, i) => (
+                        <li key={i} className="flex justify-between gap-2 px-4 py-2 text-[13px]">
+                          <span className="min-w-0 truncate">
+                            <span className="font-medium">{s.who}</span>
+                            <span className="text-muted-foreground"> · {s.how}</span>
+                            {s.device && <span className="text-muted-foreground"> · {s.device}</span>}
+                            {s.from_ip && <span className="text-muted-foreground"> · from {s.from_ip}</span>}
+                          </span>
+                          <span className="shrink-0 tabular-nums text-xs text-ink3">{timeAgo(s.when)}</span>
+                        </li>
+                      ))}
                   </ul>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Recent activity */}
-            <Card>
-              <CardHeader className="flex-row items-center justify-between space-y-0 pb-1 pt-3">
-                <CardTitle className="text-sm">Recent activity</CardTitle>
-                <SearchBox value={activityQuery} onChange={setActivityQuery} placeholder="Search activity…" />
-              </CardHeader>
-              <CardContent className="pb-3">
+            <div className="rounded-[10px] border border-border bg-card">
+              <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+                <h2 className="text-sm font-semibold">Recent activity</h2>
+                <SearchBox
+                  value={activityQuery}
+                  onChange={setActivityQuery}
+                  placeholder="Search activity…"
+                  className="w-full max-w-[190px]"
+                />
+              </div>
+              <div className="p-0">
                 {data.recent_activity.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">Nothing yet.</p>
+                  <p className="p-4 text-xs text-muted-foreground">Nothing yet.</p>
                 ) : (
-                  <ul className="space-y-1.5 text-xs max-h-72 overflow-y-auto">
-                    {data.recent_activity.filter((a) =>
-                      `${a.who} ${a.what}`.toLowerCase().includes(activityQuery.toLowerCase())
-                    ).map((a, i) => (
-                      <li key={i} className="flex justify-between gap-2">
-                        <span className="min-w-0 truncate">
-                          <span className="font-medium">{a.who}</span>
-                          <span className="text-muted-foreground"> — {a.what}</span>
-                        </span>
-                        <span className="shrink-0 text-muted-foreground">{timeAgo(a.when)}</span>
-                      </li>
-                    ))}
+                  <ul className="max-h-72 divide-y divide-border overflow-y-auto">
+                    {data.recent_activity
+                      .filter((a) => `${a.who} ${a.what}`.toLowerCase().includes(activityQuery.toLowerCase()))
+                      .map((a, i) => (
+                        <li key={i} className="flex justify-between gap-2 px-4 py-2 text-[13px]">
+                          <span className="min-w-0 truncate">
+                            <span className="font-medium">{a.who}</span>
+                            <span className="text-muted-foreground"> — {a.what}</span>
+                          </span>
+                          <span className="shrink-0 tabular-nums text-xs text-ink3">{timeAgo(a.when)}</span>
+                        </li>
+                      ))}
                   </ul>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
 
           {/* AI usage */}
-          <Card>
-            <CardHeader className="pb-1 pt-3">
-              <CardTitle className="text-sm">AI usage</CardTitle>
-            </CardHeader>
-            <CardContent className="pb-3">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5 mb-2">
-                <StatTile value={data.ai_usage.reviews_completed} label="Reviews finished" />
-                <StatTile value={data.ai_usage.reviews_failed} label="Reviews failed" />
-                <StatTile value={data.ai_usage.checks_per_review} label="Checks per review" />
-                <StatTile
+          <div className="rounded-[10px] border border-border bg-card">
+            <div className="border-b border-border px-4 py-3">
+              <h2 className="text-sm font-semibold">AI usage</h2>
+            </div>
+            <div className="p-4">
+              <div className="mb-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                <KpiTile value={data.ai_usage.reviews_completed} label="Reviews finished" />
+                <KpiTile value={data.ai_usage.reviews_failed} label="Reviews failed" tone={data.ai_usage.reviews_failed > 0 ? 'crit' : 'default'} />
+                <KpiTile value={data.ai_usage.checks_per_review} label="Checks per review" />
+                <KpiTile
                   value={data.ai_usage.ai_calls_estimate}
                   label="AI calls (approx.)"
                   sub="finished reviews × checks"
                 />
-                <StatTile
+                <KpiTile
                   value={
                     data.ai_usage.average_review_seconds != null
                       ? `${Math.round(data.ai_usage.average_review_seconds)}s`
@@ -558,15 +585,16 @@ export default function AdminPage() {
                   }
                   label="Average review time"
                 />
-                <StatTile value={timeAgo(data.ai_usage.last_review_at)} label="Last review" />
+                <KpiTile value={timeAgo(data.ai_usage.last_review_at)} label="Last review" />
               </div>
               {data.ai_usage.models_in_use.length > 0 && (
-                <p className="text-[11px] text-muted-foreground">
-                  AI models in use: {data.ai_usage.models_in_use.join(', ')}
+                <p className="text-xs text-ink3">
+                  AI models in use:{' '}
+                  <span className="font-mono">{data.ai_usage.models_in_use.join(', ')}</span>
                 </p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </>
       )}
     </AppShell>
