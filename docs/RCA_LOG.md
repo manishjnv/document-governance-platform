@@ -667,3 +667,44 @@ keep chronological.)*
   content out of layout until shown (shadcn `Tooltip` portals already do);
   never put dynamic text inside SVG `<text>` through a template hole; assert
   page width, not just element bounds, in any visual harness.
+
+
+### 28. Badge `tone` chips turned primary-blue on hover (2026-09-13, UI redesign Phase 0, caught in diff review before commit)
+
+- **Symptom:** a `<Badge tone="crit">` rendered the crit tint at rest but flipped to
+  `bg-primary/80` on hover, because the stock shadcn `default` variant class list
+  (`bg-primary ... hover:bg-primary/80`) still applied and `tailwind-merge` only
+  resolves the un-prefixed `bg-*` conflict, not the `hover:` one.
+- **Root cause:** adding a second cva axis (`tone`) on top of `variant` without
+  removing the hover states the design does not have; class-merge ordering hides
+  the defect at rest.
+- **Fix:** `components/ui/badge.tsx` — hover tints removed from the three coloured
+  variants (chips are static in the design).
+- **Prevention:** when a cva axis is layered over another, grep the other axis for
+  state-prefixed classes (`hover:`, `focus:`, `data-[state]`) — `cn`/twMerge does not
+  neutralise those across axes. Any new chip goes through `components/app/Chip`.
+
+### 29. shadcn table cells outranked the design's `.tbl` CSS (2026-09-13, UI redesign Phase 1, caught in diff review)
+
+- **Symptom:** the restyled dashboard tables kept 48 px headers, 16 px cell padding and the
+  muted hover although `.tbl` (11 px uppercase headers, 10 px cells) was applied.
+- **Root cause:** `.tbl` lives in `@layer components`; `TableHead`/`TableCell`/`TableRow`
+  carried their own utility classes (`h-12 px-4`, `p-4`, `hover:bg-muted/50`), and the
+  utilities layer wins regardless of source order.
+- **Fix:** `components/ui/table.tsx`: the components carry structure only (`Table` adds
+  `tbl`); density, type, hover and phone card rows come from `globals.css` (`4309b19`).
+- **Prevention:** when a primitive is meant to be skinned by scoped CSS, strip its own
+  utilities for the same properties; a media-query rule in a lower layer can never beat a
+  utility on the element.
+
+### 30. Code Review import page widened phones by 84 px (2026-09-13, UI redesign Phase 3, found by the Playwright sweep)
+
+- **Symptom:** `/codereview/new` at 390 px scrolled sideways; the scanner card ran past the
+  viewport.
+- **Root cause:** the step list holds unbreakable inline code tokens (the scan command with
+  its `<repo>` placeholder); a grid child defaults to `min-width:auto`, so the column grew to
+  the longest token.
+- **Fix:** grid children `min-w-0`, list `[overflow-wrap:anywhere]` (`6de58dd`).
+- **Prevention:** a per-route `documentElement.scrollWidth > clientWidth` check at 390 px
+  (same rule as the design harness) runs before any restyle commit; any grid or flex column
+  that can hold code or URLs gets `min-w-0`.

@@ -1,6 +1,6 @@
 # EDGP Implementation Progress
 
-**Last Updated:** 2026-09-12 night (design canvas 12/15 screens; run allowance deployed at `606f6c3`)
+**Last Updated:** 2026-09-13 (UI redesign Phases 0-4 built and pushed, `daae552`..`6de58dd`, NOT yet deployed; run allowance deployed at `606f6c3`)
 **Current Phase:** Phase 1-2 core product complete + deployed live; pre-launch fix plan Steps 1-2 done, Step 3 pending SME. Document Lifecycle & Multi-Project plan (Projects/Versioning/Fix-verification) — all three phases implemented, deployed, mandatory-project + fuzzy name matching added on top. Auth is now seamless Google Sign-In + email-OTP only (no password anywhere in the real UI; unrecognized emails auto-create an account). New file types (.doc/.xlsx/.xls/.csv) supported. Enterprise SEO strategy written, a live Cloudflare misconfiguration blocking all AI crawlers was found and fixed, and **SEO Phase 1 (Foundation) is implemented and deployed live** (real marketing homepage/product/pricing/about/contact/sitemap/schema -- only GSC/GA4/Lighthouse remain, blocked on dashboard access). Full detail: `docs/phases/summaries/SESSION_HANDOFF_2026_07_20_LIFECYCLE_SSO_SEO.md`.
 
 > Previous version of this doc (dated 07-17 02:00, showing "14% overall") was
@@ -20,9 +20,14 @@ standalone Playwright harness). Live: https://claude.ai/code/artifact/9f120be7-d
 (15 screens, 30 artboards, desktop + phone, all interactive, all passing the
 harness). Owner review done 2026-09-13 with no change requests. Build plan:
 `docs/planning/UI_REDESIGN_BUILD_PLAN.md` (five phases, kickoff
-`docs/phases/prompts/UI_REDESIGN_PHASE_0_PROMPT.md`); nothing built yet. Handoffs:
+`docs/phases/prompts/UI_REDESIGN_PHASE_0_PROMPT.md`, now a stub). **Phases 0-4 built and pushed
+2026-09-13** (`daae552`..`6de58dd`, 23 commits: generated `app-theme.css`, IBM Plex, shell, login,
+shared primitives under `components/app/`, every authenticated screen restyled in place with no
+logic change beyond confirm dialogs and the shared resize hook). **Not deployed yet**: the owner
+runs the standard VPS loop, then the Phase 5 live smoke and Lighthouse. Status and judgement
+calls: plan §0. Handoffs:
 `docs/phases/summaries/SESSION_HANDOFF_2026_09_12_DESIGN_CANVAS.md`,
-`SESSION_HANDOFF_2026_09_13_DESIGN_CANVAS.md`.
+`SESSION_HANDOFF_2026_09_13_DESIGN_CANVAS.md`, `SESSION_HANDOFF_2026_09_13_UI_REDESIGN.md`.
 
 **Run allowance deployed 2026-09-12 night, SHA `606f6c3`, migration 040 on
 prod:** owner decision "none gets pro": the platform admin instead grants a
