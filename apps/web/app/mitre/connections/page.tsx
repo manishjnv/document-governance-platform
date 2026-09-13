@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Pencil, Plug, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plug, Plus, Trash2 } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,15 +15,24 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { AssessmentListItem, SiemConnection, fmtDate } from '../lib';
 import { CoverageSparkline } from '../components/CoverageSparkline';
+import {
+  PageHeader,
+  Chip,
+  EmptyState,
+  SkeletonRows,
+  AlertBanner,
+  ConfirmDialog,
+} from '@/components/app';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; // 0 = Monday, matches the API
 
 const INPUT_CLS =
-  'w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+  'h-9 w-full rounded-lg border border-input bg-card px-2.5 text-[13px] focus:border-primary focus:outline-none focus:ring-[3px] focus:ring-accent';
+const LABEL_CLS = 'mb-1 block text-xs font-medium text-muted-foreground';
 
 const SENTINEL_FIELDS = [
   ['tenant_id', 'Tenant ID (GUID)'],
@@ -60,6 +69,8 @@ export default function SiemConnectionsPage() {
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [pendingDelete, setPendingDelete] = useState<SiemConnection | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const authHeaders = () => ({
     Authorization: `Bearer ${localStorage.getItem('access_token')}`,
@@ -198,21 +209,24 @@ export default function SiemConnectionsPage() {
     }
   };
 
-  const handleDelete = async (c: SiemConnection) => {
-    if (
-      !window.confirm(
-        `Delete "${c.name}"? Scheduled pulls stop; past assessments are kept.`
-      )
-    )
-      return;
+  const handleDelete = (c: SiemConnection) => {
+    setPendingDelete(c);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
     try {
+      setDeleteBusy(true);
       await axios.delete(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/connections/${c.connection_id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/mitre/connections/${pendingDelete.connection_id}`,
         { headers: authHeaders() }
       );
       await load();
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Could not delete the connection');
+    } finally {
+      setDeleteBusy(false);
+      setPendingDelete(null);
     }
   };
 
@@ -281,7 +295,7 @@ export default function SiemConnectionsPage() {
     const completed = runs.filter(
       (r) => r.status === 'completed' && r.strict_pct !== null && !r.archived
     );
-    if (completed.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
+    if (completed.length === 0) return <span className="text-[12.5px] text-muted-foreground">—</span>;
     const latest = completed[0]; // list is newest-first
     const previous = completed[1];
     const delta =
@@ -299,11 +313,7 @@ export default function SiemConnectionsPage() {
             <span
               className={cn(
                 'ml-1.5 text-xs font-medium',
-                delta > 0
-                  ? 'text-emerald-600'
-                  : delta < 0
-                    ? 'text-rose-600'
-                    : 'text-muted-foreground'
+                delta > 0 ? 'text-ok' : delta < 0 ? 'text-sev-crit' : 'text-muted-foreground'
               )}
             >
               {delta > 0 ? `+${delta}` : delta}
@@ -317,36 +327,34 @@ export default function SiemConnectionsPage() {
 
   return (
     <AppShell>
-      <TooltipProvider>
-        <div className="mb-4 flex items-center justify-between gap-2">
-          <h1 className="flex items-center gap-2 text-lg font-semibold">
-            <Plug size={18} strokeWidth={2} className="text-primary" aria-hidden="true" />
-            SIEM connections
-          </h1>
-          <div className="flex items-center gap-1.5">
+      <TooltipProvider delayDuration={200}>
+        <PageHeader
+          title={
+            <span className="flex items-center gap-2">
+              <Plug size={18} strokeWidth={2} className="text-primary" aria-hidden="true" />
+              SIEM connections
+            </span>
+          }
+          back={{ href: '/mitre', label: 'Assessments' }}
+          actions={
             <Button size="sm" onClick={openNew}>
-              <Plus size={14} className="mr-1" aria-hidden="true" /> Add connection
+              <Plus size={14} aria-hidden="true" /> Add connection
             </Button>
-            <Button asChild size="sm" variant="outline">
-              <Link href="/mitre">
-                <ArrowLeft size={14} className="mr-1" aria-hidden="true" /> Assessments
-              </Link>
-            </Button>
-          </div>
-        </div>
+          }
+        />
 
         {error && (
-          <div role="alert" className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          <AlertBanner kind="error" className="mb-4">
             {error}
-          </div>
+          </AlertBanner>
         )}
 
         {editing !== null && (
-          <form onSubmit={handleSave} className="mb-4 rounded-md border p-4">
+          <form onSubmit={handleSave} className="mb-4 rounded-[10px] border border-border bg-card p-4">
             <h2 className="mb-1 text-sm font-semibold">
               {editing === 'new' ? 'Add connection' : `Edit ${editing.name}`}
             </h2>
-            <p className="mb-3 text-xs text-muted-foreground">
+            <p className="mb-3 max-w-xl text-[12.5px] text-muted-foreground">
               Read-only pull of your detection rules. The{' '}
               {form.platform === 'sentinel' ? 'client secret' : 'auth token'} is stored
               encrypted and never shown again.
@@ -355,7 +363,11 @@ export default function SiemConnectionsPage() {
             </p>
 
             {editing === 'new' && (
-              <div className="mb-3 flex max-w-md gap-1 rounded-md border p-1" role="tablist" aria-label="Platform">
+              <div
+                className="mb-3 flex max-w-md gap-1 rounded-lg border border-border p-1"
+                role="tablist"
+                aria-label="Platform"
+              >
                 {(
                   [
                     ['sentinel', 'Microsoft Sentinel'],
@@ -368,11 +380,12 @@ export default function SiemConnectionsPage() {
                     role="tab"
                     aria-selected={form.platform === key}
                     onClick={() => setForm((prev) => ({ ...prev, platform: key }))}
-                    className={
+                    className={cn(
+                      'flex-1 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors duration-150 ease-app',
                       form.platform === key
-                        ? 'flex-1 rounded bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary'
-                        : 'flex-1 rounded px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground'
-                    }
+                        ? 'bg-accent-soft text-primary'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
                   >
                     {label}
                   </button>
@@ -382,7 +395,7 @@ export default function SiemConnectionsPage() {
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <div>
-                <label htmlFor="conn-name" className="mb-1.5 block text-sm font-medium">
+                <label htmlFor="conn-name" className={LABEL_CLS}>
                   Name <span className="font-normal text-muted-foreground">(optional)</span>
                 </label>
                 <input
@@ -398,7 +411,7 @@ export default function SiemConnectionsPage() {
               {form.platform === 'sentinel' &&
                 SENTINEL_FIELDS.map(([field, label]) => (
                   <div key={field}>
-                    <label htmlFor={`conn-${field}`} className="mb-1.5 block text-sm font-medium">
+                    <label htmlFor={`conn-${field}`} className={LABEL_CLS}>
                       {label}
                     </label>
                     <input
@@ -420,7 +433,7 @@ export default function SiemConnectionsPage() {
               {form.platform === 'splunk' && (
                 <>
                   <div>
-                    <label htmlFor="conn-host" className="mb-1.5 block text-sm font-medium">
+                    <label htmlFor="conn-host" className={LABEL_CLS}>
                       Host <span className="font-normal text-muted-foreground">(e.g. acme.splunkcloud.com)</span>
                     </label>
                     <input
@@ -435,7 +448,7 @@ export default function SiemConnectionsPage() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="conn-port" className="mb-1.5 block text-sm font-medium">
+                    <label htmlFor="conn-port" className={LABEL_CLS}>
                       Management port
                     </label>
                     <input
@@ -451,7 +464,7 @@ export default function SiemConnectionsPage() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="conn-app" className="mb-1.5 block text-sm font-medium">
+                    <label htmlFor="conn-app" className={LABEL_CLS}>
                       App <span className="font-normal text-muted-foreground">(optional — all apps if empty)</span>
                     </label>
                     <input
@@ -469,7 +482,7 @@ export default function SiemConnectionsPage() {
               )}
 
               <div>
-                <label htmlFor="conn-secret" className="mb-1.5 block text-sm font-medium">
+                <label htmlFor="conn-secret" className={LABEL_CLS}>
                   {form.platform === 'sentinel' ? 'Client secret' : 'Auth token'}{' '}
                   <span className="font-normal text-muted-foreground">
                     {editing === 'new' ? '(stored encrypted)' : '(blank = keep saved)'}
@@ -486,7 +499,7 @@ export default function SiemConnectionsPage() {
               </div>
 
               <div>
-                <label htmlFor="conn-cadence" className="mb-1.5 block text-sm font-medium">
+                <label htmlFor="conn-cadence" className={LABEL_CLS}>
                   Auto-pull schedule
                 </label>
                 <select
@@ -505,7 +518,7 @@ export default function SiemConnectionsPage() {
 
               {form.cadence !== '' && (
                 <div>
-                  <label htmlFor="conn-hour" className="mb-1.5 block text-sm font-medium">
+                  <label htmlFor="conn-hour" className={LABEL_CLS}>
                     Hour (UTC)
                   </label>
                   <select
@@ -525,7 +538,7 @@ export default function SiemConnectionsPage() {
 
               {form.cadence === 'weekly' && (
                 <div>
-                  <label htmlFor="conn-weekday" className="mb-1.5 block text-sm font-medium">
+                  <label htmlFor="conn-weekday" className={LABEL_CLS}>
                     Day of week
                   </label>
                   <select
@@ -545,7 +558,7 @@ export default function SiemConnectionsPage() {
             </div>
 
             {formError && (
-              <p role="alert" className="mt-3 text-sm text-destructive">
+              <p role="alert" className="mt-3 text-[13px] text-sev-crit">
                 {formError}
               </p>
             )}
@@ -567,41 +580,41 @@ export default function SiemConnectionsPage() {
           </form>
         )}
 
+        {connections === null && editing === null && !error && <SkeletonRows rows={2} />}
+
         {connections !== null && connections.length === 0 && !error && editing === null && (
-          <div className="rounded-md bg-muted/40 p-8 text-center text-sm text-muted-foreground">
-            No saved connections yet. Add one to pull detection rules straight from
-            Microsoft Sentinel or Splunk — on a schedule if you like. Saved secrets
-            are encrypted at rest and never shown again.
-          </div>
+          <EmptyState title="No saved connections yet. Add one to pull detection rules straight from Microsoft Sentinel or Splunk — on a schedule if you like. Saved secrets are encrypted at rest and never shown again." />
         )}
 
         {connections !== null && connections.length > 0 && (
-          <div className="overflow-x-auto rounded-md border">
-            <Table>
+          <div className="overflow-hidden rounded-[10px] border border-border bg-card">
+            <Table className="tbl cards">
               <TableHeader>
-                <TableRow>
+                <TableRow className="hover:bg-transparent">
                   <TableHead>Connection</TableHead>
                   <TableHead>Schedule</TableHead>
                   <TableHead>Last pull</TableHead>
                   <TableHead>Health</TableHead>
                   <TableHead>Coverage trend</TableHead>
                   <TableHead className="min-w-[200px]">Last error</TableHead>
-                  <TableHead />
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {connections.map((c) => (
                   <TableRow key={c.connection_id}>
-                    <TableCell>
-                      <div className="text-sm font-medium">{c.name}</div>
+                    <TableCell className="nolbl" data-th="Connection">
+                      <div className="text-[13px] font-medium">{c.name}</div>
                       <div className="text-xs text-muted-foreground">
                         {c.platform === 'splunk'
                           ? `Splunk · ${c.config.host ?? ''}`
                           : `Sentinel · ${c.config.workspace ?? ''}`}
                       </div>
                     </TableCell>
-                    <TableCell className="text-xs">{scheduleLabel(c)}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="text-[12.5px]" data-th="Schedule">
+                      {scheduleLabel(c)}
+                    </TableCell>
+                    <TableCell className="text-[12.5px] text-muted-foreground" data-th="Last pull">
                       {c.health.last_pull_at ? (
                         <>
                           {fmtDate(c.health.last_pull_at)}
@@ -611,22 +624,15 @@ export default function SiemConnectionsPage() {
                         'never'
                       )}
                     </TableCell>
-                    <TableCell>
-                      <span
-                        className={cn(
-                          'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium',
-                          c.health.scheduled_failure_streak === 0
-                            ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                            : 'bg-rose-100 text-rose-800 border-rose-200'
-                        )}
-                      >
+                    <TableCell data-th="Health">
+                      <Chip tone={c.health.scheduled_failure_streak === 0 ? 'ok' : 'crit'} dot xs>
                         {c.health.scheduled_failure_streak === 0
                           ? 'Healthy'
                           : `${c.health.scheduled_failure_streak} failed in a row`}
-                      </span>
+                      </Chip>
                     </TableCell>
-                    <TableCell>{trendFor(c)}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell data-th="Coverage trend">{trendFor(c)}</TableCell>
+                    <TableCell className="text-[12.5px] text-muted-foreground" data-th="Last error">
                       {c.health.last_error ?? '—'}
                       {rowMsg[c.connection_id] && (
                         <span className="block font-medium text-foreground">
@@ -634,8 +640,8 @@ export default function SiemConnectionsPage() {
                         </span>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
+                    <TableCell data-th="Actions">
+                      <div className="flex items-center justify-end gap-1">
                         <Button
                           size="sm"
                           variant="outline"
@@ -652,22 +658,32 @@ export default function SiemConnectionsPage() {
                         >
                           {pulling === c.connection_id ? 'Pulling…' : 'Pull now'}
                         </Button>
-                        <button
-                          type="button"
-                          aria-label={`Edit ${c.name}`}
-                          onClick={() => openEdit(c)}
-                          className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                        >
-                          <Pencil size={14} aria-hidden="true" />
-                        </button>
-                        <button
-                          type="button"
-                          aria-label={`Delete ${c.name}`}
-                          onClick={() => handleDelete(c)}
-                          className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
-                        >
-                          <Trash2 size={14} aria-hidden="true" />
-                        </button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label={`Edit ${c.name}`}
+                              onClick={() => openEdit(c)}
+                              className="rounded-md p-1.5 text-muted-foreground transition-colors duration-150 ease-app hover:bg-muted hover:text-foreground"
+                            >
+                              <Pencil size={14} aria-hidden="true" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label={`Delete ${c.name}`}
+                              onClick={() => handleDelete(c)}
+                              className="rounded-md p-1.5 text-muted-foreground transition-colors duration-150 ease-app hover:bg-muted hover:text-sev-crit"
+                            >
+                              <Trash2 size={14} aria-hidden="true" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Delete</TooltipContent>
+                        </Tooltip>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -676,6 +692,22 @@ export default function SiemConnectionsPage() {
             </Table>
           </div>
         )}
+
+        <ConfirmDialog
+          open={pendingDelete !== null}
+          onOpenChange={(open) => {
+            if (!open) setPendingDelete(null);
+          }}
+          title="Delete connection"
+          description={
+            pendingDelete
+              ? `Delete "${pendingDelete.name}"? Scheduled pulls stop; past assessments are kept.`
+              : ''
+          }
+          confirmLabel="Delete"
+          busy={deleteBusy}
+          onConfirm={confirmDelete}
+        />
       </TooltipProvider>
     </AppShell>
   );
