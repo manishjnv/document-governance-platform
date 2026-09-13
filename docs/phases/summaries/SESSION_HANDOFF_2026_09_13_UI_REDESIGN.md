@@ -13,6 +13,7 @@ in 29 commits (`daae552`..`19344f2`), pushed and **deployed** on scopewise.asses
 | 3 Code Review list, new, detail + drawer, SeverityBar, overflow fix | `cc69401` `3215758` `8a640c6` `e162bc4` `6de58dd` |
 | 4 admin, install and update bar, request-access form, skip link | `8c42c9f` `8d03a5a` |
 | 6 admin tables sortable (most recent first) + People no-match state, deployed | `e444471` |
+| Sidebar expanded by default (storage key bumped to v2), header collapse toggle, visible resize grip; deployed both hosts | `05c365c` |
 | 5 docs, sweep script + references, deploy notes, CLAUDE.md skill values | `5327a35` `06bd700` `a2dfaf2` `f062cfe` `40d614a` `19344f2` |
 
 Gates: `tsc` clean; per-screen label check (all misses are pre-existing design sample strings);
