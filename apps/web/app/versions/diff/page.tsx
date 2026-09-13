@@ -8,8 +8,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
+import { PageHeader, KpiTile, type KpiTone, EmptyState, AlertBanner, SkeletonRows } from '@/components/app';
+import { cn } from '@/lib/utils';
 
 interface FindingSummary {
   finding_id: string;
@@ -28,27 +29,51 @@ interface FindingDiff {
   persisted: FindingSummary[];
 }
 
-function severityColor(severity: string) {
-  switch (severity) {
-    case 'critical':
-      return 'border-red-300 bg-red-50 text-red-800';
-    case 'major':
-      return 'border-orange-300 bg-orange-50 text-orange-800';
-    case 'medium':
-      return 'border-yellow-300 bg-yellow-50 text-yellow-800';
-    default:
-      return 'border-border bg-muted/40 text-foreground';
-  }
-}
+const SEVERITY_CLASSES: Record<string, string> = {
+  critical: 'border-l-sev-crit bg-sev-crit-soft',
+  major: 'border-l-sev-high bg-sev-high-soft',
+  medium: 'border-l-sev-med bg-sev-med-soft',
+};
+const DEFAULT_SEVERITY_CLASS = 'border-l-line2 bg-muted/40';
 
 function FindingCard({ finding }: { finding: FindingSummary }) {
   return (
-    <div className={`rounded-md border px-3 py-2 text-sm ${severityColor(finding.severity)}`}>
-      <p className="font-medium">{finding.title}</p>
-      <p className="text-xs opacity-80">
+    <div
+      className={cn(
+        'rounded-lg border border-border border-l-[3px] px-3 py-2 text-sm',
+        SEVERITY_CLASSES[finding.severity] || DEFAULT_SEVERITY_CLASS
+      )}
+    >
+      <p className="font-medium text-foreground">{finding.title}</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">
         {finding.category}
         {finding.section_ref ? ` -- ${finding.section_ref}` : ''}
       </p>
+    </div>
+  );
+}
+
+function DiffColumn({
+  tone,
+  label,
+  items,
+  emptyText,
+}: {
+  tone: KpiTone;
+  label: string;
+  items: FindingSummary[];
+  emptyText: string;
+}) {
+  return (
+    <div className="space-y-2.5">
+      <KpiTile label={label} value={items.length} tone={tone} />
+      <div className="space-y-2">
+        {items.length === 0 ? (
+          <EmptyState title={emptyText} />
+        ) : (
+          items.map((f) => <FindingCard key={f.finding_id} finding={f} />)
+        )}
+      </div>
     </div>
   );
 }
@@ -87,67 +112,26 @@ export default function VersionDiffPage() {
 
   return (
     <AppShell>
-      <div className="mb-6">
-        <Link href="/dashboard" className="text-sm text-primary hover:underline">
-          &larr; Dashboard
-        </Link>
-        <h1 className="text-2xl font-bold mt-1">Version Comparison</h1>
-        {diff && (
-          <p className="text-muted-foreground text-sm">
-            v{diff.older_version} &rarr; v{diff.newer_version}
-          </p>
-        )}
-      </div>
+      <PageHeader
+        title="Version Comparison"
+        meta={diff ? `v${diff.older_version} → v${diff.newer_version}` : undefined}
+        back={{ href: '/dashboard', label: 'Dashboard' }}
+      />
 
-      {loading && <p className="text-muted-foreground">Loading...</p>}
-
-      {error && (
-        <div role="alert" className="bg-destructive/10 border border-destructive/30 rounded-md p-4 mb-6">
-          <p className="text-destructive">{error}</p>
-        </div>
+      {loading && (
+        <>
+          <p className="sr-only">Loading...</p>
+          <SkeletonRows rows={3} />
+        </>
       )}
 
+      {error && <AlertBanner kind="error">{error}</AlertBanner>}
+
       {diff && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <h2 className="font-semibold mb-3 text-green-700">
-              Resolved ({diff.resolved.length})
-            </h2>
-            <div className="space-y-2">
-              {diff.resolved.length === 0 && (
-                <p className="text-sm text-muted-foreground">Nothing resolved.</p>
-              )}
-              {diff.resolved.map((f) => (
-                <FindingCard key={f.finding_id} finding={f} />
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <h2 className="font-semibold mb-3 text-blue-700">New ({diff.new.length})</h2>
-            <div className="space-y-2">
-              {diff.new.length === 0 && (
-                <p className="text-sm text-muted-foreground">No new findings.</p>
-              )}
-              {diff.new.map((f) => (
-                <FindingCard key={f.finding_id} finding={f} />
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <h2 className="font-semibold mb-3 text-red-700">
-              Persisted ({diff.persisted.length})
-            </h2>
-            <div className="space-y-2">
-              {diff.persisted.length === 0 && (
-                <p className="text-sm text-muted-foreground">Nothing persisted.</p>
-              )}
-              {diff.persisted.map((f) => (
-                <FindingCard key={f.finding_id} finding={f} />
-              ))}
-            </div>
-          </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <DiffColumn tone="ok" label="Resolved" items={diff.resolved} emptyText="Nothing resolved." />
+          <DiffColumn tone="accent" label="New" items={diff.new} emptyText="No new findings." />
+          <DiffColumn tone="crit" label="Persisted" items={diff.persisted} emptyText="Nothing persisted." />
         </div>
       )}
     </AppShell>
