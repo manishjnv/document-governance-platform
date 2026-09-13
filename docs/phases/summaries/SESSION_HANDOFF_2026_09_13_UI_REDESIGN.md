@@ -1,7 +1,7 @@
 # Session handoff - 2026-09-13 - UI redesign Phases 0-4 built
 
 **Headline:** every authenticated screen of `apps/web` is restyled to the calm-light design canvas
-in 29 commits (`daae552`..`19344f2`), pushed and **deployed** on scopewise.assessiq.in (Haiku smoke clean there; its scopesense.in 200s were a false positive, see RCA #31 — that host's cut-over is still blocked on Cloudflare zone activation; Lighthouse mobile on `/dashboard` 68/100/100/63, accessibility gate holds). Reference: `docs/planning/UI_REDESIGN_BUILD_PLAN.md` section 0.
+in 29 commits (`daae552`..`19344f2`), pushed and **deployed** on scopewise.assessiq.in and, since 22:50 IST, on scopesense.in too (cut-over finished this session after the zone activated; an earlier Haiku smoke had falsely reported it live, RCA #31; AOP setting fix RCA #32; Lighthouse mobile on `/dashboard` 68/100/100/63, accessibility gate holds). Reference: `docs/planning/UI_REDESIGN_BUILD_PLAN.md` section 0.
 
 ## Commits (one per screen or unit)
 
@@ -21,7 +21,7 @@ Playwright 1440/390 on every route, no page overflow, `/` untouched. RCA #28-#30
 User-level skill `~/.claude/skills/ui-design-workflow/SKILL.md` (project-agnostic UI workflow), a global-playbook rule to load it on every UI task, a Desktop copy for Claude Design web, and project memories `ui-redesign-status-2026-09-13` + `feedback-ui-design-workflow-skill`.
 
 ## Next action
-Deployed and smoke-tested on scopewise.assessiq.in (15/15 routes 200, theme scoping, self-hosted Plex, API healthy). scopesense.in: NOT live — zone pending at Cloudflare, no Caddy block/cert yet; finish per `SCOPESENSE_DOMAIN_CUTOVER.md` once the owner clicks "Check nameservers" in the dashboard. Still open: the Phase 5 real-data
+Deployed and smoke-tested on scopewise.assessiq.in (15/15 routes 200, theme scoping, self-hosted Plex, API healthy). scopesense.in: LIVE (zone active, Origin cert to 2041, Caddy block, AOP on) — raw curl 200 on /login and /api/v1/health; dual-run ends ~2026-10-13. Still open: the Phase 5 real-data
 smoke (routes 200, `app-theme` on app pages only, Plex served from `/_next/static/media`,
 Lighthouse on `/login` and `/dashboard`). Open: Admin People no-match state (needs a filter variable).
 

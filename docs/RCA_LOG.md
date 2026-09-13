@@ -726,3 +726,18 @@ keep chronological.)*
   spot-checks at least one URL per host itself before writing "live" anywhere. Never mark a
   second host live in CLAUDE.md or a handoff until its own cut-over checklist is closed.
 
+### 32. scopesense.in returned 520 after cut-over: Authenticated Origin Pulls off on the new zone (2026-09-13, infra)
+
+- **Symptom:** right after the Caddy block, cert and web rebuild went in, Cloudflare answered
+  520 for every scopesense.in path while scopewise.assessiq.in stayed 200.
+- **Root cause:** the Caddy block was cloned from assessiq.in and requires Cloudflare's
+  origin-pull client certificate (`client_auth … cf-origin-pull-ca.pem`), but AOP is a per-zone
+  Cloudflare setting and the new zone had `tls_client_auth = off`; Cloudflare connected without
+  a client cert, Caddy refused the handshake, Cloudflare reported 520.
+- **Fix:** `PATCH /zones/<id>/settings/tls_client_auth {"value":"on"}` from the VPS; 200 within
+  seconds.
+- **Prevention:** the cut-over checklist (`SCOPESENSE_DOMAIN_CUTOVER.md`) now lists AOP with
+  SSL mode and Always-HTTPS as zone settings to verify BEFORE the smoke; any future host cloned
+  from an mTLS Caddy block needs the same. Read the Caddy access log's `tls.client_common_name`
+  (present on the old host, absent on the new) to spot it in seconds.
+

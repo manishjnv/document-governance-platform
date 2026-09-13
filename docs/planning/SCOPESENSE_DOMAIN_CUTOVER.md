@@ -81,7 +81,18 @@ Rollback: restore `Caddyfile.bak.<ts>` by truncate-write + reload; restore `.env
 - IP-filtered tokens: force IPv4 on the VPS (`curl -4`); Python `urllib` picks IPv6 and fails with a misleading generic 401.
 - The dashboard's "Add site" pre-creates DNS records from the parking page (an A record to `2.57.91.91`); always re-check records after adding a zone.
 
-## Status 2026-09-13 evening: NOT live yet
+## Status 2026-09-13 22:50 IST: LIVE (dual-run started)
+
+Owner pressed "Check nameservers" -> zone `active` 17:17Z. Origin cert issued via the API from
+the VPS (expires 2041-09-09), installed, `cutover-scopesense.sh` run (Caddy block appended and
+reloaded, `.env` same-origin API + both hosts in CORS/ALLOWED_HOSTS, web rebuilt). First smoke
+gave **520** on the new host: the zone's **Authenticated Origin Pulls (`tls_client_auth`) was
+off**, while the Caddy block (cloned from assessiq.in) requires Cloudflare's client cert —
+switched on via `PATCH /zones/<id>/settings/tls_client_auth {"value":"on"}` (RCA #32). Verified
+raw: `scopesense.in/login` 200, `/api/v1/health` 200, `www` 301 to apex, old host 200, theme and
+fonts identical. Dual-run clock starts today: end ~2026-10-13 (section 4).
+
+## Earlier the same evening: why it 404'd first
 
 Registry nameservers now point at Cloudflare (`ethan`/`nena`), but the zone still reports
 `pending`, so Cloudflare serves DNS unproxied: `scopesense.in` resolves straight to
