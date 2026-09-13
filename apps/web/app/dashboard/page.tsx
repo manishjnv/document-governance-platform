@@ -29,6 +29,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  PageHeader,
+  KpiTile,
+  Chip,
+  EmptyState,
+  SkeletonRows,
+  AlertBanner,
+  ConfirmDialog,
+} from '@/components/app';
 
 const DOCUMENT_TYPES = ['SOW', 'Proposal', 'RFP', 'Other'];
 
@@ -86,11 +95,11 @@ interface SearchResponse {
 
 function ScoreCell({ value }: { value: number | null }) {
   if (value === null || value === undefined) {
-    return <span className="text-muted-foreground">-</span>;
+    return <span className="text-ink3 tabular-nums">-</span>;
   }
   const color =
-    value >= 80 ? 'text-green-600' : value >= 50 ? 'text-yellow-600' : 'text-red-600';
-  return <span className={`font-medium ${color}`}>{value.toFixed(0)}</span>;
+    value >= 80 ? 'text-ok' : value >= 50 ? 'text-sev-med' : 'text-sev-crit';
+  return <span className={`font-semibold tabular-nums ${color}`}>{value.toFixed(0)}</span>;
 }
 
 function TrendIndicator({ current, previous }: { current: number | null; previous: number | null }) {
@@ -98,13 +107,18 @@ function TrendIndicator({ current, previous }: { current: number | null; previou
   const delta = current - previous;
   if (Math.abs(delta) < 0.5) return null;
   const Icon = delta > 0 ? ArrowUp : ArrowDown;
-  const color = delta > 0 ? 'text-green-600' : 'text-red-600';
+  const color = delta > 0 ? 'text-ok' : 'text-sev-crit';
   return (
     <span className={`inline-flex items-center ${color}`} title={`${delta > 0 ? '+' : ''}${delta.toFixed(0)} vs previous version`}>
       <Icon size={14} strokeWidth={2} aria-hidden="true" />
     </span>
   );
 }
+
+const TYPE_TONE: Record<string, 'info' | 'violet' | 'neutral'> = {
+  Proposal: 'info',
+  RFP: 'violet',
+};
 
 function DocumentTypeCell({
   doc,
@@ -117,8 +131,10 @@ function DocumentTypeCell({
 
   if (!open) {
     return (
-      <button className="hover:underline text-left" onClick={() => setOpen(true)} title="Click to change">
-        {doc.document_type || 'Unknown'}
+      <button className="cursor-pointer border-0 bg-transparent p-0" onClick={() => setOpen(true)} title="Click to change">
+        <Chip tone={TYPE_TONE[doc.document_type] ?? 'neutral'} xs>
+          {doc.document_type || 'Unknown'}
+        </Chip>
       </button>
     );
   }
@@ -133,7 +149,7 @@ function DocumentTypeCell({
           setOpen(false);
         }}
         onBlur={() => setOpen(false)}
-        className="px-1.5 py-1 text-sm border border-input rounded-md bg-background"
+        className="px-1.5 py-1 text-sm border border-input rounded-lg bg-background"
       >
         <option value="" disabled>
           Select type
@@ -193,7 +209,7 @@ function AssignProjectControl({
           if (e.key === 'Escape') setOpen(false);
         }}
         placeholder="Project name"
-        className="px-2 py-1 text-sm border border-input rounded-md bg-background w-40"
+        className="px-2 py-1 text-sm border border-input rounded-lg bg-background w-40"
       />
       <datalist id={`assign-project-options-${doc.doc_id}`}>
         {projectOptions.map((p) => (
@@ -257,7 +273,7 @@ function DocumentRows({
   const renderActions = (doc: Document, compareToVersion?: number) => {
     const isReviewing = reviewingDocId === doc.doc_id;
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-[12.5px]">
         <button
           className="text-primary hover:underline disabled:opacity-50"
           disabled={isReviewing}
@@ -296,7 +312,7 @@ function DocumentRows({
         )}
         <span className="text-muted-foreground">•</span>
         <button
-          className="text-destructive hover:underline disabled:opacity-50"
+          className="text-sev-crit hover:underline disabled:opacity-50"
           disabled={isReviewing}
           onClick={() => onDelete(doc.doc_id)}
         >
@@ -316,7 +332,7 @@ function DocumentRows({
             return (
               <Fragment key={latest.document_group_id}>
                 <TableRow>
-                  <TableCell className="font-medium">
+                  <TableCell className="nolbl font-medium" data-th="Filename">
                     <div className="flex items-center gap-2">
                       {hasHistory && (
                         <button
@@ -332,22 +348,22 @@ function DocumentRows({
                           />
                         </button>
                       )}
-                      <span>{latest.original_filename || latest.filename}</span>
+                      <span className="truncate">{latest.original_filename || latest.filename}</span>
                       {hasHistory && (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-ink3 whitespace-nowrap">
                           v{latest.version} ({versions.length} versions)
                         </span>
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-th="Type">
                     <DocumentTypeCell doc={latest} onSetType={onSetDocumentType} />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-right" data-th="Completeness">
                     <ScoreCell value={latest.latest_completeness_score} />
                   </TableCell>
-                  <TableCell>
-                    <span className="flex items-center gap-1">
+                  <TableCell className="text-right" data-th="Accuracy">
+                    <span className="flex items-center justify-end gap-1">
                       <ScoreCell value={latest.latest_overall_score} />
                       {previous && (
                         <TrendIndicator
@@ -357,26 +373,34 @@ function DocumentRows({
                       )}
                     </span>
                   </TableCell>
-                  <TableCell>{new Date(latest.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell>{renderActions(latest, previous?.version)}</TableCell>
+                  <TableCell className="font-medium tabular-nums" data-th="Uploaded">
+                    {new Date(latest.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="text-right" data-th="Actions">
+                    {renderActions(latest, previous?.version)}
+                  </TableCell>
                 </TableRow>
                 {isExpanded &&
                   versions.slice(1).map((doc) => (
                     <TableRow key={doc.doc_id} className="bg-muted/30">
-                      <TableCell className="pl-8 text-muted-foreground">
+                      <TableCell className="nolbl pl-8 text-muted-foreground" data-th="Filename">
                         v{doc.version} -- {doc.original_filename || doc.filename}
                       </TableCell>
-                      <TableCell>
+                      <TableCell data-th="Type">
                         <DocumentTypeCell doc={doc} onSetType={onSetDocumentType} />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-right" data-th="Completeness">
                         <ScoreCell value={doc.latest_completeness_score} />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-right" data-th="Accuracy">
                         <ScoreCell value={doc.latest_overall_score} />
                       </TableCell>
-                      <TableCell>{new Date(doc.created_at).toLocaleDateString()}</TableCell>
-                      <TableCell>{renderActions(doc, latest.version)}</TableCell>
+                      <TableCell className="font-medium tabular-nums" data-th="Uploaded">
+                        {new Date(doc.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right" data-th="Actions">
+                        {renderActions(doc, latest.version)}
+                      </TableCell>
                     </TableRow>
                   ))}
               </Fragment>
@@ -406,6 +430,8 @@ export default function DashboardPage() {
   const [meEmail, setMeEmail] = useState('');
   const [meName, setMeName] = useState('');
   const [requestAccessOpen, setRequestAccessOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const router = useRouter();
 
   const toggleProject = (id: string) => {
@@ -624,16 +650,24 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDelete = async (docId: string) => {
-    if (!confirm('Permanently delete this document, its reviews, and all findings? This cannot be undone.')) return;
+  const handleDelete = (docId: string) => {
+    setPendingDeleteId(docId);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
     try {
+      setDeleteBusy(true);
       const token = localStorage.getItem('access_token');
-      await axios.delete(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/${docId}`, {
+      await axios.delete(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/documents/${pendingDeleteId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchDocuments();
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to delete document');
+    } finally {
+      setDeleteBusy(false);
+      setPendingDeleteId(null);
     }
   };
 
@@ -673,17 +707,18 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      <div className="flex items-center justify-between gap-4 flex-wrap mb-6">
-        <div>
-          <h1 className="text-2xl font-medium">SOW Review</h1>
-          {runsRemaining !== null && (
-            <p className="text-xs text-muted-foreground">
-              {runsRemaining} run{runsRemaining === 1 ? '' : 's'} remaining for your organisation
-            </p>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
+      <PageHeader
+        title="SOW Review"
+        meta={
+          runsRemaining !== null
+            ? runsRemaining === 1
+              ? '1 run remaining for your organisation'
+              : `${runsRemaining} runs remaining for your organisation`
+            : undefined
+        }
+        actions={
+          <>
+          <div className="relative max-[760px]:w-full">
             <Search
               size={14}
               strokeWidth={2}
@@ -696,7 +731,7 @@ export default function DashboardPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search all documents..."
               aria-label="Search all documents"
-              className="w-64 pl-8 pr-8 py-1.5 text-sm border border-input rounded-md bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors duration-150 ease-out"
+              className="w-64 pl-8 pr-8 py-1.5 text-sm border border-input rounded-lg bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors duration-150 ease-app max-[760px]:w-full"
             />
             {isSearching && (
               <button
@@ -712,14 +747,17 @@ export default function DashboardPage() {
           <Button asChild>
             <Link href="/upload">Upload Document</Link>
           </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {isSearching ? (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/50">
-            <span className="text-sm font-medium">
-              Search results{!searchLoading && ` (${searchTotal})`} for &quot;{searchQuery.trim()}&quot;
+        <div className="rounded-[10px] border border-border bg-card overflow-hidden">
+          <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border bg-muted text-[13px]">
+            <span className="font-medium">
+              {searchLoading
+                ? `Search results for "${searchQuery.trim()}"`
+                : `Search results (${searchTotal}) for "${searchQuery.trim()}"`}
             </span>
             {searchLoading && (
               <Loader2 size={14} className="animate-spin text-muted-foreground" aria-hidden="true" />
@@ -735,32 +773,43 @@ export default function DashboardPage() {
               No documents match &quot;{searchQuery.trim()}&quot;
             </p>
           ) : (
-            <Table className="text-xs [&_th]:h-8 [&_th]:py-1.5 [&_th]:px-3 [&_td]:py-1.5 [&_td]:px-3">
+            <Table className="tbl cards">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead>Filename</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Relevance</TableHead>
+                  <TableHead className="text-right">Relevance</TableHead>
                   <TableHead>Snippet</TableHead>
                   <TableHead>Uploaded</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {searchResults.map((r) => (
                   <TableRow key={r.doc_id}>
-                    <TableCell className="font-medium">{r.filename}</TableCell>
-                    <TableCell>{r.document_type || 'Unknown'}</TableCell>
-                    <TableCell>{(r.rank * 100).toFixed(0)}%</TableCell>
+                    <TableCell className="nolbl font-medium" data-th="Filename">
+                      {r.filename}
+                    </TableCell>
+                    <TableCell data-th="Type">
+                      <Chip tone={TYPE_TONE[r.document_type ?? ''] ?? 'neutral'} xs>
+                        {r.document_type || 'Unknown'}
+                      </Chip>
+                    </TableCell>
+                    <TableCell className="text-right font-medium tabular-nums" data-th="Relevance">
+                      {(r.rank * 100).toFixed(0)}%
+                    </TableCell>
                     <TableCell
                       className="max-w-xs truncate text-muted-foreground"
                       title={snippetPlainText(r.snippet)}
+                      data-th="Snippet"
                     >
                       <SnippetText snippet={r.snippet} />
                     </TableCell>
-                    <TableCell>{new Date(r.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
+                    <TableCell className="font-medium tabular-nums" data-th="Uploaded">
+                      {new Date(r.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell data-th="Actions">
+                      <div className="flex flex-wrap items-center justify-end gap-2 text-[12.5px]">
                         <button
                           className="text-primary hover:underline disabled:opacity-50"
                           disabled={reviewingDocId === r.doc_id}
@@ -784,49 +833,44 @@ export default function DashboardPage() {
         <>
       {/* Version-link suggestions: dismissible, persist until acted on */}
       {suggestions.length > 0 && (
-        <div className="space-y-2 mb-6">
+        <div className="space-y-2 mb-[14px]">
           {suggestions.map((s) => (
-            <div
-              key={s.suggestion_id}
-              className="flex items-center justify-between gap-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3"
-            >
-              <p className="text-sm text-blue-900">
-                <strong>{s.filename}</strong> looks like it could be a new version of{' '}
-                <strong>{s.suggested_filename}</strong> (v{s.suggested_version}) --
-                link as v{s.suggested_version + 1}?{' '}
-                <span className="text-blue-700">
-                  ({Math.round(s.similarity_score * 100)}% similar)
-                </span>
-              </p>
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  className="text-sm font-medium text-blue-700 hover:underline"
-                  onClick={() => handleSuggestion(s.suggestion_id, 'accept')}
-                >
-                  Link as v{s.suggested_version + 1}
-                </button>
-                <button
-                  className="text-sm text-muted-foreground hover:underline"
-                  onClick={() => handleSuggestion(s.suggestion_id, 'dismiss')}
-                >
-                  Dismiss
-                </button>
+            <AlertBanner key={s.suggestion_id} kind="blue">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <p className="text-[13px]">
+                  <strong>{s.filename}</strong> looks like it could be a new version of{' '}
+                  <strong>{s.suggested_filename}</strong> (v{s.suggested_version}) --
+                  link as v{s.suggested_version + 1}?{' '}
+                  <span className="opacity-80">
+                    ({Math.round(s.similarity_score * 100)}% similar)
+                  </span>
+                </p>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    className="text-[13px] font-medium hover:underline"
+                    onClick={() => handleSuggestion(s.suggestion_id, 'accept')}
+                  >
+                    Link as v{s.suggested_version + 1}
+                  </button>
+                  <button
+                    className="text-[13px] text-muted-foreground hover:underline"
+                    onClick={() => handleSuggestion(s.suggestion_id, 'dismiss')}
+                  >
+                    Dismiss
+                  </button>
+                </div>
               </div>
-            </div>
+            </AlertBanner>
           ))}
         </div>
       )}
 
       {/* Stats + Filter row */}
-      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 mb-6">
-        <div className="flex flex-wrap items-center gap-x-3 rounded-lg border text-sm min-w-0">
-          <span className="text-slate-700">
-            Total <span className="font-normal text-slate-900">{stats.total}</span>
-          </span>
+      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 mb-[14px]">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 min-w-0 grow">
+          <KpiTile label="Total" value={stats.total} />
           {DOCUMENT_TYPES.map((type) => (
-            <span key={type} className="text-slate-700">
-              {type} <span className="font-normal text-slate-900">{stats.byType[type] || 0}</span>
-            </span>
+            <KpiTile key={type} label={type} value={stats.byType[type] || 0} />
           ))}
         </div>
 
@@ -838,7 +882,7 @@ export default function DashboardPage() {
             id="filterType"
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-input rounded-md focus:ring-2 focus:ring-ring bg-background"
+            className="px-3 py-1.5 text-sm border border-input rounded-lg focus:ring-2 focus:ring-ring bg-background"
           >
             <option value="">All Types</option>
             {DOCUMENT_TYPES.map((type) => (
@@ -852,34 +896,37 @@ export default function DashboardPage() {
 
       {/* Error Message */}
       {error && (
-        <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-          <p className="text-red-800">{error}</p>
-        </div>
+        <AlertBanner kind="error" className="mb-[14px]">
+          {error}
+        </AlertBanner>
       )}
 
       {/* Documents Table */}
       {loading ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Loading documents...</p>
+        <div className="space-y-3 py-2">
+          <p className="text-center text-sm text-muted-foreground">Loading documents...</p>
+          <SkeletonRows rows={5} />
         </div>
       ) : documents.length === 0 ? (
-        <div className="rounded-lg border p-8 text-center">
-          <p className="text-muted-foreground mb-4">No documents uploaded yet</p>
-          <Button asChild>
-            <Link href="/upload">Upload Your First Document</Link>
-          </Button>
-        </div>
+        <EmptyState
+          title="No documents uploaded yet"
+          action={
+            <Button asChild>
+              <Link href="/upload">Upload Your First Document</Link>
+            </Button>
+          }
+        />
       ) : (
-        <div className="rounded-lg border overflow-hidden">
-          <Table className="text-xs [&_th]:h-8 [&_th]:py-1.5 [&_th]:px-3 [&_td]:py-1.5 [&_td]:px-3">
+        <div className="rounded-[10px] border border-border bg-card overflow-hidden">
+          <Table className="tbl cards">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead>Filename</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Completeness</TableHead>
-                <TableHead>Accuracy</TableHead>
+                <TableHead className="text-right">Completeness</TableHead>
+                <TableHead className="text-right">Accuracy</TableHead>
                 <TableHead>Uploaded</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -898,7 +945,7 @@ export default function DashboardPage() {
                 return (
                   <Fragment key={id}>
                     {/* Project group row -- one slim band, not a nested box */}
-                    <TableRow className="bg-muted/50 hover:bg-muted/70 border-t">
+                    <TableRow className="band">
                       <TableCell colSpan={6} className="py-1">
                         <div className="flex items-center justify-between gap-4 flex-wrap">
                           <button
@@ -936,9 +983,9 @@ export default function DashboardPage() {
                               </span>
                             )}
                             {project && project.open_critical_count > 0 && (
-                              <span className="rounded bg-red-100 px-1.5 py-0.5 font-medium text-red-800">
+                              <Chip tone="crit" xs>
                                 {project.open_critical_count} critical
-                              </span>
+                              </Chip>
                             )}
                             {project && (
                               <Link
@@ -987,6 +1034,17 @@ export default function DashboardPage() {
           />
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteId(null);
+        }}
+        title="Delete document"
+        description="Permanently delete this document, its reviews, and all findings? This cannot be undone."
+        confirmLabel="Delete"
+        busy={deleteBusy}
+        onConfirm={confirmDelete}
+      />
     </AppShell>
   );
 }
