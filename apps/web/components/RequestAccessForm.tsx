@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import axios from 'axios';
+import { AlertBanner } from '@/components/app';
+import { Button } from '@/components/ui/button';
 
 export function RequestAccessForm({
   source,
@@ -49,38 +51,38 @@ export function RequestAccessForm({
   };
 
   return (
-    <div className="rounded-lg border p-5">
-      {heading && <h2 className="font-semibold mb-1">{heading}</h2>}
-      <p className="text-sm text-muted-foreground mb-4">
+    <div className="app-theme font-app max-w-[520px] rounded-[10px] border border-border bg-card p-4">
+      {heading && <h2 className="mb-1 text-[15px] font-semibold">{heading}</h2>}
+      <p className="mb-3 text-[13px] text-muted-foreground">
         Running a review or assessment is switched on per organisation. Send us your details
         and we will enable it.
       </p>
       {sent ? (
-        <p className="text-muted-foreground" role="status">
+        <p className="text-[13px] text-muted-foreground" role="status">
           Thanks. We will enable assessments for your organisation and email you.
         </p>
       ) : (
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} className="space-y-3.5">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium mb-1">Name</label>
+            <label htmlFor="name" className="mb-1 block text-xs font-medium text-muted-foreground">Name</label>
             <input
               id="name"
               required
               maxLength={200}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-md border px-3 py-2 bg-background"
+              className="h-9 w-full rounded-lg border border-input bg-card px-2.5 text-[13px] focus:border-primary focus:outline-none focus:ring-[3px] focus:ring-accent"
             />
           </div>
           <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-1">Work email</label>
+            <label htmlFor="email" className="mb-1 block text-xs font-medium text-muted-foreground">Work email</label>
             <input
               id="email"
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border px-3 py-2 bg-background"
+              className="h-9 w-full rounded-lg border border-input bg-card px-2.5 text-[13px] focus:border-primary focus:outline-none focus:ring-[3px] focus:ring-accent"
             />
           </div>
           <div aria-hidden="true" className="hidden">
@@ -93,18 +95,10 @@ export function RequestAccessForm({
               defaultValue=""
             />
           </div>
-          {error && (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          )}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-primary text-primary-foreground px-6 py-3 font-medium hover:opacity-90 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          >
+          {error && <AlertBanner kind="error">{error}</AlertBanner>}
+          <Button type="submit" disabled={loading} className="h-10 w-full">
             {loading ? 'Sending...' : 'Request access'}
-          </button>
+          </Button>
         </form>
       )}
     </div>

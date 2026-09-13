@@ -40,12 +40,13 @@ export function ServiceWorkerRegister() {
   return (
     <div
       role="status"
-      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-3 bg-primary px-3 py-1.5 text-sm text-primary-foreground"
+      className="app-theme font-app fixed inset-x-0 top-0 z-[70] flex items-center justify-center gap-3 bg-primary px-4 py-2 text-[13px] text-primary-foreground"
     >
       <span>A new version is available.</span>
       <Button
         size="sm"
-        variant="secondary"
+        variant="outline"
+        className="border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10"
         onClick={() => waitingWorker.postMessage({ type: 'SKIP_WAITING' })}
       >
         Reload
