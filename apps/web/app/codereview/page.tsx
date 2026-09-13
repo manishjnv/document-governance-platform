@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bug, MoreHorizontal, Plus } from 'lucide-react';
+import { Bug, MoreHorizontal, Plus, Search } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,8 +21,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { PageHeader, Chip, EmptyState, SkeletonRows, AlertBanner, type ChipTone } from '@/components/app';
 import {
   CodeReviewListItem,
+  Severity,
   SEVERITY_META,
   SEVERITY_ORDER,
   SOURCE_FORMAT_LABEL,
@@ -37,6 +39,22 @@ const SORTERS: Record<SortKey, (a: CodeReviewListItem, b: CodeReviewListItem) =>
   oldest: (a, b) => (a.created_at ?? '').localeCompare(b.created_at ?? ''),
   most_findings: (a, b) => b.counts.total - a.counts.total,
   name: (a, b) => a.name.localeCompare(b.name),
+};
+
+/** Chip tone + bar-fill token per severity, matching the sev-* design tokens. */
+const SEV_TONE: Record<Severity, ChipTone> = {
+  critical: 'crit',
+  high: 'high',
+  medium: 'med',
+  low: 'low',
+  info: 'info',
+};
+const SEV_BAR: Record<Severity, string> = {
+  critical: 'bg-sev-crit',
+  high: 'bg-sev-high',
+  medium: 'bg-sev-med',
+  low: 'bg-sev-low',
+  info: 'bg-sev-info',
 };
 
 export default function CodeReviewListPage() {
@@ -126,45 +144,57 @@ export default function CodeReviewListPage() {
   return (
     <AppShell>
       <TooltipProvider>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h1 className="flex items-center gap-2 text-lg font-semibold">
-            <Bug size={18} strokeWidth={2} className="text-primary" aria-hidden="true" />
-            Code Security Reviews
-          </h1>
-          <div className="flex items-center gap-1.5">
-            <Button asChild size="sm" variant="outline">
-              <Link href="/codereview/new">Get scanner</Link>
-            </Button>
-            <Button asChild size="sm">
-              <Link href="/codereview/new">
-                <Plus size={15} className="mr-1" aria-hidden="true" />
-                New review
-              </Link>
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          title={
+            <span className="flex items-center gap-2">
+              <Bug size={18} strokeWidth={2} className="text-primary" aria-hidden="true" />
+              Code Security Reviews
+            </span>
+          }
+          actions={
+            <>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/codereview/new">Get scanner</Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link href="/codereview/new">
+                  <Plus size={15} className="mr-1" aria-hidden="true" />
+                  New review
+                </Link>
+              </Button>
+            </>
+          }
+        />
 
         {error && (
-          <div role="alert" className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          <AlertBanner kind="error" className="mb-4">
             {error}
-          </div>
+          </AlertBanner>
         )}
 
         {items !== null && items.length > 0 && (
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or repo…"
-              aria-label="Search reviews by name or repo"
-              className="h-8 w-56 rounded-md border border-input bg-background px-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
+            <div className="relative">
+              <Search
+                size={14}
+                strokeWidth={2}
+                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by name or repo…"
+                aria-label="Search reviews by name or repo"
+                className="h-9 w-56 rounded-lg border border-input bg-card pl-8 pr-2.5 text-[13px] text-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-[3px] focus:ring-accent"
+              />
+            </div>
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
               aria-label="Sort reviews"
-              className="h-8 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-9 rounded-lg border border-input bg-card px-2 text-[13px] text-foreground outline-none focus:border-primary focus:ring-[3px] focus:ring-accent"
             >
               <option value="newest">Newest</option>
               <option value="oldest">Oldest</option>
@@ -174,50 +204,42 @@ export default function CodeReviewListPage() {
           </div>
         )}
         {actionError && (
-          <p role="alert" className="mb-2 text-xs text-destructive">{actionError}</p>
+          <p role="alert" className="mb-2 text-xs text-sev-crit">{actionError}</p>
         )}
 
-        {items === null && !error && (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="animate-pulse rounded-md border p-3.5">
-                <div className="h-4 w-2/3 rounded bg-muted" />
-                <div className="mt-2 h-3 w-1/3 rounded bg-muted" />
-                <div className="mt-3 h-1.5 w-full rounded-full bg-muted" />
-                <div className="mt-2 h-3 w-1/2 rounded bg-muted" />
-                <div className="mt-3 h-3 w-1/3 rounded bg-muted" />
-              </div>
-            ))}
-          </div>
-        )}
+        {items === null && !error && <SkeletonRows rows={3} />}
 
         {items !== null && items.length === 0 && !error && (
-          <div className="rounded-md bg-muted/40 p-8 text-center">
-            <Bug size={28} className="mx-auto mb-3 text-muted-foreground" aria-hidden="true" />
-            <p className="mx-auto max-w-md text-sm text-muted-foreground">
-              Run the Visa Vulnerability Agentic Harness scan on your repo and upload its
-              findings.json to get a reviewable findings register plus client-ready XLSX and
-              PPTX deliverables.
-            </p>
-            <p className="mx-auto mt-2 max-w-md text-xs text-muted-foreground">
-              Built on Visa&apos;s open-source Vulnerability Agentic Harness (Apache-2.0).
-              ScopeWise is not affiliated with or endorsed by Visa, Inc.
-            </p>
-            <div className="mt-4 flex justify-center gap-2">
-              <Button asChild size="sm" variant="outline">
-                <Link href="/codereview/new">Get scanner</Link>
-              </Button>
-              <Button asChild size="sm">
-                <Link href="/codereview/new">New review</Link>
-              </Button>
-            </div>
-          </div>
+          <EmptyState
+            icon={<Bug size={28} aria-hidden="true" />}
+            title={
+              <>
+                Run the Visa Vulnerability Agentic Harness scan on your repo and upload its
+                findings.json to get a reviewable findings register plus client-ready XLSX and
+                PPTX deliverables.
+              </>
+            }
+            description={
+              <>
+                Built on Visa&apos;s open-source Vulnerability Agentic Harness (Apache-2.0).
+                ScopeWise is not affiliated with or endorsed by Visa, Inc.
+              </>
+            }
+            action={
+              <div className="flex gap-2">
+                <Button asChild size="sm" variant="outline">
+                  <Link href="/codereview/new">Get scanner</Link>
+                </Button>
+                <Button asChild size="sm">
+                  <Link href="/codereview/new">New review</Link>
+                </Button>
+              </div>
+            }
+          />
         )}
 
         {visible !== null && visible.length === 0 && items !== null && items.length > 0 && (
-          <p className="rounded-md bg-muted/40 p-6 text-center text-sm text-muted-foreground">
-            No reviews match your search.
-          </p>
+          <EmptyState title="No reviews match your search." />
         )}
 
         {visible !== null && visible.length > 0 && (
@@ -237,71 +259,66 @@ export default function CodeReviewListPage() {
                       router.push(`/codereview/${item.review_id}`);
                     }
                   }}
-                  className="group cursor-pointer rounded-md border p-3.5 transition-colors hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="group cursor-pointer rounded-[10px] border border-border bg-card p-4 transition-colors ease-app hover:border-primary/50 hover:bg-accent-soft/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold leading-snug">{item.name}</p>
+                      <p className="truncate text-sm font-semibold leading-snug text-foreground">{item.name}</p>
                       <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                        <span className="truncate">{item.repo_label}</span>
+                        <span className="truncate font-mono text-xs">{item.repo_label}</span>
                         {item.git_sha && (
-                          <Tooltip delayDuration={150}>
-                            <TooltipTrigger asChild>
-                              <span className="rounded-full border bg-muted/40 px-1.5 py-0.5 font-mono text-xs">
-                                {shortSha(item.git_sha)}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent className="text-xs font-mono">{item.git_sha}</TooltipContent>
-                          </Tooltip>
+                          <Chip tone="neutral" xs className="font-mono" tip={item.git_sha}>
+                            {shortSha(item.git_sha)}
+                          </Chip>
                         )}
                       </p>
                     </div>
-                    {item.demo && (
-                      <Tooltip delayDuration={150}>
-                        <TooltipTrigger asChild>
-                          <span className="shrink-0 rounded-full border border-sky-200 bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-800">
-                            Demo
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent className="text-xs">Shared sample review — visible to every signed-in user, read-only</TooltipContent>
-                      </Tooltip>
-                    )}
-                    {item.editable !== false && (
-                    <span onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            type="button"
-                            aria-label={`Actions for ${item.name}`}
-                            className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          >
-                            <MoreHorizontal size={15} aria-hidden="true" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setRenaming(item);
-                              setRenameValue(item.name);
-                            }}
-                          >
-                            Rename
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => setDeleting(item)}
-                          >
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <span className="flex shrink-0 items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                      {item.demo && (
+                        <Chip
+                          tone="demo"
+                          xs
+                          tip="Shared sample review — visible to every signed-in user, read-only"
+                        >
+                          Demo
+                        </Chip>
+                      )}
+                      {item.editable !== false && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label={`Actions for ${item.name}`}
+                              className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              <MoreHorizontal size={15} aria-hidden="true" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="rounded-lg">
+                            <DropdownMenuItem
+                              className="rounded-lg"
+                              onClick={() => {
+                                setRenaming(item);
+                                setRenameValue(item.name);
+                              }}
+                            >
+                              Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="rounded-lg text-destructive focus:text-destructive"
+                              onClick={() => setDeleting(item)}
+                            >
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </span>
-                    )}
                   </div>
 
                   <Tooltip delayDuration={150}>
                     <TooltipTrigger asChild>
-                      <div className="mt-3 flex h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div className="mt-3 flex h-1.5 w-full overflow-hidden rounded-full bg-na">
                         {total > 0 &&
                           SEVERITY_ORDER.map((s) => {
                             const count = item.counts.by_severity[s] ?? 0;
@@ -309,7 +326,7 @@ export default function CodeReviewListPage() {
                             return (
                               <span
                                 key={s}
-                                className={SEVERITY_META[s].dot}
+                                className={SEV_BAR[s]}
                                 style={{ width: `${(count / total) * 100}%` }}
                               />
                             );
@@ -324,31 +341,26 @@ export default function CodeReviewListPage() {
                             .join(' · ')}
                     </TooltipContent>
                   </Tooltip>
-                  <p className="mt-1.5 text-[11px] text-slate-700">
+                  <div className="mt-2 flex flex-wrap items-center gap-1">
                     {total === 0 ? (
-                      'No findings'
+                      <span className="text-[11px] text-muted-foreground">No findings</span>
                     ) : (
-                      SEVERITY_ORDER.filter((s) => (item.counts.by_severity[s] ?? 0) > 0).map((s, idx) => (
-                        <span key={s}>
-                          {idx > 0 && ' · '}
-                          <span className={SEVERITY_META[s].text}>{item.counts.by_severity[s]}</span>{' '}
-                          {SEVERITY_META[s].label.toLowerCase()}
-                        </span>
+                      SEVERITY_ORDER.filter((s) => (item.counts.by_severity[s] ?? 0) > 0).map((s) => (
+                        <Chip key={s} tone={SEV_TONE[s]} dot xs>
+                          {item.counts.by_severity[s]} {SEVERITY_META[s].label.toLowerCase()}
+                        </Chip>
                       ))
                     )}
-                  </p>
+                  </div>
 
-                  <div className="mt-2.5 flex items-center gap-2 border-t pt-2 text-[11px] text-muted-foreground">
-                    <span>{total} finding{total === 1 ? '' : 's'}</span>
-                    <Tooltip delayDuration={150}>
-                      <TooltipTrigger asChild>
-                        <span className="rounded-full border bg-muted/40 px-1.5 py-0.5 font-medium">
-                          {SOURCE_FORMAT_LABEL[item.source_format]}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent className="text-xs">Import source format</TooltipContent>
-                    </Tooltip>
-                    <span className="ml-auto">{fmtDate(item.created_at)}</span>
+                  <div className="mt-2.5 flex items-center gap-2 border-t border-border pt-2 text-[11px] text-muted-foreground">
+                    <span className="font-semibold tabular-nums text-foreground">
+                      {total} finding{total === 1 ? '' : 's'}
+                    </span>
+                    <Chip tone="neutral" xs tip="Import source format">
+                      {SOURCE_FORMAT_LABEL[item.source_format]}
+                    </Chip>
+                    <span className="ml-auto tabular-nums">{fmtDate(item.created_at)}</span>
                   </div>
                 </div>
               );
@@ -358,21 +370,23 @@ export default function CodeReviewListPage() {
       </TooltipProvider>
 
       <Dialog open={!!renaming} onOpenChange={(open) => !open && setRenaming(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Rename review</DialogTitle>
+        <DialogContent className="max-w-sm rounded-xl p-0">
+          <DialogHeader className="px-5 pb-1.5 pt-[18px]">
+            <DialogTitle className="text-base font-semibold">Rename review</DialogTitle>
           </DialogHeader>
-          <input
-            autoFocus
-            value={renameValue}
-            onChange={(e) => setRenameValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleRename();
-            }}
-            aria-label="New review name"
-            className="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-          <DialogFooter>
+          <div className="px-5 pb-4">
+            <input
+              autoFocus
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleRename();
+              }}
+              aria-label="New review name"
+              className="h-9 w-full rounded-lg border border-input bg-card px-2.5 text-[13px] text-foreground outline-none focus:border-primary focus:ring-[3px] focus:ring-accent"
+            />
+          </div>
+          <DialogFooter className="flex justify-end gap-2 px-5 pb-[18px] pt-3">
             <Button variant="outline" size="sm" onClick={() => setRenaming(null)} disabled={busy}>
               Cancel
             </Button>
@@ -384,14 +398,14 @@ export default function CodeReviewListPage() {
       </Dialog>
 
       <Dialog open={!!deleting} onOpenChange={(open) => !open && setDeleting(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Delete review</DialogTitle>
+        <DialogContent className="max-w-sm rounded-xl p-0">
+          <DialogHeader className="px-5 pb-1.5 pt-[18px]">
+            <DialogTitle className="text-base font-semibold">Delete review</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
+          <p className="px-5 pb-4 text-[13.5px] text-muted-foreground">
             Delete &quot;{deleting?.name}&quot;? This can&apos;t be undone.
           </p>
-          <DialogFooter>
+          <DialogFooter className="flex justify-end gap-2 px-5 pb-[18px] pt-3">
             <Button variant="outline" size="sm" onClick={() => setDeleting(null)} disabled={busy}>
               Cancel
             </Button>
