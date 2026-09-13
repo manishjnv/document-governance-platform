@@ -102,4 +102,8 @@ re-checks on its own. If a resolver shows no DKIM/DMARC, it is negative caching 
 made before the records existed; query the authoritative NS to confirm. Hostinger hPanel:
 Emails > contact@scopesense.in > DNS status should show all green; if its DKIM values ever
 differ from the generic `hostingermail-*` ones, replace the three CNAMEs with the shown values.
+Cross-checked 2026-09-13 through the Hostinger API (`GET /api/dns/v1/zones/scopesense.in`, key
+`Hostinger_API_KEY` in the local `.env`): Hostinger's own zone holds the identical MX, SPF,
+DKIM a/b/c, DMARC and autoconfig values, so the Cloudflare copy matches what Hostinger expects.
+Its parked `A @ 2.57.91.91` is irrelevant (never move the nameservers back).
 
