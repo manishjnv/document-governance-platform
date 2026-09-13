@@ -21,7 +21,7 @@ Playwright 1440/390 on every route, no page overflow, `/` untouched. RCA #28-#30
 User-level skill `~/.claude/skills/ui-design-workflow/SKILL.md` (project-agnostic UI workflow), a global-playbook rule to load it on every UI task, a Desktop copy for Claude Design web, and project memories `ui-redesign-status-2026-09-13` + `feedback-ui-design-workflow-skill`.
 
 ## Next action
-Deployed and smoke-tested on scopewise.assessiq.in (15/15 routes 200, theme scoping, self-hosted Plex, API healthy). scopesense.in: LIVE (zone active, Origin cert to 2041, Caddy block, AOP on) — raw curl 200 on /login and /api/v1/health; dual-run ends ~2026-10-13. Still open: the Phase 5 real-data
+Deployed and smoke-tested on scopewise.assessiq.in (15/15 routes 200, theme scoping, self-hosted Plex, API healthy). scopesense.in: LIVE (zone active, Origin cert to 2041, Caddy block, AOP on) — raw curl 200 on /login and /api/v1/health; dual-run ends ~2026-10-13. Owner verified desktop real-data views of the dashboard (scopesense.in) and a MITRE assessment detail (old host) — clean. Still open: phone width for those two, Code Review detail with real data, and the rest of the Phase 5 real-data
 smoke (routes 200, `app-theme` on app pages only, Plex served from `/_next/static/media`,
 Lighthouse on `/login` and `/dashboard`). Open: Admin People no-match state (needs a filter variable).
 
