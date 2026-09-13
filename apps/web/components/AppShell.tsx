@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Bug, FileText, LayoutDashboard, Target, Menu, LogOut, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { useResize } from '@/components/app/useResize';
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
@@ -44,10 +45,10 @@ function NavLinks({
             onClick={onNavigate}
             title={collapsed ? label : undefined}
             className={cn(
-              'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+              'flex items-center gap-2.5 rounded-[7px] px-2.5 py-2 text-[13.5px] font-medium whitespace-nowrap overflow-hidden transition-colors duration-150 ease-app',
               collapsed && 'justify-center px-0',
               active
-                ? 'bg-primary text-primary-foreground'
+                ? 'bg-accent text-primary'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             )}
           >
@@ -68,12 +69,18 @@ export function AppShell({
   fullWidth?: boolean;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [width, setWidth] = useState(224);
   // Default collapsed unless the user has an explicit saved preference.
   const [collapsed, setCollapsed] = useState(true);
-  const [resizing, setResizing] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
+
+  const { width, resizing, gripProps } = useResize({
+    storageKey: STORAGE_KEY,
+    min: MIN_WIDTH,
+    max: MAX_WIDTH,
+    edge: 'right',
+    fallback: 224,
+  });
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -87,9 +94,7 @@ export function AppShell({
   }, []);
 
   useEffect(() => {
-    const savedWidth = localStorage.getItem(STORAGE_KEY);
     const savedCollapsed = localStorage.getItem(COLLAPSED_KEY);
-    if (savedWidth) setWidth(Number(savedWidth));
     if (savedCollapsed) setCollapsed(savedCollapsed === 'true');
   }, []);
 
@@ -99,34 +104,6 @@ export function AppShell({
     router.push('/');
   };
 
-  const startResize = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setResizing(true);
-  }, []);
-
-  useEffect(() => {
-    if (!resizing) return;
-
-    const onMouseMove = (e: MouseEvent) => {
-      const next = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, e.clientX));
-      setWidth(next);
-    };
-    const onMouseUp = () => {
-      setResizing(false);
-      setWidth((w) => {
-        localStorage.setItem(STORAGE_KEY, String(w));
-        return w;
-      });
-    };
-
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-    return () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
-  }, [resizing]);
-
   const toggleCollapsed = () => {
     setCollapsed((c) => {
       localStorage.setItem(COLLAPSED_KEY, String(!c));
@@ -134,7 +111,7 @@ export function AppShell({
     });
   };
 
-  const effectiveWidth = collapsed ? COLLAPSED_WIDTH : width;
+  const effectiveWidth = collapsed ? COLLAPSED_WIDTH : width ?? 224;
 
   return (
     <div className="app-theme font-app min-h-screen bg-background">
@@ -142,24 +119,39 @@ export function AppShell({
       <aside
         style={{ width: effectiveWidth }}
         className={cn(
-          'fixed inset-y-0 left-0 z-30 hidden flex-col border-r bg-background px-2 py-4 md:flex',
-          !resizing && 'transition-[width] duration-150 ease-out'
+          'fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-border bg-card px-2.5 py-3.5 md:flex',
+          !resizing && 'transition-[width] duration-[180ms] ease-app'
         )}
       >
-        <div className={cn('flex items-center gap-2 px-1 pb-1', collapsed && 'justify-center px-0')}>
-          <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
+        <div className={cn('flex items-center gap-2.5 px-2 py-1', collapsed && 'justify-center px-0')}>
+          <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0">
             <FileText size={18} strokeWidth={2} className="text-primary shrink-0" aria-hidden="true" />
             {!collapsed && <span className="text-sm font-semibold truncate">ScopeWise</span>}
           </Link>
         </div>
         {!collapsed && (
-          <p className="px-1 pb-5 text-xs text-muted-foreground">
+          <p className="px-2 pb-3.5 text-[11.5px] text-ink3 whitespace-nowrap overflow-hidden">
             Catch contract risk before you sign.
           </p>
         )}
-        {collapsed && <div className="pb-5" />}
+        {collapsed && <div className="pb-3.5" />}
         <NavLinks collapsed={collapsed} isAdmin={isAdmin} />
-        <div className="mt-auto">
+        <div className="mt-auto flex flex-col gap-1">
+          {/* Collapse toggle */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className={cn('w-full gap-2', collapsed ? 'justify-center px-0' : 'justify-start')}
+          >
+            {collapsed ? (
+              <ChevronRight size={16} strokeWidth={2} aria-hidden="true" />
+            ) : (
+              <ChevronLeft size={16} strokeWidth={2} aria-hidden="true" />
+            )}
+            {!collapsed && 'Collapse'}
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -172,27 +164,18 @@ export function AppShell({
           </Button>
         </div>
 
-        {/* Collapse toggle */}
-        <button
-          type="button"
-          onClick={toggleCollapsed}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="absolute -right-3.5 top-8 hidden h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-primary text-primary-foreground shadow-md hover:bg-primary/90 md:flex"
-        >
-          {collapsed ? <ChevronRight size={16} strokeWidth={2.5} /> : <ChevronLeft size={16} strokeWidth={2.5} />}
-        </button>
-
         {/* Drag-to-resize handle */}
         {!collapsed && (
           <div
-            onMouseDown={startResize}
-            className="absolute inset-y-0 right-0 hidden w-1 cursor-col-resize hover:bg-primary/30 md:block"
+            {...gripProps}
+            aria-label="Resize sidebar"
+            className="absolute inset-y-0 right-0 hidden w-1.5 cursor-col-resize touch-none md:block hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
           />
         )}
       </aside>
 
       {/* Mobile top bar */}
-      <header className="flex items-center justify-between border-b bg-background px-4 py-3 md:hidden">
+      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-card px-3.5 py-2.5 md:hidden">
         <Link href="/dashboard" className="flex items-center gap-2">
           <FileText size={18} strokeWidth={2} className="text-primary" aria-hidden="true" />
           <span className="text-sm font-semibold">ScopeWise</span>
@@ -203,8 +186,8 @@ export function AppShell({
       </header>
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="w-64 p-4">
-          <SheetTitle className="mb-4 flex items-center gap-2 text-sm">
+        <SheetContent side="left" className="flex w-64 flex-col bg-card p-4">
+          <SheetTitle className="mb-3.5 flex items-center gap-2 text-sm">
             <FileText size={18} strokeWidth={2} className="text-primary" aria-hidden="true" />
             ScopeWise
           </SheetTitle>
@@ -212,7 +195,7 @@ export function AppShell({
           <Button
             variant="ghost"
             size="sm"
-            className="mt-4 w-full justify-start gap-2"
+            className="mt-auto w-full justify-start gap-2"
             onClick={handleLogout}
           >
             <LogOut size={16} strokeWidth={2} aria-hidden="true" />
@@ -225,10 +208,17 @@ export function AppShell({
         style={{ '--sidebar-w': `${effectiveWidth}px` } as React.CSSProperties}
         className={cn(
           'md:[padding-left:var(--sidebar-w)]',
-          !resizing && 'transition-[padding-left] duration-150 ease-out'
+          !resizing && 'transition-[padding-left] duration-[180ms] ease-app'
         )}
       >
-        <div className={cn('py-6 px-4 sm:px-6', fullWidth ? 'w-full' : 'mx-auto max-w-7xl')}>{children}</div>
+        <div
+          className={cn(
+            'mx-auto px-4 pb-10 pt-4 sm:px-7 sm:pb-12 sm:pt-6',
+            fullWidth ? 'w-full' : 'max-w-[1240px]'
+          )}
+        >
+          {children}
+        </div>
       </main>
     </div>
   );
