@@ -138,7 +138,13 @@ last incident.
   screenshots to `apps/web/.sweep/`; run before committing a restyle. Per-screen label
   check: `python docs/design/complete-app-2026-09-12/check_app_labels.py <Stem> <tsx...>`.
   References and review checklist: `docs/design/references/README.md`; the workflow itself
-  is the user-level `ui-design-workflow` skill.
+  is the user-level `ui-design-workflow` skill. Its "project setup" values for ScopeWise:
+  stack Next 14 + Tailwind 3.4 + shadcn; token source `scripts/generate_app_theme.py` ->
+  `apps/web/app/app-theme.css` (from the canvas `dc.py` TOKENS, scoped to `.app-theme`);
+  primitives `apps/web/components/app/*` (Chip, KpiTile, PageHeader, EmptyState, Skeleton,
+  AlertBanner, ConfirmDialog, SeverityBar, useResize) + `.tbl` rules in `globals.css`;
+  label inventory `docs/design/complete-app-2026-09-12/labels/`; references Linear, Stripe,
+  Attio, Vercel; dark mode out of scope until designed.
 - `apps/web` dev server on Windows: if `next dev`/`next build` hangs
   indefinitely at "Starting..." with no compile output, it's very likely
   Windows Defender real-time scanning a freshly-touched `node_modules`/
