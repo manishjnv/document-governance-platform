@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bug, FileText, LayoutDashboard, Target, Menu, LogOut, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
+import { Bug, FileText, LayoutDashboard, Target, Menu, LogOut, PanelLeftClose, PanelLeftOpen, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useResize } from '@/components/app/useResize';
@@ -21,7 +21,8 @@ const MIN_WIDTH = 180;
 const MAX_WIDTH = 400;
 const COLLAPSED_WIDTH = 56;
 const STORAGE_KEY = 'sidebar_width';
-const COLLAPSED_KEY = 'sidebar_collapsed';
+// v2: key bumped 2026-09-13 so every user starts expanded again; old 'sidebar_collapsed' is ignored.
+const COLLAPSED_KEY = 'sidebar_collapsed_v2';
 
 function NavLinks({
   onNavigate,
@@ -69,8 +70,8 @@ export function AppShell({
   fullWidth?: boolean;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  // Default collapsed unless the user has an explicit saved preference.
-  const [collapsed, setCollapsed] = useState(true);
+  // Default expanded unless the user has an explicit saved preference.
+  const [collapsed, setCollapsed] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
 
@@ -123,11 +124,26 @@ export function AppShell({
           !resizing && 'transition-[width] duration-[180ms] ease-app'
         )}
       >
-        <div className={cn('flex items-center gap-2.5 px-2 py-1', collapsed && 'justify-center px-0')}>
+        <div className={cn('flex items-center gap-2.5 px-2 py-1', collapsed ? 'flex-col px-0' : 'justify-between')}>
           <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0">
             <FileText size={18} strokeWidth={2} className="text-primary shrink-0" aria-hidden="true" />
             {!collapsed && <span className="text-sm font-semibold truncate">ScopeWise</span>}
           </Link>
+          {/* Collapse toggle: outlined so it reads as a control, not a nav item */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+          >
+            {collapsed ? (
+              <PanelLeftOpen size={15} strokeWidth={2} aria-hidden="true" />
+            ) : (
+              <PanelLeftClose size={15} strokeWidth={2} aria-hidden="true" />
+            )}
+          </Button>
         </div>
         {!collapsed && (
           <p className="px-2 pb-3.5 text-[11.5px] text-ink3 whitespace-nowrap overflow-hidden">
@@ -137,21 +153,6 @@ export function AppShell({
         {collapsed && <div className="pb-3.5" />}
         <NavLinks collapsed={collapsed} isAdmin={isAdmin} />
         <div className="mt-auto flex flex-col gap-1">
-          {/* Collapse toggle */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleCollapsed}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className={cn('w-full gap-2', collapsed ? 'justify-center px-0' : 'justify-start')}
-          >
-            {collapsed ? (
-              <ChevronRight size={16} strokeWidth={2} aria-hidden="true" />
-            ) : (
-              <ChevronLeft size={16} strokeWidth={2} aria-hidden="true" />
-            )}
-            {!collapsed && 'Collapse'}
-          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -169,7 +170,14 @@ export function AppShell({
           <div
             {...gripProps}
             aria-label="Resize sidebar"
-            className="absolute inset-y-0 right-0 hidden w-1.5 cursor-col-resize touch-none md:block hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+            title="Drag to resize"
+            className={cn(
+              // Always-visible centred pill so the handle is discoverable; whole strip highlights on hover/drag.
+              'group absolute inset-y-0 -right-1 hidden w-2.5 cursor-col-resize touch-none md:block focus-visible:outline-none',
+              'after:absolute after:left-1/2 after:top-1/2 after:h-9 after:w-1 after:-translate-x-1/2 after:-translate-y-1/2 after:rounded-full after:bg-border after:transition-colors after:duration-150',
+              'hover:after:bg-primary focus-visible:after:bg-primary',
+              resizing ? 'bg-primary/15 after:bg-primary' : 'hover:bg-primary/10'
+            )}
           />
         )}
       </aside>
