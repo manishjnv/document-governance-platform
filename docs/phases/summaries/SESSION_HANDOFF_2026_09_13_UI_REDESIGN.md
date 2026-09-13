@@ -12,6 +12,7 @@ in 29 commits (`daae552`..`19344f2`), pushed and **deployed** on scopewise.asses
 | 2 MITRE list, new, connections, detail (2) | `61ac46a` `82938f6` `1a9d9c0` `5cca31c` `3123123` |
 | 3 Code Review list, new, detail + drawer, SeverityBar, overflow fix | `cc69401` `3215758` `8a640c6` `e162bc4` `6de58dd` |
 | 4 admin, install and update bar, request-access form, skip link | `8c42c9f` `8d03a5a` |
+| 6 admin tables sortable (most recent first) + People no-match state, deployed | `e444471` |
 | 5 docs, sweep script + references, deploy notes, CLAUDE.md skill values | `5327a35` `06bd700` `a2dfaf2` `f062cfe` `40d614a` `19344f2` |
 
 Gates: `tsc` clean; per-screen label check (all misses are pre-existing design sample strings);
@@ -23,7 +24,7 @@ User-level skill `~/.claude/skills/ui-design-workflow/SKILL.md` (project-agnosti
 ## Next action
 Deployed and smoke-tested on scopewise.assessiq.in (15/15 routes 200, theme scoping, self-hosted Plex, API healthy). scopesense.in: LIVE (zone active, Origin cert to 2041, Caddy block, AOP on) — raw curl 200 on /login and /api/v1/health; dual-run ends ~2026-10-13. Owner verified desktop real-data views of the dashboard (scopesense.in) and a MITRE assessment detail (old host) — clean. Still open: phone width for those two, Code Review detail with real data, and the rest of the Phase 5 real-data
 smoke (routes 200, `app-theme` on app pages only, Plex served from `/_next/static/media`,
-Lighthouse on `/login` and `/dashboard`). Open: Admin People no-match state (needs a filter variable).
+Lighthouse on `/login` and `/dashboard`). Admin People no-match state: done in `e444471` with column sorting.
 
 ## Agent utilization
 - Opus (main): plan and kickoff reads, both tooling scripts (Tier 2 fell back), every diff review, 5 direct fixes (badge hover, table primitive, login sentence, SeverityBar swap, import overflow), screenshots, docs.
