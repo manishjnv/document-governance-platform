@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Columns3, Download, FileSpreadsheet, Play, ShieldCheck, Trash2, UploadCloud, X } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageHeader, KpiTile, Chip, AlertBanner } from '@/components/app';
 import { cn } from '@/lib/utils';
 import { ParsePreview, UseCaseItem } from '../lib';
 import { RuleListPanel } from '../components/RuleListPanel';
@@ -84,22 +84,20 @@ function DropZone({
 
   return (
     <div>
-      <div className="mb-1.5 text-sm font-medium">
-        {label} {required && <span className="text-destructive">*</span>}
-      </div>
+      <label className="mb-1 block text-xs font-medium text-muted-foreground">
+        {label} {required && <span className="text-sev-crit">*</span>}
+      </label>
       {file ? (
-        <div className="flex items-center justify-between rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm">
-          <span className="flex min-w-0 items-center gap-2 text-emerald-800">
-            <FileSpreadsheet size={15} className="shrink-0" aria-hidden="true" />
-            <span className="truncate">{file.name}</span>
-            <span className="shrink-0 text-xs text-emerald-700/70">
-              {(file.size / 1024 / 1024).toFixed(2)} MB
-            </span>
+        <div className="flex items-center gap-2 rounded-lg border border-ok bg-ok-soft px-2.5 py-2 text-[13px] text-ok">
+          <FileSpreadsheet size={15} className="shrink-0" aria-hidden="true" />
+          <span className="min-w-0 flex-1 truncate">{file.name}</span>
+          <span className="shrink-0 tabular-nums">
+            {(file.size / 1024 / 1024).toFixed(2)} MB
           </span>
           <button
             type="button"
             aria-label={`Remove ${file.name}`}
-            className="text-emerald-800 hover:text-emerald-950"
+            className="shrink-0 text-ok hover:opacity-75"
             onClick={() => {
               onFile(null);
               if (inputRef.current) inputRef.current.value = '';
@@ -129,12 +127,12 @@ function DropZone({
             accept(e.dataTransfer.files?.[0]);
           }}
           className={cn(
-            'cursor-pointer rounded-md border-2 border-dashed p-5 text-center transition-colors duration-150 ease-out',
-            dragActive ? 'border-primary bg-primary/5' : 'border-input hover:bg-muted/50'
+            'cursor-pointer rounded-[10px] border-2 border-dashed px-4 py-[26px] text-center text-muted-foreground transition-[border-color,background-color] duration-150 ease-app',
+            dragActive ? 'border-primary bg-accent-soft' : 'border-line2 hover:bg-muted/60'
           )}
         >
-          <UploadCloud className="mx-auto mb-1.5 h-6 w-6 text-muted-foreground" aria-hidden="true" />
-          <p className="text-sm">Drag &amp; drop or click to select</p>
+          <UploadCloud className="mx-auto mb-2 h-[26px] w-[26px] text-ink3" aria-hidden="true" />
+          <p className="text-[13px]">Drag &amp; drop or click to select</p>
           <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>
         </div>
       )}
@@ -430,22 +428,24 @@ export default function NewMitreAssessmentPage() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-3xl space-y-4">
-        <h1 className="text-lg font-semibold">New MITRE Assessment</h1>
+      <div className="mx-auto max-w-3xl">
+        <PageHeader title="New MITRE Assessment" />
 
         {/* Privacy notice — shown before any file is chosen (plan §2) */}
-        <div className="flex gap-2.5 rounded-md border border-sky-200 bg-sky-50 p-3.5 text-sm text-sky-900">
-          <ShieldCheck size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
-          <p>
-            We never ask for credentials, raw log data, or personal data — upload rule
-            metadata and environment inventory only. Files are stored encrypted; only
-            minimal rule excerpts are sent for AI tagging.
-          </p>
-        </div>
+        <AlertBanner kind="info" className="mb-3.5">
+          <span className="flex gap-2.5">
+            <ShieldCheck size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+            <span>
+              We never ask for credentials, raw log data, or personal data — upload rule
+              metadata and environment inventory only. Files are stored encrypted; only
+              minimal rule excerpts are sent for AI tagging.
+            </span>
+          </span>
+        </AlertBanner>
 
         {!preview && (
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div className="flex gap-1 rounded-md border p-1" role="tablist" aria-label="Rule source">
+          <form onSubmit={handleCreate} className="space-y-3.5">
+            <div className="flex items-end gap-5 border-b border-border" role="tablist" aria-label="Rule source">
               {(
                 [
                   ['upload', 'Upload a file'],
@@ -459,11 +459,10 @@ export default function NewMitreAssessmentPage() {
                   role="tab"
                   aria-selected={source === key}
                   onClick={() => setSource(key)}
-                  className={
-                    source === key
-                      ? 'flex-1 rounded bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary'
-                      : 'flex-1 rounded px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground'
-                  }
+                  className={cn(
+                    '-mb-px border-b-2 border-transparent px-0.5 pb-2.5 text-[13px] font-medium text-muted-foreground transition-colors duration-150 ease-app hover:text-foreground',
+                    source === key && 'border-primary font-semibold text-foreground'
+                  )}
                 >
                   {label}
                 </button>
@@ -471,18 +470,18 @@ export default function NewMitreAssessmentPage() {
             </div>
 
             {source === 'sentinel' && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Microsoft Sentinel connection</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
+              <div className="rounded-[10px] border border-border bg-card">
+                <div className="border-b border-border px-4 py-3">
+                  <h2 className="text-[15px] font-semibold">Microsoft Sentinel connection</h2>
+                </div>
+                <div className="space-y-3 p-4">
                   <p className="text-xs text-muted-foreground">
                     Read-only pull of your analytics rules via a service principal with the{' '}
-                    <span className="font-medium">Microsoft Sentinel Reader</span> role.
+                    <span className="font-medium text-foreground">Microsoft Sentinel Reader</span> role.
                     The client secret is used once for this pull and is{' '}
-                    <span className="font-medium">never stored</span>.
+                    <span className="font-medium text-foreground">never stored</span>.
                   </p>
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-2.5 sm:grid-cols-2">
                     {(
                       [
                         ['tenant_id', 'Tenant ID (GUID)'],
@@ -493,7 +492,7 @@ export default function NewMitreAssessmentPage() {
                       ] as const
                     ).map(([field, label]) => (
                       <div key={field}>
-                        <label htmlFor={`siem-${field}`} className="mb-1.5 block text-sm font-medium">
+                        <label htmlFor={`siem-${field}`} className="mb-1 block text-xs font-medium text-muted-foreground">
                           {label}
                         </label>
                         <input
@@ -502,13 +501,13 @@ export default function NewMitreAssessmentPage() {
                           value={siem[field]}
                           onChange={(e) => setSiem((prev) => ({ ...prev, [field]: e.target.value }))}
                           autoComplete="off"
-                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="h-9 w-full rounded-lg border border-input bg-card px-2.5 text-[13px] outline-none transition-[border-color,background-color] duration-150 ease-app focus:border-primary focus:ring-[3px] focus:ring-accent"
                         />
                       </div>
                     ))}
                     <div>
-                      <label htmlFor="siem-secret" className="mb-1.5 block text-sm font-medium">
-                        Client secret <span className="font-normal text-muted-foreground">(never stored)</span>
+                      <label htmlFor="siem-secret" className="mb-1 block text-xs font-medium text-muted-foreground">
+                        Client secret <span className="font-normal">(never stored)</span>
                       </label>
                       <input
                         id="siem-secret"
@@ -516,7 +515,7 @@ export default function NewMitreAssessmentPage() {
                         value={siemSecret}
                         onChange={(e) => setSiemSecret(e.target.value)}
                         autoComplete="off"
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="h-9 w-full rounded-lg border border-input bg-card px-2.5 text-[13px] outline-none transition-[border-color,background-color] duration-150 ease-app focus:border-primary focus:ring-[3px] focus:ring-accent"
                       />
                     </div>
                   </div>
@@ -524,27 +523,27 @@ export default function NewMitreAssessmentPage() {
                     This path doesn&apos;t take an environment workbook yet, so the whole
                     ATT&amp;CK matrix set is assessed — the score reads lower than reality.
                   </p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
 
             {source === 'splunk' && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Splunk connection</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
+              <div className="rounded-[10px] border border-border bg-card">
+                <div className="border-b border-border px-4 py-3">
+                  <h2 className="text-[15px] font-semibold">Splunk connection</h2>
+                </div>
+                <div className="space-y-3 p-4">
                   <p className="text-xs text-muted-foreground">
                     Read-only pull of your saved searches via the Splunk REST API.
                     The management port (usually 8089) must be reachable from ScopeWise —
                     for Splunk Cloud that means allowlisting our IP on the stack. The auth
                     token is used once for this pull and is{' '}
-                    <span className="font-medium">never stored</span>.
+                    <span className="font-medium text-foreground">never stored</span>.
                   </p>
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-2.5 sm:grid-cols-2">
                     <div>
-                      <label htmlFor="splunk-host" className="mb-1.5 block text-sm font-medium">
-                        Host <span className="font-normal text-muted-foreground">(e.g. acme.splunkcloud.com)</span>
+                      <label htmlFor="splunk-host" className="mb-1 block text-xs font-medium text-muted-foreground">
+                        Host <span className="font-normal">(e.g. acme.splunkcloud.com)</span>
                       </label>
                       <input
                         id="splunk-host"
@@ -552,11 +551,11 @@ export default function NewMitreAssessmentPage() {
                         value={splunk.host}
                         onChange={(e) => setSplunk((prev) => ({ ...prev, host: e.target.value }))}
                         autoComplete="off"
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="h-9 w-full rounded-lg border border-input bg-card px-2.5 text-[13px] outline-none transition-[border-color,background-color] duration-150 ease-app focus:border-primary focus:ring-[3px] focus:ring-accent"
                       />
                     </div>
                     <div>
-                      <label htmlFor="splunk-port" className="mb-1.5 block text-sm font-medium">
+                      <label htmlFor="splunk-port" className="mb-1 block text-xs font-medium text-muted-foreground">
                         Management port
                       </label>
                       <input
@@ -566,12 +565,12 @@ export default function NewMitreAssessmentPage() {
                         value={splunk.port}
                         onChange={(e) => setSplunk((prev) => ({ ...prev, port: e.target.value }))}
                         autoComplete="off"
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="h-9 w-full rounded-lg border border-input bg-card px-2.5 text-[13px] outline-none transition-[border-color,background-color] duration-150 ease-app focus:border-primary focus:ring-[3px] focus:ring-accent"
                       />
                     </div>
                     <div>
-                      <label htmlFor="splunk-app" className="mb-1.5 block text-sm font-medium">
-                        App <span className="font-normal text-muted-foreground">(optional — all apps if empty)</span>
+                      <label htmlFor="splunk-app" className="mb-1 block text-xs font-medium text-muted-foreground">
+                        App <span className="font-normal">(optional — all apps if empty)</span>
                       </label>
                       <input
                         id="splunk-app"
@@ -579,12 +578,12 @@ export default function NewMitreAssessmentPage() {
                         value={splunk.app}
                         onChange={(e) => setSplunk((prev) => ({ ...prev, app: e.target.value }))}
                         autoComplete="off"
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="h-9 w-full rounded-lg border border-input bg-card px-2.5 text-[13px] outline-none transition-[border-color,background-color] duration-150 ease-app focus:border-primary focus:ring-[3px] focus:ring-accent"
                       />
                     </div>
                     <div>
-                      <label htmlFor="splunk-token" className="mb-1.5 block text-sm font-medium">
-                        Auth token <span className="font-normal text-muted-foreground">(never stored)</span>
+                      <label htmlFor="splunk-token" className="mb-1 block text-xs font-medium text-muted-foreground">
+                        Auth token <span className="font-normal">(never stored)</span>
                       </label>
                       <input
                         id="splunk-token"
@@ -592,7 +591,7 @@ export default function NewMitreAssessmentPage() {
                         value={siemSecret}
                         onChange={(e) => setSiemSecret(e.target.value)}
                         autoComplete="off"
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="h-9 w-full rounded-lg border border-input bg-card px-2.5 text-[13px] outline-none transition-[border-color,background-color] duration-150 ease-app focus:border-primary focus:ring-[3px] focus:ring-accent"
                       />
                     </div>
                   </div>
@@ -600,16 +599,16 @@ export default function NewMitreAssessmentPage() {
                     This path doesn&apos;t take an environment workbook yet, so the whole
                     ATT&amp;CK matrix set is assessed — the score reads lower than reality.
                   </p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
 
-            <Card className={source !== 'upload' ? 'hidden' : undefined}>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Your files</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
+            <div className={cn('rounded-[10px] border border-border bg-card', source !== 'upload' && 'hidden')}>
+              <div className="border-b border-border px-4 py-3">
+                <h2 className="text-[15px] font-semibold">Your files</h2>
+              </div>
+              <div className="space-y-3.5 p-4">
+                <div className="grid gap-3.5 sm:grid-cols-2">
                   <DropZone
                     label="Detection rules export"
                     hint="xlsx, xls, csv, pdf or docx · up to 50MB"
@@ -653,17 +652,17 @@ export default function NewMitreAssessmentPage() {
                     your score reads lower than reality.
                   </span>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">About this assessment</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-[10px] border border-border bg-card">
+              <div className="border-b border-border px-4 py-3">
+                <h2 className="text-[15px] font-semibold">About this assessment</h2>
+              </div>
+              <div className="space-y-3.5 p-4">
+                <div className="grid gap-3 sm:grid-cols-3">
                   <div>
-                    <label htmlFor="mitre-name" className="mb-1.5 block text-sm font-medium">
+                    <label htmlFor="mitre-name" className="mb-1 block text-xs font-medium text-muted-foreground">
                       Assessment name
                     </label>
                     <input
@@ -672,18 +671,18 @@ export default function NewMitreAssessmentPage() {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="e.g. Q3 SOC coverage"
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="h-9 w-full rounded-lg border border-input bg-card px-2.5 text-[13px] outline-none transition-[border-color,background-color] duration-150 ease-app focus:border-primary focus:ring-[3px] focus:ring-accent"
                     />
                   </div>
                   <div>
-                    <label htmlFor="mitre-industry" className="mb-1.5 block text-sm font-medium">
+                    <label htmlFor="mitre-industry" className="mb-1 block text-xs font-medium text-muted-foreground">
                       Industry
                     </label>
                     <select
                       id="mitre-industry"
                       value={industry}
                       onChange={(e) => setIndustry(e.target.value)}
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="h-9 w-full rounded-lg border border-input bg-card px-2.5 text-[13px] outline-none transition-[border-color,background-color] duration-150 ease-app focus:border-primary focus:ring-[3px] focus:ring-accent"
                     >
                       <option value="">Select…</option>
                       {INDUSTRIES.map((i) => (
@@ -692,7 +691,7 @@ export default function NewMitreAssessmentPage() {
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="mitre-region" className="mb-1.5 block text-sm font-medium">
+                    <label htmlFor="mitre-region" className="mb-1 block text-xs font-medium text-muted-foreground">
                       Region
                     </label>
                     <input
@@ -702,7 +701,7 @@ export default function NewMitreAssessmentPage() {
                       value={region}
                       onChange={(e) => setRegion(e.target.value.slice(0, 200))}
                       placeholder="e.g. North America"
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="h-9 w-full rounded-lg border border-input bg-card px-2.5 text-[13px] outline-none transition-[border-color,background-color] duration-150 ease-app focus:border-primary focus:ring-[3px] focus:ring-accent"
                     />
                     <datalist id="mitre-region-suggestions">
                       {REGION_SUGGESTIONS.map((r) => (
@@ -716,12 +715,12 @@ export default function NewMitreAssessmentPage() {
                     runs. Manual for uploads; auto-derived from the SIEM
                     connection/workspace/host name for pulled assessments. */}
                 <div>
-                  <label htmlFor="mitre-customer" className="mb-1.5 block text-sm font-medium">
+                  <label htmlFor="mitre-customer" className="mb-1 block text-xs font-medium text-muted-foreground">
                     Customer / engagement{' '}
-                    <span className="font-normal text-muted-foreground">(optional)</span>
+                    <span className="font-normal">(optional)</span>
                   </label>
                   {source !== 'upload' ? (
-                    <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                    <p className="flex min-h-9 items-center rounded-lg border border-dashed border-line2 bg-muted/30 px-2.5 text-[13px] text-muted-foreground">
                       Auto-set from your SIEM connection so scheduled re-runs group correctly.
                     </p>
                   ) : (
@@ -732,10 +731,10 @@ export default function NewMitreAssessmentPage() {
                       value={customer}
                       onChange={(e) => setCustomer(e.target.value)}
                       placeholder="e.g. Acme Corp"
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="h-9 w-full rounded-lg border border-input bg-card px-2.5 text-[13px] outline-none transition-[border-color,background-color] duration-150 ease-app focus:border-primary focus:ring-[3px] focus:ring-accent"
                     />
                   )}
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1 text-[11.5px] text-muted-foreground">
                     Compares this run&apos;s trend only against the same customer&apos;s previous runs.
                   </p>
                 </div>
@@ -743,7 +742,7 @@ export default function NewMitreAssessmentPage() {
                 {/* Phase 14d: optional project metadata — shown on the
                     assessment header and report covers, so a forwarded
                     report identifies itself. */}
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-3">
                   {(
                     [
                       ['mitre-project', 'Organization / project', projectName, setProjectName, 'e.g. Contoso Bank SOC'],
@@ -752,9 +751,9 @@ export default function NewMitreAssessmentPage() {
                     ] as const
                   ).map(([id, label, value, setter, placeholder]) => (
                     <div key={id}>
-                      <label htmlFor={id} className="mb-1.5 block text-sm font-medium">
+                      <label htmlFor={id} className="mb-1 block text-xs font-medium text-muted-foreground">
                         {label}{' '}
-                        <span className="font-normal text-muted-foreground">(optional)</span>
+                        <span className="font-normal">(optional)</span>
                       </label>
                       <input
                         id={id}
@@ -763,15 +762,15 @@ export default function NewMitreAssessmentPage() {
                         value={value}
                         onChange={(e) => setter(e.target.value)}
                         placeholder={placeholder}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="h-9 w-full rounded-lg border border-input bg-card px-2.5 text-[13px] outline-none transition-[border-color,background-color] duration-150 ease-app focus:border-primary focus:ring-[3px] focus:ring-accent"
                       />
                     </div>
                   ))}
                 </div>
                 <div>
-                  <label htmlFor="mitre-purpose" className="mb-1.5 block text-sm font-medium">
+                  <label htmlFor="mitre-purpose" className="mb-1 block text-xs font-medium text-muted-foreground">
                     Purpose{' '}
-                    <span className="font-normal text-muted-foreground">(optional)</span>
+                    <span className="font-normal">(optional)</span>
                   </label>
                   <textarea
                     id="mitre-purpose"
@@ -780,17 +779,17 @@ export default function NewMitreAssessmentPage() {
                     value={purposeNote}
                     onChange={(e) => setPurposeNote(e.target.value)}
                     placeholder="e.g. Annual detection-coverage review for the audit committee"
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="w-full rounded-lg border border-input bg-card px-2.5 py-2 text-[13px] outline-none transition-[border-color,background-color] duration-150 ease-app focus:border-primary focus:ring-[3px] focus:ring-accent"
                   />
                 </div>
 
                 {actorCatalog.length > 0 && (
-                  <div>
-                    <div className="mb-1.5 block text-sm font-medium">
+                  <div className="border-t border-border pt-3.5">
+                    <div className="mb-1 text-[13px] font-semibold">
                       Threat actors of concern{' '}
                       <span className="font-normal text-muted-foreground">(optional)</span>
                     </div>
-                    <p className="mb-2 text-xs text-muted-foreground">
+                    <p className="mb-2.5 text-xs text-muted-foreground">
                       Pick any groups you track or worry about — gaps in techniques
                       they use will be prioritized in your roadmap. This never
                       changes your coverage score, only the ordering.
@@ -803,11 +802,12 @@ export default function NewMitreAssessmentPage() {
                           onClick={() => toggleActor(actor.name)}
                           title={actor.note ?? undefined}
                           aria-pressed={threatActors.includes(actor.name)}
-                          className={
+                          className={cn(
+                            'inline-flex h-[22px] items-center rounded-full border px-2 text-xs font-semibold transition-colors duration-150',
                             threatActors.includes(actor.name)
-                              ? 'rounded-full border border-primary bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary'
-                              : 'rounded-full border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground'
-                          }
+                              ? 'border-transparent bg-violet-soft text-violet'
+                              : 'border-input bg-card font-medium text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                          )}
                         >
                           {actor.name}
                           {actor.attack_id ? ` · ${actor.attack_id}` : ''}
@@ -817,12 +817,12 @@ export default function NewMitreAssessmentPage() {
                   </div>
                 )}
 
-                <label className="flex items-start gap-2 text-sm">
+                <label className="flex items-start gap-2 border-t border-border pt-3.5 text-[13px]">
                   <input
                     type="checkbox"
                     checked={countDisabled}
                     onChange={(e) => setCountDisabled(e.target.checked)}
-                    className="mt-0.5"
+                    className="mt-0.5 accent-primary"
                   />
                   <span>
                     Count disabled rules as coverage
@@ -833,9 +833,9 @@ export default function NewMitreAssessmentPage() {
                   </span>
                 </label>
 
-                <div>
-                  <div className="mb-1 text-sm font-medium">Scope exclusions</div>
-                  <p className="mb-2 text-xs text-muted-foreground">
+                <div className="border-t border-border pt-3.5">
+                  <div className="mb-1 text-[13px] font-semibold">Scope exclusions</div>
+                  <p className="mb-2.5 text-xs text-muted-foreground">
                     Tell us what NOT to assess and why — e.g. “mobile: BYOD fleet is
                     unmanaged”, “T1200: accepted risk, physical controls”. Excluded items
                     leave the score entirely, and the report lists them with your reason.
@@ -853,7 +853,7 @@ export default function NewMitreAssessmentPage() {
                             )
                           }
                           placeholder="T1200, mobile, or a platform (e.g. macOS)"
-                          className="w-2/5 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="h-9 w-2/5 rounded-lg border border-input bg-card px-2.5 text-[13px] outline-none transition-[border-color,background-color] duration-150 ease-app focus:border-primary focus:ring-[3px] focus:ring-accent"
                         />
                         <input
                           type="text"
@@ -865,13 +865,13 @@ export default function NewMitreAssessmentPage() {
                             )
                           }
                           placeholder="Why it's out of scope (required)"
-                          className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="h-9 flex-1 rounded-lg border border-input bg-card px-2.5 text-[13px] outline-none transition-[border-color,background-color] duration-150 ease-app focus:border-primary focus:ring-[3px] focus:ring-accent"
                         />
                         <button
                           type="button"
                           aria-label={`Remove exclusion ${i + 1}`}
                           onClick={() => setExclusions((prev) => prev.filter((_, j) => j !== i))}
-                          className="text-muted-foreground hover:text-destructive"
+                          className="text-muted-foreground hover:text-sev-crit"
                         >
                           <Trash2 size={15} />
                         </button>
@@ -888,124 +888,106 @@ export default function NewMitreAssessmentPage() {
                     Add exclusion
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-
-            {error && (
-              <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 p-3.5 text-sm text-destructive">
-                {error}
               </div>
-            )}
+            </div>
 
-            <Button type="submit" disabled={!useCaseFile || submitting} className="w-full">
+            {error && <AlertBanner kind="error">{error}</AlertBanner>}
+
+            <Button type="submit" disabled={!useCaseFile || submitting} className="h-10 w-full">
               {submitting ? 'Uploading & parsing…' : 'Upload & preview'}
             </Button>
           </form>
         )}
 
         {preview && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Parse preview — check before running</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
+          <div className="rounded-[10px] border border-border bg-card">
+            <div className="border-b border-border px-4 py-3">
+              <h2 className="text-[15px] font-semibold">Parse preview — check before running</h2>
+            </div>
+            <div className="space-y-3.5 p-4">
               {/* Phase 14b: each tile opens the matching uploaded rows. */}
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {(
                   [
                     {
                       value: preview.row_count,
                       label: `rule${preview.row_count === 1 ? '' : 's'} found`,
                       status: null,
-                      box: 'bg-muted/40',
-                      accent: '',
+                      tone: 'default',
                     },
                     {
                       value: preview.tagged,
                       label: 'already tagged',
                       status: 'customer_tagged',
-                      box: 'bg-emerald-50',
-                      accent: 'text-emerald-700',
+                      tone: 'ok',
                     },
                     {
                       value: preview.untagged,
                       label: 'for AI tagging',
                       status: 'unmapped',
-                      box: 'bg-amber-50',
-                      accent: 'text-amber-700',
+                      tone: 'med',
                     },
                     {
                       value: preview.invalid,
                       label: `invalid tag${preview.invalid === 1 ? '' : 's'}`,
                       status: 'invalid',
-                      box: 'bg-rose-50',
-                      accent: 'text-rose-700',
+                      tone: 'crit',
                     },
                   ] as const
                 ).map((tile) => (
-                  <button
+                  <KpiTile
                     key={tile.label}
-                    type="button"
-                    onClick={() =>
-                      openRuleTile(
-                        `${tile.value} ${tile.label}`,
-                        tile.status
-                      )
-                    }
-                    className={cn(
-                      'rounded-md p-2.5 text-center transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                      tile.box
-                    )}
-                    title="Click to see these rows"
-                  >
-                    <div className={cn('text-lg font-bold', tile.accent)}>{tile.value}</div>
-                    <div className="text-[11px] text-muted-foreground">{tile.label}</div>
-                  </button>
+                    label={tile.label}
+                    value={tile.value}
+                    tone={tile.tone}
+                    tip="Click to see these rows"
+                    onClick={() => openRuleTile(`${tile.value} ${tile.label}`, tile.status)}
+                  />
                 ))}
               </div>
 
               {preview.extraction_pending && (
-                <p className="rounded-md bg-amber-50 p-3 text-xs text-amber-800">
+                <AlertBanner kind="warn">
                   Your document isn&apos;t a spreadsheet, so rules will be AI-extracted from
                   its text when the assessment runs — lower fidelity than the XLSX template.
-                </p>
+                </AlertBanner>
               )}
 
               {Object.keys(preview.columns).length > 0 && (
                 <div>
-                  <div className="mb-1 flex items-center justify-between gap-2">
-                    <span className="text-xs font-semibold text-muted-foreground">
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">
                       Detected columns{preview.sheet ? ` (sheet “${preview.sheet}”)` : ''}
                     </span>
                     {preview.headers.length > 0 && !adjustOpen && (
-                      <Button type="button" variant="outline" size="sm" onClick={openAdjust}>
+                      <Button type="button" variant="outline" size="sm" onClick={openAdjust} title="Columns can only be adjusted before the assessment runs.">
                         <Columns3 size={13} className="mr-1" aria-hidden="true" /> Adjust columns
                       </Button>
                     )}
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {Object.entries(preview.columns).map(([field, idx]) => (
-                      <span key={field} className="rounded-full border bg-muted/40 px-2 py-0.5 text-[11px]">
+                      <Chip key={field} tone="neutral">
                         {columnLabels[field] ?? field}: column {Number(idx) + 1}
-                      </span>
+                      </Chip>
                     ))}
                   </div>
                 </div>
               )}
 
               {adjustOpen && preview.headers.length > 0 && (
-                <div className="space-y-3 rounded-md border bg-muted/20 p-3">
+                <div className="space-y-3 rounded-[10px] border border-border bg-muted/30 p-3.5">
                   <p className="text-xs text-muted-foreground">
                     Map each field to the right column of your file, then apply — we
                     re-read the uploaded file with your mapping. Only the name column is
                     required.
                   </p>
-                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
                     {Object.entries(columnLabels).map(([field, label]) => (
                       <div key={field}>
-                        <label htmlFor={`col-${field}`} className="mb-0.5 block text-[11px] font-medium">
+                        <label htmlFor={`col-${field}`} className="mb-1 block text-xs font-medium text-muted-foreground">
                           {label}
-                          {field === 'name' && <span className="text-destructive"> *</span>}
+                          {field === 'name' && <span className="text-sev-crit"> *</span>}
                         </label>
                         <select
                           id={`col-${field}`}
@@ -1013,7 +995,7 @@ export default function NewMitreAssessmentPage() {
                           onChange={(e) =>
                             setColMap((prev) => ({ ...prev, [field]: e.target.value }))
                           }
-                          className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="h-9 w-full rounded-lg border border-input bg-card px-2.5 text-[13px] outline-none transition-[border-color,background-color] duration-150 ease-app focus:border-primary focus:ring-[3px] focus:ring-accent"
                         >
                           <option value="">— not mapped —</option>
                           {preview.headers.map((h, i) => (
@@ -1026,12 +1008,12 @@ export default function NewMitreAssessmentPage() {
                     ))}
                   </div>
                   {preview.sample_rows.length > 0 && (
-                    <div className="overflow-x-auto rounded-md border bg-background">
+                    <div className="overflow-x-auto rounded-[10px] border border-border bg-card">
                       <table className="w-full text-[11px]">
                         <thead>
                           <tr>
                             {preview.headers.map((h, i) => (
-                              <th key={i} className="whitespace-nowrap border-b bg-muted/40 px-2 py-1 text-left font-medium">
+                              <th key={i} className="whitespace-nowrap border-b border-border bg-muted px-2 py-1 text-left font-medium uppercase tracking-[.05em] text-ink3">
                                 {h || `col ${i + 1}`}
                               </th>
                             ))}
@@ -1041,7 +1023,7 @@ export default function NewMitreAssessmentPage() {
                           {preview.sample_rows.map((row, ri) => (
                             <tr key={ri}>
                               {row.map((cell, ci) => (
-                                <td key={ci} className="max-w-56 truncate whitespace-nowrap border-b px-2 py-1 text-muted-foreground">
+                                <td key={ci} className="max-w-56 truncate whitespace-nowrap border-b border-border px-2 py-1 text-muted-foreground">
                                   {cell}
                                 </td>
                               ))}
@@ -1068,7 +1050,7 @@ export default function NewMitreAssessmentPage() {
               )}
 
               {preview.environment_provided ? (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[12.5px] text-muted-foreground">
                   Environment: {preview.environment.platforms.join(', ') || 'no platforms detected'}
                   {preview.environment.has_ics_assets && ' · OT/ICS assets'}
                   {preview.environment.has_managed_mobile && ' · managed mobile'}
@@ -1076,27 +1058,25 @@ export default function NewMitreAssessmentPage() {
                   {Object.values(preview.sheets_found).join(', ')}
                 </p>
               ) : (
-                <p className="text-xs text-amber-700">
+                <AlertBanner kind="warn">
                   No environment workbook — the full ATT&CK matrices will be assessed, so
                   the score is a lower bound.
-                </p>
+                </AlertBanner>
               )}
 
               {preview.warnings.length > 0 && (
-                <ul className="space-y-1">
+                <div className="space-y-1.5">
                   {preview.warnings.map((w, i) => (
-                    <li key={i} className="rounded-md bg-amber-50 px-3 py-1.5 text-xs text-amber-800">
+                    <AlertBanner key={i} kind="warn">
                       {w}
-                    </li>
+                    </AlertBanner>
                   ))}
-                </ul>
-              )}
-
-              {error && (
-                <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                  {error}
                 </div>
               )}
+
+              {error && <AlertBanner kind="error">{error}</AlertBanner>}
+
+              <hr className="border-border" />
 
               {assessmentsEnabled === false ? (
                 <div className="flex flex-col gap-2">
@@ -1113,7 +1093,7 @@ export default function NewMitreAssessmentPage() {
               ) : (
                 <div className="flex flex-col gap-1.5">
                   <div className="flex flex-col gap-2 sm:flex-row">
-                    <Button onClick={handleRun} disabled={running} className="flex-1">
+                    <Button onClick={handleRun} disabled={running} className="flex-1 max-[760px]:w-full">
                       <Play size={15} className="mr-1.5" aria-hidden="true" />
                       {running ? 'Starting…' : 'Run assessment'}
                     </Button>
@@ -1133,8 +1113,8 @@ export default function NewMitreAssessmentPage() {
                   Or keep it for later — it&apos;s saved in your assessment list.
                 </Link>
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         <RuleListPanel
