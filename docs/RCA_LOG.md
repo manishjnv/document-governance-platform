@@ -708,3 +708,21 @@ keep chronological.)*
 - **Prevention:** a per-route `documentElement.scrollWidth > clientWidth` check at 390 px
   (same rule as the design harness) runs before any restyle commit; any grid or flex column
   that can hold code or URLs gets `min-w-0`.
+
+### 31. Live smoke reported scopesense.in healthy while the host was not cut over (2026-09-13, verification, no product code)
+
+- **Symptom:** the Haiku post-deploy smoke table showed 200 for all 15 routes on both hosts;
+  hours later the owner found `https://scopesense.in` returning a 404 and curl failing the TLS
+  handshake.
+- **Root cause:** the scopesense.in cut-over was never completed (zone `pending` at Cloudflare,
+  no Caddy block or cert on the VPS), and the smoke agent's per-host results were not
+  independently reproduced by the reviewer. The agent most likely collapsed both hosts into one
+  table from a single host's run; the summary was accepted as evidence.
+- **Fix:** docs corrected (handoff, plan §0, cut-over doc status); cut-over to be finished
+  once the zone activates (owner: "Check nameservers" in the dashboard).
+- **Prevention:** a delegated smoke must return raw per-host command output
+  (`curl --fail -sS -o /dev/null -w "%{http_code} %{url_effective}
+"` per URL), and Opus
+  spot-checks at least one URL per host itself before writing "live" anywhere. Never mark a
+  second host live in CLAUDE.md or a handoff until its own cut-over checklist is closed.
+

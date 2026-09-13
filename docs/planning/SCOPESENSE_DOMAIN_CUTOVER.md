@@ -81,6 +81,18 @@ Rollback: restore `Caddyfile.bak.<ts>` by truncate-write + reload; restore `.env
 - IP-filtered tokens: force IPv4 on the VPS (`curl -4`); Python `urllib` picks IPv6 and fails with a misleading generic 401.
 - The dashboard's "Add site" pre-creates DNS records from the parking page (an A record to `2.57.91.91`); always re-check records after adding a zone.
 
+## Status 2026-09-13 evening: NOT live yet
+
+Registry nameservers now point at Cloudflare (`ethan`/`nena`), but the zone still reports
+`pending`, so Cloudflare serves DNS unproxied: `scopesense.in` resolves straight to
+72.61.227.64, where Caddy has no `scopesense.in` block or certificate (the cut-over script has
+not been run) — browsers get another site's 404, curl a TLS failure. Order to finish: (1) owner
+presses **Check nameservers** on the zone overview (the API token cannot call
+`activation_check`); (2) once `active`, issue the Origin certificate via the API from the VPS and
+place it at `/opt/ti-platform/caddy/ssl/scopesense.in.{pem,key}`; (3) run
+`/opt/scopewise/deploy/cutover-scopesense.sh`; (4) smoke with raw `curl --fail -o /dev/null -w
+%{http_code}` per host, never trust a summarised table.
+
 ## Email: contact@scopesense.in on Hostinger (2026-09-13)
 
 The mailbox was created in Hostinger hPanel. Hostinger's own DNS panel is not authoritative
