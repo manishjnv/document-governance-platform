@@ -1,74 +1,30 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Copy, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Chip, useResize, type ChipTone } from '@/components/app';
 import { cn } from '@/lib/utils';
-import { CodeReviewFinding, SEVERITY_META, VERDICT_META, Verdict } from '../../lib';
+import { CodeReviewFinding, SEVERITY_META, Severity, VERDICT_META, Verdict } from '../../lib';
 import { FIX_RE, RISK_RE } from './highlightWords';
 
 const CWE_RE = /^CWE-(\d+)$/i;
-const MIN_WIDTH = 380;
 const WIDTH_KEY = 'codereview-sheet-width';
 
-/* ---------- resizable width (copy of mitre/useSheetResize with a visible grip) ---------- */
-function useDrawerWidth() {
-  const [width, setWidth] = useState<number | null>(null);
-  useEffect(() => {
-    try {
-      const stored = Number(localStorage.getItem(WIDTH_KEY));
-      if (stored >= MIN_WIDTH) setWidth(stored);
-    } catch {
-      // ponytail: storage unavailable -> default width
-    }
-  }, []);
-  const apply = useCallback((next: number) => {
-    const clamped = Math.round(Math.min(Math.max(next, MIN_WIDTH), window.innerWidth * 0.95));
-    setWidth(clamped);
-    try {
-      localStorage.setItem(WIDTH_KEY, String(clamped));
-    } catch {
-      // ignore
-    }
-  }, []);
-  const onPointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      e.preventDefault();
-      const onMove = (ev: PointerEvent) => apply(window.innerWidth - ev.clientX);
-      const onUp = () => window.removeEventListener('pointermove', onMove);
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp, { once: true });
-    },
-    [apply]
-  );
-  const onKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-      e.preventDefault();
-      apply((width ?? 560) + (e.key === 'ArrowLeft' ? 40 : -40));
-    },
-    [width, apply]
-  );
-  const style = width ? { width: `min(${width}px, 100vw)`, maxWidth: `min(${width}px, 100vw)` } : undefined;
-  // ponytail: native title instead of a Tooltip — the sheet auto-focuses this handle on open, which would pop a Radix tooltip every time
-  const handle = (
-    <div
-      role="separator"
-      aria-orientation="vertical"
-      aria-label="Resize panel (drag, or use arrow keys)"
-      title="Drag to resize"
-      tabIndex={0}
-      onPointerDown={onPointerDown}
-      onKeyDown={onKeyDown}
-      className="group absolute left-0 top-0 z-10 flex h-full w-3 cursor-ew-resize touch-none items-center justify-center transition-colors hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:outline-none"
-    >
-      <span className="h-10 w-1 rounded-full bg-border transition-colors group-hover:bg-primary group-focus-visible:bg-primary" />
-    </div>
-  );
-  return { style, handle };
-}
+const SEV_TONE: Record<Severity, ChipTone> = {
+  critical: 'crit',
+  high: 'high',
+  medium: 'med',
+  low: 'low',
+  info: 'info',
+};
+
+const VERDICT_TONE: Record<Verdict, ChipTone> = {
+  TRUE_POSITIVE: 'ok',
+  FALSE_POSITIVE: 'neutral',
+};
 
 /* ---------- rich text: highlight keywords, code tokens, links; bullet long prose ---------- */
 const ABBREV_RE = /^(e\.g|i\.e|etc|vs|cf)$/i;
@@ -77,7 +33,7 @@ const CODE_RE =
 
 function Code({ children }: { children: string }) {
   return (
-    <code className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[12px] text-slate-800 ring-1 ring-inset ring-slate-200">
+    <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12px] text-foreground ring-1 ring-inset ring-border">
       {children}
     </code>
   );
@@ -90,7 +46,7 @@ function Highlight({ text, fixTone }: { text: string; fixTone?: boolean }) {
   let key = 0;
   const words = (chunk: string) => {
     const re = fixTone ? FIX_RE : RISK_RE;
-    const cls = fixTone ? 'font-semibold text-emerald-700' : 'font-semibold text-rose-700';
+    const cls = fixTone ? 'font-semibold text-ok' : 'font-semibold text-sev-crit';
     let l = 0;
     re.lastIndex = 0;
     let m: RegExpExecArray | null;
@@ -138,16 +94,16 @@ function RichText({ text, fixTone }: { text: string; fixTone?: boolean }) {
   );
   if (sentences.length <= 1) {
     return (
-      <p className="text-[13.5px] leading-relaxed text-slate-800">
+      <p className="text-[13.5px] leading-relaxed text-foreground">
         <Highlight text={text} fixTone={fixTone} />
       </p>
     );
   }
   return (
-    <ul className="space-y-1 text-[13.5px] leading-relaxed text-slate-800">
+    <ul className="space-y-1 text-[13.5px] leading-relaxed text-foreground">
       {sentences.map((s, i) => (
         <li key={i} className="flex gap-2">
-          <span className={cn('mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full', fixTone ? 'bg-emerald-500' : 'bg-slate-400')} aria-hidden="true" />
+          <span className={cn('mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full', fixTone ? 'bg-ok' : 'bg-ink3')} aria-hidden="true" />
           <span className="min-w-0">
             <Highlight text={s} fixTone={fixTone} />
           </span>
@@ -162,7 +118,7 @@ function Section({ label, tone, hint, children }: { label: string; tone: string;
     <section>
       <Tooltip delayDuration={200}>
         <TooltipTrigger asChild>
-          <h3 className="mb-1.5 flex w-fit cursor-default items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+          <h3 className="mb-1.5 flex w-fit cursor-default items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">
             <span className={cn('h-2 w-2 rounded-sm', tone)} aria-hidden="true" />
             {label}
           </h3>
@@ -178,9 +134,9 @@ function Fact({ label, tip, children, className }: { label: string; tip: string;
   return (
     <Tooltip delayDuration={150}>
       <TooltipTrigger asChild>
-        <div className={cn('min-w-0 cursor-default rounded-md border bg-muted/30 px-2.5 py-1.5 transition-colors hover:bg-muted/60', className)}>
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</div>
-          <div className="mt-0.5 text-xs text-slate-800">{children}</div>
+        <div className={cn('min-w-0 cursor-default rounded-md border border-border bg-muted/30 px-2.5 py-1.5 transition-colors hover:bg-muted/60', className)}>
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-ink3">{label}</div>
+          <div className="mt-0.5 text-xs text-foreground">{children}</div>
         </div>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs text-xs">{tip}</TooltipContent>
@@ -189,23 +145,18 @@ function Fact({ label, tip, children, className }: { label: string; tip: string;
 }
 
 function cvssTone(score: number) {
-  if (score >= 9) return 'text-rose-700';
-  if (score >= 7) return 'text-orange-600';
-  if (score >= 4) return 'text-amber-600';
-  return 'text-emerald-700';
+  if (score >= 9) return 'text-sev-crit';
+  if (score >= 7) return 'text-sev-high';
+  if (score >= 4) return 'text-sev-med';
+  return 'text-sev-low';
 }
 
 function SeverityChip({ severity }: { severity: CodeReviewFinding['severity'] }) {
   const meta = SEVERITY_META[severity] ?? SEVERITY_META.info;
   return (
-    <Tooltip delayDuration={150}>
-      <TooltipTrigger asChild>
-        <span className={cn('inline-flex cursor-default items-center rounded-full border px-1.5 py-0.5 text-[11px] font-medium', meta.chip)}>
-          {meta.label}
-        </span>
-      </TooltipTrigger>
-      <TooltipContent className="text-xs">{meta.label} severity (scanner-assigned)</TooltipContent>
-    </Tooltip>
+    <Chip tone={SEV_TONE[severity] ?? 'info'} dot tip={`${meta.label} severity (scanner-assigned)`}>
+      {meta.label}
+    </Chip>
   );
 }
 
@@ -223,7 +174,10 @@ export function FindingDrawer({
   selectedIdx: number | null;
   onSelect: (idx: number | null) => void;
 }) {
-  const resize = useDrawerWidth();
+  const resize = useResize({ storageKey: WIDTH_KEY, min: 360, edge: 'left', fallback: 576 });
+  const resizeStyle = resize.width
+    ? { width: `min(${resize.width}px, 100vw)`, maxWidth: `min(${resize.width}px, 100vw)` }
+    : undefined;
   const [copied, setCopied] = useState(false);
 
   // Deep link: open ?finding=N once on mount.
@@ -260,19 +214,36 @@ export function FindingDrawer({
 
   return (
     <Sheet open={selected !== null} onOpenChange={(open) => !open && onSelect(null)}>
-      <SheetContent side="right" style={resize.style} className="flex w-full flex-col overflow-y-auto p-5 pl-6 sm:max-w-xl">
-        {resize.handle}
+      <SheetContent
+        side="right"
+        style={resizeStyle}
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-xl"
+        grip={
+          <div
+            {...resize.gripProps}
+            aria-label="Resize panel (drag, or use arrow keys)"
+            title="Drag to resize"
+            className="absolute left-0 top-0 z-10 flex h-full w-3 cursor-ew-resize touch-none items-center justify-center focus-visible:outline-none group"
+          >
+            <i className="block h-10 w-1 rounded-full bg-line2 transition-colors duration-150 ease-app group-hover:bg-primary group-focus-visible:bg-primary" />
+          </div>
+        }
+      >
         {selected && (
           <>
-            <SheetTitle className="flex flex-wrap items-center gap-2 text-base leading-snug text-slate-900">
-              <span className="font-mono text-sm text-slate-500">#{selected.idx}</span>
-              <SeverityChip severity={selected.severity} />
-              {selected.title}
-            </SheetTitle>
-            <p className="mt-1 text-xs text-slate-600">{selected.vuln_class_label}</p>
+            <div className="border-b border-border px-6 pb-3 pt-4">
+              <SheetTitle className="flex flex-wrap items-center gap-2 text-base font-semibold leading-snug text-foreground">
+                <SeverityChip severity={selected.severity} />
+                {selected.title}
+              </SheetTitle>
+              <p className="mt-1 font-mono text-xs text-muted-foreground">
+                #{selected.idx} · {selected.vuln_class_label}
+              </p>
+            </div>
 
+            <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
             {/* Quick facts */}
-            <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
               <Fact label="CWE" tip="Common Weakness Enumeration entry — opens the MITRE definition.">
                 {selected.cwe ? (
                   cweMatch ? (
@@ -311,9 +282,9 @@ export function FindingDrawer({
               </Fact>
               <Fact label="Verdict" tip={selected.verdict ? `${VERDICT_META[selected.verdict as Verdict].tooltip}${selected.verdict_confidence != null ? ` (${selected.verdict_confidence}/10)` : ''}` : 'Not reviewed by the verifier'}>
                 {selected.verdict ? (
-                  <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[11px] font-medium', VERDICT_META[selected.verdict as Verdict].chip)}>
+                  <Chip tone={VERDICT_TONE[selected.verdict as Verdict]}>
                     {VERDICT_META[selected.verdict as Verdict].label}
-                  </span>
+                  </Chip>
                 ) : (
                   '—'
                 )}
@@ -321,53 +292,53 @@ export function FindingDrawer({
               <Fact label="File" tip={`${selected.file} lines ${selected.line_start}–${selected.line_end}`} className="col-span-2">
                 <span className="block truncate font-mono text-[12px]">
                   {selected.file}
-                  <span className="text-slate-500">:{selected.line_start}-{selected.line_end}</span>
+                  <span className="text-muted-foreground">:{selected.line_start}-{selected.line_end}</span>
                 </span>
               </Fact>
               {(selected.source_ref || selected.sink_ref) && (
                 <Fact label="Source → Sink" tip="Where attacker-controlled data enters (source) and where it does damage (sink)." className="col-span-2 sm:col-span-3">
                   <span className="flex flex-wrap items-center gap-1 font-mono text-[12px]">
-                    <span className="text-sky-700">{selected.source_ref ?? '?'}</span>
-                    <span className="text-slate-400">→</span>
-                    <span className="text-rose-700">{selected.sink_ref ?? '?'}</span>
+                    <span className="text-sev-info">{selected.source_ref ?? '?'}</span>
+                    <span className="text-muted-foreground">→</span>
+                    <span className="text-sev-crit">{selected.sink_ref ?? '?'}</span>
                   </span>
                 </Fact>
               )}
             </div>
 
             {selected.verdict_reason && (
-              <div className="mt-2 rounded-md border-l-2 border-emerald-400 bg-emerald-50/60 px-3 py-2">
+              <div className="rounded-md border-l-2 border-ok bg-ok-soft/60 px-3 py-2">
                 <RichText text={selected.verdict_reason} />
               </div>
             )}
 
-            <div className="mt-4 flex-1 space-y-4">
+            <div className="space-y-4">
               {selected.description && (
-                <Section label="What is wrong" tone="bg-rose-500" hint="The weakness the scanner found, in plain words.">
+                <Section label="What is wrong" tone="bg-sev-crit" hint="The weakness the scanner found, in plain words.">
                   <RichText text={selected.description} />
                 </Section>
               )}
               {selected.impact && (
-                <Section label="Why it matters" tone="bg-orange-500" hint="What an attacker gains if this is real.">
+                <Section label="Why it matters" tone="bg-sev-high" hint="What an attacker gains if this is real.">
                   <RichText text={selected.impact} />
                 </Section>
               )}
               {selected.recommendation && (
-                <Section label="How to fix" tone="bg-emerald-500" hint="Suggested remediation — verify before applying.">
+                <Section label="How to fix" tone="bg-ok" hint="Suggested remediation — verify before applying.">
                   <RichText text={selected.recommendation} fixTone />
                 </Section>
               )}
               {selected.exploit_scenario && (
-                <Section label="How it is exploited" tone="bg-amber-500" hint="A concrete attack path the scanner reasoned about.">
+                <Section label="How it is exploited" tone="bg-sev-med" hint="A concrete attack path the scanner reasoned about.">
                   <RichText text={selected.exploit_scenario} />
                 </Section>
               )}
               {selected.preconditions.length > 0 && (
-                <Section label="Preconditions" tone="bg-slate-400" hint="What must already be true for the attack to work.">
-                  <ul className="space-y-1 text-[13.5px] leading-relaxed text-slate-800">
+                <Section label="Preconditions" tone="bg-ink3" hint="What must already be true for the attack to work.">
+                  <ul className="space-y-1 text-[13.5px] leading-relaxed text-foreground">
                     {selected.preconditions.map((p, i) => (
                       <li key={i} className="flex gap-2">
-                        <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" aria-hidden="true" />
+                        <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-ink3" aria-hidden="true" />
                         <span className="min-w-0"><Highlight text={p} /></span>
                       </li>
                     ))}
@@ -375,11 +346,11 @@ export function FindingDrawer({
                 </Section>
               )}
               {selected.code_snippet && (
-                <Section label="Code" tone="bg-slate-700" hint={`${selected.file}, starting at line ${selected.line_start}`}>
-                  <pre className="overflow-x-auto rounded-md border bg-slate-50 p-2.5 font-mono text-xs leading-5 text-slate-800">
+                <Section label="Code" tone="bg-foreground" hint={`${selected.file}, starting at line ${selected.line_start}`}>
+                  <pre className="overflow-auto rounded-lg border border-border bg-muted/50 p-3 font-mono text-xs leading-[1.55]">
                     {selected.code_snippet.split('\n').map((line, i) => (
                       <div key={i} className="whitespace-pre">
-                        <span className="mr-3 inline-block w-8 select-none text-right text-slate-400">{selected.line_start + i}</span>
+                        <span className="mr-3 inline-block w-8 select-none text-right text-muted-foreground">{selected.line_start + i}</span>
                         {line}
                       </div>
                     ))}
@@ -387,18 +358,18 @@ export function FindingDrawer({
                 </Section>
               )}
               {selected.exploitability_notes && (
-                <Section label="Exploitability" tone="bg-amber-300" hint="How easy the scanner thinks this is to exploit in practice.">
+                <Section label="Exploitability" tone="bg-sev-med" hint="How easy the scanner thinks this is to exploit in practice.">
                   <RichText text={selected.exploitability_notes} />
                 </Section>
               )}
               {selected.verifier_reasoning && (
-                <Section label="Verifier reasoning" tone="bg-emerald-300" hint="The second-pass model's reasoning for its verdict.">
+                <Section label="Verifier reasoning" tone="bg-ok" hint="The second-pass model's reasoning for its verdict.">
                   <RichText text={selected.verifier_reasoning} />
                 </Section>
               )}
               {selected.duplicates.length > 0 && (
-                <Section label="Also at" tone="bg-slate-300" hint="Other locations with the same pattern.">
-                  <ul className="space-y-0.5 font-mono text-xs text-slate-700">
+                <Section label="Also at" tone="bg-line2" hint="Other locations with the same pattern.">
+                  <ul className="space-y-0.5 font-mono text-xs text-muted-foreground">
                     {selected.duplicates.map((d, i) => (
                       <li key={i}>
                         {d.file}:{d.line_start}-{d.line_end}
@@ -408,8 +379,9 @@ export function FindingDrawer({
                 </Section>
               )}
             </div>
+            </div>
 
-            <div className="sticky bottom-0 -mx-5 mt-4 flex items-center justify-between gap-2 border-t bg-background px-5 py-3">
+            <div className="flex items-center justify-between gap-2 border-t border-border bg-card px-5 py-2.5">
               <Tooltip delayDuration={200}>
                 <TooltipTrigger asChild>
                   <Button size="sm" variant="outline" disabled={position <= 0} onClick={() => goTo(-1)}>
@@ -419,7 +391,7 @@ export function FindingDrawer({
                 </TooltipTrigger>
                 <TooltipContent className="text-xs">Previous finding in the current list</TooltipContent>
               </Tooltip>
-              <span className="text-xs text-slate-600">
+              <span className="text-xs text-muted-foreground">
                 {position + 1} of {list.length}
               </span>
               <div className="flex items-center gap-2">

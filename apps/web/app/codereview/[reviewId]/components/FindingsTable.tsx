@@ -4,13 +4,27 @@ import { useMemo } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown, Search as SearchIcon } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Chip, type ChipTone } from '@/components/app';
 import { cn } from '@/lib/utils';
-import { CodeReviewFinding, SEVERITY_META, VERDICT_META, Verdict } from '../../lib';
+import { CodeReviewFinding, SEVERITY_META, Severity, VERDICT_META, Verdict } from '../../lib';
 
 export type SortKey = 'idx' | 'severity' | 'title' | 'vuln_class' | 'cwe' | 'cvss_score' | 'confidence' | 'file';
 export type SortDir = 'asc' | 'desc';
 
 const CWE_RE = /^CWE-(\d+)$/i;
+
+const SEV_TONE: Record<Severity, ChipTone> = {
+  critical: 'crit',
+  high: 'high',
+  medium: 'med',
+  low: 'low',
+  info: 'info',
+};
+
+const VERDICT_TONE: Record<Verdict, ChipTone> = {
+  TRUE_POSITIVE: 'ok',
+  FALSE_POSITIVE: 'neutral',
+};
 
 /** Focus the next/previous data row relative to the row that was
  * keyboard-navigated from, wrapping at the table body boundary is not
@@ -25,10 +39,9 @@ function moveRowFocus(row: HTMLElement, dir: 1 | -1) {
 function SeverityCell({ severity }: { severity: CodeReviewFinding['severity'] }) {
   const meta = SEVERITY_META[severity] ?? SEVERITY_META.info;
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', meta.dot)} aria-hidden="true" />
+    <Chip tone={SEV_TONE[severity] ?? 'info'} dot xs>
       {meta.label}
-    </span>
+    </Chip>
   );
 }
 
@@ -41,7 +54,7 @@ function CweCell({ cwe }: { cwe: string | null }) {
       href={`https://cwe.mitre.org/data/definitions/${match[1]}.html`}
       target="_blank"
       rel="noreferrer"
-      className="text-primary hover:underline"
+      className="font-mono text-xs text-primary hover:underline"
     >
       {cwe}
     </a>
@@ -69,8 +82,10 @@ function VerdictCell({ verdict }: { verdict: CodeReviewFinding['verdict'] }) {
   return (
     <Tooltip delayDuration={150}>
       <TooltipTrigger asChild>
-        <span className={cn('inline-flex cursor-default items-center whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[11px] font-medium', meta.chip)}>
-          {meta.label}
+        <span>
+          <Chip tone={VERDICT_TONE[verdict as Verdict]} xs>
+            {meta.label}
+          </Chip>
         </span>
       </TooltipTrigger>
       <TooltipContent className="text-xs">{meta.tooltip}</TooltipContent>
@@ -116,8 +131,8 @@ export function FindingsTable({
     return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
   }, [allFindings]);
 
-  const SortHeader = ({ label, sk }: { label: string; sk: SortKey }) => (
-    <TableHead className="sticky top-0 z-10 h-auto whitespace-nowrap bg-background px-2.5 py-2">
+  const SortHeader = ({ label, sk, right }: { label: string; sk: SortKey; right?: boolean }) => (
+    <TableHead className={cn('h-auto whitespace-nowrap px-2.5 py-2', right && 'r')}>
       <button
         type="button"
         onClick={() => onSort(sk)}
@@ -144,14 +159,14 @@ export function FindingsTable({
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search title, file, or CWE…"
             aria-label="Search findings by title, file, or CWE"
-            className="h-8 w-full rounded-md border border-input bg-background pl-7 pr-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-8 w-full rounded-md border border-input bg-card pl-7 pr-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
         <select
           value={klass ?? ''}
           onChange={(e) => onKlassChange(e.target.value || null)}
           aria-label="Filter by vulnerability class"
-          className="h-8 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-8 rounded-md border border-input bg-card px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <option value="">All classes</option>
           {classOptions.map(([id, label]) => (
@@ -164,7 +179,7 @@ export function FindingsTable({
           value={verdict ?? ''}
           onChange={(e) => onVerdictChange((e.target.value || null) as Verdict | 'none' | null)}
           aria-label="Filter by verdict"
-          className="h-8 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-8 rounded-md border border-input bg-card px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <option value="">All verdicts</option>
           <option value="TRUE_POSITIVE">Confirmed</option>
@@ -173,8 +188,8 @@ export function FindingsTable({
         </select>
       </div>
 
-      <div className="hidden overflow-x-auto rounded-md border sm:block">
-        <Table>
+      <div className="overflow-hidden rounded-[10px] border border-border bg-card">
+        <Table className="tbl cards">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <SortHeader label="#" sk="idx" />
@@ -182,10 +197,10 @@ export function FindingsTable({
               <SortHeader label="Title" sk="title" />
               <SortHeader label="Class" sk="vuln_class" />
               <SortHeader label="CWE" sk="cwe" />
-              <SortHeader label="CVSS" sk="cvss_score" />
+              <SortHeader label="CVSS" sk="cvss_score" right />
               <SortHeader label="Confidence" sk="confidence" />
               <SortHeader label="File:lines" sk="file" />
-              <TableHead className="sticky top-0 z-10 h-auto whitespace-nowrap bg-background px-2.5 py-2">Verdict</TableHead>
+              <TableHead className="h-auto whitespace-nowrap px-2.5 py-2">Verdict</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -210,29 +225,35 @@ export function FindingsTable({
                   }
                 }}
                 className={cn(
-                  'cursor-pointer transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  'clickable transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   i % 2 === 1 && 'bg-muted/30'
                 )}
               >
-                <TableCell className="px-2.5 py-1.5 text-muted-foreground">{f.idx}</TableCell>
-                <TableCell className="px-2.5 py-1.5">
+                <TableCell className="px-2.5 py-1.5 font-mono text-xs text-muted-foreground" data-th="#">
+                  {f.idx}
+                </TableCell>
+                <TableCell className="px-2.5 py-1.5" data-th="Severity">
                   <SeverityCell severity={f.severity} />
                 </TableCell>
-                <TableCell className="max-w-xs px-2.5 py-1.5 font-medium">
+                <TableCell className="max-w-xs px-2.5 py-1.5 font-medium" data-th="Title">
                   <span className="line-clamp-2">{f.title}</span>
                 </TableCell>
-                <TableCell className="px-2.5 py-1.5 text-slate-700">{f.vuln_class_label}</TableCell>
-                <TableCell className="px-2.5 py-1.5">
+                <TableCell className="px-2.5 py-1.5 text-muted-foreground" data-th="Class">
+                  {f.vuln_class_label}
+                </TableCell>
+                <TableCell className="px-2.5 py-1.5" data-th="CWE">
                   <CweCell cwe={f.cwe} />
                 </TableCell>
-                <TableCell className="px-2.5 py-1.5 text-right font-mono text-xs">{f.cvss_score ?? '—'}</TableCell>
-                <TableCell className="px-2.5 py-1.5">
+                <TableCell className="r px-2.5 py-1.5 font-mono text-xs tabular-nums" data-th="CVSS">
+                  {f.cvss_score ?? '—'}
+                </TableCell>
+                <TableCell className="px-2.5 py-1.5" data-th="Confidence">
                   <ConfidenceCell confidence={f.confidence} votes={f.votes} />
                 </TableCell>
-                <TableCell className="max-w-xs px-2.5 py-1.5">
+                <TableCell className="max-w-xs px-2.5 py-1.5" data-th="File:lines">
                   <Tooltip delayDuration={150}>
                     <TooltipTrigger asChild>
-                      <span className="block truncate font-mono text-xs text-slate-700">
+                      <span className="block truncate font-mono text-xs text-muted-foreground">
                         {f.file}:{f.line_start}-{f.line_end}
                       </span>
                     </TooltipTrigger>
@@ -241,7 +262,7 @@ export function FindingsTable({
                     </TooltipContent>
                   </Tooltip>
                 </TableCell>
-                <TableCell className="px-2.5 py-1.5">
+                <TableCell className="px-2.5 py-1.5" data-th="Verdict">
                   <VerdictCell verdict={f.verdict} />
                 </TableCell>
               </TableRow>
@@ -255,36 +276,6 @@ export function FindingsTable({
             )}
           </TableBody>
         </Table>
-      </div>
-
-      {/* Mobile card rows */}
-      <div data-row-list className="space-y-1.5 sm:hidden">
-        {rows.map((f) => (
-          <div
-            key={f.idx}
-            data-row
-            tabIndex={0}
-            role="button"
-            aria-label={`Open finding ${f.idx}: ${f.title}`}
-            onClick={() => onOpenFinding(f.idx)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onOpenFinding(f.idx);
-              }
-            }}
-            className="cursor-pointer rounded-md border p-3 transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="line-clamp-2 text-sm font-medium">{f.title}</span>
-              <SeverityCell severity={f.severity} />
-            </div>
-            <div className="mt-1 truncate font-mono text-xs text-slate-700">
-              {f.file}:{f.line_start}-{f.line_end}
-            </div>
-          </div>
-        ))}
-        {rows.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">No findings match your search or filter.</p>}
       </div>
 
       <p className="text-xs text-muted-foreground">

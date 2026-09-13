@@ -2,12 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Bug,
   Check,
-  ChevronDown,
   Copy,
   Download,
   MoreHorizontal,
@@ -23,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AlertBanner, Chip, PageHeader, Skeleton, SkeletonRows } from '@/components/app';
 import { cn } from '@/lib/utils';
 import {
   CodeReviewDetail,
@@ -206,9 +205,7 @@ export default function CodeReviewResultsPage() {
   if (error) {
     return (
       <AppShell>
-        <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-          {error}
-        </div>
+        <AlertBanner kind="error">{error}</AlertBanner>
       </AppShell>
     );
   }
@@ -216,17 +213,13 @@ export default function CodeReviewResultsPage() {
   if (!review) {
     return (
       <AppShell>
-        <div className="animate-pulse space-y-4">
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-16 rounded-md border bg-muted/40" />
+              <Skeleton key={i} className="h-16" />
             ))}
           </div>
-          <div className="space-y-1.5">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-8 rounded-md border bg-muted/30" />
-            ))}
-          </div>
+          <SkeletonRows rows={6} />
         </div>
       </AppShell>
     );
@@ -237,97 +230,88 @@ export default function CodeReviewResultsPage() {
   return (
     <AppShell>
       <TooltipProvider>
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div className="min-w-0">
-              <Link href="/codereview" className="text-xs text-muted-foreground hover:text-foreground hover:underline">
-                ← Reviews
-              </Link>
-              {renaming ? (
-                <div className="mt-0.5 flex items-center gap-1">
-                  <input
-                    autoFocus
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') saveRename();
-                      if (e.key === 'Escape') setRenaming(false);
-                    }}
-                    aria-label="New review name"
-                    className="h-8 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  />
-                  <button
-                    type="button"
-                    aria-label="Save name"
-                    disabled={!renameValue.trim()}
-                    onClick={saveRename}
-                    className="rounded p-1 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
-                  >
-                    <Check size={14} aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Cancel rename"
-                    onClick={() => setRenaming(false)}
-                    className="rounded p-1 text-muted-foreground hover:bg-muted"
-                  >
-                    <X size={14} aria-hidden="true" />
-                  </button>
-                </div>
-              ) : (
-                <h1 className="flex items-center gap-2 text-lg font-semibold">
+        <PageHeader
+          back={{ href: '/codereview', label: 'Reviews' }}
+          title={
+            renaming ? (
+              <div className="flex items-center gap-1">
+                <input
+                  autoFocus
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveRename();
+                    if (e.key === 'Escape') setRenaming(false);
+                  }}
+                  aria-label="New review name"
+                  className="h-9 w-72 rounded-lg border border-input bg-card px-2.5 text-base outline-none focus:border-primary focus:ring-[3px] focus:ring-accent"
+                />
+                <button
+                  type="button"
+                  aria-label="Save name"
+                  disabled={!renameValue.trim()}
+                  onClick={saveRename}
+                  className="rounded-md p-1 text-ok hover:bg-ok-soft disabled:opacity-50"
+                >
+                  <Check size={14} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Cancel rename"
+                  onClick={() => setRenaming(false)}
+                  className="rounded-md p-1 text-muted-foreground hover:bg-muted"
+                >
+                  <X size={14} aria-hidden="true" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <span className="flex flex-wrap items-center gap-2">
                   <Bug size={18} strokeWidth={2} className="text-primary" aria-hidden="true" />
                   {review.name}
                   {review.demo && (
-                    <Tooltip delayDuration={150}>
-                      <TooltipTrigger asChild>
-                        <span className="rounded-full border border-sky-200 bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-800">Demo</span>
-                      </TooltipTrigger>
-                      <TooltipContent className="text-xs">Shared sample review — read-only for everyone</TooltipContent>
-                    </Tooltip>
+                    <Chip tone="demo" xs tip="Shared sample review — read-only for everyone">
+                      Demo
+                    </Chip>
                   )}
                   {review.editable !== false && (
-                  <button
-                    type="button"
-                    aria-label={`Rename ${review.name}`}
-                    onClick={() => {
-                      setRenaming(true);
-                      setRenameValue(review.name);
-                    }}
-                    className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <Pencil size={13} aria-hidden="true" />
-                  </button>
+                    <button
+                      type="button"
+                      aria-label={`Rename ${review.name}`}
+                      onClick={() => {
+                        setRenaming(true);
+                        setRenameValue(review.name);
+                      }}
+                      className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <Pencil size={13} aria-hidden="true" />
+                    </button>
                   )}
-                </h1>
+                </span>
+                {renameError && <p className="mt-1 text-xs text-destructive">{renameError}</p>}
+              </>
+            )
+          }
+          meta={
+            <span className="flex flex-wrap items-center gap-1.5">
+              <Chip tone="neutral" xs tip="Original scan output format">
+                {SOURCE_FORMAT_LABEL[report.source_format]}
+              </Chip>
+              {review.git_sha && (
+                <Chip tone="neutral" xs className="font-mono" tip={review.git_sha}>
+                  {shortSha(review.git_sha)}
+                </Chip>
               )}
-              {renameError && <p className="mt-1 text-xs text-destructive">{renameError}</p>}
-              <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                <Tooltip delayDuration={150}>
-                  <TooltipTrigger asChild>
-                    <span className="rounded-full border bg-muted/40 px-1.5 py-0.5 font-medium">
-                      {SOURCE_FORMAT_LABEL[report.source_format]}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent className="text-xs">Original scan output format</TooltipContent>
-                </Tooltip>
-                {review.git_sha && (
-                  <Tooltip delayDuration={150}>
-                    <TooltipTrigger asChild>
-                      <span className="rounded-full border bg-muted/40 px-1.5 py-0.5 font-mono">{shortSha(review.git_sha)}</span>
-                    </TooltipTrigger>
-                    <TooltipContent className="text-xs font-mono">{review.git_sha}</TooltipContent>
-                  </Tooltip>
-                )}
-                <Tooltip delayDuration={150}>
-                  <TooltipTrigger asChild>
-                    <span>{fmtDate(review.created_at)}</span>
-                  </TooltipTrigger>
-                  <TooltipContent className="text-xs">When this review was imported</TooltipContent>
-                </Tooltip>
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5">
+              <Tooltip delayDuration={150}>
+                <TooltipTrigger asChild>
+                  <span>{fmtDate(review.created_at)}</span>
+                </TooltipTrigger>
+                <TooltipContent className="text-xs">When this review was imported</TooltipContent>
+              </Tooltip>
+            </span>
+          }
+          actions={
+            <>
               <Button size="sm" variant="outline" onClick={() => download('xlsx')} aria-label="Download XLSX register">
                 <Download size={14} className="mr-1.5" aria-hidden="true" />
                 XLSX
@@ -349,26 +333,23 @@ export default function CodeReviewResultsPage() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
-          </div>
+            </>
+          }
+        />
 
-          {downloadError && (
-            <p role="alert" className="text-xs text-destructive">
-              {downloadError}
-            </p>
-          )}
+        {downloadError && (
+          <p role="alert" className="mb-3 text-xs text-destructive">
+            {downloadError}
+          </p>
+        )}
 
-          {report.degraded && !degradedDismissed && (
-            <div role="alert" className="flex items-start justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-              <span>
-                <span className="font-medium">Scan degraded.</span> {report.degraded_reason}
-              </span>
-              <button type="button" aria-label="Dismiss" onClick={dismissDegraded} className="shrink-0 rounded p-0.5 hover:bg-amber-100">
-                <X size={14} aria-hidden="true" />
-              </button>
-            </div>
-          )}
+        {report.degraded && !degradedDismissed && (
+          <AlertBanner kind="warn" onDismiss={dismissDegraded} className="mb-3">
+            <span className="font-medium">Scan degraded.</span> {report.degraded_reason}
+          </AlertBanner>
+        )}
 
+        <div className="space-y-4">
           <ReviewBand report={report} onSelectSeverity={(s) => setSeverityFilter(s)} />
 
           <SeverityStrip
@@ -378,7 +359,7 @@ export default function CodeReviewResultsPage() {
             onChange={setSeverityFilter}
           />
 
-          <div role="tablist" className="flex items-center gap-1 border-b">
+          <div role="tablist" className="flex gap-5 border-b border-border">
             {([
               ['findings', 'Findings'],
               ['chains', `Exploit chains (${report.chains.length})`],
@@ -391,8 +372,8 @@ export default function CodeReviewResultsPage() {
                 aria-selected={tab === id}
                 onClick={() => setTab(id)}
                 className={cn(
-                  'px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                  tab === id ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground hover:text-foreground'
+                  '-mb-px border-b-2 border-transparent px-0.5 pb-2.5 text-[13px] font-medium text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  tab === id ? 'border-primary font-semibold text-foreground' : 'hover:text-foreground'
                 )}
               >
                 {label}

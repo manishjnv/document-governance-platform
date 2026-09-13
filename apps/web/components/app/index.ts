@@ -6,3 +6,4 @@ export { Skeleton, SkeletonRows } from './Skeleton';
 export { AlertBanner, type AlertBannerProps, type AlertKind } from './AlertBanner';
 export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
 export { useResize } from './useResize';
+export { SeverityBar, type SeverityBarProps } from './SeverityBar';

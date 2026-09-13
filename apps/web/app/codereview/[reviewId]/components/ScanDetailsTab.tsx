@@ -4,14 +4,23 @@ import { CodeReviewReport } from '../../lib';
 
 function Dl({ rows }: { rows: [string, React.ReactNode][] }) {
   return (
-    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[13px]">
       {rows.map(([k, v], i) => (
         <div className="contents" key={i}>
-          <dt className="text-muted-foreground">{k}</dt>
-          <dd>{v}</dd>
+          <dt className="text-ink3">{k}</dt>
+          <dd className="text-right font-medium text-foreground">{v}</dd>
         </div>
       ))}
     </dl>
+  );
+}
+
+function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-[10px] border border-border bg-card p-4">
+      <h3 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">{title}</h3>
+      {children}
+    </div>
   );
 }
 
@@ -46,22 +55,17 @@ export function ScanDetailsTab({ report }: { report: CodeReviewReport }) {
     : [];
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Scan metrics</h3>
-          <Dl rows={metricRows} />
-        </div>
-        <div>
-          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Run manifest</h3>
-          {manifest ? <Dl rows={manifestRows} /> : <p className="text-sm text-muted-foreground">not uploaded</p>}
-        </div>
-      </div>
+    <div className="grid gap-3 sm:grid-cols-2">
+      <SectionCard title="Scan metrics">
+        <Dl rows={metricRows} />
+      </SectionCard>
+      <SectionCard title="Run manifest">
+        {manifest ? <Dl rows={manifestRows} /> : <p className="text-sm text-muted-foreground">not uploaded</p>}
+      </SectionCard>
 
-      <div>
-        <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Ingest notes</h3>
+      <SectionCard title="Ingest notes">
         {report.assumptions.length > 0 ? (
-          <ul className="list-disc space-y-0.5 pl-4 text-sm">
+          <ul className="list-disc space-y-1 pl-4 text-[13px] text-foreground">
             {report.assumptions.map((a, i) => (
               <li key={i}>{a}</li>
             ))}
@@ -69,12 +73,12 @@ export function ScanDetailsTab({ report }: { report: CodeReviewReport }) {
         ) : (
           <p className="text-sm text-muted-foreground">none</p>
         )}
-      </div>
+      </SectionCard>
 
       {report.summary_text && (
-        <div>
-          <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Scanner summary</h3>
-          <p className="whitespace-pre-wrap text-sm text-muted-foreground">{report.summary_text}</p>
+        <div className="rounded-[10px] border border-border bg-card p-4 sm:col-span-2">
+          <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">Scanner summary</h3>
+          <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-muted-foreground">{report.summary_text}</p>
         </div>
       )}
     </div>
