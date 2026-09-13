@@ -8,11 +8,10 @@
 import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowLeft, UploadCloud } from 'lucide-react';
+import { UploadCloud } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { PageHeader, Chip, AlertBanner } from '@/components/app';
 import { cn } from '@/lib/utils';
 
 export default function UploadPage() {
@@ -193,151 +192,131 @@ export default function UploadPage() {
 
   return (
     <AppShell>
-      <div className="max-w-2xl mx-auto">
-        <Link
-          href="/dashboard"
-          className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft size={14} strokeWidth={2} aria-hidden="true" />
-          Back to SOW Review
-        </Link>
-        <Card>
-          <CardHeader>
-            <CardTitle>{versionOfDocId ? 'Upload New Version' : 'Upload Document'}</CardTitle>
-            <CardDescription>
+      <div className="mx-auto max-w-2xl">
+        <PageHeader
+          title={versionOfDocId ? 'Upload New Version' : 'Upload Document'}
+          back={{ href: '/dashboard', label: 'Back to SOW Review' }}
+        />
+        <div className="rounded-[10px] border border-border bg-card p-4">
+          <form onSubmit={handleUpload} className="space-y-3.5">
+            <p className="text-[13px] text-muted-foreground">
               {versionOfDocId
                 ? 'This file will be linked as the next version of the source document.'
                 : 'Upload a SOW, Proposal, or other document for review'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleUpload} className="space-y-4">
-              {/* Project (optional label) -- inherited automatically when uploading a new version */}
-              {!versionOfDocId && (
-              <div>
-                <label htmlFor="projectName" className="block text-sm font-medium mb-2">
-                  Project <span className="text-destructive">*</span>
-                </label>
-                {presetProjectId ? (
-                  <div className="flex items-center justify-between px-4 py-2 border border-input rounded-md bg-muted/50">
-                    <span>
-                      {projectOptions.find((p) => p.project_id === presetProjectId)?.name ??
-                        'Selected project'}
-                    </span>
-                    <button
-                      type="button"
-                      className="text-sm text-primary hover:underline"
-                      onClick={() => setPresetProjectId('')}
-                    >
-                      Change
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <input
-                      id="projectName"
-                      type="text"
-                      list="project-options"
-                      value={projectName}
-                      onChange={(e) => setProjectName(e.target.value)}
-                      placeholder="Select existing or type a new project name"
-                      className="w-full px-4 py-2 border border-input rounded-md bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors duration-150 ease-out"
-                    />
-                    <datalist id="project-options">
-                      {projectOptions.map((p) => (
-                        <option key={p.project_id} value={p.name} />
-                      ))}
-                    </datalist>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Pick an existing project from the list, or type a new name to create one.
-                    </p>
-                  </>
-                )}
-              </div>
-              )}
+            </p>
 
-              {/* Drag and Drop Area */}
-              <div
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-                className={cn(
-                  'border-2 border-dashed rounded-md p-12 text-center cursor-pointer transition-colors duration-150 ease-out',
-                  dragActive
-                    ? 'border-primary bg-primary/5'
-                    : 'border-input hover:bg-muted/50'
-                )}
-                onClick={() => fileInputRef.current?.click()}
-                role="button"
-                tabIndex={0}
-                aria-label="Choose a document to upload, or drag and drop it here"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    fileInputRef.current?.click();
-                  }
-                }}
-              >
-                <div className="mb-4">
-                  <UploadCloud className="mx-auto h-10 w-10 text-muted-foreground" aria-hidden="true" />
+            {/* Project (optional label) -- inherited automatically when uploading a new version */}
+            {!versionOfDocId && (
+            <div>
+              <label htmlFor="projectName" className="mb-1 block text-xs font-medium text-muted-foreground">
+                Project <span className="text-sev-crit">*</span>
+              </label>
+              {presetProjectId ? (
+                <div className="flex items-center gap-2">
+                  <Chip tone="neutral">
+                    {projectOptions.find((p) => p.project_id === presetProjectId)?.name ??
+                      'Selected project'}
+                  </Chip>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setPresetProjectId('')}>
+                    Change
+                  </Button>
                 </div>
-
-                <h3 className="text-lg font-medium mb-2">
-                  Drag and drop your document
-                </h3>
-                <p className="text-muted-foreground mb-2">or click to select</p>
-                <p className="text-sm text-muted-foreground">PDF, DOCX, DOC, XLSX, XLS, or CSV • up to 50MB</p>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  onChange={handleFileInput}
-                  accept=".pdf,.docx,.doc,.xlsx,.xls,.csv"
-                  className="hidden"
-                  aria-label="Document file"
-                  tabIndex={-1}
-                />
-              </div>
-
-              {/* Selected File */}
-              {file && (
-                <div className="border border-[#28A745]/30 bg-[#28A745]/10 rounded-md p-4">
-                  <p className="text-[#28A745]">
-                    <strong>Selected:</strong> {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+              ) : (
+                <>
+                  <input
+                    id="projectName"
+                    type="text"
+                    list="project-options"
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                    placeholder="Select existing or type a new project name"
+                    className="h-9 w-full rounded-lg border border-input bg-card px-2.5 text-[13px] outline-none transition-[border-color,background-color] duration-150 ease-app focus:border-primary focus:ring-[3px] focus:ring-accent"
+                  />
+                  <datalist id="project-options">
+                    {projectOptions.map((p) => (
+                      <option key={p.project_id} value={p.name} />
+                    ))}
+                  </datalist>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Pick an existing project from the list, or type a new name to create one.
                   </p>
-                </div>
+                </>
               )}
+            </div>
+            )}
 
-              {/* Error Message */}
-              {error && (
-                <div role="alert" className="bg-destructive/10 border border-destructive/30 rounded-md p-4">
-                  <p className="text-destructive">{error}</p>
-                </div>
+            {/* Drag and Drop Area */}
+            <div
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+              className={cn(
+                'cursor-pointer rounded-[10px] border-2 border-dashed px-4 py-[26px] text-center text-muted-foreground transition-[border-color,background-color] duration-150 ease-app',
+                dragActive
+                  ? 'border-primary bg-accent-soft'
+                  : 'border-line2 hover:bg-muted/60'
               )}
-
-              {/* Success Message */}
-              {success && (
-                <div role="status" className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-md p-4">
-                  <p>{success}</p>
-                </div>
-              )}
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                disabled={
-                  !file ||
-                  uploading ||
-                  (!versionOfDocId && !presetProjectId && !projectName.trim())
+              onClick={() => fileInputRef.current?.click()}
+              role="button"
+              tabIndex={0}
+              aria-label="Choose a document to upload, or drag and drop it here"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
                 }
-                className="w-full"
-              >
-                {uploading ? 'Uploading...' : 'Upload Document'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+              }}
+            >
+              <UploadCloud className="mx-auto mb-2 h-[26px] w-[26px] text-ink3" aria-hidden="true" />
+
+              <h3 className="mb-1 text-[15px] font-medium text-foreground">
+                Drag and drop your document
+              </h3>
+              <p className="mb-1 text-muted-foreground">or click to select</p>
+              <p className="text-[13px] text-muted-foreground">PDF, DOCX, DOC, XLSX, XLS, or CSV • up to 50MB</p>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileInput}
+                accept=".pdf,.docx,.doc,.xlsx,.xls,.csv"
+                className="hidden"
+                aria-label="Document file"
+                tabIndex={-1}
+              />
+            </div>
+
+            {/* Selected File */}
+            {file && (
+              <div className="flex items-center gap-2 rounded-lg border border-ok bg-ok-soft px-2.5 py-2 text-[13px] text-ok">
+                <span className="min-w-0 flex-1 truncate">
+                  <strong>Selected:</strong> {file.name}
+                </span>
+                <span className="tabular-nums whitespace-nowrap">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+              </div>
+            )}
+
+            {/* Error Message */}
+            {error && <AlertBanner kind="error">{error}</AlertBanner>}
+
+            {/* Success Message */}
+            {success && <AlertBanner kind="ok">{success}</AlertBanner>}
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              disabled={
+                !file ||
+                uploading ||
+                (!versionOfDocId && !presetProjectId && !projectName.trim())
+              }
+              className="h-10 w-full"
+            >
+              {uploading ? 'Uploading...' : 'Upload Document'}
+            </Button>
+          </form>
+        </div>
       </div>
     </AppShell>
   );
