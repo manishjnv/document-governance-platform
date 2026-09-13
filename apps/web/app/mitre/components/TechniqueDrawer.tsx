@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { AlertBanner, Chip, EmptyState } from '@/components/app';
 import {
   SOURCE_META,
   STRENGTH_META,
@@ -17,6 +18,14 @@ import {
 } from '../lib';
 import { StateBadge } from './StateBadge';
 import { useSheetResize } from './useSheetResize';
+
+// Tone mapping for the detection-strength Chip — retargeted from
+// STRENGTH_META's pre-redesign chip classes (lib.ts) to design tokens.
+const STRENGTH_TONE: Record<string, 'ok' | 'med' | 'crit'> = {
+  strong: 'ok',
+  moderate: 'med',
+  weak: 'crit',
+};
 
 /** Slide-over detail for one technique: state, tactics, N/A reason, and the
  * detection rules mapped to it (with confidence + customer/AI source).
@@ -130,39 +139,38 @@ export function TechniqueDrawer({
       <SheetContent
         side="right"
         style={resize.style}
-        className="w-full overflow-y-auto p-5 sm:max-w-md"
+        grip={resize.handle}
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
       >
-        {resize.handle}
         {technique && (
           <>
-            <SheetTitle className="flex flex-wrap items-center gap-2 text-base">
-              {technique.technique_id}
-              <StateBadge state={technique.state} />
-              {typeof technique.strength === 'number' && (
-                <Tooltip delayDuration={150}>
-                  <TooltipTrigger asChild>
-                    <span
-                      className={`inline-flex cursor-default items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${STRENGTH_META[strengthBucket(technique.strength)].chip}`}
-                    >
-                      {STRENGTH_META[strengthBucket(technique.strength)].label} · {technique.strength}/100
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs text-xs">{STRENGTH_TIP}</TooltipContent>
-                </Tooltip>
+            <div className="border-b border-border px-6 pb-3 pt-4">
+              <SheetTitle className="flex flex-wrap items-center gap-2 text-base font-semibold">
+                <span className="font-mono">{technique.technique_id}</span>
+                <StateBadge state={technique.state} />
+                {typeof technique.strength === 'number' && (
+                  <Chip
+                    tone={STRENGTH_TONE[strengthBucket(technique.strength)]}
+                    tip={STRENGTH_TIP}
+                  >
+                    {STRENGTH_META[strengthBucket(technique.strength)].label} · {technique.strength}/100
+                  </Chip>
+                )}
+              </SheetTitle>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {tacticNames.join(' · ')}
+              </div>
+              {technique.strength_rationale && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Detection strength: {technique.strength_rationale}
+                </p>
               )}
-            </SheetTitle>
-            <div className="mt-1 text-xs text-muted-foreground">
-              {tacticNames.join(' · ')}
             </div>
-            {technique.strength_rationale && (
-              <p className="mt-1 text-xs text-muted-foreground">
-                Detection strength: {technique.strength_rationale}
-              </p>
-            )}
 
+            <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
             {(toolCoverage?.[technique.technique_id]?.length ?? 0) > 0 && (
-              <div className="mt-3 rounded-md border border-blue-300 bg-blue-50 p-3 text-sm dark:border-blue-900 dark:bg-blue-950/40">
-                <div className="mb-1 text-xs font-semibold text-blue-700 dark:text-blue-300">
+              <AlertBanner kind="blue">
+                <div className="mb-1 text-[11px] font-semibold uppercase tracking-[.05em]">
                   Tool credit — MITRE-evaluated
                 </div>
                 {toolCoverage![technique.technique_id].join(', ')} was evaluated
@@ -189,7 +197,7 @@ export function TechniqueDrawer({
                             setAttesting(null);
                           }
                         }}
-                        className="rounded-md border border-blue-400 bg-white px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:bg-transparent dark:text-blue-300 dark:hover:bg-blue-900/40"
+                        className="rounded-md border border-primary/40 bg-card px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-accent-soft disabled:opacity-50"
                       >
                         {attesting === tool
                           ? 'Attesting…'
@@ -198,15 +206,13 @@ export function TechniqueDrawer({
                     ))}
                   </div>
                 )}
-                {attestError && (
-                  <p className="mt-1 text-xs text-destructive">{attestError}</p>
-                )}
-              </div>
+                {attestError && <AlertBanner kind="error" className="mt-2">{attestError}</AlertBanner>}
+              </AlertBanner>
             )}
 
             {technique.na_reason && !explain && (
-              <div className="mt-4 rounded-md bg-muted/60 p-3 text-sm">
-                <div className="mb-1 text-xs font-semibold text-muted-foreground">
+              <div className="rounded-lg border border-border p-3 text-sm">
+                <div className="mb-1 text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">
                   Why this doesn&apos;t count toward coverage
                 </div>
                 {technique.na_reason}
@@ -215,9 +221,9 @@ export function TechniqueDrawer({
 
             {/* Phase 14a: the four plain-language blocks (any state). */}
             {explain && (
-              <div className="mt-4 space-y-3">
-                <div className="rounded-md border p-3 text-sm">
-                  <div className="mb-1 text-xs font-semibold text-muted-foreground">
+              <div className="space-y-3">
+                <div className="rounded-lg border border-border p-3 text-sm">
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">
                     What is this?
                   </div>
                   <div className="font-medium leading-snug">{explain.name}</div>
@@ -231,8 +237,8 @@ export function TechniqueDrawer({
                   )}
                 </div>
 
-                <div className="rounded-md border p-3 text-sm">
-                  <div className="mb-1 text-xs font-semibold text-muted-foreground">
+                <div className="rounded-lg border border-border p-3 text-sm">
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">
                     {explain.state === 'partial' || explain.state === 'not_covered'
                       ? 'Where is the gap?'
                       : 'Where this fits'}
@@ -283,8 +289,8 @@ export function TechniqueDrawer({
                   )}
                 </div>
 
-                <div className="rounded-md bg-muted/60 p-3 text-sm">
-                  <div className="mb-1 text-xs font-semibold text-muted-foreground">
+                <div className="rounded-lg bg-muted/60 p-3 text-sm">
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">
                     {explain.state === 'covered'
                       ? 'Why this counts as covered'
                       : explain.state === 'not_applicable'
@@ -294,8 +300,8 @@ export function TechniqueDrawer({
                   {explain.why}
                 </div>
 
-                <div className="rounded-md border p-3 text-sm">
-                  <div className="mb-1 text-xs font-semibold text-muted-foreground">
+                <div className="rounded-lg border border-border p-3 text-sm">
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">
                     What would good look like?
                   </div>
                   {explain.good.sketch ? (
@@ -353,30 +359,26 @@ export function TechniqueDrawer({
             )}
 
             {recommendation && (
-              <div className="mt-4 rounded-md bg-sky-50 p-3 text-sm">
-                <div className="mb-1 text-xs font-semibold text-sky-800">Recommendation</div>
+              <AlertBanner kind="info">
+                <div className="mb-1 text-[11px] font-semibold uppercase tracking-[.05em]">Recommendation</div>
                 {recommendation}
-              </div>
+              </AlertBanner>
             )}
             {!recommendation && gap && (
-              <div className="mt-4 rounded-md bg-sky-50 p-3 text-sm">
-                <div className="mb-1 text-xs font-semibold text-sky-800">Recommendation</div>
+              <AlertBanner kind="info">
+                <div className="mb-1 text-[11px] font-semibold uppercase tracking-[.05em]">Recommendation</div>
                 {gap.hint}
-              </div>
+              </AlertBanner>
             )}
 
-            <div className="mt-5">
-              <div className="mb-2 text-xs font-semibold text-muted-foreground">
+            <div>
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">
                 Detection rules mapped here ({mappedRules.length})
               </div>
-              {mappedRules.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  None of your uploaded rules map to this technique.
-                </p>
-              )}
+              {mappedRules.length === 0 && <EmptyState title="None of your uploaded rules map to this technique." />}
               <div className="space-y-2">
                 {mappedRules.map(({ uc, mapping }) => (
-                  <div key={uc.use_case_id} className="rounded-md border p-2.5 text-sm">
+                  <div key={uc.use_case_id} className="rounded-lg border border-border px-3 py-2 text-[13px]">
                     <div className="flex items-start justify-between gap-2">
                       <div className="font-medium leading-snug">{uc.name}</div>
                       {canEdit && (
@@ -387,7 +389,7 @@ export function TechniqueDrawer({
                               aria-label={`Remove the ${technique.technique_id} mapping from ${uc.name}`}
                               disabled={saving}
                               onClick={() => removeMapping(uc)}
-                              className="shrink-0 rounded p-0.5 text-muted-foreground transition-colors hover:bg-rose-50 hover:text-rose-700 disabled:opacity-50"
+                              className="shrink-0 rounded p-0.5 text-muted-foreground transition-colors hover:bg-sev-crit-soft hover:text-sev-crit disabled:opacity-50"
                             >
                               <X size={14} aria-hidden="true" />
                             </button>
@@ -401,16 +403,9 @@ export function TechniqueDrawer({
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
                       <span>{uc.enabled === false ? 'Disabled rule' : uc.enabled === true ? 'Enabled' : 'Status unknown'}</span>
-                      <Tooltip delayDuration={150}>
-                        <TooltipTrigger asChild>
-                          <span className="cursor-default underline decoration-dotted underline-offset-2">
-                            {(SOURCE_META[mapping.source] ?? SOURCE_META.ai).label}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-xs text-xs">
-                          {(SOURCE_META[mapping.source] ?? SOURCE_META.ai).tip}
-                        </TooltipContent>
-                      </Tooltip>
+                      <Chip tone="neutral" xs tip={(SOURCE_META[mapping.source] ?? SOURCE_META.ai).tip}>
+                        {(SOURCE_META[mapping.source] ?? SOURCE_META.ai).label}
+                      </Chip>
                       <span title="How sure the mapping is (1.0 = your own tag)">
                         confidence {mapping.confidence}
                       </span>
@@ -429,8 +424,8 @@ export function TechniqueDrawer({
               )}
 
               {canEdit && unmappedRules.length > 0 && (
-                <div className="mt-4 rounded-md border border-dashed p-2.5">
-                  <div className="mb-1.5 text-xs font-semibold text-muted-foreground">
+                <div className="mt-4 rounded-lg border border-dashed border-line2 p-2.5">
+                  <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">
                     Map another rule to this technique
                   </div>
                   <div className="flex items-center gap-2">
@@ -439,7 +434,7 @@ export function TechniqueDrawer({
                       onChange={(e) => setAddRuleId(e.target.value)}
                       disabled={saving}
                       aria-label="Rule to map to this technique"
-                      className="h-8 min-w-0 flex-1 rounded-md border bg-background px-2 text-xs"
+                      className="h-8 min-w-0 flex-1 rounded-md border border-input bg-card px-2 text-xs"
                     >
                       <option value="">Choose a rule…</option>
                       {unmappedRules.map((uc) => (
@@ -459,10 +454,11 @@ export function TechniqueDrawer({
                 </div>
               )}
               {editError && (
-                <p role="alert" className="mt-2 text-xs text-destructive">
+                <AlertBanner kind="error" className="mt-2">
                   {editError}
-                </p>
+                </AlertBanner>
               )}
+            </div>
             </div>
           </>
         )}

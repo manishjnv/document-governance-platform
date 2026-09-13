@@ -25,13 +25,29 @@ const realPlatforms = (t: TechniqueResult) =>
 
 // Navigator-style score gradient for covered cells: darker green = more
 // rules map here. One rule = coverage hanging on a single detection.
+// Token-based (no hex literals): the "ok" semantic color at increasing
+// opacity stands in for the old emerald-400/500/700 ladder.
 const DEPTH_CELLS: [string, string][] = [
-  ['1 rule', 'bg-emerald-400/75 text-white hover:bg-emerald-500'],
-  ['2–3 rules', 'bg-emerald-500/85 text-white hover:bg-emerald-600'],
-  ['4+ rules', 'bg-emerald-700/90 text-white hover:bg-emerald-800'],
+  ['1 rule', 'bg-ok-soft text-ok hover:bg-ok/20'],
+  ['2–3 rules', 'bg-ok/60 text-white hover:bg-ok/70'],
+  ['4+ rules', 'bg-ok text-white hover:bg-ok/90'],
 ];
 const depthCell = (ruleCount: number) =>
   DEPTH_CELLS[ruleCount <= 1 ? 0 : ruleCount <= 3 ? 1 : 2][1];
+
+// Non-covered state fills, retargeted from lib.ts's STATE_META.cell (which
+// still carries the old ad hoc Tailwind colors used by other, out-of-scope
+// consumers) to the shared design tokens for this matrix + its legend.
+const STATE_FILL: Record<string, string> = {
+  partial: 'bg-sev-med-soft text-sev-med hover:bg-sev-med/20',
+  not_covered: 'bg-sev-crit-soft text-sev-crit hover:bg-sev-crit/20',
+  not_applicable: 'bg-na text-muted-foreground hover:bg-muted',
+};
+const STATE_DOT: Record<string, string> = {
+  partial: 'bg-sev-med',
+  not_covered: 'bg-sev-crit',
+  not_applicable: 'bg-ink3',
+};
 
 /** Navigator-style tactic-column heatmap, plain CSS grid — no charting
  * dependency. Cells show "ID Name" (truncated — no extra area per TTP) and
@@ -146,10 +162,8 @@ export function CoverageHeatmap({
       : `${base}: ${[...sel][0]}${sel.size > 1 ? ` +${sel.size - 1}` : ''}`;
   const lensTriggerCls = (active: boolean) =>
     cn(
-      'flex items-center gap-1 rounded border px-1.5 py-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-      active
-        ? 'border-primary/40 bg-muted font-medium'
-        : 'border-transparent bg-muted/40 hover:bg-muted'
+      'flex h-7 items-center gap-1 rounded-full px-2.5 text-[12.5px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+      active ? 'bg-accent text-primary' : 'bg-muted/40 text-muted-foreground hover:bg-muted'
     );
 
   const matchesGroup = (t: TechniqueResult) =>
@@ -300,7 +314,7 @@ export function CoverageHeatmap({
               id="threat-group-lens"
               value={groupId}
               onChange={(e) => setGroupId(e.target.value)}
-              className="max-w-[260px] rounded border bg-background px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-7 max-w-[260px] rounded-md border border-input bg-card px-2 text-[12.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="">None — full matrix</option>
               {(threatGroups ?? []).map((g) => (
@@ -330,7 +344,7 @@ export function CoverageHeatmap({
                     onChange={(e) => setPlatformQuery(e.target.value)}
                     onKeyDown={(e) => e.stopPropagation()}
                     placeholder="Search platforms…"
-                    className="w-full rounded border bg-background px-1.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full rounded-md border border-input bg-card px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
               )}
@@ -390,7 +404,7 @@ export function CoverageHeatmap({
                     onChange={(e) => setSourceQuery(e.target.value)}
                     onKeyDown={(e) => e.stopPropagation()}
                     placeholder="Search sources…"
-                    className="w-full rounded border bg-background px-1.5 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full rounded-md border border-input bg-card px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
               )}
@@ -500,45 +514,49 @@ export function CoverageHeatmap({
         </p>
       )}
 
-      {/* Legend — each state is also a filter: click to show only it. */}
+      {/* Legend — each state is also a filter: click to show only it. Styled
+          as a segmented control (shared .seg pattern) whose segments carry a
+          Chip-style color dot each, so it reads as both a filter and a key. */}
       <div className="flex flex-wrap items-center gap-3 text-xs">
-        {Object.entries(STATE_META).map(([state, meta]) => {
-          const active = stateFilter.has(state);
-          const dimmed = stateFilter.size > 0 && !active;
-          return (
-            <Tooltip key={state} delayDuration={150}>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => toggleStateFilter(state)}
-                  className={cn(
-                    'flex items-center gap-1.5 rounded px-1 py-0.5 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                    active && 'bg-muted font-medium',
-                    dimmed && 'opacity-40'
-                  )}
-                >
-                  {state === 'covered' ? (
-                    <span className="flex h-3 w-[18px] overflow-hidden rounded-sm">
-                      {DEPTH_CELLS.map(([label, cls]) => (
-                        <span key={label} className={cn('flex-1', cls.split(' ')[0])} />
-                      ))}
-                    </span>
-                  ) : (
-                    <span className={cn('h-3 w-3 rounded-sm', meta.cell.split(' ')[0])} />
-                  )}
-                  {meta.label}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs text-xs">
-                {meta.tip}
-                {state === 'covered' &&
-                  ' Darker green = more rules detect it (1, 2–3, 4+); the lightest shade means coverage rests on a single rule.'}{' '}
-                Click to show only these techniques.
-              </TooltipContent>
-            </Tooltip>
-          );
-        })}
+        <div className="inline-flex flex-wrap items-center gap-0.5 rounded-[7px] bg-na p-[3px]">
+          {Object.entries(STATE_META).map(([state, meta]) => {
+            const active = stateFilter.has(state);
+            const dimmed = stateFilter.size > 0 && !active;
+            return (
+              <Tooltip key={state} delayDuration={150}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => toggleStateFilter(state)}
+                    className={cn(
+                      'flex h-7 items-center gap-1.5 rounded-[5px] px-2.5 text-[12.5px] font-medium text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      active ? 'bg-card text-foreground shadow-sm' : 'hover:text-foreground',
+                      dimmed && 'opacity-40'
+                    )}
+                  >
+                    {state === 'covered' ? (
+                      <span className="flex h-2.5 w-[18px] overflow-hidden rounded-full">
+                        {DEPTH_CELLS.map(([label, cls]) => (
+                          <span key={label} className={cn('flex-1', cls.split(' ')[0])} />
+                        ))}
+                      </span>
+                    ) : (
+                      <i aria-hidden className={cn('h-2 w-2 rounded-full', STATE_DOT[state] ?? 'bg-ink3')} />
+                    )}
+                    {meta.label}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs text-xs">
+                  {meta.tip}
+                  {state === 'covered' &&
+                    ' Darker green = more rules detect it (1, 2–3, 4+); the lightest shade means coverage rests on a single rule.'}{' '}
+                  Click to show only these techniques.
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
         {stateFilter.size > 0 && (
           <button
             type="button"
@@ -555,10 +573,10 @@ export function CoverageHeatmap({
               aria-pressed={hideSubs}
               onClick={() => setHideSubs((v) => !v)}
               className={cn(
-                'rounded border px-1.5 py-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                'h-7 rounded-md border px-2.5 text-[12.5px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 hideSubs
-                  ? 'border-primary/40 bg-muted font-medium'
-                  : 'border-transparent bg-muted/40'
+                  ? 'border-primary/40 bg-accent-soft text-primary'
+                  : 'border-transparent bg-muted/40 text-muted-foreground hover:bg-muted'
               )}
             >
               {hideSubs ? 'Sub-techniques hidden' : 'Hide sub-techniques'}
@@ -634,7 +652,7 @@ export function CoverageHeatmap({
             </button>
           </h3>
           {!collapsed.has(domainKey) && (
-          <div className="overflow-x-auto rounded-md bg-muted/30 p-2">
+          <div className="overflow-x-auto rounded-[10px] border border-border bg-card p-2">
             <div
               className="grid gap-2"
               style={{
@@ -663,7 +681,7 @@ export function CoverageHeatmap({
                               { grouped: true }
                             )
                           }
-                          className="mb-1 w-full rounded px-1 text-left hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="mb-1 w-full rounded px-1 text-left hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           <div className="truncate text-xs font-semibold">{tactic.name}</div>
                           <div className="text-[10px]">
@@ -710,17 +728,19 @@ export function CoverageHeatmap({
                             onFocus={(e) => showTip(e.target as Element)}
                             onBlur={hideTip}
                             className={cn(
-                              'flex w-full items-center gap-1 rounded px-1.5 py-1 text-left text-[11px] leading-tight transition-colors',
-                              t.state === 'covered' ? depthCell(ruleCount) : meta.cell,
+                              'flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-left text-xs leading-tight transition-colors hover:ring-1 hover:ring-primary',
+                              t.state === 'covered'
+                                ? depthCell(ruleCount)
+                                : STATE_FILL[t.state] ?? 'bg-card text-muted-foreground',
                               t.technique_id.includes('.') && 'ml-2 w-[calc(100%-0.5rem)]'
                             )}
                           >
                             <span className="min-w-0 flex-1 truncate">
-                              <span className="font-medium">{t.technique_id}</span>
+                              <span className="font-medium font-mono">{t.technique_id}</span>
                               {t.name && <span className="opacity-85"> {t.name}</span>}
                             </span>
                             {subs && subs.applicable > 0 && (
-                              <span className="shrink-0 rounded bg-black/15 px-1 text-[10px] tabular-nums">
+                              <span className="shrink-0 rounded bg-foreground/15 px-1 text-[10px] tabular-nums">
                                 {subs.covered}/{subs.applicable}
                               </span>
                             )}
