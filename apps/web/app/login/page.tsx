@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 
 declare global {
   interface Window {
@@ -89,7 +89,7 @@ function GoogleSignInButton({ onError }: { onError: (msg: string) => void }) {
       {!ready && (
         <div
           aria-hidden="true"
-          className="absolute inset-x-0 mx-auto flex h-[44px] w-[336px] max-w-full items-center justify-center rounded-md border bg-muted/40 text-sm text-muted-foreground animate-pulse"
+          className="absolute inset-x-0 mx-auto flex h-[44px] w-[336px] max-w-full items-center justify-center rounded-lg bg-muted text-[13px] text-ink3 animate-pulse"
         >
           Loading Google sign-in…
         </div>
@@ -150,7 +150,7 @@ function OtpLogin({ onError }: { onError: (msg: string) => void }) {
 
   if (!codeRequested) {
     return (
-      <form onSubmit={requestCode} className="space-y-3">
+      <form onSubmit={requestCode}>
         <div>
           <label htmlFor="email" className="sr-only">
             Your email address
@@ -162,14 +162,14 @@ function OtpLogin({ onError }: { onError: (msg: string) => void }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
-            className="w-full px-3 py-2 border border-input rounded-md text-sm transition duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+            className="h-9 w-full rounded-lg border border-input bg-card px-2.5 text-[13px] text-foreground outline-none transition-[border-color,box-shadow] duration-150 ease-app focus:border-primary focus:ring-[3px] focus:ring-accent"
             required
           />
         </div>
-        <Button type="submit" disabled={loading} className="w-full">
+        <Button type="submit" disabled={loading} className="mt-2.5 h-10 w-full">
           {loading ? 'Sending your code...' : 'Email me a sign-in code'}
         </Button>
-        <p className="text-xs text-muted-foreground text-center">
+        <p className="mt-2 text-xs text-ink3">
           We&apos;ll email you a 4-digit code — no password needed.
         </p>
       </form>
@@ -177,11 +177,11 @@ function OtpLogin({ onError }: { onError: (msg: string) => void }) {
   }
 
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">
+    <div>
+      <p className="text-[13.5px]">
         Enter the 4-digit code sent to <strong>{email}</strong>.
       </p>
-      <div className="relative">
+      <div className="mt-2.5 flex gap-2">
         <input
           type={showCode ? 'text' : 'password'}
           name="one-time-code"
@@ -196,26 +196,27 @@ function OtpLogin({ onError }: { onError: (msg: string) => void }) {
           }}
           disabled={loading}
           autoFocus
-          className="w-full px-3 py-2 pr-10 border border-input rounded-md text-lg tracking-[0.5em] text-center transition duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:opacity-50"
+          aria-label="Sign-in code"
+          className="h-10 flex-1 rounded-lg border border-input bg-card text-center font-mono text-lg tracking-[.35em] outline-none transition-[border-color,box-shadow] duration-150 ease-app focus:border-primary focus:ring-[3px] focus:ring-accent disabled:opacity-50"
         />
         <button
           type="button"
           onClick={() => setShowCode((v) => !v)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          className="flex h-10 w-10 flex-none items-center justify-center rounded-lg border border-input text-ink3 transition-colors duration-150 hover:bg-muted hover:text-foreground"
           aria-label={showCode ? 'Hide code' : 'Show code'}
         >
           {showCode ? <EyeOff size={16} /> : <Eye size={16} />}
         </button>
       </div>
-      {loading && <p className="text-xs text-muted-foreground text-center">Verifying...</p>}
+      {loading && <p className="mt-1.5 text-xs text-ink3">Verifying...</p>}
       {codeError && (
-        <p role="alert" className="text-xs text-destructive text-center">
+        <p role="alert" className="mt-1.5 text-xs text-destructive">
           {codeError}
         </p>
       )}
       <button
         type="button"
-        className="text-sm text-primary hover:underline w-full text-center"
+        className="mt-3 text-[13px] text-primary hover:underline"
         onClick={() => {
           setCodeRequested(false);
           setCode('');
@@ -231,36 +232,33 @@ export default function LoginPage() {
   const [error, setError] = useState('');
 
   return (
-    <div className="app-theme font-app min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-1">
-          <div className="flex items-center justify-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-primary" />
-            <CardTitle>ScopeWise</CardTitle>
+    <div className="app-theme font-app min-h-screen bg-background flex items-center justify-center p-6">
+      <Card className="w-full max-w-[392px] rounded-[10px] border border-border bg-card px-[26px] pb-6 pt-7">
+        <div className="mb-[18px] text-center">
+          <div className="mb-2.5 flex items-center justify-center">
+            <ShieldCheck className="h-[26px] w-[26px] text-primary" />
           </div>
-          <CardDescription>Catch contract risk before you sign.</CardDescription>
-        </CardHeader>
+          <h1 className="text-[19px] font-semibold leading-tight tracking-[-0.01em]">ScopeWise</h1>
+          <p className="mt-1 text-[13px] text-muted-foreground">Catch contract risk before you sign.</p>
+        </div>
 
-        <CardContent className="space-y-4">
-          {error && (
-            <div role="alert" className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
-              <p className="text-destructive text-sm">{error}</p>
-            </div>
-          )}
-
-          <GoogleSignInButton onError={setError} />
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">Or sign in with a code</span>
-            </div>
+        {error && (
+          <div role="alert" className="mb-3.5 rounded-lg border border-sev-crit bg-sev-crit-soft px-3.5 py-3 text-[13px] text-sev-crit">
+            {error}
           </div>
+        )}
 
-          <OtpLogin onError={setError} />
-        </CardContent>
+        <GoogleSignInButton onError={setError} />
+
+        <div className="my-[18px] flex items-center gap-2.5">
+          <span className="h-px flex-1 bg-border" />
+          <span className="inline-flex h-[18px] items-center whitespace-nowrap rounded-full border border-input bg-card px-1.5 text-[10.5px] font-medium text-muted-foreground">
+            Or sign in with a code
+          </span>
+          <span className="h-px flex-1 bg-border" />
+        </div>
+
+        <OtpLogin onError={setError} />
       </Card>
     </div>
   );
