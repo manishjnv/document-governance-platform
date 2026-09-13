@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { RefreshCw, Search, ShieldCheck } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PageHeader, KpiTile, Chip, SkeletonRows, AlertBanner } from '@/components/app';
+import { PageHeader, KpiTile, Chip, SkeletonRows, AlertBanner, EmptyState } from '@/components/app';
 import { cn } from '@/lib/utils';
 
 interface Org {
@@ -85,6 +85,110 @@ function timeAgo(iso: string | null): string {
   return `${months} month${months > 1 ? 's' : ''} ago`;
 }
 
+type SortDir = 'asc' | 'desc';
+
+// ISO date strings this page deals with look like "2026-09-13" or "2026-09-13T10:00:00".
+// Detect them so they sort by time, not lexicographically.
+function toTime(v: unknown): number | null {
+  if (v instanceof Date) return v.getTime();
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2})?/.test(v)) {
+    const t = Date.parse(v);
+    return Number.isNaN(t) ? null : t;
+  }
+  return null;
+}
+
+function isSortedAsDate(v: unknown): boolean {
+  return v instanceof Date || typeof v === 'number' || toTime(v) != null;
+}
+
+function compareValues(a: unknown, b: unknown): number {
+  if (typeof a === 'number' && typeof b === 'number') return a - b;
+  if (typeof a === 'boolean' && typeof b === 'boolean') return Number(a) - Number(b);
+  const aTime = toTime(a);
+  const bTime = toTime(b);
+  if (aTime != null && bTime != null) return aTime - bTime;
+  return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+}
+
+// Generic column sort for the admin tables: null/undefined always sort last (regardless of
+// direction), numbers and ISO date strings sort by value/time, everything else is a locale
+// compare. `toggle` picks desc-first for number/date columns and asc-first for text columns.
+function useSort<T>(
+  rows: T[],
+  initial: { key: keyof T | string; dir: SortDir },
+  getters?: Partial<Record<string, (r: T) => unknown>>
+) {
+  const [sortKey, setSortKey] = useState<string>(initial.key as string);
+  const [dir, setDir] = useState<SortDir>(initial.dir);
+
+  const getValue = (r: T, key: string): unknown => {
+    const g = getters?.[key];
+    if (g) return g(r);
+    return (r as Record<string, unknown>)[key];
+  };
+
+  const sorted = useMemo(() => {
+    const arr = [...rows];
+    arr.sort((a, b) => {
+      const av = getValue(a, sortKey);
+      const bv = getValue(b, sortKey);
+      const aNull = av == null;
+      const bNull = bv == null;
+      if (aNull && bNull) return 0;
+      if (aNull) return 1;
+      if (bNull) return -1;
+      const cmp = compareValues(av, bv);
+      return dir === 'asc' ? cmp : -cmp;
+    });
+    return arr;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, sortKey, dir]);
+
+  const toggle = (key: string) => {
+    if (key === sortKey) {
+      setDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+    const firstNonNull = rows.map((r) => getValue(r, key)).find((v) => v != null);
+    setSortKey(key);
+    setDir(isSortedAsDate(firstNonNull) ? 'desc' : 'asc');
+  };
+
+  const ariaSort = (key: string): 'ascending' | 'descending' | 'none' => {
+    if (sortKey !== key) return 'none';
+    return dir === 'asc' ? 'ascending' : 'descending';
+  };
+
+  return { sorted, sortKey, dir, toggle, ariaSort };
+}
+
+function SortHead({
+  label,
+  sortKey,
+  className,
+  align,
+  sort,
+}: {
+  label: string;
+  sortKey: string;
+  className?: string;
+  align?: 'right';
+  sort: { sortKey: string; dir: SortDir; toggle: (key: string) => void; ariaSort: (key: string) => 'ascending' | 'descending' | 'none' };
+}) {
+  return (
+    <TableHead className={cn(align === 'right' && 'text-right', className)} aria-sort={sort.ariaSort(sortKey)}>
+      <button type="button" onClick={() => sort.toggle(sortKey)}>
+        {label}
+        <span aria-hidden className={sort.sortKey === sortKey ? 'opacity-100' : 'opacity-0'}>
+          {sort.dir === 'asc' ? '↑' : '↓'}
+        </span>
+      </button>
+    </TableHead>
+  );
+}
+
 function SearchBox({
   value,
   onChange,
@@ -128,6 +232,20 @@ export default function AdminPage() {
   const [orgError, setOrgError] = useState('');
   const [savingOrg, setSavingOrg] = useState<string | null>(null);
   const [runDrafts, setRunDrafts] = useState<Record<string, string>>({});
+
+  // Most-recent-first by default: orgs by created date, people by last activity
+  // (falling back to last sign-in, then joined, when a row lacks that field).
+  const orgsSort = useSort<Org>(orgs ?? [], { key: 'created_at', dir: 'desc' });
+  const visiblePeople = data
+    ? data.people.filter((p) =>
+        `${p.name} ${p.email} ${p.role} ${p.workspace ?? ''}`
+          .toLowerCase()
+          .includes(peopleQuery.toLowerCase())
+      )
+    : [];
+  const peopleSort = useSort<Person>(visiblePeople, { key: 'last_active', dir: 'desc' }, {
+    last_active: (p) => p.last_activity ?? p.last_sign_in ?? p.joined,
+  });
 
   const load = async () => {
     setLoading(true);
@@ -335,16 +453,16 @@ export default function AdminPage() {
                 <Table className="cards">
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
-                      <TableHead>Organisation</TableHead>
-                      <TableHead>Tier</TableHead>
-                      <TableHead>Runs</TableHead>
-                      <TableHead className="text-right">Members</TableHead>
-                      <TableHead>Created</TableHead>
+                      <SortHead label="Organisation" sortKey="name" sort={orgsSort} />
+                      <SortHead label="Tier" sortKey="subscription_tier" sort={orgsSort} />
+                      <SortHead label="Runs" sortKey="run_allowance" sort={orgsSort} />
+                      <SortHead label="Members" sortKey="user_count" align="right" sort={orgsSort} />
+                      <SortHead label="Created" sortKey="created_at" sort={orgsSort} />
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {orgs.map((org) => (
+                    {orgsSort.sorted.map((org) => (
                       <TableRow key={org.org_id}>
                         <TableCell className="nolbl font-medium" data-th="Organisation">
                           {org.name}
@@ -432,26 +550,31 @@ export default function AdminPage() {
               <Table className="cards">
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    {data.people.some((p) => p.workspace) && <TableHead>Workspace</TableHead>}
-                    <TableHead>Status</TableHead>
-                    <TableHead>Joined</TableHead>
-                    <TableHead>Last sign-in</TableHead>
-                    <TableHead className="text-right">Documents</TableHead>
-                    <TableHead className="text-right">Reviews</TableHead>
-                    <TableHead>Last active</TableHead>
+                    <SortHead label="Name" sortKey="name" sort={peopleSort} />
+                    <SortHead label="Email" sortKey="email" sort={peopleSort} />
+                    <SortHead label="Role" sortKey="role" sort={peopleSort} />
+                    {data.people.some((p) => p.workspace) && (
+                      <SortHead label="Workspace" sortKey="workspace" sort={peopleSort} />
+                    )}
+                    <SortHead label="Status" sortKey="active" sort={peopleSort} />
+                    <SortHead label="Joined" sortKey="joined" sort={peopleSort} />
+                    <SortHead label="Last sign-in" sortKey="last_sign_in" sort={peopleSort} />
+                    <SortHead label="Documents" sortKey="documents_uploaded" align="right" sort={peopleSort} />
+                    <SortHead label="Reviews" sortKey="reviews_run" align="right" sort={peopleSort} />
+                    <SortHead label="Last active" sortKey="last_active" sort={peopleSort} />
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {data.people
-                    .filter((p) =>
-                      `${p.name} ${p.email} ${p.role} ${p.workspace ?? ''}`
-                        .toLowerCase()
-                        .includes(peopleQuery.toLowerCase())
-                    )
-                    .map((p) => (
+                {visiblePeople.length === 0 && peopleQuery.trim() !== '' ? (
+                  <tbody>
+                    <tr>
+                      <td colSpan={data.people.some((p) => p.workspace) ? 10 : 9} className="border-0 p-0">
+                        <EmptyState title="No people match your search." className="rounded-none border-0" />
+                      </td>
+                    </tr>
+                  </tbody>
+                ) : (
+                  <TableBody>
+                    {peopleSort.sorted.map((p) => (
                       <TableRow key={p.email}>
                         <TableCell className="nolbl font-medium" data-th="Name">
                           {p.name}
@@ -485,7 +608,8 @@ export default function AdminPage() {
                         <TableCell data-th="Last active">{timeAgo(p.last_activity)}</TableCell>
                       </TableRow>
                     ))}
-                </TableBody>
+                  </TableBody>
+                )}
               </Table>
             </div>
           </div>
