@@ -133,6 +133,12 @@ last incident.
   update this line when new tests land.
 - Frontend type-check: `cd apps/web && npx tsc --noEmit` — must be clean
   before committing any frontend change.
+- Frontend visual sweep: `python apps/web/tests/ui_sweep.py --base http://localhost:3000`
+  (dev server running) fails on any page that scrolls sideways at 1440/390 and writes
+  screenshots to `apps/web/.sweep/`; run before committing a restyle. Per-screen label
+  check: `python docs/design/complete-app-2026-09-12/check_app_labels.py <Stem> <tsx...>`.
+  References and review checklist: `docs/design/references/README.md`; the workflow itself
+  is the user-level `ui-design-workflow` skill.
 - `apps/web` dev server on Windows: if `next dev`/`next build` hangs
   indefinitely at "Starting..." with no compile output, it's very likely
   Windows Defender real-time scanning a freshly-touched `node_modules`/
