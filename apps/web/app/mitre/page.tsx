@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Archive, ArchiveRestore, Check, Loader2, Pencil, Plus, Target, X } from 'lucide-react';
+import { Archive, ArchiveRestore, Check, Loader2, Pencil, Plus, Search, Target, X } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,6 +14,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { PageHeader, Chip, EmptyState, SkeletonRows, AlertBanner, type ChipTone } from '@/components/app';
 import { AssessmentListItem, DOMAIN_LABELS, STATUS_META, fmtDate, orderedDomains } from './lib';
 import { CoverageSparkline } from './components/CoverageSparkline';
 
@@ -22,6 +23,14 @@ const STATUS_HELP: Record<string, string> = {
   pending: 'Uploaded and parsed — open it to run the assessment.',
   running: 'Running now — mapping your rules to ATT&CK techniques. This takes a few minutes.',
   failed: 'The run didn’t finish — open it to see why and re-run.',
+};
+
+/** Chip tone per assessment status, matching STATUS_META's labels. */
+const STATUS_TONE: Record<string, ChipTone> = {
+  pending: 'neutral',
+  running: 'info',
+  completed: 'ok',
+  failed: 'crit',
 };
 
 export default function MitreListPage() {
@@ -103,45 +112,57 @@ export default function MitreListPage() {
   return (
     <AppShell>
       <TooltipProvider>
-        <div className="mb-4 flex items-center justify-between gap-2">
-          <h1 className="flex items-center gap-2 text-lg font-semibold">
-            <Target size={18} strokeWidth={2} className="text-primary" aria-hidden="true" />
-            MITRE Assessments
-          </h1>
-          <div className="flex items-center gap-1.5">
-            <Button asChild size="sm" variant="outline">
-              <Link href="/mitre/connections">SIEM connections</Link>
-            </Button>
-            <Button asChild size="sm">
-              <Link href="/mitre/new">
-                <Plus size={15} className="mr-1" aria-hidden="true" />
-                New assessment
-              </Link>
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          title={
+            <span className="flex items-center gap-2">
+              <Target size={18} strokeWidth={2} className="text-primary" aria-hidden="true" />
+              MITRE Assessments
+            </span>
+          }
+          actions={
+            <>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/mitre/connections">SIEM connections</Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link href="/mitre/new">
+                  <Plus size={15} className="mr-1" aria-hidden="true" />
+                  New assessment
+                </Link>
+              </Button>
+            </>
+          }
+        />
 
         {error && (
-          <div role="alert" className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+          <AlertBanner kind="error" className="mb-4">
             {error}
-          </div>
+          </AlertBanner>
         )}
 
         {items !== null && items.length > 0 && (
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, customer, or project…"
-              aria-label="Search assessments by name, customer, or project"
-              className="h-8 w-56 rounded-md border border-input bg-background px-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
+            <div className="relative">
+              <Search
+                size={14}
+                strokeWidth={2}
+                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by name, customer, or project…"
+                aria-label="Search assessments by name, customer, or project"
+                className="h-8 w-56 rounded-lg border border-input bg-background pl-7 pr-2.5 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               aria-label="Filter by status"
-              className="h-8 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-8 rounded-lg border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="">All statuses</option>
               {Object.entries(STATUS_META).map(([key, meta]) => (
@@ -165,28 +186,32 @@ export default function MitreListPage() {
           </div>
         )}
         {actionError && (
-          <p role="alert" className="mb-2 text-xs text-destructive">{actionError}</p>
+          <p role="alert" className="mb-2 text-xs text-sev-crit">{actionError}</p>
         )}
 
         {items !== null && items.length === 0 && !error && (
-          <div className="rounded-md bg-muted/40 p-8 text-center">
-            <Target size={28} className="mx-auto mb-3 text-muted-foreground" aria-hidden="true" />
-            <p className="mx-auto max-w-md text-sm text-muted-foreground">
-              Upload your SIEM detection rules and we&apos;ll show you exactly which MITRE
-              ATT&CK techniques you can and can&apos;t detect. You get a coverage score, a
-              ranked gap list, and a build roadmap — tailored to the log sources you
-              already have.
-            </p>
-            <Button asChild size="sm" className="mt-4">
-              <Link href="/mitre/new">Start your first assessment</Link>
-            </Button>
-          </div>
+          <EmptyState
+            icon={<Target size={28} aria-hidden="true" />}
+            title={
+              <>
+                Upload your SIEM detection rules and we&apos;ll show you exactly which MITRE
+                ATT&CK techniques you can and can&apos;t detect. You get a coverage score, a
+                ranked gap list, and a build roadmap — tailored to the log sources you
+                already have.
+              </>
+            }
+            action={
+              <Button asChild size="sm">
+                <Link href="/mitre/new">Start your first assessment</Link>
+              </Button>
+            }
+          />
         )}
 
+        {items === null && !error && <SkeletonRows rows={6} />}
+
         {visible !== null && visible.length === 0 && items !== null && items.length > 0 && (
-          <p className="rounded-md bg-muted/40 p-6 text-center text-sm text-muted-foreground">
-            No assessments match your search or filters.
-          </p>
+          <EmptyState title="No assessments match your search or filters." />
         )}
 
         {/* Compact card grid — one card per run, everything readable at a
@@ -195,6 +220,7 @@ export default function MitreListPage() {
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {visible.map((item) => {
               const status = STATUS_META[item.status] ?? STATUS_META.pending;
+              const statusTone = STATUS_TONE[item.status] ?? 'neutral';
               const brief = orderedDomains(item.domains_brief ?? {}).filter(
                 ([, d]) => (d.applicable ?? 0) > 0
               );
@@ -215,7 +241,7 @@ export default function MitreListPage() {
                       router.push(`/mitre/${item.assessment_id}`);
                     }
                   }}
-                  className="group cursor-pointer rounded-md border p-3.5 transition-colors hover:border-primary/50 hover:bg-primary/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="group cursor-pointer rounded-[10px] border border-border bg-card p-3.5 transition-colors ease-app hover:border-primary/50 hover:bg-accent-soft/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {/* Header: name + chips, actions right */}
                   <div className="flex items-start justify-between gap-2">
@@ -236,7 +262,7 @@ export default function MitreListPage() {
                             if (e.key === 'Escape') setRenamingId(null);
                           }}
                           aria-label="New assessment name"
-                          className="h-7 w-full min-w-0 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="h-7 w-full min-w-0 rounded-lg border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         />
                         <button
                           type="button"
@@ -246,7 +272,7 @@ export default function MitreListPage() {
                             patchAssessment(item.assessment_id, { name: renameValue.trim() });
                             setRenamingId(null);
                           }}
-                          className="rounded p-1 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+                          className="rounded p-1 text-ok hover:bg-ok-soft disabled:opacity-50"
                         >
                           <Check size={14} aria-hidden="true" />
                         </button>
@@ -261,20 +287,18 @@ export default function MitreListPage() {
                       </span>
                     ) : (
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold leading-snug">{item.name}</p>
+                        <p className="truncate text-sm font-semibold leading-snug text-foreground">{item.name}</p>
                         {(item.customer || item.project_name || item.archived || item.siem) && (
                           <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                            {item.customer && <span className="truncate font-medium">{item.customer}</span>}
+                            {item.customer && <span className="truncate font-medium text-foreground">{item.customer}</span>}
                             {item.project_name && <span className="truncate">{item.project_name}</span>}
                             {item.siem && (
-                              <span className="rounded-full border border-sky-200 bg-sky-100 px-1.5 py-0.5 font-medium text-sky-800">
+                              <Chip tone="info" xs>
                                 {item.siem.platform === 'splunk' ? 'Splunk' : 'Sentinel'}
                                 {item.siem.trigger === 'scheduled' ? ' · auto' : ''}
-                              </span>
+                              </Chip>
                             )}
-                            {item.archived && (
-                              <span className="rounded-full border px-1.5 py-0.5 font-medium">Archived</span>
-                            )}
+                            {item.archived && <Chip tone="neutral" xs>Archived</Chip>}
                           </p>
                         )}
                       </div>
@@ -285,12 +309,14 @@ export default function MitreListPage() {
                         onClick={(e) => e.stopPropagation()}
                       >
                         {item.demo && (
-                          <Tooltip delayDuration={150}>
-                            <TooltipTrigger asChild>
-                              <span className="mr-1 rounded-full border border-sky-200 bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-800">Demo</span>
-                            </TooltipTrigger>
-                            <TooltipContent className="text-xs">Shared sample assessment — visible to every signed-in user, read-only</TooltipContent>
-                          </Tooltip>
+                          <Chip
+                            tone="demo"
+                            xs
+                            className="mr-1"
+                            tip="Shared sample assessment — visible to every signed-in user, read-only"
+                          >
+                            Demo
+                          </Chip>
                         )}
                         {item.editable !== false && (<>
                         <Tooltip delayDuration={150}>
@@ -341,7 +367,7 @@ export default function MitreListPage() {
                   {item.status === 'completed' && item.strict_pct !== null ? (
                     <>
                       <div className="mt-2.5 flex items-baseline gap-2">
-                        <span className="text-2xl font-bold leading-none text-primary">
+                        <span className="text-2xl font-bold leading-none tabular-nums text-primary">
                           {item.strict_pct}%
                         </span>
                         <span className="min-w-0 text-[11px] leading-tight text-muted-foreground">
@@ -351,8 +377,8 @@ export default function MitreListPage() {
                         {delta !== null && delta !== 0 && (
                           <span
                             className={cn(
-                              'ml-auto shrink-0 text-[11px] font-semibold',
-                              delta > 0 ? 'text-emerald-600' : 'text-rose-600'
+                              'ml-auto shrink-0 text-[11px] font-semibold tabular-nums',
+                              delta > 0 ? 'text-ok' : 'text-sev-crit'
                             )}
                             title={`${delta > 0 ? '+' : ''}${delta} points vs your previous completed run`}
                           >
@@ -363,16 +389,16 @@ export default function MitreListPage() {
                       <div className="mt-2 space-y-1">
                         {brief.map(([key, d]) => (
                           <div key={key} className="flex items-center gap-2 text-[11px]">
-                            <span className="w-16 shrink-0 text-muted-foreground">
+                            <span className="w-16 shrink-0 text-ink3">
                               {DOMAIN_LABELS[key] ?? key}
                             </span>
-                            <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+                            <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-na">
                               <div
                                 className="h-full rounded-full bg-primary"
                                 style={{ width: `${Math.min(100, d.strict_pct ?? 0)}%` }}
                               />
                             </div>
-                            <span className="w-10 shrink-0 text-right text-muted-foreground">
+                            <span className="w-10 shrink-0 text-right tabular-nums text-muted-foreground">
                               {d.strict_pct}%
                             </span>
                           </div>
@@ -389,17 +415,12 @@ export default function MitreListPage() {
                   )}
 
                   {/* Footer */}
-                  <div className="mt-2.5 flex items-center gap-2 border-t pt-2 text-[11px] text-muted-foreground">
-                    <span
-                      className={cn(
-                        'inline-flex items-center rounded-full border px-1.5 py-0.5 font-medium',
-                        status.chip
-                      )}
-                    >
+                  <div className="mt-2.5 flex items-center gap-2 border-t border-border pt-2 text-[11px] text-ink3">
+                    <Chip tone={statusTone} dot xs>
                       {status.label}
-                    </span>
+                    </Chip>
                     <span>ATT&CK v{item.attack_version}</span>
-                    <span className="ml-auto">{fmtDate(item.created_at)}</span>
+                    <span className="ml-auto tabular-nums">{fmtDate(item.created_at)}</span>
                   </div>
                 </div>
               );
