@@ -20,8 +20,10 @@ export function useResize(opts: {
   edge?: ResizeEdge;
   step?: number;
   fallback?: number;
+  /** Left offset of the resize container, subtracted from clientX for edge:'right'. Default 0. */
+  origin?: () => number;
 }) {
-  const { storageKey, min, max, edge = 'left', step = 40, fallback } = opts;
+  const { storageKey, min, max, edge = 'left', step = 40, fallback, origin = () => 0 } = opts;
   const [width, setWidthState] = useState<number | null>(null);
   const [resizing, setResizing] = useState(false);
 
@@ -59,10 +61,10 @@ export function useResize(opts: {
   const onPointerMove = useCallback(
     (e: ReactPointerEvent<HTMLElement>) => {
       if (!resizing) return;
-      const next = edge === 'right' ? e.clientX : window.innerWidth - e.clientX;
+      const next = edge === 'right' ? e.clientX - origin() : window.innerWidth - e.clientX;
       setWidth(next);
     },
-    [resizing, edge, setWidth]
+    [resizing, edge, origin, setWidth]
   );
 
   const onPointerUp = useCallback((e: ReactPointerEvent<HTMLElement>) => {

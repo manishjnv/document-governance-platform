@@ -9,12 +9,32 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import axios from 'axios';
 import Link from 'next/link';
-import { ArrowLeft, ChevronDown, FileText, Check, RotateCcw, MapPin, HelpCircle } from 'lucide-react';
+import { ChevronDown, FileText, Check, RotateCcw, MapPin, HelpCircle } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  PageHeader,
+  KpiTile,
+  Chip,
+  EmptyState,
+  SkeletonRows,
+  AlertBanner,
+  useResize,
+  type ChipTone,
+  type KpiTone,
+} from '@/components/app';
 import { cn } from '@/lib/utils';
+
+function scoreTextClass(score: number) {
+  return score >= 80 ? 'text-ok' : score >= 60 ? 'text-sev-med' : 'text-sev-crit';
+}
+function scoreFillClass(score: number) {
+  return score >= 80 ? 'bg-ok' : score >= 60 ? 'bg-sev-med' : 'bg-sev-crit';
+}
+
+// Left pane width (px) before the user has ever dragged the resize grip.
+const SPLIT_FALLBACK_WIDTH = 640;
 
 // Short, plain-English explanation shown on hover/focus of the "?" icon
 // next to a metric -- see docs/planning/SCORING_METHODOLOGY.md for the
@@ -94,6 +114,33 @@ interface DocInfo {
 
 const SEVERITIES = ['critical', 'major', 'medium', 'low', 'info'] as const;
 
+const SEV_LABEL: Record<(typeof SEVERITIES)[number], string> = {
+  critical: 'Critical',
+  major: 'Major',
+  medium: 'Medium',
+  low: 'Low',
+  info: 'Info',
+};
+
+// KpiTile has no low/info-specific tone -- accent/grey are the closest read.
+const SEV_KPI_TONE: Record<(typeof SEVERITIES)[number], KpiTone> = {
+  critical: 'crit',
+  major: 'high',
+  medium: 'med',
+  low: 'accent',
+  info: 'grey',
+};
+
+const SEVERITY_CHIP_TONE: Record<string, ChipTone> = {
+  critical: 'crit',
+  major: 'high',
+  medium: 'med',
+  low: 'low',
+};
+function sevChipTone(severity: string): ChipTone {
+  return SEVERITY_CHIP_TONE[severity.toLowerCase()] ?? 'neutral';
+}
+
 // Section headings can repeat/contain characters that aren't safe as a raw
 // DOM id -- slugify so scrollIntoView has a stable, unique target.
 function sectionSlug(heading: string, index: number) {
@@ -112,11 +159,22 @@ export default function ResultsPage() {
   const [areaFilter, setAreaFilter] = useState<string | null>(null);
   const [showDocument, setShowDocument] = useState(true);
   const [highlightedSection, setHighlightedSection] = useState<string | null>(null);
-  const [splitPercent, setSplitPercent] = useState(33);
-  const [resizingSplit, setResizingSplit] = useState(false);
   const router = useRouter();
   const docPaneRef = useRef<HTMLDivElement>(null);
   const splitContainerRef = useRef<HTMLDivElement>(null);
+
+  const {
+    width: splitWidth,
+    resizing: resizingSplit,
+    gripProps: splitGripProps,
+  } = useResize({
+    storageKey: 'results_split_width',
+    min: 320,
+    max: () => (splitContainerRef.current?.clientWidth ?? 1200) * 0.8,
+    edge: 'right',
+    origin: () => splitContainerRef.current?.getBoundingClientRect().left ?? 0,
+    fallback: SPLIT_FALLBACK_WIDTH,
+  });
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -224,31 +282,6 @@ export default function ResultsPage() {
     }
   };
 
-  const startSplitResize = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setResizingSplit(true);
-  };
-
-  useEffect(() => {
-    if (!resizingSplit) return;
-
-    const onMouseMove = (e: MouseEvent) => {
-      const container = splitContainerRef.current;
-      if (!container) return;
-      const rect = container.getBoundingClientRect();
-      const pct = ((e.clientX - rect.left) / rect.width) * 100;
-      setSplitPercent(Math.min(80, Math.max(20, pct)));
-    };
-    const onMouseUp = () => setResizingSplit(false);
-
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-    return () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
-  }, [resizingSplit]);
-
   const sectionIndexByHeading = useMemo(() => {
     const map = new Map<string, number>();
     docInfo?.parsed_sections?.forEach((s, i) => {
@@ -339,10 +372,9 @@ export default function ResultsPage() {
 
   if (loading) {
     return (
-      <AppShell>
-        <div className="flex items-center justify-center py-16">
-          <p className="text-muted-foreground">Loading review...</p>
-        </div>
+      <AppShell fullWidth>
+        <p className="py-4 text-center text-muted-foreground">Loading review...</p>
+        <SkeletonRows rows={5} />
       </AppShell>
     );
   }
@@ -350,349 +382,238 @@ export default function ResultsPage() {
   if (error || !review) {
     return (
       <AppShell>
-        <div className="max-w-4xl mx-auto">
-          <div role="alert" className="bg-red-50 border border-red-200 rounded-md p-6">
-            <p className="text-red-900 mb-4">{error || 'Review not found'}</p>
-            <Link href="/dashboard" className="text-red-700 hover:text-red-900 font-medium">
+        <div className="mx-auto max-w-4xl">
+          <AlertBanner kind="error">
+            <p className="mb-2">{error || 'Review not found'}</p>
+            <Link href="/dashboard" className="font-medium text-sev-crit hover:underline">
               Back to Dashboard
             </Link>
-          </div>
+          </AlertBanner>
         </div>
       </AppShell>
     );
   }
 
-  const scoreStatus = (score: number) => {
-    if (score >= 80) return 'green';
-    if (score >= 60) return 'yellow';
-    return 'red';
-  };
-
-  const severityColor = (severity: string) => {
-    switch (severity.toLowerCase()) {
-      case 'critical':
-        return 'bg-red-100 text-red-950 border-red-400';
-      case 'major':
-        return 'bg-orange-100 text-orange-950 border-orange-400';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-950 border-yellow-400';
-      case 'low':
-        return 'bg-blue-100 text-blue-950 border-blue-400';
-      default:
-        return 'bg-gray-100 text-gray-950 border-gray-400';
-    }
-  };
-
-  const severityBadge = (severity: string) => {
-    switch (severity.toLowerCase()) {
-      case 'critical':
-        return 'bg-red-700 text-white';
-      case 'major':
-        return 'bg-orange-700 text-white';
-      case 'medium':
-        return 'bg-yellow-700 text-white';
-      case 'low':
-        return 'bg-blue-700 text-white';
-      default:
-        return 'bg-gray-700 text-white';
-    }
-  };
-
-  const STAT_STYLES: Record<(typeof SEVERITIES)[number], { bg: string; text: string; label: string }> = {
-    critical: { bg: 'bg-red-100', text: 'text-red-800', label: 'Critical' },
-    major: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Major' },
-    medium: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Medium' },
-    low: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Low' },
-    info: { bg: 'bg-gray-200', text: 'text-gray-800', label: 'Info' },
-  };
+  const riskTone: ChipTone = review.risk_score > 70 ? 'crit' : review.risk_score > 40 ? 'med' : 'ok';
+  const riskBand = review.risk_score > 70 ? 'High' : review.risk_score > 40 ? 'Medium' : 'Low';
+  const riskTextClass = review.risk_score > 70 ? 'text-sev-crit' : review.risk_score > 40 ? 'text-sev-med' : 'text-ok';
 
   const findingsPanel = (
     <>
-      {/* Actions */}
-      <div className="flex flex-wrap items-center justify-end gap-1.5 mb-2">
-        {docInfo?.parsed_sections && docInfo.parsed_sections.length > 0 && (
-          <Button size="sm" variant="outline" onClick={() => setShowDocument((s) => !s)}>
-            <FileText size={14} strokeWidth={2} className="mr-1.5" aria-hidden="true" />
-            {showDocument ? 'Hide Document' : 'Show Document'}
-          </Button>
-        )}
-        <Button size="sm" variant="outline" onClick={handleDownloadPdf}>
-          Download PDF
-        </Button>
-        <Button size="sm" onClick={handleViewReport}>
-          View Full Report
-        </Button>
-      </div>
-
       {/* Overall Score / Risk Level */}
-      <div className="grid grid-cols-2 gap-1.5 mb-2">
-        <Card>
-          <CardHeader className="text-center pb-0.5 pt-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">
-              Overall Score
-              <InfoTip text="How complete and well-written this document is (0-100), across scope, clarity, commercial terms, delivery, and more. Higher is better." />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-center pb-2">
+      <div className="mb-2 grid grid-cols-2 gap-1.5">
+        <div className="rounded-[10px] border border-border bg-card p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">Overall Score</span>
+            <InfoTip text="How complete and well-written this document is (0-100), across scope, clarity, commercial terms, delivery, and more. Higher is better." />
+          </div>
+          <div className={cn('mt-0.5 text-[28px] font-semibold tabular-nums', scoreTextClass(review.overall_score))}>
+            {review.overall_score.toFixed(1)}
+          </div>
+          <div
+            role="progressbar"
+            aria-valuenow={review.overall_score}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Overall score"
+            className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-na"
+          >
             <div
-              className={`text-3xl font-bold mb-1 ${
-                scoreStatus(review.overall_score) === 'green'
-                  ? 'text-green-700'
-                  : scoreStatus(review.overall_score) === 'yellow'
-                  ? 'text-yellow-700'
-                  : 'text-red-700'
-              }`}
-            >
-              {review.overall_score.toFixed(1)}
-            </div>
-            <div
-              role="progressbar"
-              aria-valuenow={review.overall_score}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label="Overall score"
-              className="w-full bg-gray-200 rounded-full h-1.5"
-            >
-              <div
-                className={`h-1.5 rounded-full ${
-                  scoreStatus(review.overall_score) === 'green'
-                    ? 'bg-green-600'
-                    : scoreStatus(review.overall_score) === 'yellow'
-                    ? 'bg-yellow-600'
-                    : 'bg-red-600'
-                }`}
-                style={{ width: `${review.overall_score}%` }}
-              />
-            </div>
-          </CardContent>
-        </Card>
+              className={cn('h-full rounded-full transition-[width] duration-500 ease-app', scoreFillClass(review.overall_score))}
+              style={{ width: `${review.overall_score}%` }}
+            />
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="text-center pb-0.5 pt-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">
-              Risk Level
-              <InfoTip text="How much this document could hurt you if signed as-is -- combines how severe the issues are and how many there are. Higher is worse." />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-center pb-2">
-            <div
-              className={`text-3xl font-bold mb-1 ${
-                review.risk_score > 70
-                  ? 'text-red-700'
-                  : review.risk_score > 40
-                  ? 'text-yellow-700'
-                  : 'text-green-700'
-              }`}
-            >
+        <div className="rounded-[10px] border border-border bg-card p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">Risk Level</span>
+            <InfoTip text="How much this document could hurt you if signed as-is -- combines how severe the issues are and how many there are. Higher is worse." />
+          </div>
+          <div className="mt-0.5 flex items-baseline gap-2.5">
+            <span className={cn('text-[28px] font-semibold tabular-nums', riskTextClass)}>
               {review.risk_score.toFixed(0)}%
-            </div>
-            <p
-              className={`text-xs font-semibold ${
-                review.risk_score > 70
-                  ? 'text-red-700'
-                  : review.risk_score > 40
-                  ? 'text-yellow-700'
-                  : 'text-green-700'
-              }`}
-            >
-              {review.risk_score > 70 ? 'High' : review.risk_score > 40 ? 'Medium' : 'Low'}
-            </p>
-          </CardContent>
-        </Card>
+            </span>
+            <Chip tone={riskTone}>{riskBand}</Chip>
+          </div>
+        </div>
       </div>
 
       {/* Risk breakdown by axis -- which KIND of risk is driving the score */}
       {review.risk_breakdown && Object.keys(review.risk_breakdown).length > 0 && (
-        <Card className="mb-2">
-          <CardHeader className="pb-0.5 pt-2">
-            <CardTitle className="text-sm">
+        <div className="mb-2 rounded-[10px] border border-border bg-card">
+          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
+            <h3 className="text-sm font-semibold">
               Risk by Area
               <InfoTip text="The same risk score, split by area (Legal, Commercial, Delivery, etc.) so you can see what's actually driving it. Click an area to filter the findings below to just that area." />
-              {areaFilter && (
-                <button
-                  onClick={() => setAreaFilter(null)}
-                  className="ml-2 text-xs font-normal text-primary hover:underline"
-                >
-                  clear filter
-                </button>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pb-2">
-            <div className="space-y-1.5">
-              {Object.entries(review.risk_breakdown)
-                .sort((a, b) => b[1] - a[1])
-                .map(([axis, score]) => {
-                  const active = areaFilter === axis;
-                  return (
-                    <button
-                      key={axis}
-                      onClick={() => setAreaFilter(active ? null : axis)}
-                      className={cn(
-                        'flex items-center gap-2 text-xs w-full rounded-md p-0.5 transition-all',
-                        active ? 'ring-2 ring-offset-1 ring-primary' : 'hover:bg-muted/60'
-                      )}
-                    >
-                      <span className="w-20 shrink-0 text-foreground font-medium truncate text-left">{axis}</span>
-                      <div className="flex-1 bg-gray-200 rounded-full h-1.5">
-                        <div
-                          className={cn(
-                            'h-1.5 rounded-full transition-[width] duration-500 ease-out',
-                            score > 70 ? 'bg-red-600' : score > 40 ? 'bg-yellow-600' : 'bg-green-600'
-                          )}
-                          style={{ width: `${score}%` }}
-                        />
-                      </div>
-                      <span className="w-9 shrink-0 text-right text-muted-foreground">{score.toFixed(0)}%</span>
-                    </button>
-                  );
-                })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Document X-Ray: sections found + rule-engine gaps at a glance */}
-      {docInfo?.parsed_sections && docInfo.parsed_sections.length > 0 && (
-        <Card className="mb-2">
-          <CardHeader className="pb-0.5 pt-2">
-            <CardTitle className="text-sm">
-              Document X-Ray
-              <InfoTip text="A quick scan of the document itself: which sections it has, and which required sections/checks are missing." />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pb-2">
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div>
-                <h4 className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wide mb-1">
-                  Sections Found ({docInfo.parsed_sections.length})
-                </h4>
-                <ul className="space-y-0.5">
-                  {docInfo.parsed_sections.map((s, i) => (
-                    <li key={i} className="truncate text-foreground">
-                      {s.heading}
-                      {s.page_number != null && <span className="text-muted-foreground"> (p.{s.page_number})</span>}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold text-muted-foreground uppercase text-[10px] tracking-wide mb-1">
-                  Gaps Detected ({ruleGaps.length})
-                </h4>
-                {ruleGaps.length === 0 ? (
-                  <p className="text-muted-foreground">None -- passes all rule checks.</p>
-                ) : (
-                  <ul className="space-y-0.5">
-                    {ruleGaps.map((f) => (
-                      <li key={f.finding_id} className="truncate text-red-700">
-                        {f.title}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Findings Summary (clickable filters) */}
-      <Card className="mb-2">
-        <CardHeader className="pb-0.5 pt-2">
-          <CardTitle className="text-sm">
-            Findings Summary
-            <InfoTip text="Every issue found, grouped by how serious it is. Click a number to filter the list below to just that severity." />
-            {severityFilter && (
+            </h3>
+            {areaFilter && (
               <button
-                onClick={() => setSeverityFilter(null)}
-                className="ml-2 text-xs font-normal text-primary hover:underline"
+                onClick={() => setAreaFilter(null)}
+                className="text-xs font-normal text-primary hover:underline"
               >
                 clear filter
               </button>
             )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pb-2">
-          <div className="grid grid-cols-5 gap-1.5">
-            {SEVERITIES.map((sev) => {
-              const style = STAT_STYLES[sev];
-              const active = severityFilter === sev;
-              return (
-                <button
-                  key={sev}
-                  onClick={() => setSeverityFilter(active ? null : sev)}
-                  className={cn(
-                    'text-center p-2 rounded-md transition-all',
-                    style.bg,
-                    active ? 'ring-2 ring-offset-1 ring-primary' : 'hover:ring-1 hover:ring-primary/40'
-                  )}
-                >
-                  <div className={cn('text-2xl font-bold', style.text)}>
-                    {review.findings_count[sev]}
-                  </div>
-                  <div className="text-foreground text-xs font-medium">{style.label}</div>
-                </button>
-              );
-            })}
           </div>
-        </CardContent>
-      </Card>
+          <div className="space-y-1.5 p-4">
+            {Object.entries(review.risk_breakdown)
+              .sort((a, b) => b[1] - a[1])
+              .map(([axis, score]) => {
+                const active = areaFilter === axis;
+                return (
+                  <button
+                    key={axis}
+                    onClick={() => setAreaFilter(active ? null : axis)}
+                    className={cn(
+                      'flex w-full items-center gap-2 rounded-lg p-1 text-xs transition-colors duration-150 ease-app',
+                      active ? 'ring-2 ring-offset-1 ring-primary' : 'hover:bg-muted/60'
+                    )}
+                  >
+                    <span className="w-20 shrink-0 truncate text-left text-[12.5px] font-medium text-foreground">{axis}</span>
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-na">
+                      <div
+                        className={cn('h-full rounded-full transition-[width] duration-500 ease-app', scoreFillClass(score))}
+                        style={{ width: `${score}%` }}
+                      />
+                    </div>
+                    <span className="w-9 shrink-0 text-right text-[12.5px] font-semibold tabular-nums text-foreground">
+                      {score.toFixed(0)}%
+                    </span>
+                  </button>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
+      {/* Document X-Ray: sections found + rule-engine gaps at a glance */}
+      {docInfo?.parsed_sections && docInfo.parsed_sections.length > 0 && (
+        <div className="mb-2 rounded-[10px] border border-border bg-card">
+          <div className="border-b border-border px-4 py-2.5">
+            <h3 className="text-sm font-semibold">
+              Document X-Ray
+              <InfoTip text="A quick scan of the document itself: which sections it has, and which required sections/checks are missing." />
+            </h3>
+          </div>
+          <div className="grid grid-cols-2 gap-3 p-4 text-xs">
+            <div>
+              <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">
+                Sections Found ({docInfo.parsed_sections.length})
+              </h4>
+              <ul className="space-y-0.5">
+                {docInfo.parsed_sections.map((s, i) => (
+                  <li key={i} className="truncate text-foreground">
+                    {s.heading}
+                    {s.page_number != null && <span className="text-muted-foreground"> (p.{s.page_number})</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">
+                Gaps Detected ({ruleGaps.length})
+              </h4>
+              {ruleGaps.length === 0 ? (
+                <p className="text-muted-foreground">None -- passes all rule checks.</p>
+              ) : (
+                <ul className="space-y-0.5">
+                  {ruleGaps.map((f) => (
+                    <li key={f.finding_id} className="truncate text-sev-crit">
+                      {f.title}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Findings Summary (clickable filters) */}
+      <div className="mb-2 rounded-[10px] border border-border bg-card">
+        <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
+          <h3 className="text-sm font-semibold">
+            Findings Summary
+            <InfoTip text="Every issue found, grouped by how serious it is. Click a number to filter the list below to just that severity." />
+          </h3>
+          {severityFilter && (
+            <button
+              onClick={() => setSeverityFilter(null)}
+              className="text-xs font-normal text-primary hover:underline"
+            >
+              clear filter
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-5 gap-1.5 p-4">
+          {SEVERITIES.map((sev) => {
+            const active = severityFilter === sev;
+            return (
+              <KpiTile
+                key={sev}
+                label={SEV_LABEL[sev]}
+                value={review.findings_count[sev]}
+                tone={SEV_KPI_TONE[sev]}
+                active={active}
+                onClick={() => setSeverityFilter(active ? null : sev)}
+              />
+            );
+          })}
+        </div>
+      </div>
 
       {/* Findings Details */}
-      <Card>
-        <CardHeader className="pb-0.5 pt-2">
-          <CardTitle className="text-sm">
-            Findings {(severityFilter || areaFilter) && <span className="text-muted-foreground font-normal">({visibleFindings.length} of {review.findings.length})</span>}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pb-2">
+      <div className="rounded-[10px] border border-border bg-card">
+        <div className="border-b border-border px-4 py-2.5">
+          <h3 className="text-sm font-semibold">
+            Findings {(severityFilter || areaFilter) && <span className="font-normal text-muted-foreground">({visibleFindings.length} of {review.findings.length})</span>}
+          </h3>
+        </div>
+        <div className="p-4">
           {visibleFindings.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No findings in this filter.</p>
+            <EmptyState title="No findings in this filter." />
           ) : (
-            <div className="space-y-1">
+            <div className="space-y-2">
               {visibleFindings.map((finding) => {
                 const title = finding.title || finding.category?.replace(/_/g, ' ') || 'Finding';
                 const fixed = finding.status === 'resolved';
+                const isOpen = expandedFinding === finding.finding_id;
                 return (
                   <div
                     key={finding.finding_id}
                     className={cn(
-                      'border rounded-md overflow-hidden',
-                      severityColor(finding.severity),
+                      'overflow-hidden rounded-[10px] border transition-colors duration-150 ease-app',
+                      isOpen ? 'border-primary bg-accent-soft' : 'border-border bg-card',
                       fixed && 'opacity-60'
                     )}
                   >
                     <button
-                      onClick={() =>
-                        setExpandedFinding(
-                          expandedFinding === finding.finding_id ? null : finding.finding_id
-                        )
-                      }
-                      aria-expanded={expandedFinding === finding.finding_id}
+                      onClick={() => setExpandedFinding(isOpen ? null : finding.finding_id)}
+                      aria-expanded={isOpen}
                       aria-controls={`finding-detail-${finding.finding_id}`}
-                      className="w-full py-1.5 px-2.5 text-left flex justify-between items-center gap-2 hover:brightness-95"
+                      className="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 text-left hover:bg-muted/40"
                     >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className={cn('shrink-0 text-[9px] font-bold uppercase tracking-wide px-1 py-0.5 rounded leading-none', severityBadge(finding.severity))}>
+                      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                        <Chip tone={sevChipTone(finding.severity)} xs className="uppercase tracking-wide">
                           {finding.severity}
-                        </span>
+                        </Chip>
                         {finding.risk_area && (
-                          <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide px-1 py-0.5 rounded leading-none bg-muted text-muted-foreground">
+                          <Chip tone="neutral" xs>
                             {finding.risk_area}
-                          </span>
+                          </Chip>
                         )}
                         {fixed && (
-                          <span className="shrink-0 flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide px-1 py-0.5 rounded leading-none bg-green-700 text-white">
-                            <Check size={9} strokeWidth={3} /> Fixed
-                          </span>
+                          <Chip tone="ok" xs className="gap-1">
+                            <Check size={9} strokeWidth={3} aria-hidden="true" /> Fixed
+                          </Chip>
                         )}
                         {finding.evidence_type && (
-                          <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide px-1 py-0.5 rounded leading-none border border-muted-foreground/30 text-muted-foreground">
+                          <Chip tone="neutral" xs>
                             {finding.evidence_type.replace(/_/g, ' ')}
-                          </span>
+                          </Chip>
                         )}
-                        <h3 className={cn('font-semibold text-xs truncate', fixed && 'line-through')}>
+                        <h3 className={cn('truncate text-[13px] font-semibold text-foreground', fixed && 'line-through')}>
                           {title}
                         </h3>
                         {finding.section_ref && (
@@ -702,7 +623,7 @@ export default function ResultsPage() {
                               e.stopPropagation();
                               handleLocateInDoc(finding.section_ref);
                             }}
-                            className="shrink-0 flex items-center gap-0.5 text-[11px] font-semibold text-primary hover:underline"
+                            className="flex shrink-0 items-center gap-0.5 text-[11px] font-semibold text-primary hover:underline"
                           >
                             <MapPin size={10} strokeWidth={2.5} aria-hidden="true" />
                             {finding.section_ref}
@@ -713,33 +634,31 @@ export default function ResultsPage() {
                         size={14}
                         strokeWidth={2}
                         aria-hidden="true"
-                        className={`ml-2 shrink-0 transition-transform duration-150 ${
-                          expandedFinding === finding.finding_id ? 'rotate-180' : ''
-                        }`}
+                        className={cn('ml-2 shrink-0 transition-transform duration-150 ease-app', isOpen && 'rotate-180')}
                       />
                     </button>
 
-                    {expandedFinding === finding.finding_id && (
-                      <div id={`finding-detail-${finding.finding_id}`} className="border-t px-2.5 py-2 space-y-2 text-xs">
+                    {isOpen && (
+                      <div id={`finding-detail-${finding.finding_id}`} className="space-y-2.5 border-t border-border px-3.5 py-3 text-[13px]">
                         <div>
-                          <h4 className="font-semibold mb-1 text-xs uppercase tracking-wide text-muted-foreground">Description</h4>
-                          <p>{renderWithSectionLinks(finding.description)}</p>
+                          <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">Description</h4>
+                          <p className="leading-relaxed">{renderWithSectionLinks(finding.description)}</p>
                         </div>
                         {finding.matched_text && (
                           <div>
-                            <h4 className="font-semibold mb-1 text-xs uppercase tracking-wide text-muted-foreground">Document Text</h4>
-                            <blockquote className="border-l-2 border-muted-foreground/30 pl-2 italic text-muted-foreground">
+                            <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">Document Text</h4>
+                            <blockquote className="border-l-2 border-line2 pl-2.5 italic text-muted-foreground">
                               {renderWithSectionLinks(finding.matched_text)}
                             </blockquote>
                           </div>
                         )}
                         <div>
-                          <h4 className="font-semibold mb-1 text-xs uppercase tracking-wide text-muted-foreground">Recommendation</h4>
-                          <p>{renderWithSectionLinks(finding.recommendation)}</p>
+                          <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">Recommendation</h4>
+                          <p className="leading-relaxed">{renderWithSectionLinks(finding.recommendation)}</p>
                         </div>
                         <div>
-                          <h4 className="font-semibold mb-1 text-xs uppercase tracking-wide text-muted-foreground">Confidence</h4>
-                          <p>{finding.confidence}%</p>
+                          <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">Confidence</h4>
+                          <p className="font-semibold tabular-nums text-foreground">{finding.confidence}%</p>
                         </div>
                         <div className="pt-1">
                           {fixed ? (
@@ -765,11 +684,11 @@ export default function ResultsPage() {
               })}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {review.audit_meta && (
-        <p className="text-[11px] text-muted-foreground px-1">
+        <p className="px-1 text-[11px] text-ink3">
           {[
             review.audit_meta.models_used &&
               Object.values(review.audit_meta.models_used).length > 0 &&
@@ -791,85 +710,96 @@ export default function ResultsPage() {
   return (
     <AppShell fullWidth>
       <TooltipProvider delayDuration={200}>
-      <div className="w-full">
-        <div className="flex items-center justify-between mb-1">
-          <h1 className="text-xl font-bold text-foreground">Review Results</h1>
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground font-medium"
-          >
-            <ArrowLeft size={16} strokeWidth={2} aria-hidden="true" />
-            Back to Dashboard
-          </Link>
-        </div>
-
-        {docInfo && (
-          <p className="text-sm text-muted-foreground mb-2">
-            <span className="font-medium text-foreground">{docInfo.original_filename}</span>
-            {docInfo.project_name && <> &middot; Project: {docInfo.project_name}</>}
-            {docInfo.document_type && <> &middot; {docInfo.document_type}</>}
-            {docInfo.page_count != null && <> &middot; {docInfo.page_count} page{docInfo.page_count === 1 ? '' : 's'}</>}
-            {' '}&middot; Uploaded {new Date(docInfo.created_at).toLocaleDateString()}
-          </p>
-        )}
+        <PageHeader
+          title="Review Results"
+          back={{ href: '/dashboard', label: 'Back to Dashboard' }}
+          meta={
+            docInfo && (
+              <>
+                <span className="font-medium text-foreground">{docInfo.original_filename}</span>
+                {docInfo.project_name && <> &middot; Project: {docInfo.project_name}</>}
+                {docInfo.document_type && <> &middot; {docInfo.document_type}</>}
+                {docInfo.page_count != null && <> &middot; {docInfo.page_count} page{docInfo.page_count === 1 ? '' : 's'}</>}
+                {' '}&middot; Uploaded {new Date(docInfo.created_at).toLocaleDateString()}
+              </>
+            )
+          }
+          actions={
+            <>
+              {docInfo?.parsed_sections && docInfo.parsed_sections.length > 0 && (
+                <Button size="sm" variant="outline" onClick={() => setShowDocument((s) => !s)}>
+                  <FileText size={14} strokeWidth={2} className="mr-1.5" aria-hidden="true" />
+                  {showDocument ? 'Hide Document' : 'Show Document'}
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={handleDownloadPdf}>
+                Download PDF
+              </Button>
+              <Button size="sm" onClick={handleViewReport}>
+                View Full Report
+              </Button>
+            </>
+          }
+        />
 
         {showDocument && docInfo?.parsed_sections ? (
-          <div ref={splitContainerRef} className={cn('flex flex-col md:flex-row items-start gap-2 md:gap-0', resizingSplit && 'select-none')}>
+          <div
+            ref={splitContainerRef}
+            className={cn('flex flex-col items-start gap-3 md:flex-row md:gap-0', resizingSplit && 'select-none')}
+          >
             <div
-              style={{ '--split-w': `${splitPercent}%` } as React.CSSProperties}
-              className="w-full md:[width:var(--split-w)] min-w-0 md:pr-1"
+              style={{ '--split-w': `${splitWidth ?? SPLIT_FALLBACK_WIDTH}px` } as React.CSSProperties}
+              className="w-full min-w-0 md:w-[var(--split-w)] md:flex-none"
             >
               {findingsPanel}
             </div>
 
-            {/* Drag-to-resize divider (panes stack on mobile, no divider) */}
+            {/* Drag-to-resize grip (panes stack on mobile, no grip) */}
             <div
-              onMouseDown={startSplitResize}
-              className="hidden md:block w-1.5 shrink-0 self-stretch cursor-col-resize rounded-full bg-border hover:bg-primary/50 active:bg-primary transition-colors"
-            />
-
-            <div
-              style={{ '--split-w': `${100 - splitPercent}%` } as React.CSSProperties}
-              className="w-full md:[width:var(--split-w)] min-w-0 md:pl-1"
+              {...splitGripProps}
+              aria-label="Resize document pane (drag, or use arrow keys)"
+              title="Drag to resize"
+              className="hidden md:flex w-3.5 flex-none self-stretch cursor-col-resize touch-none items-center justify-center group focus-visible:outline-none"
             >
-              <Card className="md:sticky top-4 max-h-[70vh] md:max-h-[calc(100vh-2rem)] flex flex-col">
-                <CardHeader className="pb-0.5 pt-2">
-                  <CardTitle className="text-sm">Document</CardTitle>
-                </CardHeader>
-                <CardContent className="overflow-y-auto pb-2" ref={docPaneRef}>
-                  <div className="space-y-4 text-sm">
-                    {docInfo.parsed_sections.map((section, i) => {
-                      const slug = sectionSlug(section.heading, i);
-                      return (
-                        <div
-                          key={slug}
-                          id={slug}
-                          className={cn(
-                            'rounded-md p-2 -m-2 transition-colors duration-500',
-                            highlightedSection === slug && 'bg-yellow-100'
+              <i className="block h-10 w-1 rounded-full bg-line2 transition-colors duration-150 ease-app group-hover:bg-primary group-focus-visible:bg-primary" />
+            </div>
+
+            <div className="w-full min-w-0 flex-1">
+              <div className="flex max-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-[10px] border border-border bg-card md:sticky md:top-4">
+                <div className="border-b border-border px-4 py-2.5">
+                  <h3 className="text-sm font-semibold">Document</h3>
+                </div>
+                <div ref={docPaneRef} className="space-y-1 overflow-y-auto p-4">
+                  {docInfo.parsed_sections.map((section, i) => {
+                    const slug = sectionSlug(section.heading, i);
+                    return (
+                      <div
+                        key={slug}
+                        id={slug}
+                        className={cn(
+                          'rounded-lg p-2 transition-colors duration-[450ms] ease-app',
+                          highlightedSection === slug && 'bg-accent-soft'
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[13px] font-semibold text-foreground">{section.heading}</span>
+                          {section.page_number != null && (
+                            <span className="shrink-0 text-[11px] font-medium tabular-nums text-ink3">
+                              p.{section.page_number}
+                            </span>
                           )}
-                        >
-                          <h4 className="font-semibold text-foreground mb-1">
-                            {section.heading}
-                            {section.page_number != null && (
-                              <span className="ml-2 text-xs font-normal text-muted-foreground">
-                                p.{section.page_number}
-                              </span>
-                            )}
-                          </h4>
-                          <p className="whitespace-pre-wrap text-muted-foreground">{section.content}</p>
                         </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
+                        <p className="mt-1 whitespace-pre-wrap text-[12.5px] text-muted-foreground">{section.content}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         ) : (
           findingsPanel
         )}
-      </div>
       </TooltipProvider>
     </AppShell>
   );
