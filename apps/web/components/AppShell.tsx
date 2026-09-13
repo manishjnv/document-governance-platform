@@ -3,19 +3,64 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bug, FileText, LayoutDashboard, Target, Menu, LogOut, PanelLeftClose, PanelLeftOpen, ShieldCheck } from 'lucide-react';
+import { Bug, FileText, LayoutDashboard, Target, Menu, LogOut, PanelLeftClose, PanelLeftOpen, Plus, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useResize } from '@/components/app/useResize';
 import { cn } from '@/lib/utils';
 
-const NAV_ITEMS = [
-  { href: '/dashboard', label: 'SOW Review', icon: LayoutDashboard },
-  { href: '/mitre', label: 'MITRE Assessment', icon: Target },
-  { href: '/codereview', label: 'Code Security Review', icon: Bug },
+// Module-level actions shown under the active module so they stay reachable from detail pages.
+// `match` is the pathname prefix that owns the module (e.g. /results/... belongs to SOW Review).
+const NAV_ITEMS: NavItem[] = [
+  {
+    href: '/dashboard',
+    label: 'SOW Review',
+    icon: LayoutDashboard,
+    match: ['/dashboard', '/results', '/upload'],
+    actions: [{ href: '/upload', label: 'Upload document', primary: true }],
+  },
+  {
+    href: '/mitre',
+    label: 'MITRE Assessment',
+    icon: Target,
+    actions: [
+      { href: '/mitre/new', label: 'New assessment', primary: true },
+      { href: '/mitre/connections', label: 'SIEM connections' },
+    ],
+  },
+  {
+    href: '/codereview',
+    label: 'Code Security Review',
+    icon: Bug,
+    actions: [
+      { href: '/codereview/new', label: 'New review', primary: true },
+      { href: '/codereview/new', label: 'Get scanner' },
+    ],
+  },
 ];
 
-const ADMIN_NAV_ITEM = { href: '/admin', label: 'Admin', icon: ShieldCheck };
+const ADMIN_NAV_ITEM: NavItem = { href: '/admin', label: 'Admin', icon: ShieldCheck };
+
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof Bug;
+  match?: string[];
+  actions?: { href: string; label: string; primary?: boolean }[];
+};
+
+type Me = { email: string; first_name?: string | null; last_name?: string | null; is_platform_admin?: boolean };
+
+function displayName(me: Me) {
+  const name = [me.first_name, me.last_name].filter(Boolean).join(' ').trim();
+  return name || me.email;
+}
+
+function initials(me: Me) {
+  const name = displayName(me);
+  const parts = name.includes('@') ? [name] : name.split(/\s+/);
+  return parts.slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('');
+}
 
 const MIN_WIDTH = 180;
 const MAX_WIDTH = 400;
@@ -37,25 +82,47 @@ function NavLinks({
   const items = isAdmin ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS;
   return (
     <nav className="flex flex-col gap-1">
-      {items.map(({ href, label, icon: Icon }) => {
-        const active = pathname === href || pathname?.startsWith(`${href}/`);
+      {items.map(({ href, label, icon: Icon, match, actions }) => {
+        const roots = match ?? [href];
+        const active = roots.some((r) => pathname === r || pathname?.startsWith(`${r}/`));
         return (
-          <Link
-            key={href}
-            href={href}
-            onClick={onNavigate}
-            title={collapsed ? label : undefined}
-            className={cn(
-              'flex items-center gap-2.5 rounded-[7px] px-2.5 py-2 text-[13.5px] font-medium whitespace-nowrap overflow-hidden transition-colors duration-150 ease-app',
-              collapsed && 'justify-center px-0',
-              active
-                ? 'bg-accent text-primary'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+          <div key={href} className="flex flex-col">
+            <Link
+              href={href}
+              onClick={onNavigate}
+              title={collapsed ? label : undefined}
+              className={cn(
+                'flex items-center gap-2.5 rounded-[7px] px-2.5 py-2 text-[13.5px] font-medium whitespace-nowrap overflow-hidden transition-colors duration-150 ease-app',
+                collapsed && 'justify-center px-0',
+                active
+                  ? 'bg-accent text-primary'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+            >
+              <Icon size={16} strokeWidth={2} aria-hidden="true" />
+              {!collapsed && label}
+            </Link>
+            {active && !collapsed && actions && (
+              <div className="ml-[15px] mt-0.5 mb-1 flex flex-col gap-0.5 border-l border-border pl-3">
+                {actions.map((a) => (
+                  <Link
+                    key={a.label}
+                    href={a.href}
+                    onClick={onNavigate}
+                    className={cn(
+                      'flex items-center gap-1.5 rounded-[6px] px-2 py-1.5 text-[12.5px] whitespace-nowrap transition-colors duration-150 ease-app',
+                      a.primary
+                        ? 'font-medium text-primary hover:bg-accent'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                  >
+                    {a.primary && <Plus size={13} strokeWidth={2.25} aria-hidden="true" />}
+                    {a.label}
+                  </Link>
+                ))}
+              </div>
             )}
-          >
-            <Icon size={16} strokeWidth={2} aria-hidden="true" />
-            {!collapsed && label}
-          </Link>
+          </div>
         );
       })}
     </nav>
@@ -72,7 +139,8 @@ export function AppShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   // Default expanded unless the user has an explicit saved preference.
   const [collapsed, setCollapsed] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [me, setMe] = useState<Me | null>(null);
+  const isAdmin = me?.is_platform_admin === true;
   const router = useRouter();
 
   const { width, resizing, gripProps } = useResize({
@@ -90,7 +158,7 @@ export function AppShell({
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => (r.ok ? r.json() : null))
-      .then((me) => setIsAdmin(me?.is_platform_admin === true))
+      .then((data) => setMe(data && typeof data.email === 'string' ? data : null))
       .catch(() => {});
   }, []);
 
@@ -153,6 +221,27 @@ export function AppShell({
         {collapsed && <div className="pb-3.5" />}
         <NavLinks collapsed={collapsed} isAdmin={isAdmin} />
         <div className="mt-auto flex flex-col gap-1">
+          {me && (
+            <div
+              title={collapsed ? `${displayName(me)} · ${me.email}` : undefined}
+              className={cn('flex items-center gap-2.5 border-t border-border pt-3 pb-1', collapsed ? 'justify-center px-0' : 'px-2')}
+            >
+              <span
+                aria-hidden="true"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-semibold text-primary"
+              >
+                {initials(me)}
+              </span>
+              {!collapsed && (
+                <span className="min-w-0 flex flex-col leading-tight">
+                  <span className="truncate text-[12.5px] font-medium text-foreground">{displayName(me)}</span>
+                  {displayName(me) !== me.email && (
+                    <span className="truncate text-[11px] text-muted-foreground">{me.email}</span>
+                  )}
+                </span>
+              )}
+            </div>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -200,10 +289,26 @@ export function AppShell({
             ScopeWise
           </SheetTitle>
           <NavLinks onNavigate={() => setMobileOpen(false)} isAdmin={isAdmin} />
+          {me && (
+            <div className="mt-auto flex items-center gap-2.5 border-t border-border px-2 pt-3 pb-1">
+              <span
+                aria-hidden="true"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-semibold text-primary"
+              >
+                {initials(me)}
+              </span>
+              <span className="min-w-0 flex flex-col leading-tight">
+                <span className="truncate text-[12.5px] font-medium text-foreground">{displayName(me)}</span>
+                {displayName(me) !== me.email && (
+                  <span className="truncate text-[11px] text-muted-foreground">{me.email}</span>
+                )}
+              </span>
+            </div>
+          )}
           <Button
             variant="ghost"
             size="sm"
-            className="mt-auto w-full justify-start gap-2"
+            className={cn('w-full justify-start gap-2', !me && 'mt-auto')}
             onClick={handleLogout}
           >
             <LogOut size={16} strokeWidth={2} aria-hidden="true" />
