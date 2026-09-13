@@ -18,8 +18,9 @@ Design canvas from `docs/design/complete-app-2026-09-12/` (generator,
 primitives, runtime helpers, verbatim inventories, label-completeness check,
 standalone Playwright harness). Live: https://claude.ai/code/artifact/9f120be7-d49e-4651-8ea3-a103269b5e24
 (15 screens, 30 artboards, desktop + phone, all interactive, all passing the
-harness). Next: owner review on the live canvas, then build page by page
-under `apps/web` (README lists what the design unifies). Handoffs:
+harness). Owner review done 2026-09-13 with no change requests. Build plan:
+`docs/planning/UI_REDESIGN_BUILD_PLAN.md` (five phases, kickoff
+`docs/phases/prompts/UI_REDESIGN_PHASE_0_PROMPT.md`); nothing built yet. Handoffs:
 `docs/phases/summaries/SESSION_HANDOFF_2026_09_12_DESIGN_CANVAS.md`,
 `SESSION_HANDOFF_2026_09_13_DESIGN_CANVAS.md`.
 
