@@ -1,7 +1,7 @@
 # Session handoff - 2026-09-13 - UI redesign Phases 0-4 built
 
 **Headline:** every authenticated screen of `apps/web` is restyled to the calm-light design canvas
-in 25 commits (`daae552`..`a2dfaf2`), pushed and **deployed** on both hosts (Haiku smoke clean). Reference: `docs/planning/UI_REDESIGN_BUILD_PLAN.md` section 0.
+in 29 commits (`daae552`..`19344f2`), pushed and **deployed** on both hosts (Haiku smoke clean; Lighthouse mobile on `/dashboard` 68/100/100/63, accessibility gate holds). Reference: `docs/planning/UI_REDESIGN_BUILD_PLAN.md` section 0.
 
 ## Commits (one per screen or unit)
 
@@ -12,12 +12,16 @@ in 25 commits (`daae552`..`a2dfaf2`), pushed and **deployed** on both hosts (Hai
 | 2 MITRE list, new, connections, detail (2) | `61ac46a` `82938f6` `1a9d9c0` `5cca31c` `3123123` |
 | 3 Code Review list, new, detail + drawer, SeverityBar, overflow fix | `cc69401` `3215758` `8a640c6` `e162bc4` `6de58dd` |
 | 4 admin, install and update bar, request-access form, skip link | `8c42c9f` `8d03a5a` |
+| 5 docs, sweep script + references, deploy notes, CLAUDE.md skill values | `5327a35` `06bd700` `a2dfaf2` `f062cfe` `40d614a` `19344f2` |
 
 Gates: `tsc` clean; per-screen label check (all misses are pre-existing design sample strings);
 Playwright 1440/390 on every route, no page overflow, `/` untouched. RCA #28-#30 added.
 
+## Also this session (outside the repo)
+User-level skill `~/.claude/skills/ui-design-workflow/SKILL.md` (project-agnostic UI workflow), a global-playbook rule to load it on every UI task, a Desktop copy for Claude Design web, and project memories `ui-redesign-status-2026-09-13` + `feedback-ui-design-workflow-skill`.
+
 ## Next action
-Deployed and smoke-tested (30/30 routes 200, theme scoping, self-hosted Plex, API healthy). Still open: Lighthouse (no Chrome locally) and the Phase 5 real-data
+Deployed and smoke-tested (30/30 routes 200, theme scoping, self-hosted Plex, API healthy). Still open: the Phase 5 real-data
 smoke (routes 200, `app-theme` on app pages only, Plex served from `/_next/static/media`,
 Lighthouse on `/login` and `/dashboard`). Open: Admin People no-match state (needs a filter variable).
 
