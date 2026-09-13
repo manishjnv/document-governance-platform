@@ -3,14 +3,16 @@
 **Headline:** all 15 authenticated screens (30 artboards, desktop + phone) pass the harness and
 the label check and are published as Version 4 of
 https://claude.ai/code/artifact/9f120be7-d49e-4651-8ea3-a103269b5e24. Design only; no `apps/web`
-change. Next: owner review pass on the live canvas.
+change. Owner reviewed the canvas the same day with no change requests; this session then wrote
+the build plan, and a separate session built and deployed it (see below).
 
 ## Commits
 
 | SHA | What |
 |---|---|
 | `8fc5e0d` | Results, MITRE detail, Code Review detail pass at both sizes; tooltips no longer widen pages; harness page-width check + `desktop_only` step flag |
-| (this) | Docs: README status, progress index, resume prompt stubbed, RCA #27, this handoff |
+| `62441b8` | Docs: README status, progress index, resume prompt stubbed, RCA #27, this handoff |
+| `1b218aa` | Docs: `docs/planning/UI_REDESIGN_BUILD_PLAN.md` (five phases, restyle in place, tokens generated from `dc.py`, cheapest-tier routing) + `UI_REDESIGN_PHASE_0_PROMPT.md` |
 
 ## What was wrong and how it was fixed (detail in RCA #27 and the commit message)
 
@@ -23,8 +25,10 @@ change. Next: owner review pass on the live canvas.
 
 ## Open
 
-Owner review of the live canvas; then the build plan (page by page under `apps/web`, README lists
-what the design unifies). Everything else pending is unchanged from the 2026-09-12 handoffs.
+The plan was executed the same day by another session: Phases 0-4 built, deployed on both hosts,
+RCA #28-30, handoff `SESSION_HANDOFF_2026_09_13_UI_REDESIGN.md`, status in the plan's §0. Still
+open there: real-data screenshot pass on the three detail pages, Admin People no-match state.
+Everything else pending is unchanged from the 2026-09-12 handoffs.
 
 ## Agent utilization
 
