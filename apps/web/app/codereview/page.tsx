@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { PageHeader, Chip, EmptyState, SkeletonRows, AlertBanner, type ChipTone } from '@/components/app';
+import { PageHeader, Chip, EmptyState, SkeletonRows, AlertBanner, SeverityBar, type ChipTone } from '@/components/app';
 import {
   CodeReviewListItem,
   Severity,
@@ -48,13 +48,6 @@ const SEV_TONE: Record<Severity, ChipTone> = {
   medium: 'med',
   low: 'low',
   info: 'info',
-};
-const SEV_BAR: Record<Severity, string> = {
-  critical: 'bg-sev-crit',
-  high: 'bg-sev-high',
-  medium: 'bg-sev-med',
-  low: 'bg-sev-low',
-  info: 'bg-sev-info',
 };
 
 export default function CodeReviewListPage() {
@@ -318,20 +311,7 @@ export default function CodeReviewListPage() {
 
                   <Tooltip delayDuration={150}>
                     <TooltipTrigger asChild>
-                      <div className="mt-3 flex h-1.5 w-full overflow-hidden rounded-full bg-na">
-                        {total > 0 &&
-                          SEVERITY_ORDER.map((s) => {
-                            const count = item.counts.by_severity[s] ?? 0;
-                            if (count === 0) return null;
-                            return (
-                              <span
-                                key={s}
-                                className={SEV_BAR[s]}
-                                style={{ width: `${(count / total) * 100}%` }}
-                              />
-                            );
-                          })}
-                      </div>
+                      <SeverityBar counts={item.counts.by_severity} className="mt-3" />
                     </TooltipTrigger>
                     <TooltipContent className="text-xs">
                       {total === 0
