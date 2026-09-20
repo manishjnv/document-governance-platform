@@ -130,3 +130,11 @@ Cross-checked 2026-09-13 through the Hostinger API (`GET /api/dns/v1/zones/scope
 DKIM a/b/c, DMARC and autoconfig values, so the Cloudflare copy matches what Hostinger expects.
 Its parked `A @ 2.57.91.91` is irrelevant (never move the nameservers back).
 
+## Rename to ScopeSense + search signals moved (2026-09-20)
+
+Owner decision: the product was built as ScopeWise, `scopewise.in` was taken, so the product is now **ScopeSense**, and scopesense.in is the address search engines should index. `scopewise.assessiq.in` keeps serving until the dual-run ends (~2026-10-13) because office proxies may block the new domain, so there is still **no host redirect**.
+
+- **Why now:** Bing showed scopesense.in as "Discovered but not crawled": every page's canonical, the sitemap (51 URLs) and the `Sitemap:` line in robots all named the old host, so search engines were told the new domain was a copy. A canonical is invisible to visitors, so moving it costs proxy-blocked users nothing and gives search engines about three weeks to transfer before the old host goes away.
+- **Changed:** 305 display-name mentions and 48 public-host mentions across 68 files in `apps/`, `scripts/`, `marketplace/` (text only), `README.md`, `LICENSE` title. Regenerated: the two downloadable templates, the Sentinel workbook JSON, the four OG images. Route `/compare/scopewise-vs-manual-review` -> `/compare/scopesense-vs-manual-review` with a permanent redirect in `apps/web/next.config.js`.
+- **Deliberately NOT renamed:** everything listed in `CLAUDE.md` "What this is" (database, containers, network, volumes, `/opt/scopewise`, the browser storage key, `scopewiseNote`, scan-kit file names, the Sentinel workbook id). Env, CORS, ALLOWED_HOSTS and the Caddy blocks were not touched: both hosts must keep working.
+- **Still to do at the end of the dual-run:** 301 from the old host, Bing and Google "change of address", decide whether to rename the scan-kit files and the marketplace listing (the listing name is changed on Microsoft's side).

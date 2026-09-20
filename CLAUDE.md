@@ -1,14 +1,20 @@
-# CLAUDE.md — ScopeWise (Document Governance Platform)
+# CLAUDE.md — ScopeSense (Document Governance Platform)
 
 Project-specific overlay. This wins over the global playbook where the two
 conflict; otherwise the global playbook's orchestration rules still apply.
 
 ## What this is
 
-AI-powered SOW/RFP document review platform. Product name is **ScopeWise**
-(rebranded from "EDGP" — if you see "EDGP" in old comments/docs, it's the
-same product, historical name only, do not reintroduce it in new
-user-facing text). Backend: FastAPI (`apps/api`). Frontend: Next.js
+AI-powered SOW/RFP document review platform. Product name is **ScopeSense**
+(renamed from "ScopeWise" on 2026-09-20 because scopewise.in was not
+available; before that "EDGP"). Both old names are historical only: never
+reintroduce them in user-facing text. **Infrastructure keeps the old name on
+purpose** — `scopewise_prod`, `scopewise-*` containers, `scopewise-net`,
+`scopewise_*` volumes, `/opt/scopewise`, the `scopewise_templates_unlocked`
+browser key, the `scopewiseNote` field, the scan-kit file names and the
+Sentinel workbook id `ScopeWiseMitreCoverage`. Renaming those means data
+moves, downtime or breaking what customers already hold, for nothing a user
+sees. Dated session logs under `docs/phases/` keep the name they were written with. Backend: FastAPI (`apps/api`). Frontend: Next.js
 (`apps/web`). 6 AI review agents (Scope/Delivery/Commercial/Security/PMO/
 Legal) + a rule engine, per `docs/planning/4_AI_AGENT_SPECS.md`.
 
@@ -17,8 +23,11 @@ Legal) + a rule engine, per `docs/planning/4_AI_AGENT_SPECS.md`.
   2026-09-12 cut-over, https://scopesense.in as well. **Both hosts stay live
   for ~30 days** (until ~2026-10-12; office proxies may block the new
   domain), so: no redirect yet, the web build uses `NEXT_PUBLIC_API_URL=`
-  (empty = same-origin `/api/...`), Caddy has one site block per host, and
-  the SEO canonical/metadataBase stays on the old host until the switch.
+  (empty = same-origin `/api/...`), Caddy has one site block per host. **The
+  SEO canonical, metadataBase, sitemap and robots point at scopesense.in since
+  2026-09-20** (owner decision; the earlier plan kept them on the old host
+  until the switch, which kept scopesense.in out of Bing and Google). Both
+  hosts still serve identical pages; only the search signals moved.
   Cut-over runbook: `/opt/scopewise/deploy/cutover-scopesense.sh` on the VPS;
   Cloudflare zone `scopesense.in` id `b2765bac…` (memory `scopesense-domain-cutover`).
 - LLM provider: OpenRouter (see `apps/api/app/ai/agent.py` — never
@@ -138,7 +147,7 @@ last incident.
   screenshots to `apps/web/.sweep/`; run before committing a restyle. Per-screen label
   check: `python docs/design/complete-app-2026-09-12/check_app_labels.py <Stem> <tsx...>`.
   References and review checklist: `docs/design/references/README.md`; the workflow itself
-  is the user-level `ui-design-workflow` skill. Its "project setup" values for ScopeWise:
+  is the user-level `ui-design-workflow` skill. Its "project setup" values for ScopeSense:
   stack Next 14 + Tailwind 3.4 + shadcn; token source `scripts/generate_app_theme.py` ->
   `apps/web/app/app-theme.css` (from the canvas `dc.py` TOKENS, scoped to `.app-theme`);
   primitives `apps/web/components/app/*` (Chip, KpiTile, PageHeader, EmptyState, Skeleton,
