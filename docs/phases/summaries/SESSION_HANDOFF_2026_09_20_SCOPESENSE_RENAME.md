@@ -2,7 +2,7 @@
 
 **Headline:** Product renamed ScopeWise -> ScopeSense in all user-facing text; SEO canonical, sitemap and robots now name scopesense.in. Both hosts still serve, no host redirect (dual-run to ~2026-10-13). The one place the facts live: `docs/planning/SCOPESENSE_DOMAIN_CUTOVER.md` section "Rename to ScopeSense".
 
-**Gates:** `npx tsc --noEmit` clean. Name-asserting backend tests without a DB: 8 passed. **Full 985-test suite NOT run** (Docker Desktop was off locally, so `edgp_test` was unreachable); the change is display strings only, source and test assertions changed together. Run the full suite in the next session.
+**Gates:** `npx tsc --noEmit` clean. Name-asserting backend tests without a DB: 8 passed. Full backend suite run later the same day once Docker Desktop was started: **996 passed, 7 skipped, 0 failed** (baseline was 985 / 7; `CLAUDE.md` Testing line updated).
 
 **Not renamed on purpose:** infrastructure names, the browser storage key, `scopewiseNote`, scan-kit file names, the Sentinel workbook id (see `CLAUDE.md`).
 
