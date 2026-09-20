@@ -60,7 +60,7 @@ export default async function BlogPostPage({
   const post = getBlogPost(slug);
   if (!post) notFound();
 
-  const baseUrl = 'https://scopewise.assessiq.in';
+  const baseUrl = 'https://scopesense.in';
   const url = `${baseUrl}/resources/blog/${post.slug}`;
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -72,12 +72,12 @@ export default async function BlogPostPage({
     image: [`${baseUrl}/og-default.png`],
     datePublished: post.publishedDate,
     dateModified: post.updatedDate ?? post.publishedDate,
-    // Decision 2026-09-12: posts are authored as "ScopeWise Team"; the schema
+    // Decision 2026-09-12: posts are authored as "ScopeSense Team"; the schema
     // author is deliberately the Organization, not a Person.
-    author: { '@type': 'Organization', name: 'ScopeWise', url: baseUrl },
+    author: { '@type': 'Organization', name: 'ScopeSense', url: baseUrl },
     publisher: {
       '@type': 'Organization',
-      name: 'ScopeWise',
+      name: 'ScopeSense',
       url: baseUrl,
       logo: { '@type': 'ImageObject', url: `${baseUrl}/icons/icon-512.png` },
     },

@@ -37,9 +37,9 @@ export const PILLAR_LABELS: Record<Pillar, string> = {
 
 /** Human label for the "related reading" link, derived from the path. */
 export const RELATED_LABELS: Record<RelatedPath, string> = {
-  '/use-cases/sow-review': 'See how ScopeWise reviews a SOW in practice',
-  '/use-cases/rfp-review': 'See how ScopeWise reviews an RFP in practice',
-  '/use-cases/scope-creep-prevention': 'See how ScopeWise catches scope creep in practice',
+  '/use-cases/sow-review': 'See how ScopeSense reviews a SOW in practice',
+  '/use-cases/rfp-review': 'See how ScopeSense reviews an RFP in practice',
+  '/use-cases/scope-creep-prevention': 'See how ScopeSense catches scope creep in practice',
   '/product/sow-review': 'See the SOW & RFP Review product',
   '/product/mitre-coverage': 'See the MITRE ATT&CK Coverage product',
   '/product/code-security-review': 'See the Code Security Review product',
@@ -51,7 +51,7 @@ export const BLOG_POSTS: BlogPost[] = [
     title: "Statement of Work vs. MSA: What's the Difference?",
     dek: 'SOWs and MSAs get used interchangeably in conversation but do very different jobs in a contract stack -- here is how each one works and why the distinction matters when you are reviewing either one.',
     publishedDate: '2026-07-20',
-    author: 'ScopeWise Team',
+    author: 'ScopeSense Team',
     pillar: 'sow',
     relatedUseCase: '/use-cases/sow-review',
     body: [
@@ -82,7 +82,7 @@ export const BLOG_POSTS: BlogPost[] = [
     title: 'The 10-Point SOW Review Checklist Before You Sign',
     dek: 'A Statement of Work usually gets reviewed by whoever needs the project started, not a lawyer -- this checklist covers the ten places risk most often hides.',
     publishedDate: '2026-07-20',
-    author: 'ScopeWise Team',
+    author: 'ScopeSense Team',
     pillar: 'sow',
     relatedUseCase: '/use-cases/sow-review',
     body: [
@@ -113,7 +113,7 @@ export const BLOG_POSTS: BlogPost[] = [
     title: 'What Is a Liability Cap, and Why Your SOW Needs One',
     dek: 'A liability cap bounds how much one party can be forced to pay the other if something goes wrong -- here is what it covers, what it typically excludes, and why the exclusions matter as much as the number.',
     publishedDate: '2026-07-20',
-    author: 'ScopeWise Team',
+    author: 'ScopeSense Team',
     pillar: 'sow',
     relatedUseCase: '/use-cases/sow-review',
     body: [
@@ -140,7 +140,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         heading: 'How to review one',
         content:
-          "Check three things in order: is there a cap at all, what is the amount and how is it calculated (fixed figure vs. multiple of fees), and what is carved out. Then check mutuality -- does the same cap and carve-out list apply to both parties. ScopeWise's Commercial agent runs this exact check on every SOW it reviews, flagging missing caps, unusually asymmetric terms, and carve-out lists broad enough to functionally uncap the clause -- alongside the five other review agents (Scope, Delivery, Security, PMO, Legal) and the rule engine that scan the rest of the document.",
+          "Check three things in order: is there a cap at all, what is the amount and how is it calculated (fixed figure vs. multiple of fees), and what is carved out. Then check mutuality -- does the same cap and carve-out list apply to both parties. ScopeSense's Commercial agent runs this exact check on every SOW it reviews, flagging missing caps, unusually asymmetric terms, and carve-out lists broad enough to functionally uncap the clause -- alongside the five other review agents (Scope, Delivery, Security, PMO, Legal) and the rule engine that scan the rest of the document.",
       },
     ],
   },
@@ -149,7 +149,7 @@ export const BLOG_POSTS: BlogPost[] = [
     title: '5 Scope Creep Clauses That Cost Enterprises Money',
     dek: 'Scope creep rarely starts with a dramatic ask -- it starts with five specific clause patterns that quietly leave the door open. Here is how to spot each one before you sign.',
     publishedDate: '2026-07-20',
-    author: 'ScopeWise Team',
+    author: 'ScopeSense Team',
     pillar: 'sow',
     relatedUseCase: '/use-cases/scope-creep-prevention',
     body: [
@@ -176,7 +176,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         heading: 'Silent assumption of client-side dependencies',
         content:
-          "A project timeline that assumes the client will provide approvals, access, data, or content on a certain schedule -- without stating that assumption in the SOW -- sets up a trap. When the client runs late, the vendor either absorbs the delay for free or has an awkward conversation asking to be paid for time spent waiting. SOWs should list client-side dependencies explicitly and state what happens to the timeline and price if they slip. This is exactly the kind of hidden dependency ScopeWise's Delivery and PMO agents are built to surface during review, alongside the SOW rule engine's checks for exclusions and change-control language -- see how it works in practice on our [scope creep prevention](/use-cases/scope-creep-prevention) page.",
+          "A project timeline that assumes the client will provide approvals, access, data, or content on a certain schedule -- without stating that assumption in the SOW -- sets up a trap. When the client runs late, the vendor either absorbs the delay for free or has an awkward conversation asking to be paid for time spent waiting. SOWs should list client-side dependencies explicitly and state what happens to the timeline and price if they slip. This is exactly the kind of hidden dependency ScopeSense's Delivery and PMO agents are built to surface during review, alongside the SOW rule engine's checks for exclusions and change-control language -- see how it works in practice on our [scope creep prevention](/use-cases/scope-creep-prevention) page.",
       },
     ],
   },
@@ -185,7 +185,7 @@ export const BLOG_POSTS: BlogPost[] = [
     title: 'How to Evaluate an RFP Response: A Procurement Guide',
     dek: 'Scoring a stack of RFP responses against each other is harder than it looks -- vendors format pricing differently, answer questions selectively, and write proposals to sound compliant. Here is a practical way to evaluate them.',
     publishedDate: '2026-07-20',
-    author: 'ScopeWise Team',
+    author: 'ScopeSense Team',
     pillar: 'sow',
     relatedUseCase: '/use-cases/rfp-review',
     body: [
@@ -207,7 +207,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         heading: 'Check proposed terms against the RFP, not just the price',
         content:
-          "A response can be commercially attractive and still propose terms that conflict with what your RFP required -- a shorter warranty period, a different liability position, payment terms tied to different milestones than you specified. These deviations are sometimes disclosed explicitly and sometimes buried in an appendix or a vendor's standard terms attached at the end. Every proposed term should be checked against your RFP's stated requirements, and any deviation should be flagged for negotiation rather than discovered after award. ScopeWise's RFP review checks exactly this -- vendor responses against your evaluation criteria and required terms -- see the [RFP review](/use-cases/rfp-review) use case for how it fits into a procurement workflow.",
+          "A response can be commercially attractive and still propose terms that conflict with what your RFP required -- a shorter warranty period, a different liability position, payment terms tied to different milestones than you specified. These deviations are sometimes disclosed explicitly and sometimes buried in an appendix or a vendor's standard terms attached at the end. Every proposed term should be checked against your RFP's stated requirements, and any deviation should be flagged for negotiation rather than discovered after award. ScopeSense's RFP review checks exactly this -- vendor responses against your evaluation criteria and required terms -- see the [RFP review](/use-cases/rfp-review) use case for how it fits into a procurement workflow.",
       },
     ],
   },
@@ -216,7 +216,7 @@ export const BLOG_POSTS: BlogPost[] = [
     title: 'RFP Red Flags: 8 Warning Signs in a Vendor Response',
     dek: 'Some vendor responses signal trouble before the project even starts. Here are eight concrete warning signs worth checking for in every RFP response you evaluate.',
     publishedDate: '2026-07-20',
-    author: 'ScopeWise Team',
+    author: 'ScopeSense Team',
     pillar: 'sow',
     relatedUseCase: '/use-cases/rfp-review',
     body: [
@@ -243,7 +243,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         heading: 'Why these are worth checking systematically',
         content:
-          "None of these eight signs alone disqualifies a vendor -- context matters, and a direct follow-up question can resolve most of them. The risk is not catching any one of them in isolation, it is missing several at once because a proposal reads well on a skim. ScopeWise's RFP review checks vendor responses against your stated requirements and flags exactly this kind of gap -- unanswered requirements, undisclosed subcontracting, terms that conflict with the RFP -- see the [RFP review](/use-cases/rfp-review) use case for details.",
+          "None of these eight signs alone disqualifies a vendor -- context matters, and a direct follow-up question can resolve most of them. The risk is not catching any one of them in isolation, it is missing several at once because a proposal reads well on a skim. ScopeSense's RFP review checks vendor responses against your stated requirements and flags exactly this kind of gap -- unanswered requirements, undisclosed subcontracting, terms that conflict with the RFP -- see the [RFP review](/use-cases/rfp-review) use case for details.",
       },
     ],
   },
@@ -252,7 +252,7 @@ export const BLOG_POSTS: BlogPost[] = [
     title: 'Ambiguous Contract Language: 12 Real Examples',
     dek: 'Certain phrases show up in contract after contract because they sound reasonable and commit to almost nothing. Here are 12 of the most common, what makes each one risky, and what to write instead.',
     publishedDate: '2026-07-20',
-    author: 'ScopeWise Team',
+    author: 'ScopeSense Team',
     pillar: 'sow',
     relatedUseCase: '/use-cases/sow-review',
     body: [
@@ -279,7 +279,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         heading: 'Undefined breach and satisfaction standards',
         content:
-          '"Material breach" used without a definition leaves what counts as material -- and therefore what triggers termination rights -- open to interpretation exactly when it matters most, mid-dispute. "Satisfactory to client" as an acceptance standard is fully subjective and gives one party unilateral, unreviewable discretion over whether the other party gets paid or the contract proceeds. Write instead specific examples or thresholds that define a material breach, and objective, checkable acceptance criteria in place of a subjective satisfaction standard. ScopeWise\'s ambiguous-language scan is a deterministic rule-based check that runs against every uploaded document and flags exactly these phrase patterns -- not an LLM guess, but a direct scan for the language above -- see how it fits into a [full SOW review](/use-cases/sow-review).',
+          '"Material breach" used without a definition leaves what counts as material -- and therefore what triggers termination rights -- open to interpretation exactly when it matters most, mid-dispute. "Satisfactory to client" as an acceptance standard is fully subjective and gives one party unilateral, unreviewable discretion over whether the other party gets paid or the contract proceeds. Write instead specific examples or thresholds that define a material breach, and objective, checkable acceptance criteria in place of a subjective satisfaction standard. ScopeSense\'s ambiguous-language scan is a deterministic rule-based check that runs against every uploaded document and flags exactly these phrase patterns -- not an LLM guess, but a direct scan for the language above -- see how it fits into a [full SOW review](/use-cases/sow-review).',
       },
     ],
   },
@@ -288,7 +288,7 @@ export const BLOG_POSTS: BlogPost[] = [
     title: "AI Contract Review: What It Can (and Can't) Catch",
     dek: "AI-assisted contract review is genuinely useful and genuinely limited -- here is an honest breakdown of what it catches reliably, what it cannot do, and why that gap is worth designing around rather than ignoring.",
     publishedDate: '2026-07-20',
-    author: 'ScopeWise Team',
+    author: 'ScopeSense Team',
     pillar: 'sow',
     relatedUseCase: '/use-cases/sow-review',
     body: [
@@ -308,9 +308,9 @@ export const BLOG_POSTS: BlogPost[] = [
           'A tool that claimed to fully replace legal judgment would be overselling and would eventually fail on exactly the kind of document where it mattered most. The useful framing is division of labor: AI review handles the exhaustive, mechanical, easy-to-miss-under-deadline work, and a human handles the judgment calls the machine is not positioned to make. That division only works if the tool is honest about where the line sits -- surfacing findings with the specific clause and reasoning behind them, rather than a black-box score, so a reviewer can quickly agree, disagree, or escalate rather than trusting a verdict blind.',
       },
       {
-        heading: 'How ScopeWise draws that line',
+        heading: 'How ScopeSense draws that line',
         content:
-          "ScopeWise pairs six specialized review agents (Scope, Delivery, Commercial, Security, PMO, Legal) with a deterministic rule engine rather than relying on a single model's output. The rule engine handles the mechanical, checklist-style checks -- missing clauses, undefined terms, ambiguous-language patterns -- where a fixed, auditable rule is more reliable than a model's judgment call. The agents handle the more contextual review -- summarizing risk, explaining why a clause is a problem, connecting findings across sections. Every finding cites the specific text it is based on, which is what lets a human reviewer verify it quickly rather than take it on faith. See the full breakdown on our [SOW review](/use-cases/sow-review) page.",
+          "ScopeSense pairs six specialized review agents (Scope, Delivery, Commercial, Security, PMO, Legal) with a deterministic rule engine rather than relying on a single model's output. The rule engine handles the mechanical, checklist-style checks -- missing clauses, undefined terms, ambiguous-language patterns -- where a fixed, auditable rule is more reliable than a model's judgment call. The agents handle the more contextual review -- summarizing risk, explaining why a clause is a problem, connecting findings across sections. Every finding cites the specific text it is based on, which is what lets a human reviewer verify it quickly rather than take it on faith. See the full breakdown on our [SOW review](/use-cases/sow-review) page.",
       },
     ],
   },
@@ -319,7 +319,7 @@ export const BLOG_POSTS: BlogPost[] = [
     title: 'How Much of MITRE ATT&CK Does Your SIEM Really Cover?',
     dek: "Most detection rule sets cover a small slice of MITRE ATT&CK while the telemetry to cover far more already sits in the SIEM. Here is why the number is smaller than teams assume, and how a MITRE ATT&CK coverage assessment gets you an honest one.",
     publishedDate: '2026-09-12',
-    author: 'ScopeWise Team',
+    author: 'ScopeSense Team',
     pillar: 'mitre',
     relatedUseCase: '/product/mitre-coverage',
     body: [
@@ -356,7 +356,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         heading: 'What to do with the gap list',
         content:
-          'A list of not-covered and partial techniques is not useful until it is ordered. Gaps get ranked by how often real attackers use the technique and by whether it touches a declared crown jewel, then split by feasibility: short-term gaps are covered by telemetry already onboarded, mid-term gaps need tooling the team already owns but has not wired up, and long-term gaps need new capability entirely. That ranked list is the actual deliverable — a SIEM detection coverage percentage on its own tells you where you stand, but a feasibility-sorted gap list tells you what to build next quarter versus what to defer. If you want to see this run against your own rule export and environment inventory, [ScopeWise\'s MITRE ATT&CK coverage assessment](/product/mitre-coverage) produces the coverage numbers, the detection-strength scoring, and the ranked gap list from the same run.',
+          'A list of not-covered and partial techniques is not useful until it is ordered. Gaps get ranked by how often real attackers use the technique and by whether it touches a declared crown jewel, then split by feasibility: short-term gaps are covered by telemetry already onboarded, mid-term gaps need tooling the team already owns but has not wired up, and long-term gaps need new capability entirely. That ranked list is the actual deliverable — a SIEM detection coverage percentage on its own tells you where you stand, but a feasibility-sorted gap list tells you what to build next quarter versus what to defer. If you want to see this run against your own rule export and environment inventory, [ScopeSense\'s MITRE ATT&CK coverage assessment](/product/mitre-coverage) produces the coverage numbers, the detection-strength scoring, and the ranked gap list from the same run.',
       },
     ],
   },
@@ -365,7 +365,7 @@ export const BLOG_POSTS: BlogPost[] = [
     title: 'Reading an ATT&CK Navigator Layer Without Fooling Yourself',
     dek: "A Navigator layer looks like a finished picture of your detection coverage, but the colors are a summary of choices someone made upstream -- here is what to check before you trust the grid.",
     publishedDate: '2026-09-12',
-    author: 'ScopeWise Team',
+    author: 'ScopeSense Team',
     pillar: 'mitre',
     relatedUseCase: '/product/mitre-coverage',
     body: [
@@ -377,7 +377,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         heading: 'Color and score are two different mechanisms',
         content:
-          "Navigator supports two ways of coloring cells. One is a gradient tied to a numeric score, useful when the underlying data is genuinely continuous, like a percentage or a count. The other is a fixed color assigned per state, useful when the data is categorical. ScopeWise writes fixed colors: covered, partial, not covered, and not applicable each get one color, matching the palette used in the PDF report, so a technique that reads amber in the Navigator reads amber on the page too. This matters because a gradient layer and a fixed-color layer can look superficially similar at a glance but mean different things -- a gradient answers 'how much,' a fixed-color layer answers 'which bucket,' and mixing up the two when reading someone else's layer is an easy way to misjudge what a shade is telling you.",
+          "Navigator supports two ways of coloring cells. One is a gradient tied to a numeric score, useful when the underlying data is genuinely continuous, like a percentage or a count. The other is a fixed color assigned per state, useful when the data is categorical. ScopeSense writes fixed colors: covered, partial, not covered, and not applicable each get one color, matching the palette used in the PDF report, so a technique that reads amber in the Navigator reads amber on the page too. This matters because a gradient layer and a fixed-color layer can look superficially similar at a glance but mean different things -- a gradient answers 'how much,' a fixed-color layer answers 'which bucket,' and mixing up the two when reading someone else's layer is an easy way to misjudge what a shade is telling you.",
       },
       {
         heading: 'Not applicable is a decision, not a blank',
@@ -402,7 +402,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         heading: 'What the layer is for',
         content:
-          "A Navigator layer is a picture of presence: which techniques have a rule, which do not, and which were excluded and why. It is not a verdict on how strong those rules are, and it is not a substitute for reading the gap list behind it. The gap list, ranked by what it says about your exposure, and the detection-strength notes attached to each covered cell are the parts of the assessment that turn into work -- the layer is just the map that points at where to look. See how ScopeWise builds this whole picture, from rule ingest through the layer export, on the [MITRE ATT&CK Coverage](/product/mitre-coverage) product page.",
+          "A Navigator layer is a picture of presence: which techniques have a rule, which do not, and which were excluded and why. It is not a verdict on how strong those rules are, and it is not a substitute for reading the gap list behind it. The gap list, ranked by what it says about your exposure, and the detection-strength notes attached to each covered cell are the parts of the assessment that turn into work -- the layer is just the map that points at where to look. See how ScopeSense builds this whole picture, from rule ingest through the layer export, on the [MITRE ATT&CK Coverage](/product/mitre-coverage) product page.",
       },
     ],
   },
@@ -411,7 +411,7 @@ export const BLOG_POSTS: BlogPost[] = [
     title: 'What a Code Security Review Deliverable Should Contain',
     dek: 'A scanner produces a JSON file of raw hits. A code security review report is something else -- verified findings, exploit chains, and a fix plan a client can actually work.',
     publishedDate: '2026-09-12',
-    author: 'ScopeWise Team',
+    author: 'ScopeSense Team',
     pillar: 'codereview',
     relatedUseCase: '/product/code-security-review',
     body: [
@@ -443,12 +443,12 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         heading: 'What this looks like on a real codebase',
         content:
-          "The clearest way to see the transformation is on a codebase built to have bugs in it. OWASP NodeGoat is a deliberately vulnerable training application, released under Apache-2.0, designed to exercise the OWASP Top Ten. ScopeWise uses it as a golden benchmark: a scan run on 2026-09-11 against NodeGoat's 63 files took 103 minutes of wall-clock time and cost about $4 in model usage on the consultant's own OpenRouter key. The scanner returned 88 raw hits. After deduplication and verification, that came down to 29 confirmed findings, and those findings resolved into 6 distinct exploit chains -- six different ways an attacker could link individual weaknesses into something worse. That gap, 88 down to 29, plus six chains instead of a flat list, is the entire argument for why a code security review report has to be more than a scanner's raw file. For context on what this replaces: a manual internal penetration-test engagement typically costs $7,000 to $35,000 (Bright Defense, penetration testing pricing guide), which is the budget bracket this kind of automated triage is meant to sit ahead of, not replace.",
+          "The clearest way to see the transformation is on a codebase built to have bugs in it. OWASP NodeGoat is a deliberately vulnerable training application, released under Apache-2.0, designed to exercise the OWASP Top Ten. ScopeSense uses it as a golden benchmark: a scan run on 2026-09-11 against NodeGoat's 63 files took 103 minutes of wall-clock time and cost about $4 in model usage on the consultant's own OpenRouter key. The scanner returned 88 raw hits. After deduplication and verification, that came down to 29 confirmed findings, and those findings resolved into 6 distinct exploit chains -- six different ways an attacker could link individual weaknesses into something worse. That gap, 88 down to 29, plus six chains instead of a flat list, is the entire argument for why a code security review report has to be more than a scanner's raw file. For context on what this replaces: a manual internal penetration-test engagement typically costs $7,000 to $35,000 (Bright Defense, penetration testing pricing guide), which is the budget bracket this kind of automated triage is meant to sit ahead of, not replace.",
       },
       {
         heading: 'Where this fits',
         content:
-          "Built on Visa's open-source Vulnerability Agentic Harness (Apache-2.0). ScopeWise is not affiliated with or endorsed by Visa, Inc. Everything described here -- the findings register, the exploit chains, the editable tracker, and the briefing deck built from the same numbers -- is what ScopeWise generates once a consultant uploads a findings file from a scan they ran themselves. See the [Code Security Review](/product/code-security-review) product page for how the upload and export flow works end to end.",
+          "Built on Visa's open-source Vulnerability Agentic Harness (Apache-2.0). ScopeSense is not affiliated with or endorsed by Visa, Inc. Everything described here -- the findings register, the exploit chains, the editable tracker, and the briefing deck built from the same numbers -- is what ScopeSense generates once a consultant uploads a findings file from a scan they ran themselves. See the [Code Security Review](/product/code-security-review) product page for how the upload and export flow works end to end.",
       },
     ],
   },
@@ -457,7 +457,7 @@ export const BLOG_POSTS: BlogPost[] = [
     title: 'SOW vs. RFP Review: What Changes and What Stays the Same',
     dek: "An RFP and a SOW read like cousins but do different jobs -- one asks vendors to propose, the other defines what a winning vendor will deliver. Here is what a review has to check differently in each, and what stays identical.",
     publishedDate: '2026-09-12',
-    author: 'ScopeWise Team',
+    author: 'ScopeSense Team',
     pillar: 'sow',
     relatedUseCase: '/use-cases/rfp-review',
     body: [
@@ -469,7 +469,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         heading: 'What differs for an RFP',
         content:
-          "An RFP's structure mirrors FAR Part 15, the part of the U.S. Federal Acquisition Regulation that governs contracting by negotiation: a statement of requirements, evaluation factors and their relative weights, submission instructions, and a stated basis for award. That structure is not a government-only convention -- it is the same discipline any RFP needs to produce responses that can actually be compared. So the review asks whether evaluation criteria are stated, weighted, and measurable rather than left implicit; whether the requirements are specific enough that two vendors answering them produce comparable proposals instead of two different documents; and whether the timeline and Q&A process are fair to every bidder rather than favoring whoever has an inside line to the buyer. ScopeWise runs 7 deterministic RFP rules against 20 SOW rules, and each of the six reviewer agents -- Scope, Delivery, Commercial, Security, PMO, Legal -- has an RFP-specific prompt branch, so the Commercial reviewer on an RFP asks about pricing-format requirements and evaluation weighting instead of the payment milestones it would check on a SOW.",
+          "An RFP's structure mirrors FAR Part 15, the part of the U.S. Federal Acquisition Regulation that governs contracting by negotiation: a statement of requirements, evaluation factors and their relative weights, submission instructions, and a stated basis for award. That structure is not a government-only convention -- it is the same discipline any RFP needs to produce responses that can actually be compared. So the review asks whether evaluation criteria are stated, weighted, and measurable rather than left implicit; whether the requirements are specific enough that two vendors answering them produce comparable proposals instead of two different documents; and whether the timeline and Q&A process are fair to every bidder rather than favoring whoever has an inside line to the buyer. ScopeSense runs 7 deterministic RFP rules against 20 SOW rules, and each of the six reviewer agents -- Scope, Delivery, Commercial, Security, PMO, Legal -- has an RFP-specific prompt branch, so the Commercial reviewer on an RFP asks about pricing-format requirements and evaluation weighting instead of the payment milestones it would check on a SOW.",
       },
       {
         heading: 'What stays the same',
@@ -494,7 +494,7 @@ export const BLOG_POSTS: BlogPost[] = [
       {
         heading: 'The same discipline, applied elsewhere',
         content:
-          "The evidence-first discipline behind this -- every finding quotes its source, every number is computed by code, and the model is asked to judge only what code structurally cannot -- is not specific to RFPs and SOWs. It is the same approach behind ScopeWise's MITRE ATT&CK coverage assessment and its code security review module: deterministic checks do what deterministic checks can do reliably, and judgment is reserved for the parts that actually require it. See [RFP review in practice](/use-cases/rfp-review) for how this plays out on a real evaluation-criteria gap.",
+          "The evidence-first discipline behind this -- every finding quotes its source, every number is computed by code, and the model is asked to judge only what code structurally cannot -- is not specific to RFPs and SOWs. It is the same approach behind ScopeSense's MITRE ATT&CK coverage assessment and its code security review module: deterministic checks do what deterministic checks can do reliably, and judgment is reserved for the parts that actually require it. See [RFP review in practice](/use-cases/rfp-review) for how this plays out on a real evaluation-criteria gap.",
       },
     ],
   },

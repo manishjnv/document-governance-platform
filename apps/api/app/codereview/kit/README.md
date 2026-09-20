@@ -1,7 +1,7 @@
-# ScopeWise Code Security Review - scan kit
+# ScopeSense Code Security Review - scan kit
 
 Scans your own repo on your own machine with your own OpenRouter key and
-produces one zip that you upload to ScopeWise. Nothing leaves your machine
+produces one zip that you upload to ScopeSense. Nothing leaves your machine
 until you upload that zip. Needs Python 3.11+ (https://www.python.org/downloads/)
 and an OpenRouter API key (https://openrouter.ai/keys).
 
@@ -37,7 +37,7 @@ answer `y`. Every run writes a timestamped transcript to `logs/scan-<repo>-<time
 transcript path, VVAH's `<repo>/security-scan/*_errors.jsonl` traceback and the
 `run_manifest_*.json` stage timeline to look at. A small repo costs a few dollars and takes 30-120 minutes. It
 writes `scopewise-scan-<repo>-<date>.zip` next to the scripts - upload that at
-ScopeWise -> Code Security Review -> New review.
+ScopeSense -> Code Security Review -> New review.
 
 ## Manual install (plain pip)
 

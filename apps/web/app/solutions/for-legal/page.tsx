@@ -6,7 +6,7 @@ import { MarketingFooter } from '@/components/MarketingFooter';
 export const metadata: Metadata = {
   title: 'For Legal Teams',
   description:
-    'ScopeWise for legal and legal-ops: triage which SOWs and RFPs need full attorney review and which are low-risk, so attorney time goes where it matters.',
+    'ScopeSense for legal and legal-ops: triage which SOWs and RFPs need full attorney review and which are low-risk, so attorney time goes where it matters.',
   alternates: { canonical: '/solutions/for-legal' },
 };
 
@@ -16,7 +16,7 @@ export default function ForLegalPage() {
       <MarketingHeader />
 
       <main className="max-w-4xl mx-auto px-4 py-16">
-        <h1 className="text-3xl md:text-4xl font-bold mb-4">ScopeWise for legal teams</h1>
+        <h1 className="text-3xl md:text-4xl font-bold mb-4">ScopeSense for legal teams</h1>
         <p className="text-lg text-muted-foreground mb-12">
           Not every SOW that lands in the legal queue needs a full attorney
           review. Some are boilerplate variations of a template you&apos;ve
@@ -36,7 +36,7 @@ export default function ForLegalPage() {
           without reading each one first there&apos;s no way to prioritize.
         </p>
         <p className="text-muted-foreground mb-12">
-          ScopeWise doesn&apos;t replace that judgment. It reads every document
+          ScopeSense doesn&apos;t replace that judgment. It reads every document
           first, flags exactly what needs attorney eyes and why, and lets
           the rest move through faster -- so the queue is sorted by actual
           risk instead of first-in-first-out.
@@ -88,7 +88,7 @@ export default function ForLegalPage() {
           Findings are tied back to the exact clause they came from and
           rated by severity, so an attorney reviewing a flagged document
           isn&apos;t starting from scratch -- they&apos;re starting from a specific
-          list of what to look at and why. On revised versions, ScopeWise
+          list of what to look at and why. On revised versions, ScopeSense
           re-checks prior findings against the new draft automatically, so
           a &quot;fixed&quot; clause is verified, not just marked done by whoever
           uploaded it.
@@ -103,7 +103,7 @@ export default function ForLegalPage() {
           </Link>
         </div>
         <p className="text-center text-sm text-muted-foreground">
-          See how ScopeWise handles{' '}
+          See how ScopeSense handles{' '}
           <Link href="/use-cases/sow-review" className="underline">
             SOW review
           </Link>

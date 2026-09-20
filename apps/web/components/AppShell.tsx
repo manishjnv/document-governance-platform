@@ -195,7 +195,7 @@ export function AppShell({
         <div className={cn('flex items-center gap-2.5 px-2 py-1', collapsed ? 'flex-col px-0' : 'justify-between')}>
           <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0">
             <FileText size={18} strokeWidth={2} className="text-primary shrink-0" aria-hidden="true" />
-            {!collapsed && <span className="text-sm font-semibold truncate">ScopeWise</span>}
+            {!collapsed && <span className="text-sm font-semibold truncate">ScopeSense</span>}
           </Link>
           {/* Collapse toggle: outlined so it reads as a control, not a nav item */}
           <Button
@@ -275,7 +275,7 @@ export function AppShell({
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-card px-3.5 py-2.5 md:hidden">
         <Link href="/dashboard" className="flex items-center gap-2">
           <FileText size={18} strokeWidth={2} className="text-primary" aria-hidden="true" />
-          <span className="text-sm font-semibold">ScopeWise</span>
+          <span className="text-sm font-semibold">ScopeSense</span>
         </Link>
         <Button variant="ghost" size="icon" aria-label="Open navigation menu" onClick={() => setMobileOpen(true)}>
           <Menu size={20} strokeWidth={2} />
@@ -286,7 +286,7 @@ export function AppShell({
         <SheetContent side="left" className="flex w-64 flex-col bg-card p-4">
           <SheetTitle className="mb-3.5 flex items-center gap-2 text-sm">
             <FileText size={18} strokeWidth={2} className="text-primary" aria-hidden="true" />
-            ScopeWise
+            ScopeSense
           </SheetTitle>
           <NavLinks onNavigate={() => setMobileOpen(false)} isAdmin={isAdmin} />
           {me && (

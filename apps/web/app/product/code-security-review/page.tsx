@@ -7,14 +7,14 @@ import { MarketingFooter } from '@/components/MarketingFooter';
 export const metadata: Metadata = {
   title: 'Code Security Review',
   description:
-    'Run the open-source scanner on your side, upload findings only. ScopeWise turns them into a plain-language register, exploit chains, an XLSX tracker and a briefing deck.',
+    'Run the open-source scanner on your side, upload findings only. ScopeSense turns them into a plain-language register, exploit chains, an XLSX tracker and a briefing deck.',
   alternates: { canonical: '/product/code-security-review' },
-  openGraph: { images: [{ url: '/og-code-security-review.png', width: 1200, height: 630, alt: "ScopeWise Code Security Review: never sees your client's code" }] },
+  openGraph: { images: [{ url: '/og-code-security-review.png', width: 1200, height: 630, alt: "ScopeSense Code Security Review: never sees your client's code" }] },
   twitter: { images: ['/og-code-security-review.png'] },
 };
 
 const STEPS = [
-  'Download the scan kit from ScopeWise. It installs the scanner in a sandbox on your machine.',
+  'Download the scan kit from ScopeSense. It installs the scanner in a sandbox on your machine.',
   'Run the estimate, then the scan, on your own OpenRouter key. The cost estimate is shown before anything is spent.',
   'Upload the findings.json zip the kit produces. No source code leaves your network.',
   'Work the register in the browser, open the drawer for any finding, review exploit chains, and export the XLSX tracker and PPTX briefing deck.',
@@ -46,7 +46,7 @@ const WHAT_YOU_GET = [
 const FAQS = [
   {
     q: 'Does my code leave my network?',
-    a: "No. The scanner runs where the code is, on your machine or on a jump box inside the client's network. Only the findings file is uploaded to ScopeWise.",
+    a: "No. The scanner runs where the code is, on your machine or on a jump box inside the client's network. Only the findings file is uploaded to ScopeSense.",
   },
   {
     q: 'What does a scan cost?',
@@ -76,28 +76,28 @@ export default function CodeSecurityReviewPage() {
       },
       {
         '@type': 'SoftwareApplication',
-        name: 'ScopeWise Code Security Review',
+        name: 'ScopeSense Code Security Review',
         applicationCategory: 'SecurityApplication',
         operatingSystem: 'Web',
-        url: 'https://scopewise.assessiq.in/product/code-security-review',
+        url: 'https://scopesense.in/product/code-security-review',
         description:
           'Turns findings from a locally-run open-source code scanner into a severity-ranked register, exploit chains, an XLSX remediation tracker, and a PPTX briefing deck.',
       },
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://scopewise.assessiq.in/' },
+          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://scopesense.in/' },
           {
             '@type': 'ListItem',
             position: 2,
             name: 'Products',
-            item: 'https://scopewise.assessiq.in/product/sow-review',
+            item: 'https://scopesense.in/product/sow-review',
           },
           {
             '@type': 'ListItem',
             position: 3,
             name: 'Code Security Review',
-            item: 'https://scopewise.assessiq.in/product/code-security-review',
+            item: 'https://scopesense.in/product/code-security-review',
           },
         ],
       },
@@ -120,14 +120,14 @@ export default function CodeSecurityReviewPage() {
         </h1>
         <p className="text-lg text-muted-foreground mb-12">
           The scanner runs on your machine, on your own API key. Only the
-          findings file is uploaded. ScopeWise turns it into the deliverable:
+          findings file is uploaded. ScopeSense turns it into the deliverable:
           a severity-ranked register with plain-language explanations, the
           exploit chains that link findings together, and the fewest fixes
           that break every chain.
         </p>
         <Image
           src="/screens/code-review-findings-drawer-960.webp"
-          alt="ScopeWise Code Security Review of OWASP NodeGoat: 29 findings, 6 exploit chains, and the finding drawer open on a critical finding"
+          alt="ScopeSense Code Security Review of OWASP NodeGoat: 29 findings, 6 exploit chains, and the finding drawer open on a critical finding"
           width={960}
           height={600}
           sizes="(min-width: 1024px) 896px, 100vw"
@@ -184,7 +184,7 @@ export default function CodeSecurityReviewPage() {
           </div>
           <p className="text-sm text-muted-foreground">
             Golden benchmark: OWASP NodeGoat (Apache-2.0), a deliberately
-            vulnerable training application, scanned with the ScopeWise kit
+            vulnerable training application, scanned with the ScopeSense kit
             on 2026-09-11. A small repository costs a few dollars and takes
             30 to 120 minutes.
           </p>
@@ -203,7 +203,7 @@ export default function CodeSecurityReviewPage() {
         <h2 className="text-2xl font-bold mb-4">Built on an open-source scanner</h2>
         <p className="text-muted-foreground mb-4">
           Built on Visa&apos;s open-source Vulnerability Agentic Harness
-          (Apache-2.0). ScopeWise is not affiliated with or endorsed by
+          (Apache-2.0). ScopeSense is not affiliated with or endorsed by
           Visa, Inc.
         </p>
         <p className="text-muted-foreground mb-4">
@@ -217,7 +217,7 @@ export default function CodeSecurityReviewPage() {
           network scanner.
         </p>
         <p className="text-muted-foreground mb-12">
-          ScopeWise never clones a repository or runs the scanner on its
+          ScopeSense never clones a repository or runs the scanner on its
           servers. Everything after upload is deterministic code: no AI
           model is called anywhere in this module.
         </p>

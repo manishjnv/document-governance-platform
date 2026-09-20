@@ -21,5 +21,5 @@ class ContactRequest(BaseModel):
 async def submit_contact(request: ContactRequest) -> dict:
     source = request.source or "contact"
     body = f"From: {request.name} <{request.email}>\nSource: {source}\n\n{request.message}"
-    await send_email(settings.contact_email, f"ScopeWise contact form: {request.name}", body)
+    await send_email(settings.contact_email, f"ScopeSense contact form: {request.name}", body)
     return {"message": "Thanks -- we'll get back to you soon."}

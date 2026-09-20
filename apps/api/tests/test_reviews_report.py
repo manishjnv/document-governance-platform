@@ -144,7 +144,7 @@ class TestGenerateReport:
         assert body["format"] == "html"
         html = body["data"]
 
-        assert "ScopeWise" in html
+        assert "ScopeSense" in html
         assert "Acme Rollout" in html  # doc stats strip
         assert "Document X-Ray" in html
         assert "Payment Terms" in html  # section found

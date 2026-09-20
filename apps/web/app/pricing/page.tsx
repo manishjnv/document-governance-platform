@@ -6,7 +6,7 @@ import { MarketingFooter } from '@/components/MarketingFooter';
 
 export const metadata: Metadata = {
   title: 'Pricing',
-  description: 'ScopeWise pricing is quote-based: contract review, MITRE ATT&CK coverage assessments and code security reviews, sized to your engagement volume.',
+  description: 'ScopeSense pricing is quote-based: contract review, MITRE ATT&CK coverage assessments and code security reviews, sized to your engagement volume.',
   alternates: { canonical: '/pricing' },
   // Kept for direct sharing only; not linked or indexed on prod (2026-09-12).
   robots: { index: false, follow: false },
@@ -28,7 +28,7 @@ export default function PricingPage() {
       <main className="max-w-3xl mx-auto px-4 py-16 text-center">
         <h1 className="text-3xl md:text-4xl font-bold mb-4">Pricing</h1>
         <p className="text-lg text-muted-foreground mb-10">
-          ScopeWise is in early access and pricing is quote-based. Tell us
+          ScopeSense is in early access and pricing is quote-based. Tell us
           which of the three products you need and roughly how many reviews
           or assessments a month, and we will send a plan that fits.
         </p>

@@ -6,7 +6,7 @@ import { MarketingFooter } from '@/components/MarketingFooter';
 export const metadata: Metadata = {
   title: 'For AppSec Consultants',
   description:
-    'ScopeWise for application security consultants: run the open-source scanner on your side, upload findings only, deliver a register, exploit chains and a fix plan.',
+    'ScopeSense for application security consultants: run the open-source scanner on your side, upload findings only, deliver a register, exploit chains and a fix plan.',
   alternates: { canonical: '/solutions/for-appsec-consultants' },
 };
 
@@ -17,11 +17,11 @@ const FAQS = [
   },
   {
     q: 'Can I upload SARIF from another tool?',
-    a: 'ScopeWise ingests findings.json and SARIF produced by the supported scanner. Output from other tools is not supported in this version.',
+    a: 'ScopeSense ingests findings.json and SARIF produced by the supported scanner. Output from other tools is not supported in this version.',
   },
   {
-    q: 'Does ScopeWise verify the findings?',
-    a: "The scanner includes its own verifier pass and ScopeWise shows that verdict per finding. Final verification is your reviewer's job; the findings are triage candidates, not a completed assessment.",
+    q: 'Does ScopeSense verify the findings?',
+    a: "The scanner includes its own verifier pass and ScopeSense shows that verdict per finding. Final verification is your reviewer's job; the findings are triage candidates, not a completed assessment.",
   },
   {
     q: 'Can the client run the scan?',
@@ -44,18 +44,18 @@ export default function ForAppsecConsultantsPage() {
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://scopewise.assessiq.in/' },
+          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://scopesense.in/' },
           {
             '@type': 'ListItem',
             position: 2,
             name: 'Solutions',
-            item: 'https://scopewise.assessiq.in/solutions/for-procurement',
+            item: 'https://scopesense.in/solutions/for-procurement',
           },
           {
             '@type': 'ListItem',
             position: 3,
             name: 'For AppSec Consultants',
-            item: 'https://scopewise.assessiq.in/solutions/for-appsec-consultants',
+            item: 'https://scopesense.in/solutions/for-appsec-consultants',
           },
         ],
       },
@@ -73,10 +73,10 @@ export default function ForAppsecConsultantsPage() {
       <MarketingHeader />
 
       <main className="max-w-4xl mx-auto px-4 py-16">
-        <h1 className="text-3xl md:text-4xl font-bold mb-4">ScopeWise for application security consultants</h1>
+        <h1 className="text-3xl md:text-4xl font-bold mb-4">ScopeSense for application security consultants</h1>
         <p className="text-lg text-muted-foreground mb-12">
           Scanner output is where a code review engagement starts, not
-          where it ends. ScopeWise turns the findings file into the
+          where it ends. ScopeSense turns the findings file into the
           deliverable: a plain-language register, the exploit chains an
           attacker would follow, and the smallest set of fixes that breaks
           every chain.
@@ -91,7 +91,7 @@ export default function ForAppsecConsultantsPage() {
           work is the deliverable, and it is rebuilt by hand every time.
         </p>
         <p className="text-muted-foreground mb-12">
-          ScopeWise ingests the findings file and does the structural
+          ScopeSense ingests the findings file and does the structural
           part: severity ordering, deduplication, plain-language
           explanations, chain detection and the minimal fix set. Your
           reviewer spends the time on judgement instead of formatting.
@@ -139,14 +139,14 @@ export default function ForAppsecConsultantsPage() {
           multi-agent voting, so it can find logic flaws that pattern
           rules miss. It is not deterministic, it publishes no precision
           or recall figures, and its findings are triage candidates for
-          your reviewer. It never tests running systems. ScopeWise is not
+          your reviewer. It never tests running systems. ScopeSense is not
           affiliated with or endorsed by Visa, Inc., never runs the
           scanner on its servers, and calls no AI model after upload.
         </p>
 
         <h2 className="text-2xl font-bold mb-4">Your client&apos;s code never leaves their network</h2>
         <p className="text-muted-foreground mb-12">
-          The scan runs where the code is. ScopeWise receives the
+          The scan runs where the code is. ScopeSense receives the
           findings file only, stores it encrypted, and scopes it to your
           organization. The kit refuses working folders that contain
           dependency or build trees, so a scan cannot silently balloon in

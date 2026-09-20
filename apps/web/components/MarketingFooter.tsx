@@ -63,7 +63,7 @@ export function MarketingFooter() {
           ))}
         </nav>
         <div className="mt-10 pt-6 border-t flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
-          <span>&copy; {new Date().getFullYear()} ScopeWise</span>
+          <span>&copy; {new Date().getFullYear()} ScopeSense</span>
           <span>Evidence-based risk reviews. Contracts, detections, code.</span>
         </div>
       </div>

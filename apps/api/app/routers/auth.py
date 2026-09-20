@@ -282,7 +282,7 @@ async def request_otp(request: OtpRequestRequest, db: AsyncSession = Depends(get
 
     await send_email(
         request.email,
-        "Your ScopeWise login code",
+        "Your ScopeSense login code",
         f"Your login code is {code}. It expires in 10 minutes.",
         html_body=otp_email_html(code),
     )

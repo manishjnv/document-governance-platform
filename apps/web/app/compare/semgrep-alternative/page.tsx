@@ -4,9 +4,9 @@ import { MarketingHeader } from '@/components/MarketingHeader';
 import { MarketingFooter } from '@/components/MarketingFooter';
 
 export const metadata: Metadata = {
-  title: 'ScopeWise vs Semgrep',
+  title: 'ScopeSense vs Semgrep',
   description:
-    'How ScopeWise Code Security Review compares with Semgrep: CI scanning vs a consultant deliverable built on Visa’s open-source VVAH scanner.',
+    'How ScopeSense Code Security Review compares with Semgrep: CI scanning vs a consultant deliverable built on Visa’s open-source VVAH scanner.',
   alternates: { canonical: '/compare/semgrep-alternative' },
 };
 
@@ -42,16 +42,16 @@ const ROWS = [
 
 const FAQS = [
   {
-    q: 'Is ScopeWise a replacement for Semgrep?',
-    a: 'Not for continuous scanning. Semgrep runs in CI on every commit and blocks or comments on pull requests. ScopeWise’s Code Security Review is a point-in-time deliverable a consultant produces for a client, from a scan the consultant runs themselves.',
+    q: 'Is ScopeSense a replacement for Semgrep?',
+    a: 'Not for continuous scanning. Semgrep runs in CI on every commit and blocks or comments on pull requests. ScopeSense’s Code Security Review is a point-in-time deliverable a consultant produces for a client, from a scan the consultant runs themselves.',
   },
   {
-    q: 'Does ScopeWise scan code on its own servers?',
-    a: 'No. Scanning happens on the Apache-2.0 open-source Vulnerability Agentic Harness, run locally by whoever is doing the review. ScopeWise only ever receives the findings.json output, not the source code.',
+    q: 'Does ScopeSense scan code on its own servers?',
+    a: 'No. Scanning happens on the Apache-2.0 open-source Vulnerability Agentic Harness, run locally by whoever is doing the review. ScopeSense only ever receives the findings.json output, not the source code.',
   },
   {
     q: 'What is the Vulnerability Agentic Harness?',
-    a: 'Built on Visa’s open-source Vulnerability Agentic Harness (Apache-2.0). ScopeWise is not affiliated with or endorsed by Visa, Inc.',
+    a: 'Built on Visa’s open-source Vulnerability Agentic Harness (Apache-2.0). ScopeSense is not affiliated with or endorsed by Visa, Inc.',
   },
   {
     q: 'Does the register include exploit chains, not just a findings list?',
@@ -74,13 +74,13 @@ export default function SemgrepAlternativePage() {
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://scopewise.assessiq.in/' },
-          { '@type': 'ListItem', position: 2, name: 'Compare', item: 'https://scopewise.assessiq.in/compare' },
+          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://scopesense.in/' },
+          { '@type': 'ListItem', position: 2, name: 'Compare', item: 'https://scopesense.in/compare' },
           {
             '@type': 'ListItem',
             position: 3,
-            name: 'ScopeWise vs Semgrep',
-            item: 'https://scopewise.assessiq.in/compare/semgrep-alternative',
+            name: 'ScopeSense vs Semgrep',
+            item: 'https://scopesense.in/compare/semgrep-alternative',
           },
         ],
       },
@@ -96,11 +96,11 @@ export default function SemgrepAlternativePage() {
 
       <main className="max-w-4xl mx-auto px-4 py-16">
         <h1 className="text-3xl md:text-4xl font-bold mb-4">
-          ScopeWise vs Semgrep, side by side
+          ScopeSense vs Semgrep, side by side
         </h1>
         <p className="text-lg text-muted-foreground mb-6">
           Semgrep is a scanner developers run in CI, with fixes suggested
-          inline in a pull request. ScopeWise&apos;s Code Security Review
+          inline in a pull request. ScopeSense&apos;s Code Security Review
           is a different kind of product: a consultant-facing deliverable
           layer built on top of an open-source agentic scanner, producing
           the plain-language register, exploit chains and office-format
@@ -108,7 +108,7 @@ export default function SemgrepAlternativePage() {
         </p>
         <p className="text-sm text-muted-foreground mb-12">
           Built on Visa&apos;s open-source Vulnerability Agentic Harness
-          (Apache-2.0). ScopeWise is not affiliated with or endorsed by
+          (Apache-2.0). ScopeSense is not affiliated with or endorsed by
           Visa, Inc.
         </p>
         <p className="text-sm text-muted-foreground mb-12">
@@ -124,7 +124,7 @@ export default function SemgrepAlternativePage() {
         <div className="overflow-x-auto mb-12">
           <table className="w-full text-sm border-collapse">
             <caption className="sr-only">
-              Comparison of Semgrep and ScopeWise across what each is,
+              Comparison of Semgrep and ScopeSense across what each is,
               where it runs, how it handles fixes, deliverable format and
               pricing.
             </caption>
@@ -132,7 +132,7 @@ export default function SemgrepAlternativePage() {
               <tr className="border-b">
                 <th scope="col" className="text-left font-semibold py-3 pr-4">Criterion</th>
                 <th scope="col" className="text-left font-semibold py-3 pr-4">Semgrep</th>
-                <th scope="col" className="text-left font-semibold py-3">ScopeWise</th>
+                <th scope="col" className="text-left font-semibold py-3">ScopeSense</th>
               </tr>
             </thead>
             <tbody>
@@ -151,14 +151,14 @@ export default function SemgrepAlternativePage() {
         <p className="text-muted-foreground mb-6">
           Semgrep runs on every commit, in the pipeline a development team
           already has, and can block a pull request the moment a rule
-          fires. ScopeWise&apos;s Code Security Review does not do
+          fires. ScopeSense&apos;s Code Security Review does not do
           continuous CI scanning or PR blocking — it is a review produced
           for a point in time, typically a client engagement, not a gate
           in a team&apos;s own build.
         </p>
         <p className="text-muted-foreground mb-6">
           Its remediation guidance lands directly in the IDE and the PR,
-          in the same place a developer is already working. ScopeWise
+          in the same place a developer is already working. ScopeSense
           produces no auto-fix; the register and exploit chains are meant
           for a person to work from, not a bot to apply.
         </p>
@@ -174,7 +174,7 @@ export default function SemgrepAlternativePage() {
           On the NodeGoat reference application, a full scan-to-deliverable
           run went from 88 raw findings to 29 verified findings across 6
           exploit chains, for roughly $4 in model spend and about 103
-          minutes end to end (ScopeWise engineering measurement). The{' '}
+          minutes end to end (ScopeSense engineering measurement). The{' '}
           <Link href="/product/code-security-review" className="underline hover:no-underline">
             product page
           </Link>{' '}
@@ -193,7 +193,7 @@ export default function SemgrepAlternativePage() {
           language, exploit chains showing how findings compound, and an
           XLSX or PPTX the client can act on without installing anything.
           The two are not mutually exclusive: a team can run Semgrep in
-          its own CI and still commission a ScopeWise review as an
+          its own CI and still commission a ScopeSense review as an
           independent, point-in-time deliverable for a client or auditor.
         </p>
 
@@ -230,7 +230,7 @@ export default function SemgrepAlternativePage() {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Semgrep is a trademark of its owner. ScopeWise is not affiliated
+          Semgrep is a trademark of its owner. ScopeSense is not affiliated
           with Semgrep.
         </p>
       </main>

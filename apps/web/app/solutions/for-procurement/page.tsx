@@ -6,7 +6,7 @@ import { MarketingFooter } from '@/components/MarketingFooter';
 export const metadata: Metadata = {
   title: 'For Procurement Teams',
   description:
-    'ScopeWise for procurement: review vendor SOWs and RFP responses for commercial and scope risk before award, without a lawyer on every deal.',
+    'ScopeSense for procurement: review vendor SOWs and RFP responses for commercial and scope risk before award, without a lawyer on every deal.',
   alternates: { canonical: '/solutions/for-procurement' },
 };
 
@@ -16,7 +16,7 @@ export default function ForProcurementPage() {
       <MarketingHeader />
 
       <main className="max-w-4xl mx-auto px-4 py-16">
-        <h1 className="text-3xl md:text-4xl font-bold mb-4">ScopeWise for procurement</h1>
+        <h1 className="text-3xl md:text-4xl font-bold mb-4">ScopeSense for procurement</h1>
         <p className="text-lg text-muted-foreground mb-12">
           Every vendor SOW or RFP response that lands on a procurement desk
           has to be checked before award -- for pricing clarity, for scope
@@ -45,9 +45,9 @@ export default function ForProcurementPage() {
           sustainable at volume.
         </p>
 
-        <h2 className="text-2xl font-bold mb-4">What ScopeWise checks</h2>
+        <h2 className="text-2xl font-bold mb-4">What ScopeSense checks</h2>
         <p className="text-muted-foreground mb-6">
-          Upload the vendor&apos;s SOW or RFP response and ScopeWise runs it
+          Upload the vendor&apos;s SOW or RFP response and ScopeSense runs it
           through six specialist AI agents plus a deterministic rule engine
           in parallel. For procurement, the highest-value agents are:
         </p>
@@ -90,7 +90,7 @@ export default function ForProcurementPage() {
 
         <h2 className="text-2xl font-bold mb-4">Where legal still fits in</h2>
         <p className="text-muted-foreground mb-12">
-          ScopeWise isn&apos;t a replacement for legal review -- it&apos;s a triage
+          ScopeSense isn&apos;t a replacement for legal review -- it&apos;s a triage
           layer in front of it. Every finding is tied back to the exact
           clause it came from, scored by severity, so you can clear the
           low-risk vendor SOWs yourself and route only the ones with real
@@ -107,7 +107,7 @@ export default function ForProcurementPage() {
           </Link>
         </div>
         <p className="text-center text-sm text-muted-foreground">
-          See how ScopeWise handles{' '}
+          See how ScopeSense handles{' '}
           <Link href="/use-cases/sow-review" className="underline">
             SOW review
           </Link>{' '}

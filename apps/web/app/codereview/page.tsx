@@ -215,7 +215,7 @@ export default function CodeReviewListPage() {
             description={
               <>
                 Built on Visa&apos;s open-source Vulnerability Agentic Harness (Apache-2.0).
-                ScopeWise is not affiliated with or endorsed by Visa, Inc.
+                ScopeSense is not affiliated with or endorsed by Visa, Inc.
               </>
             }
             action={

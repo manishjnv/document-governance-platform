@@ -36,9 +36,9 @@ const BREADCRUMB_JSON_LD = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://scopewise.assessiq.in/' },
-    { '@type': 'ListItem', position: 2, name: 'Resources', item: 'https://scopewise.assessiq.in/resources/blog' },
-    { '@type': 'ListItem', position: 3, name: 'Templates', item: 'https://scopewise.assessiq.in/resources/templates' },
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://scopesense.in/' },
+    { '@type': 'ListItem', position: 2, name: 'Resources', item: 'https://scopesense.in/resources/blog' },
+    { '@type': 'ListItem', position: 3, name: 'Templates', item: 'https://scopesense.in/resources/templates' },
   ],
 };
 
@@ -51,7 +51,7 @@ export default function TemplatesPage() {
         <h1 className="text-3xl md:text-4xl font-bold mb-4">Templates and checklists</h1>
         <p className="text-lg text-muted-foreground mb-12">
           Three working files we use ourselves. Leave your name and work email and the
-          download links appear below; we may follow up once about ScopeWise and nothing
+          download links appear below; we may follow up once about ScopeSense and nothing
           else.
         </p>
 

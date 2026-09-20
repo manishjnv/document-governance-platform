@@ -23,6 +23,6 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: 'https://scopewise.assessiq.in/sitemap.xml',
+    sitemap: 'https://scopesense.in/sitemap.xml',
   };
 }

@@ -535,7 +535,7 @@ export default function NewMitreAssessmentPage() {
                 <div className="space-y-3 p-4">
                   <p className="text-xs text-muted-foreground">
                     Read-only pull of your saved searches via the Splunk REST API.
-                    The management port (usually 8089) must be reachable from ScopeWise —
+                    The management port (usually 8089) must be reachable from ScopeSense —
                     for Splunk Cloud that means allowlisting our IP on the stack. The auth
                     token is used once for this pull and is{' '}
                     <span className="font-medium text-foreground">never stored</span>.

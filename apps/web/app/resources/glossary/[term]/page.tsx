@@ -58,11 +58,11 @@ export default async function GlossaryTermPage({
     '@type': 'DefinedTerm',
     name: entry.term,
     description: entry.shortDefinition,
-    url: `https://scopewise.assessiq.in/resources/glossary/${entry.slug}`,
+    url: `https://scopesense.in/resources/glossary/${entry.slug}`,
     inDefinedTermSet: {
       '@type': 'DefinedTermSet',
-      name: 'ScopeWise Glossary',
-      url: 'https://scopewise.assessiq.in/resources/glossary',
+      name: 'ScopeSense Glossary',
+      url: 'https://scopesense.in/resources/glossary',
     },
   };
 
@@ -106,7 +106,7 @@ export default async function GlossaryTermPage({
         <div className="rounded-lg border border-primary/30 bg-primary/5 p-5 mb-12">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="h-4 w-4 text-primary" />
-            <h2 className="font-semibold">How ScopeWise checks this</h2>
+            <h2 className="font-semibold">How ScopeSense checks this</h2>
           </div>
           <p className="text-sm text-muted-foreground">{entry.scopewiseNote}</p>
         </div>
@@ -114,7 +114,7 @@ export default async function GlossaryTermPage({
         <div className="rounded-lg border p-5 mb-12">
           <h2 className="font-semibold mb-2">Related reading</h2>
           <Link href={entry.relatedUseCase} className="text-primary hover:underline">
-            See how ScopeWise reviews this in practice &rarr;
+            See how ScopeSense reviews this in practice &rarr;
           </Link>
         </div>
 

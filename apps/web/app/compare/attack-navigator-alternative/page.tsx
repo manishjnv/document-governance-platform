@@ -4,9 +4,9 @@ import { MarketingHeader } from '@/components/MarketingHeader';
 import { MarketingFooter } from '@/components/MarketingFooter';
 
 export const metadata: Metadata = {
-  title: 'ScopeWise vs ATT&CK Navigator',
+  title: 'ScopeSense vs ATT&CK Navigator',
   description:
-    'How ScopeWise MITRE ATT&CK Coverage compares with the free ATT&CK Navigator on layer building, applicability and gaps — and why it exports a layer too.',
+    'How ScopeSense MITRE ATT&CK Coverage compares with the free ATT&CK Navigator on layer building, applicability and gaps — and why it exports a layer too.',
   alternates: { canonical: '/compare/attack-navigator-alternative' },
 };
 
@@ -42,15 +42,15 @@ const ROWS = [
 
 const FAQS = [
   {
-    q: 'Is ScopeWise trying to replace the ATT&CK Navigator?',
-    a: 'No. Navigator is the standard way to view and share an ATT&CK layer, and ScopeWise exports one from every assessment so the result opens there too. They solve different problems: Navigator visualizes a layer you already have; ScopeWise builds the scored layer from your raw rule export.',
+    q: 'Is ScopeSense trying to replace the ATT&CK Navigator?',
+    a: 'No. Navigator is the standard way to view and share an ATT&CK layer, and ScopeSense exports one from every assessment so the result opens there too. They solve different problems: Navigator visualizes a layer you already have; ScopeSense builds the scored layer from your raw rule export.',
   },
   {
-    q: 'Can I still open a ScopeWise assessment in the Navigator?',
+    q: 'Can I still open a ScopeSense assessment in the Navigator?',
     a: 'Yes. Every assessment includes a Navigator layer export alongside the PDF, XLSX and PPTX outputs.',
   },
   {
-    q: 'Does ScopeWise need my raw logs or SIEM data?',
+    q: 'Does ScopeSense need my raw logs or SIEM data?',
     a: 'No. It ingests your detection rule export and an environment inventory you provide; it does not require log or telemetry access.',
   },
   {
@@ -74,13 +74,13 @@ export default function AttackNavigatorAlternativePage() {
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://scopewise.assessiq.in/' },
-          { '@type': 'ListItem', position: 2, name: 'Compare', item: 'https://scopewise.assessiq.in/compare' },
+          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://scopesense.in/' },
+          { '@type': 'ListItem', position: 2, name: 'Compare', item: 'https://scopesense.in/compare' },
           {
             '@type': 'ListItem',
             position: 3,
-            name: 'ScopeWise vs ATT&CK Navigator',
-            item: 'https://scopewise.assessiq.in/compare/attack-navigator-alternative',
+            name: 'ScopeSense vs ATT&CK Navigator',
+            item: 'https://scopesense.in/compare/attack-navigator-alternative',
           },
         ],
       },
@@ -96,11 +96,11 @@ export default function AttackNavigatorAlternativePage() {
 
       <main className="max-w-4xl mx-auto px-4 py-16">
         <h1 className="text-3xl md:text-4xl font-bold mb-4">
-          ScopeWise vs the MITRE ATT&CK Navigator
+          ScopeSense vs the MITRE ATT&CK Navigator
         </h1>
         <p className="text-lg text-muted-foreground mb-12">
           The ATT&CK Navigator is a free, open-source tool for viewing and
-          annotating ATT&CK layers. ScopeWise&apos;s MITRE ATT&CK Coverage
+          annotating ATT&CK layers. ScopeSense&apos;s MITRE ATT&CK Coverage
           module is a paid assessment that builds the scored layer from a
           detection rule export and an environment inventory, then exports
           a Navigator layer as one of its outputs. The two are
@@ -119,7 +119,7 @@ export default function AttackNavigatorAlternativePage() {
         <div className="overflow-x-auto mb-12">
           <table className="w-full text-sm border-collapse">
             <caption className="sr-only">
-              Comparison of the ATT&CK Navigator and ScopeWise across what
+              Comparison of the ATT&CK Navigator and ScopeSense across what
               each is, how layer data gets in, applicability and gaps,
               deliverables, and cost.
             </caption>
@@ -127,7 +127,7 @@ export default function AttackNavigatorAlternativePage() {
               <tr className="border-b">
                 <th scope="col" className="text-left font-semibold py-3 pr-4">Criterion</th>
                 <th scope="col" className="text-left font-semibold py-3 pr-4">ATT&CK Navigator</th>
-                <th scope="col" className="text-left font-semibold py-3">ScopeWise</th>
+                <th scope="col" className="text-left font-semibold py-3">ScopeSense</th>
               </tr>
             </thead>
             <tbody>
@@ -147,14 +147,14 @@ export default function AttackNavigatorAlternativePage() {
           Navigator is free, runs entirely in a browser (or self-hosted),
           and needs no data upload of any kind — a red team or blue team
           can sketch a layer by hand in minutes for a one-off exercise,
-          which is more than ScopeWise&apos;s pipeline is built for.
+          which is more than ScopeSense&apos;s pipeline is built for.
         </p>
         <p className="text-muted-foreground mb-6">
           It is also the tool most ATT&CK content already targets: threat
           intel reports, other vendors&apos; overlays and community layers
           are commonly shared as Navigator files. That is exactly why
-          ScopeWise exports one — an assessment that could only be opened
-          in ScopeWise&apos;s own viewer would be less useful to a team
+          ScopeSense exports one — an assessment that could only be opened
+          in ScopeSense&apos;s own viewer would be less useful to a team
           already living in Navigator.
         </p>
         <p className="text-muted-foreground mb-12">
@@ -167,7 +167,7 @@ export default function AttackNavigatorAlternativePage() {
         <p className="text-muted-foreground mb-12">
           A deterministic pre-pass over the rule export cuts the AI tagging
           calls needed to reach a scored layer by 63%, with zero false
-          positives introduced by that pre-pass (ScopeWise engineering
+          positives introduced by that pre-pass (ScopeSense engineering
           measurement). The{' '}
           <Link href="/product/mitre-coverage" className="underline hover:no-underline">
             product page
@@ -185,8 +185,8 @@ export default function AttackNavigatorAlternativePage() {
           and a real environment, with applicability reasons a reviewer
           can check, ranked gaps and a roadmap, and exports beyond the
           layer file itself, that is a different job, and it is the one
-          ScopeWise&apos;s assessment does. Most teams end up using both:
-          ScopeWise to generate the scored layer, the Navigator to view
+          ScopeSense&apos;s assessment does. Most teams end up using both:
+          ScopeSense to generate the scored layer, the Navigator to view
           and share it alongside everything else already in that format.
         </p>
 
@@ -224,7 +224,7 @@ export default function AttackNavigatorAlternativePage() {
 
         <p className="text-xs text-muted-foreground">
           MITRE ATT&CK and ATT&CK Navigator are trademarks of The MITRE
-          Corporation. ScopeWise is not affiliated with or endorsed by
+          Corporation. ScopeSense is not affiliated with or endorsed by
           MITRE.
         </p>
       </main>

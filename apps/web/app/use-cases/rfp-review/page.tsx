@@ -13,11 +13,11 @@ export const metadata: Metadata = {
 const FAQS = [
   {
     q: 'How is RFP review different from SOW review?',
-    a: 'An RFP evaluates vendors rather than defining delivered work, so ScopeWise checks for different things: whether evaluation criteria are defined, whether vendor qualification requirements are clear, and whether submission format, deadline, and Q&A process are specified -- instead of deliverables and acceptance criteria.',
+    a: 'An RFP evaluates vendors rather than defining delivered work, so ScopeSense checks for different things: whether evaluation criteria are defined, whether vendor qualification requirements are clear, and whether submission format, deadline, and Q&A process are specified -- instead of deliverables and acceptance criteria.',
   },
   {
-    q: 'Can ScopeWise review a vendor’s RFP response, or only the RFP itself?',
-    a: 'ScopeWise reviews the document you upload -- either the RFP you’re issuing (to check it’s clear enough to get comparable responses) or a vendor’s response (to check the commercial and legal terms it proposes) -- against the same set of risk agents.',
+    q: 'Can ScopeSense review a vendor’s RFP response, or only the RFP itself?',
+    a: 'ScopeSense reviews the document you upload -- either the RFP you’re issuing (to check it’s clear enough to get comparable responses) or a vendor’s response (to check the commercial and legal terms it proposes) -- against the same set of risk agents.',
   },
   {
     q: 'What red flags does it catch in a vendor response?',
@@ -25,7 +25,7 @@ const FAQS = [
   },
   {
     q: 'Does it replace a procurement scoring process?',
-    a: 'No. ScopeWise flags risk in the document text itself -- ambiguity, missing terms, red-flag clauses -- it does not score vendors against your weighted evaluation criteria. It’s a pre-award risk check that runs alongside your existing scoring process, not a replacement for it.',
+    a: 'No. ScopeSense flags risk in the document text itself -- ambiguity, missing terms, red-flag clauses -- it does not score vendors against your weighted evaluation criteria. It’s a pre-award risk check that runs alongside your existing scoring process, not a replacement for it.',
   },
 ];
 
@@ -58,7 +58,7 @@ export default function RfpReviewPage() {
           questions are different too: are the evaluation criteria clear
           enough to compare vendors fairly? Are qualification requirements
           specific? Is the submission process well-defined enough to avoid
-          a disputed award? ScopeWise checks the document for exactly
+          a disputed award? ScopeSense checks the document for exactly
           these gaps, on both the RFP you issue and the responses you get
           back.
         </p>
@@ -100,9 +100,9 @@ export default function RfpReviewPage() {
           </div>
         </div>
 
-        <h2 className="text-2xl font-bold mb-4">How ScopeWise handles RFPs</h2>
+        <h2 className="text-2xl font-bold mb-4">How ScopeSense handles RFPs</h2>
         <p className="text-muted-foreground mb-4">
-          ScopeWise treats RFP as a distinct document type, not a SOW with
+          ScopeSense treats RFP as a distinct document type, not a SOW with
           different labels. The Scope agent checks for defined evaluation
           criteria and scope of the requested proposal instead of
           deliverables; the Delivery agent checks for submission deadline,
@@ -142,7 +142,7 @@ export default function RfpReviewPage() {
           <p className="text-sm text-muted-foreground">
             Running vendor evaluations?{' '}
             <Link href="/solutions/for-procurement" className="underline hover:no-underline">
-              See ScopeWise for procurement teams
+              See ScopeSense for procurement teams
             </Link>
             .
           </p>

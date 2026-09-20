@@ -1,15 +1,15 @@
-# ScopeWise scan kit - one-time setup (Windows). Launched by setup.cmd in the kit root.
+# ScopeSense scan kit - one-time setup (Windows). Launched by setup.cmd in the kit root.
 # Creates .venv, installs the bundled scanner, asks for your OpenRouter key, writes .env.
 $ErrorActionPreference = 'Stop'
 $env:PYTHONUTF8 = '1'
 Set-Location (Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) '..')   # kit root
 
-$Activity = 'ScopeWise scan kit setup'
+$Activity = 'ScopeSense scan kit setup'
 $Interactive = [Environment]::UserInteractive -and -not [Console]::IsInputRedirected
 
 function Show-Banner {
     Write-Host ''
-    Write-Host '  ScopeWise Code Security Review - scan kit setup' -ForegroundColor Cyan
+    Write-Host '  ScopeSense Code Security Review - scan kit setup' -ForegroundColor Cyan
     Write-Host '  ------------------------------------------------' -ForegroundColor DarkCyan
     Write-Host '  Installs the bundled scanner into .venv in this folder and saves your key.' -ForegroundColor Gray
     Write-Host ''

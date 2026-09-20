@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ScopeWise consultant scan kit runner.
+# ScopeSense consultant scan kit runner.
 # Usage: ./scopewise-scan.sh <path-to-repo>
 set -uo pipefail
 export PYTHONUTF8=1
@@ -114,5 +114,5 @@ echo "  |  Scan complete                                               |"
 echo "  +--------------------------------------------------------------+"
 echo "  Results : $SCRIPT_DIR/$ZIP_NAME"
 echo "  Log     : $LOG"
-echo "  Upload the zip at ScopeWise -> Code Security Review -> New review"
+echo "  Upload the zip at ScopeSense -> Code Security Review -> New review"
 echo

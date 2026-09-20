@@ -6,7 +6,7 @@ import { MarketingFooter } from '@/components/MarketingFooter';
 export const metadata: Metadata = {
   title: 'For Agencies & Consultancies',
   description:
-    'ScopeWise for agencies and consultancies: self-check outbound SOWs before sending to a client and catch the scope gaps that turn into unpaid work later.',
+    'ScopeSense for agencies and consultancies: self-check outbound SOWs before sending to a client and catch the scope gaps that turn into unpaid work later.',
   alternates: { canonical: '/solutions/for-agencies' },
 };
 
@@ -16,7 +16,7 @@ export default function ForAgenciesPage() {
       <MarketingHeader />
 
       <main className="max-w-4xl mx-auto px-4 py-16">
-        <h1 className="text-3xl md:text-4xl font-bold mb-4">ScopeWise for agencies and consultancies</h1>
+        <h1 className="text-3xl md:text-4xl font-bold mb-4">ScopeSense for agencies and consultancies</h1>
         <p className="text-lg text-muted-foreground mb-12">
           Most SOW review tools are built for the buyer&apos;s side. But the
           document usually gets written by the agency, under deadline
@@ -46,9 +46,9 @@ export default function ForAgenciesPage() {
           six weeks in.
         </p>
 
-        <h2 className="text-2xl font-bold mb-4">What ScopeWise catches before you send it</h2>
+        <h2 className="text-2xl font-bold mb-4">What ScopeSense catches before you send it</h2>
         <p className="text-muted-foreground mb-6">
-          Run your own draft SOW through ScopeWise before it goes to the
+          Run your own draft SOW through ScopeSense before it goes to the
           client. The same six agents that review inbound documents work
           just as well on outbound ones:
         </p>
@@ -94,7 +94,7 @@ export default function ForAgenciesPage() {
         <p className="text-muted-foreground mb-12">
           Every finding points to the exact clause and explains why it&apos;s a
           risk and how to fix it, so tightening a draft SOW is a fast pass,
-          not a rewrite. And because ScopeWise re-checks revised versions
+          not a rewrite. And because ScopeSense re-checks revised versions
           against the original, you can confirm a fix actually landed
           before the document goes out the door.
         </p>
@@ -108,7 +108,7 @@ export default function ForAgenciesPage() {
           </Link>
         </div>
         <p className="text-center text-sm text-muted-foreground">
-          See how ScopeWise handles{' '}
+          See how ScopeSense handles{' '}
           <Link href="/use-cases/scope-creep-prevention" className="underline">
             scope creep prevention
           </Link>

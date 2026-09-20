@@ -15,9 +15,9 @@ import { MarketingFooter } from '@/components/MarketingFooter';
 import { BLOG_POSTS } from '@/app/resources/blog/data';
 
 export const metadata: Metadata = {
-  title: 'ScopeWise: risk reviews for contracts, detections and code',
+  title: 'ScopeSense: risk reviews for contracts, detections and code',
   description:
-    'ScopeWise scores SOWs and RFPs, MITRE ATT&CK detection coverage, and code-scanner findings against named frameworks and produces the client-ready report.',
+    'ScopeSense scores SOWs and RFPs, MITRE ATT&CK detection coverage, and code-scanner findings against named frameworks and produces the client-ready report.',
   alternates: { canonical: '/' },
 };
 
@@ -30,7 +30,7 @@ const PRODUCTS = [
     title: 'SOW & RFP Review',
     desc: 'Six specialist AI reviewers plus a deterministic rule engine. Risk score, evidence quoted per finding, fix-verification on re-review.',
     image: '/screens/sow-review-results-960.webp',
-    imageAlt: 'ScopeWise SOW review results for a sample SOC services statement of work: overall score, risk by area, document x-ray and the findings list',
+    imageAlt: 'ScopeSense SOW review results for a sample SOC services statement of work: overall score, risk by area, document x-ray and the findings list',
   },
   {
     key: 'mitre',
@@ -40,7 +40,7 @@ const PRODUCTS = [
     title: 'MITRE ATT&CK Coverage',
     desc: 'Upload your detection rules and environment inventory. Get coverage by tactic, ranked gaps, a 90-day roadmap, and the PPTX, XLSX and Navigator layer to present it.',
     image: '/screens/mitre-coverage-heatmap-960.webp',
-    imageAlt: 'ScopeWise MITRE ATT&CK assessment results: coverage tiles, top gaps and the per-tactic technique heatmap for the ACME sample workspace',
+    imageAlt: 'ScopeSense MITRE ATT&CK assessment results: coverage tiles, top gaps and the per-tactic technique heatmap for the ACME sample workspace',
   },
   {
     key: 'codereview',
@@ -50,7 +50,7 @@ const PRODUCTS = [
     title: 'Code Security Review',
     desc: 'Run the open-source scanner on your side. Upload findings only. Get a plain-language register, exploit chains and the fewest fixes that break every chain.',
     image: '/screens/code-review-findings-drawer-960.webp',
-    imageAlt: 'ScopeWise Code Security Review: the NodeGoat findings register with a finding drawer open showing what is wrong, why it matters and how to fix it',
+    imageAlt: 'ScopeSense Code Security Review: the NodeGoat findings register with a finding drawer open showing what is wrong, why it matters and how to fix it',
   },
 ];
 
@@ -123,13 +123,13 @@ const RECENT_POSTS = [...BLOG_POSTS]
   .slice(0, 3);
 
 export default function HomePage() {
-  const baseUrl = 'https://scopewise.assessiq.in';
+  const baseUrl = 'https://scopesense.in';
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
       {
         '@type': 'Organization',
-        name: 'ScopeWise',
+        name: 'ScopeSense',
         url: baseUrl,
         logo: `${baseUrl}/icons/icon-512.png`,
         sameAs: ['https://github.com/manishjnv/document-governance-platform'],
@@ -139,16 +139,16 @@ export default function HomePage() {
           url: `${baseUrl}/contact`,
         },
         description:
-          'ScopeWise builds evidence-based risk reviews for contracts, detection coverage and code security findings.',
+          'ScopeSense builds evidence-based risk reviews for contracts, detection coverage and code security findings.',
       },
       {
         '@type': 'WebSite',
-        name: 'ScopeWise',
+        name: 'ScopeSense',
         url: baseUrl,
       },
       {
         '@type': 'SoftwareApplication',
-        name: 'ScopeWise SOW & RFP Review',
+        name: 'ScopeSense SOW & RFP Review',
         applicationCategory: 'BusinessApplication',
         operatingSystem: 'Web',
         url: `${baseUrl}/product/sow-review`,
@@ -157,7 +157,7 @@ export default function HomePage() {
       },
       {
         '@type': 'SoftwareApplication',
-        name: 'ScopeWise MITRE ATT&CK Coverage',
+        name: 'ScopeSense MITRE ATT&CK Coverage',
         applicationCategory: 'SecurityApplication',
         operatingSystem: 'Web',
         url: `${baseUrl}/product/mitre-coverage`,
@@ -166,7 +166,7 @@ export default function HomePage() {
       },
       {
         '@type': 'SoftwareApplication',
-        name: 'ScopeWise Code Security Review',
+        name: 'ScopeSense Code Security Review',
         applicationCategory: 'SecurityApplication',
         operatingSystem: 'Web',
         url: `${baseUrl}/product/code-security-review`,
@@ -192,7 +192,7 @@ export default function HomePage() {
             Evidence-based risk reviews for contracts, detections and code
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-            ScopeWise reads the SOW, the SIEM rule set or the scanner output,
+            ScopeSense reads the SOW, the SIEM rule set or the scanner output,
             scores the gaps against named frameworks, and hands you the
             client-ready report. Deterministic numbers. AI only where it is
             honest.
@@ -261,7 +261,7 @@ export default function HomePage() {
         <section className="max-w-6xl mx-auto px-4 py-16">
           <h2 className="text-2xl font-bold text-center mb-2">Why consultancies use it</h2>
           <p className="text-muted-foreground text-center max-w-2xl mx-auto mb-10">
-            ScopeWise replaces the spreadsheet-and-deck workflow behind each
+            ScopeSense replaces the spreadsheet-and-deck workflow behind each
             of these assessments. The report is generated, not assembled.
           </p>
           <div className="grid md:grid-cols-3 gap-6">
@@ -305,7 +305,7 @@ export default function HomePage() {
             ))}
           </div>
           <p className="text-center text-sm text-muted-foreground">
-            Also see ScopeWise for{' '}
+            Also see ScopeSense for{' '}
             <Link href="/solutions/for-legal" className="underline hover:no-underline">
               legal teams
             </Link>{' '}

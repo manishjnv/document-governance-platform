@@ -1,5 +1,5 @@
 @echo off
-rem ScopeWise scan kit - Windows launcher for scopewise-scan.ps1.
+rem ScopeSense scan kit - Windows launcher for scopewise-scan.ps1.
 rem Usage: scopewise-scan.cmd C:\path\to\repo
 cd /d "%~dp0"
 if "%~1"=="" (

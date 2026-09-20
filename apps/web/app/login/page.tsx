@@ -238,7 +238,7 @@ export default function LoginPage() {
           <div className="mb-2.5 flex items-center justify-center">
             <ShieldCheck className="h-[26px] w-[26px] text-primary" />
           </div>
-          <h1 className="text-[19px] font-semibold leading-tight tracking-[-0.01em]">ScopeWise</h1>
+          <h1 className="text-[19px] font-semibold leading-tight tracking-[-0.01em]">ScopeSense</h1>
           <p className="mt-1 text-[13px] text-muted-foreground">Catch contract risk before you sign.</p>
         </div>
 

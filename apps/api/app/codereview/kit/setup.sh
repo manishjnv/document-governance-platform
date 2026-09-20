@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ScopeWise scan kit - one-time setup (macOS / Linux). Run from the unzipped kit folder:
+# ScopeSense scan kit - one-time setup (macOS / Linux). Run from the unzipped kit folder:
 #   ./setup.sh
 # Creates .venv, installs the bundled scanner, asks for your OpenRouter key, writes .env.
 set -uo pipefail
@@ -22,7 +22,7 @@ fail() {
   exit 1
 }
 
-printf '\n  %sScopeWise Code Security Review - scan kit setup%s\n' "$C" "$N"
+printf '\n  %sScopeSense Code Security Review - scan kit setup%s\n' "$C" "$N"
 printf '  ------------------------------------------------\n'
 printf '  %sInstalls the bundled scanner into .venv in this folder and saves your key.%s\n' "$D" "$N"
 

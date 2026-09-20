@@ -4,9 +4,9 @@ import { MarketingHeader } from '@/components/MarketingHeader';
 import { MarketingFooter } from '@/components/MarketingFooter';
 
 export const metadata: Metadata = {
-  title: 'ScopeWise vs SOWaudit.com',
+  title: 'ScopeSense vs SOWaudit.com',
   description:
-    'How ScopeWise SOW & RFP Review compares with SOWaudit.com: scope, review approach, evidence, re-review and exports, sourced from their own site.',
+    'How ScopeSense SOW & RFP Review compares with SOWaudit.com: scope, review approach, evidence, re-review and exports, sourced from their own site.',
   alternates: { canonical: '/compare/sowaudit-alternative' },
 };
 
@@ -47,18 +47,18 @@ const ROWS = [
 const FAQS = [
   {
     q: 'Is this page affiliated with SOWaudit.com?',
-    a: 'No. ScopeWise is not affiliated with, endorsed by, or partnered with SOWaudit. Every SOWaudit claim on this page is sourced from sowaudit.com and dated.',
+    a: 'No. ScopeSense is not affiliated with, endorsed by, or partnered with SOWaudit. Every SOWaudit claim on this page is sourced from sowaudit.com and dated.',
   },
   {
-    q: 'Does ScopeWise review RFPs as well as SOWs?',
+    q: 'Does ScopeSense review RFPs as well as SOWs?',
     a: 'Yes. RFP support runs through the same six reviewer agents and rule engine as SOW review, so a procurement team can use one tool pre- and post-signature.',
   },
   {
     q: 'What happens when a document is revised after redlines?',
-    a: 'Upload the new version and ScopeWise links it to the original. Every earlier finding is re-checked against the new text and marked verified or still open, not by a manual checkbox.',
+    a: 'Upload the new version and ScopeSense links it to the original. Every earlier finding is re-checked against the new text and marked verified or still open, not by a manual checkbox.',
   },
   {
-    q: 'Does ScopeWise replace legal judgment on a contract?',
+    q: 'Does ScopeSense replace legal judgment on a contract?',
     a: 'No. It flags risk patterns and ambiguous language with evidence for a person to decide on. Severity ratings are assigned by the model and have not been validated by an external legal reviewer.',
   },
 ];
@@ -78,13 +78,13 @@ export default function SowauditAlternativePage() {
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://scopewise.assessiq.in/' },
-          { '@type': 'ListItem', position: 2, name: 'Compare', item: 'https://scopewise.assessiq.in/compare' },
+          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://scopesense.in/' },
+          { '@type': 'ListItem', position: 2, name: 'Compare', item: 'https://scopesense.in/compare' },
           {
             '@type': 'ListItem',
             position: 3,
-            name: 'ScopeWise vs SOWaudit.com',
-            item: 'https://scopewise.assessiq.in/compare/sowaudit-alternative',
+            name: 'ScopeSense vs SOWaudit.com',
+            item: 'https://scopesense.in/compare/sowaudit-alternative',
           },
         ],
       },
@@ -100,11 +100,11 @@ export default function SowauditAlternativePage() {
 
       <main className="max-w-4xl mx-auto px-4 py-16">
         <h1 className="text-3xl md:text-4xl font-bold mb-4">
-          ScopeWise vs SOWaudit.com, side by side
+          ScopeSense vs SOWaudit.com, side by side
         </h1>
         <p className="text-lg text-muted-foreground mb-12">
           SOWaudit.com is a single-document SOW review tool. This page
-          compares it with ScopeWise&apos;s SOW & RFP Review on scope,
+          compares it with ScopeSense&apos;s SOW & RFP Review on scope,
           review approach, evidence and re-review, using only claims each
           product states about itself in public. It is not a ranking of
           which is better for every buyer.
@@ -120,7 +120,7 @@ export default function SowauditAlternativePage() {
         <div className="overflow-x-auto mb-12">
           <table className="w-full text-sm border-collapse">
             <caption className="sr-only">
-              Comparison of SOWaudit.com and ScopeWise across scope, review
+              Comparison of SOWaudit.com and ScopeSense across scope, review
               approach, evidence, re-review, cross-document rollups and
               report output.
             </caption>
@@ -128,7 +128,7 @@ export default function SowauditAlternativePage() {
               <tr className="border-b">
                 <th scope="col" className="text-left font-semibold py-3 pr-4">Criterion</th>
                 <th scope="col" className="text-left font-semibold py-3 pr-4">SOWaudit.com</th>
-                <th scope="col" className="text-left font-semibold py-3">ScopeWise</th>
+                <th scope="col" className="text-left font-semibold py-3">ScopeSense</th>
               </tr>
             </thead>
             <tbody>
@@ -148,7 +148,7 @@ export default function SowauditAlternativePage() {
           SOWaudit.com describes a second tool, Margin Sentinel, that runs
           after signature: it classifies ongoing project communications as
           in-scope, out-of-scope or ambiguous against the signed baseline
-          and auto-drafts change-order language. ScopeWise reviews the
+          and auto-drafts change-order language. ScopeSense reviews the
           documents themselves — the SOW, the RFP, the redline — and does
           not currently monitor day-to-day project communications for
           scope creep during delivery.
@@ -161,7 +161,7 @@ export default function SowauditAlternativePage() {
           a team actually works.
         </p>
         <p className="text-muted-foreground mb-12">
-          ScopeWise&apos;s severity ratings are model-assigned and have not
+          ScopeSense&apos;s severity ratings are model-assigned and have not
           been validated by an external legal reviewer; that limitation
           applies to a rule-based or forensic-pass tool too, whenever
           software rather than counsel is doing the first read.
@@ -171,7 +171,7 @@ export default function SowauditAlternativePage() {
         <p className="text-muted-foreground mb-12">
           On our labeled SOW test set the pipeline reached 29 of 29
           ground-truth findings with zero rule-engine false positives
-          (ScopeWise accuracy baseline, July 2026). That is a measure of
+          (ScopeSense accuracy baseline, July 2026). That is a measure of
           recall on a labeled set, not a promise about every document; the{' '}
           <Link href="/product/sow-review" className="underline hover:no-underline">
             product page
@@ -188,7 +188,7 @@ export default function SowauditAlternativePage() {
           more than one document per engagement, or needs the review
           rolled up across a set of related contracts for a procurement
           or legal team managing several vendors at once, that is the
-          shape ScopeWise is built for. Neither tool decides a contract
+          shape ScopeSense is built for. Neither tool decides a contract
           for you; both hand a person the evidence to decide faster.
         </p>
 
@@ -225,7 +225,7 @@ export default function SowauditAlternativePage() {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          SOWaudit is a trademark of its owner. ScopeWise is not affiliated
+          SOWaudit is a trademark of its owner. ScopeSense is not affiliated
           with SOWaudit.
         </p>
       </main>

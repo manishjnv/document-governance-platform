@@ -5,7 +5,7 @@ import { ContactForm } from './ContactForm';
 
 export const metadata: Metadata = {
   title: 'Contact',
-  description: 'Get in touch with the ScopeWise team.',
+  description: 'Get in touch with the ScopeSense team.',
   alternates: { canonical: '/contact' },
 };
 
@@ -17,7 +17,7 @@ export default function ContactPage() {
       <main className="max-w-md mx-auto px-4 py-16">
         <h1 className="text-3xl md:text-4xl font-bold mb-4 text-center">Contact us</h1>
         <p className="text-lg text-muted-foreground mb-8 text-center">
-          Evaluating ScopeWise for your team, or have a question about a
+          Evaluating ScopeSense for your team, or have a question about a
           review? Send us a message and we&apos;ll get back to you.
         </p>
         <ContactForm />

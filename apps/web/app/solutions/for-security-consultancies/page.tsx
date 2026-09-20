@@ -6,26 +6,26 @@ import { MarketingFooter } from '@/components/MarketingFooter';
 export const metadata: Metadata = {
   title: 'For Security Consultancies & MDR',
   description:
-    'ScopeWise for security consultancies and MDR providers: MITRE ATT&CK coverage assessments and code security reviews as repeatable, evidence-backed deliverables.',
+    'ScopeSense for security consultancies and MDR providers: MITRE ATT&CK coverage assessments and code security reviews as repeatable, evidence-backed deliverables.',
   alternates: { canonical: '/solutions/for-security-consultancies' },
 };
 
 const FAQS = [
   {
     q: 'Can we white-label the deliverables?',
-    a: 'The PPTX and XLSX exports are editable files, so you can add your own cover and branding before delivery. ScopeWise does not currently offer a fully white-labeled portal.',
+    a: 'The PPTX and XLSX exports are editable files, so you can add your own cover and branding before delivery. ScopeSense does not currently offer a fully white-labeled portal.',
   },
   {
     q: 'Which SIEMs are supported?',
     a: 'Microsoft Sentinel and Splunk have live read-only connectors. Any other SIEM works from a file export in xlsx, csv, pdf or docx.',
   },
   {
-    q: 'Does the client need a ScopeWise account?',
+    q: 'Does the client need a ScopeSense account?',
     a: 'No. The consultant runs the assessment and delivers the exports. Client accounts can be added to an organization if you want them to view results directly.',
   },
   {
     q: 'Is this a substitute for a red-team or purple-team exercise?',
-    a: 'No. ScopeWise measures whether detections exist and how strong they look on paper. Validating that they fire is what a purple-team exercise is for, and the gap list is a good place to start one.',
+    a: 'No. ScopeSense measures whether detections exist and how strong they look on paper. Validating that they fire is what a purple-team exercise is for, and the gap list is a good place to start one.',
   },
 ];
 
@@ -48,19 +48,19 @@ export default function ForSecurityConsultanciesPage() {
             '@type': 'ListItem',
             position: 1,
             name: 'Home',
-            item: 'https://scopewise.assessiq.in/',
+            item: 'https://scopesense.in/',
           },
           {
             '@type': 'ListItem',
             position: 2,
             name: 'Solutions',
-            item: 'https://scopewise.assessiq.in/solutions/for-procurement',
+            item: 'https://scopesense.in/solutions/for-procurement',
           },
           {
             '@type': 'ListItem',
             position: 3,
             name: 'For Security Consultancies & MDR',
-            item: 'https://scopewise.assessiq.in/solutions/for-security-consultancies',
+            item: 'https://scopesense.in/solutions/for-security-consultancies',
           },
         ],
       },
@@ -79,12 +79,12 @@ export default function ForSecurityConsultanciesPage() {
 
       <main className="max-w-4xl mx-auto px-4 py-16">
         <h1 className="text-3xl md:text-4xl font-bold mb-4">
-          ScopeWise for security consultancies and MDR providers
+          ScopeSense for security consultancies and MDR providers
         </h1>
         <p className="text-lg text-muted-foreground mb-12">
           Two of the assessments clients ask for most, detection coverage
           and code security, are usually delivered as a spreadsheet and a
-          deck built by hand for every engagement. ScopeWise generates
+          deck built by hand for every engagement. ScopeSense generates
           both from scored data, so the second engagement costs the same
           effort as the tenth.
         </p>
@@ -105,7 +105,7 @@ export default function ForSecurityConsultanciesPage() {
           between turning one into the other by hand.
         </p>
 
-        <h2 className="text-2xl font-bold mb-4">What ScopeWise produces for each engagement</h2>
+        <h2 className="text-2xl font-bold mb-4">What ScopeSense produces for each engagement</h2>
         <div className="grid sm:grid-cols-2 gap-6 mb-12">
           <div className="rounded-lg border p-5">
             <h3 className="font-semibold mb-2">MITRE ATT&amp;CK coverage assessment</h3>

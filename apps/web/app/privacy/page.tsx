@@ -6,7 +6,7 @@ import { MarketingFooter } from '@/components/MarketingFooter';
 export const metadata: Metadata = {
   title: 'Privacy Policy',
   description:
-    'How ScopeWise collects, uses, stores, and protects your data — accounts, uploaded documents, and SIEM connection data.',
+    'How ScopeSense collects, uses, stores, and protects your data — accounts, uploaded documents, and SIEM connection data.',
   alternates: { canonical: '/privacy' },
 };
 
@@ -60,7 +60,7 @@ export default function PrivacyPage() {
         <h1 className="text-3xl md:text-4xl font-bold mb-2">Privacy Policy</h1>
         <p className="text-sm text-muted-foreground mb-10">Last updated: 20 August 2026</p>
         <p className="text-lg text-muted-foreground mb-10">
-          ScopeWise reviews the documents and detection rules you choose to
+          ScopeSense reviews the documents and detection rules you choose to
           share with it. This page explains what we collect, why, how it is
           protected, and how to get it removed. The short version: we collect
           only what the product needs, we never sell it, and SIEM access is

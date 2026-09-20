@@ -1,4 +1,4 @@
-# ScopeWise consultant scan kit runner. Launched by scopewise-scan.cmd in the kit root.
+# ScopeSense consultant scan kit runner. Launched by scopewise-scan.cmd in the kit root.
 # Usage: .\scopewise-scan.cmd <path-to-repo>
 param(
     [Parameter(Mandatory=$true)]
@@ -131,7 +131,7 @@ try {
     Write-Host "  +--------------------------------------------------------------+" -ForegroundColor Green
     Write-Host "  Results : $zipPath"
     Write-Host "  Log     : $Log"
-    Write-Host "  Upload the zip at ScopeWise -> Code Security Review -> New review" -ForegroundColor Yellow
+    Write-Host "  Upload the zip at ScopeSense -> Code Security Review -> New review" -ForegroundColor Yellow
     Write-Host ""
 } finally {
     Remove-Item -Recurse -Force $tmpDir

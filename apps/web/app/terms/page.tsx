@@ -6,7 +6,7 @@ import { MarketingFooter } from '@/components/MarketingFooter';
 export const metadata: Metadata = {
   title: 'Terms of Service',
   description:
-    'The terms for using ScopeWise: your account, your content, acceptable use, AI-generated output, and liability.',
+    'The terms for using ScopeSense: your account, your content, acceptable use, AI-generated output, and liability.',
   alternates: { canonical: '/terms' },
 };
 
@@ -14,8 +14,8 @@ const SECTIONS = [
   {
     h: 'The service',
     body: [
-      'ScopeWise is a web service that reviews documents, detection-rule exports and code-scanner findings you choose to upload, and produces reports.',
-      'It is provided by the ScopeWise team on an early-access basis; features may change.',
+      'ScopeSense is a web service that reviews documents, detection-rule exports and code-scanner findings you choose to upload, and produces reports.',
+      'It is provided by the ScopeSense team on an early-access basis; features may change.',
     ],
   },
   {
@@ -53,7 +53,7 @@ const SECTIONS = [
     body: [
       'Reviews, severity ratings, coverage figures and findings are produced by software, in part by AI models, and can be wrong or incomplete.',
       'They are decision support for a qualified reviewer.',
-      'ScopeWise does not provide legal, security-assurance or audit opinions, and no output is a certification of any kind.',
+      'ScopeSense does not provide legal, security-assurance or audit opinions, and no output is a certification of any kind.',
     ],
   },
   {
@@ -66,7 +66,7 @@ const SECTIONS = [
   {
     h: 'Liability',
     body: [
-      'To the extent permitted by law, ScopeWise is not liable for indirect or consequential loss.',
+      'To the extent permitted by law, ScopeSense is not liable for indirect or consequential loss.',
       'Total liability is limited to the fees you paid in the twelve months before the claim.',
     ],
   },

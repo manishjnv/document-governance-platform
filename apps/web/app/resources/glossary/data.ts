@@ -37,7 +37,7 @@ export const GLOSSARY_ENTRIES: GlossaryEntry[] = [
       },
     ],
     scopewiseNote:
-      "ScopeWise's Commercial agent checks every SOW for the presence, amount, and carve-out structure of liability caps, flagging missing or unusually asymmetric caps as a finding.",
+      "ScopeSense's Commercial agent checks every SOW for the presence, amount, and carve-out structure of liability caps, flagging missing or unusually asymmetric caps as a finding.",
     keywords: ['liability cap', 'limitation of liability', 'carve-outs', 'general damages'],
     relatedUseCase: '/use-cases/sow-review',
   },
@@ -63,7 +63,7 @@ export const GLOSSARY_ENTRIES: GlossaryEntry[] = [
       },
     ],
     scopewiseNote:
-      "ScopeWise's Legal agent reviews indemnification language for scope, mutuality, and how it interacts with the liability cap elsewhere in the document, flagging one-sided or unusually broad obligations.",
+      "ScopeSense's Legal agent reviews indemnification language for scope, mutuality, and how it interacts with the liability cap elsewhere in the document, flagging one-sided or unusually broad obligations.",
     keywords: ['indemnify', 'mutuality', 'liability cap', 'hold harmless'],
     relatedUseCase: '/use-cases/sow-review',
   },
@@ -89,7 +89,7 @@ export const GLOSSARY_ENTRIES: GlossaryEntry[] = [
       },
     ],
     scopewiseNote:
-      "ScopeWise's Scope agent is built to catch the root causes before signature -- vague deliverable language, missing acceptance criteria, absent change-control process -- rather than waiting to catch the symptom after a project is already underway.",
+      "ScopeSense's Scope agent is built to catch the root causes before signature -- vague deliverable language, missing acceptance criteria, absent change-control process -- rather than waiting to catch the symptom after a project is already underway.",
     keywords: ['scope creep', 'acceptance criteria', 'change-control', 'deliverable'],
     relatedUseCase: '/use-cases/scope-creep-prevention',
   },
@@ -115,7 +115,7 @@ export const GLOSSARY_ENTRIES: GlossaryEntry[] = [
       },
     ],
     scopewiseNote:
-      "When ScopeWise reviews a SOW that references an MSA, it's worth confirming the MSA itself has been reviewed for the terms that carry through to every SOW signed under it -- liability, indemnification, IP ownership.",
+      "When ScopeSense reviews a SOW that references an MSA, it's worth confirming the MSA itself has been reviewed for the terms that carry through to every SOW signed under it -- liability, indemnification, IP ownership.",
     keywords: ['MSA', 'SOW', 'liability cap', 'order of precedence'],
     relatedUseCase: '/use-cases/sow-review',
   },
@@ -141,7 +141,7 @@ export const GLOSSARY_ENTRIES: GlossaryEntry[] = [
       },
     ],
     scopewiseNote:
-      'This is the exact document type ScopeWise is built to review: it parses a SOW, runs six specialist AI agents and a rule engine against it, and returns a risk-scored review before you sign.',
+      'This is the exact document type ScopeSense is built to review: it parses a SOW, runs six specialist AI agents and a rule engine against it, and returns a risk-scored review before you sign.',
     keywords: ['SOW', 'acceptance criteria', 'change-control', 'deliverables'],
     relatedUseCase: '/use-cases/sow-review',
   },
@@ -167,7 +167,7 @@ export const GLOSSARY_ENTRIES: GlossaryEntry[] = [
       },
     ],
     scopewiseNote:
-      "ScopeWise's Scope, Delivery, and Commercial agents run doc-type-aware checks for RFPs -- looking for defined evaluation criteria, a submission deadline and Q&A window, and disclosed budget or pricing format -- backed by a separate RFP rule set distinct from the SOW rules.",
+      "ScopeSense's Scope, Delivery, and Commercial agents run doc-type-aware checks for RFPs -- looking for defined evaluation criteria, a submission deadline and Q&A window, and disclosed budget or pricing format -- backed by a separate RFP rule set distinct from the SOW rules.",
     keywords: ['RFP', 'evaluation criteria', 'submission deadline', 'competitive proposal'],
     relatedUseCase: '/use-cases/rfp-review',
   },
@@ -193,7 +193,7 @@ export const GLOSSARY_ENTRIES: GlossaryEntry[] = [
         },
     ],
     scopewiseNote:
-      "ScopeWise's RFP review pipeline is built around solicitations that ask vendors for a priced proposal -- the Commercial agent's RFP checks specifically look for budget or pricing-format disclosure, which an RFI by design doesn't include, so RFIs sit outside what that pipeline is tuned to evaluate today.",
+      "ScopeSense's RFP review pipeline is built around solicitations that ask vendors for a priced proposal -- the Commercial agent's RFP checks specifically look for budget or pricing-format disclosure, which an RFI by design doesn't include, so RFIs sit outside what that pipeline is tuned to evaluate today.",
     keywords: ['RFI', 'vendor capability', 'market research', 'pre-RFP'],
     relatedUseCase: '/use-cases/rfp-review',
   },
@@ -219,7 +219,7 @@ export const GLOSSARY_ENTRIES: GlossaryEntry[] = [
       },
     ],
     scopewiseNote:
-      "ScopeWise's Scope agent explicitly extracts whether acceptance criteria are present for each deliverable, quotes the criteria text when it exists, and flags missing acceptance criteria as a finding -- one of its highest-confidence risk categories since it's based on explicit absence, not inference.",
+      "ScopeSense's Scope agent explicitly extracts whether acceptance criteria are present for each deliverable, quotes the criteria text when it exists, and flags missing acceptance criteria as a finding -- one of its highest-confidence risk categories since it's based on explicit absence, not inference.",
     keywords: ['acceptance criteria', 'deliverable', 'UAT', 'payment milestone'],
     relatedUseCase: '/use-cases/sow-review',
   },
@@ -245,7 +245,7 @@ export const GLOSSARY_ENTRIES: GlossaryEntry[] = [
       },
     ],
     scopewiseNote:
-      "ScopeWise's Commercial agent extracts the pricing model (fixed price, time-and-materials, or hybrid) from every SOW, and cross-checks fixed-price engagements specifically for whether out-of-scope work has its own defined rate -- since a fixed price with no defined overage rate is a common source of unbilled scope creep.",
+      "ScopeSense's Commercial agent extracts the pricing model (fixed price, time-and-materials, or hybrid) from every SOW, and cross-checks fixed-price engagements specifically for whether out-of-scope work has its own defined rate -- since a fixed price with no defined overage rate is a common source of unbilled scope creep.",
     keywords: ['fixed price', 'pricing model', 'out-of-scope pricing', 'change order'],
     relatedUseCase: '/use-cases/sow-review',
   },
@@ -271,7 +271,7 @@ export const GLOSSARY_ENTRIES: GlossaryEntry[] = [
       },
     ],
     scopewiseNote:
-      "ScopeWise's Commercial agent identifies time-and-materials pricing from the pricing model extraction and checks whether an escalation clause or cost-overrun control (like a not-to-exceed cap) is defined, flagging its absence as a commercial risk since uncapped T&M is the clearest path to a runaway bill.",
+      "ScopeSense's Commercial agent identifies time-and-materials pricing from the pricing model extraction and checks whether an escalation clause or cost-overrun control (like a not-to-exceed cap) is defined, flagging its absence as a commercial risk since uncapped T&M is the clearest path to a runaway bill.",
     keywords: ['time and materials', 'T&M', 'not-to-exceed', 'rate card'],
     relatedUseCase: '/use-cases/sow-review',
   },
@@ -297,7 +297,7 @@ export const GLOSSARY_ENTRIES: GlossaryEntry[] = [
       },
     ],
     scopewiseNote:
-      "Force majeure isn't a dedicated extraction field for ScopeWise's Legal agent today, but the clause language is covered by its broader legal-risk review, and the cross-cutting ambiguous-language scan separately flags undefined trigger phrasing like \"beyond reasonable control\" wherever it appears in the document.",
+      "Force majeure isn't a dedicated extraction field for ScopeSense's Legal agent today, but the clause language is covered by its broader legal-risk review, and the cross-cutting ambiguous-language scan separately flags undefined trigger phrasing like \"beyond reasonable control\" wherever it appears in the document.",
     keywords: ['force majeure', 'excused performance', 'ambiguous language', 'notice period'],
     relatedUseCase: '/use-cases/sow-review',
   },
@@ -323,7 +323,7 @@ export const GLOSSARY_ENTRIES: GlossaryEntry[] = [
       },
     ],
     scopewiseNote:
-      "ScopeWise's Legal agent explicitly extracts whether termination for convenience is defined and with what notice period -- separate from termination for cause and its cure period -- and flags a missing termination clause as a legal risk category on its own.",
+      "ScopeSense's Legal agent explicitly extracts whether termination for convenience is defined and with what notice period -- separate from termination for cause and its cure period -- and flags a missing termination clause as a legal risk category on its own.",
     keywords: ['termination for convenience', 'notice period', 'termination for cause', 'wind-down'],
     relatedUseCase: '/use-cases/sow-review',
   },
@@ -349,7 +349,7 @@ export const GLOSSARY_ENTRIES: GlossaryEntry[] = [
       },
     ],
     scopewiseNote:
-      "ScopeWise's PMO agent extracts whether an SLA is defined for the engagement, along with response time, resolution time, and support hours, and flags a missing SLA as an operational risk for any ongoing or retainer-style SOW.",
+      "ScopeSense's PMO agent extracts whether an SLA is defined for the engagement, along with response time, resolution time, and support hours, and flags a missing SLA as an operational risk for any ongoing or retainer-style SOW.",
     keywords: ['SLA', 'response time', 'resolution time', 'uptime'],
     relatedUseCase: '/use-cases/sow-review',
   },
@@ -375,7 +375,7 @@ export const GLOSSARY_ENTRIES: GlossaryEntry[] = [
       },
     ],
     scopewiseNote:
-      "ScopeWise's Legal agent extracts whether a warranty is defined and flags missing warranty language as a legal risk, while the Delivery agent separately checks whether a warranty period is defined alongside the post-go-live hypercare window -- since the two commonly get confused but cover different things.",
+      "ScopeSense's Legal agent extracts whether a warranty is defined and flags missing warranty language as a legal risk, while the Delivery agent separately checks whether a warranty period is defined alongside the post-go-live hypercare window -- since the two commonly get confused but cover different things.",
     keywords: ['warranty', 'defect remediation', 'implied warranty', 'hypercare'],
     relatedUseCase: '/use-cases/sow-review',
   },
@@ -401,7 +401,7 @@ export const GLOSSARY_ENTRIES: GlossaryEntry[] = [
       },
     ],
     scopewiseNote:
-      "ScopeWise's Legal agent extracts the limitation-of-liability clause as a whole -- including whether it's missing or uncapped -- while the Commercial agent separately checks the specific cap amount and carve-out structure documented in the liability-cap entry; a finding from either can surface without the other, since they check different parts of the same clause.",
+      "ScopeSense's Legal agent extracts the limitation-of-liability clause as a whole -- including whether it's missing or uncapped -- while the Commercial agent separately checks the specific cap amount and carve-out structure documented in the liability-cap entry; a finding from either can surface without the other, since they check different parts of the same clause.",
     keywords: ['limitation of liability', 'consequential damages', 'liability cap', 'exclusions'],
     relatedUseCase: '/use-cases/sow-review',
   },

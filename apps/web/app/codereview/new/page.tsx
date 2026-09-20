@@ -153,7 +153,7 @@ export default function NewCodeReviewPage() {
   const footerNote = (
     <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
       <Info size={13} className="shrink-0" aria-hidden="true" />
-      Findings are AI triage candidates from your scan; nothing runs on ScopeWise.
+      Findings are AI triage candidates from your scan; nothing runs on ScopeSense.
     </p>
   );
 

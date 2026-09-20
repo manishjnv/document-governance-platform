@@ -4,10 +4,10 @@ import { MarketingHeader } from '@/components/MarketingHeader';
 import { MarketingFooter } from '@/components/MarketingFooter';
 
 export const metadata: Metadata = {
-  title: 'ScopeWise vs Manual SOW Review',
+  title: 'ScopeSense vs Manual SOW Review',
   description:
     'Side by side: what an AI-assisted SOW review changes versus a manual read, where it is faster and more consistent, and where a human reviewer still wins.',
-  alternates: { canonical: '/compare/scopewise-vs-manual-review' },
+  alternates: { canonical: '/compare/scopesense-vs-manual-review' },
 };
 
 const ROWS = [
@@ -54,7 +54,7 @@ const ROWS = [
 
 const FAQS = [
   {
-    q: 'Does ScopeWise replace legal review?',
+    q: 'Does ScopeSense replace legal review?',
     a: 'No. It reads every document first, flags the clauses that need attention and why, and lets the low-risk ones move faster. Counsel still decides on the material contracts.',
   },
   {
@@ -63,7 +63,7 @@ const FAQS = [
   },
   {
     q: 'How does a re-review work?',
-    a: 'Upload the revised version and ScopeWise links it to the original. Each earlier finding is re-checked against the new text and marked verified or still open.',
+    a: 'Upload the revised version and ScopeSense links it to the original. Each earlier finding is re-checked against the new text and marked verified or still open.',
   },
   {
     q: 'What document types are supported?',
@@ -71,7 +71,7 @@ const FAQS = [
   },
 ];
 
-export default function ScopeWiseVsManualReviewPage() {
+export default function ScopeSenseVsManualReviewPage() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -90,13 +90,13 @@ export default function ScopeWiseVsManualReviewPage() {
             '@type': 'ListItem',
             position: 1,
             name: 'Home',
-            item: 'https://scopewise.assessiq.in/',
+            item: 'https://scopesense.in/',
           },
           {
             '@type': 'ListItem',
             position: 2,
-            name: 'ScopeWise vs manual SOW review',
-            item: 'https://scopewise.assessiq.in/compare/scopewise-vs-manual-review',
+            name: 'ScopeSense vs manual SOW review',
+            item: 'https://scopesense.in/compare/scopesense-vs-manual-review',
           },
         ],
       },
@@ -115,12 +115,12 @@ export default function ScopeWiseVsManualReviewPage() {
 
       <main className="max-w-4xl mx-auto px-4 py-16">
         <h1 className="text-3xl md:text-4xl font-bold mb-4">
-          ScopeWise vs manual SOW review, side by side
+          ScopeSense vs manual SOW review, side by side
         </h1>
         <p className="text-lg text-muted-foreground mb-12">
           Most Statements of Work are reviewed once, quickly, by whoever needs
           the project to start. This page compares that manual read with an
-          AI-assisted review in ScopeWise on the things that decide whether a
+          AI-assisted review in ScopeSense on the things that decide whether a
           risk gets caught, and is honest about where a human reviewer still
           does the better job.
         </p>
@@ -129,7 +129,7 @@ export default function ScopeWiseVsManualReviewPage() {
         <div className="overflow-x-auto mb-12">
           <table className="w-full text-sm border-collapse">
             <caption className="sr-only">
-              Comparison of manual SOW review and ScopeWise across time,
+              Comparison of manual SOW review and ScopeSense across time,
               consistency, evidence, re-review, cost and limitations.
             </caption>
             <thead>
@@ -141,7 +141,7 @@ export default function ScopeWiseVsManualReviewPage() {
                   Manual review
                 </th>
                 <th scope="col" className="text-left font-semibold py-3">
-                  ScopeWise
+                  ScopeSense
                 </th>
               </tr>
             </thead>
@@ -165,7 +165,7 @@ export default function ScopeWiseVsManualReviewPage() {
           external legal reviewer.
         </p>
         <p className="text-muted-foreground mb-6">
-          ScopeWise is a first-pass triage tool, not legal advice. On a
+          ScopeSense is a first-pass triage tool, not legal advice. On a
           material contract, counsel reads the clauses the review flags and
           decides.
         </p>
@@ -179,7 +179,7 @@ export default function ScopeWiseVsManualReviewPage() {
         <p className="text-muted-foreground mb-12">
           On our labeled SOW test set the pipeline reached 29 of 29
           ground-truth findings with zero rule-engine false positives
-          (ScopeWise accuracy baseline, July 2026). That is a measure of
+          (ScopeSense accuracy baseline, July 2026). That is a measure of
           recall on a labeled set, not a promise about every document; the{' '}
           <Link href="/product/sow-review" className="underline hover:no-underline">
             product page

@@ -6,7 +6,7 @@ import { MarketingFooter } from '@/components/MarketingFooter';
 export const metadata: Metadata = {
   title: 'Scope Creep Prevention',
   description:
-    'How scope creep starts in vague SOW language, and how ScopeWise catches undefined deliverables and missing acceptance criteria before signature.',
+    'How scope creep starts in vague SOW language, and how ScopeSense catches undefined deliverables and missing acceptance criteria before signature.',
   alternates: { canonical: '/use-cases/scope-creep-prevention' },
 };
 
@@ -17,15 +17,15 @@ const FAQS = [
   },
   {
     q: 'Can an AI review really prevent scope creep, or just flag it?',
-    a: 'ScopeWise flags it, in the document, before signature -- it does not manage scope during a live project. The prevention happens by catching ambiguous deliverable language and a missing change-control process at the review stage, when it\'s cheap to fix, instead of during execution, when it\'s expensive.',
+    a: 'ScopeSense flags it, in the document, before signature -- it does not manage scope during a live project. The prevention happens by catching ambiguous deliverable language and a missing change-control process at the review stage, when it\'s cheap to fix, instead of during execution, when it\'s expensive.',
   },
   {
-    q: 'What is a change-control process, and why does ScopeWise check for one?',
-    a: 'It\'s the documented process for how scope changes get proposed, approved, and priced once work has started. Without one, every "small addition" becomes a negotiation instead of a standard change request -- ScopeWise checks explicitly whether this process is defined in the document at all.',
+    q: 'What is a change-control process, and why does ScopeSense check for one?',
+    a: 'It\'s the documented process for how scope changes get proposed, approved, and priced once work has started. Without one, every "small addition" becomes a negotiation instead of a standard change request -- ScopeSense checks explicitly whether this process is defined in the document at all.',
   },
   {
     q: 'Does this apply to RFPs too, not just SOWs?',
-    a: 'Scope creep as a concept is specific to SOWs, since RFPs define an evaluation process rather than delivered work. For RFPs, ScopeWise instead checks that the scope of the requested proposal and evaluation criteria are clearly defined -- see RFP review for that angle.',
+    a: 'Scope creep as a concept is specific to SOWs, since RFPs define an evaluation process rather than delivered work. For RFPs, ScopeSense instead checks that the scope of the requested proposal and evaluation criteria are clearly defined -- see RFP review for that angle.',
   },
 ];
 
@@ -100,7 +100,7 @@ export default function ScopeCreepPreventionPage() {
           </div>
         </div>
 
-        <h2 className="text-2xl font-bold mb-4">How ScopeWise catches it before signature</h2>
+        <h2 className="text-2xl font-bold mb-4">How ScopeSense catches it before signature</h2>
         <p className="text-muted-foreground mb-4">
           The Scope agent is built specifically around this failure mode.
           For every SOW it reviews, it:
@@ -131,7 +131,7 @@ export default function ScopeCreepPreventionPage() {
           &quot;as appropriate,&quot; &quot;etc.&quot;) anywhere in the
           document, and this framing follows the same deliverables-and-boundaries
           structure that scope-management methodology (PMBOK-style scope
-          definition) is built around -- ScopeWise applies it as a
+          definition) is built around -- ScopeSense applies it as a
           pre-signature check rather than an in-flight management
           practice.
         </p>
@@ -158,7 +158,7 @@ export default function ScopeCreepPreventionPage() {
           <p className="text-sm text-muted-foreground">
             Managing client SOWs at an agency?{' '}
             <Link href="/solutions/for-agencies" className="underline hover:no-underline">
-              See ScopeWise for agencies
+              See ScopeSense for agencies
             </Link>
             .
           </p>

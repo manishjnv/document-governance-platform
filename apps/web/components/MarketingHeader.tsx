@@ -8,7 +8,7 @@ export function MarketingHeader() {
       <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <ShieldCheck className="h-5 w-5 text-primary" />
-          ScopeWise
+          ScopeSense
         </Link>
         <MarketingNav />
       </div>

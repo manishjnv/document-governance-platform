@@ -7,16 +7,16 @@ import { MarketingFooter } from '@/components/MarketingFooter';
 export const metadata: Metadata = {
   title: 'MITRE ATT&CK Coverage Assessment',
   description:
-    'Upload your SIEM detection rules and environment inventory. ScopeWise maps them to MITRE ATT&CK v19.1, scores coverage by tactic, ranks gaps and builds the deck.',
+    'Upload your SIEM detection rules and environment inventory. ScopeSense maps them to MITRE ATT&CK v19.1, scores coverage by tactic, ranks gaps and builds the deck.',
   alternates: { canonical: '/product/mitre-coverage' },
-  openGraph: { images: [{ url: '/og-mitre-coverage.png', width: 1200, height: 630, alt: 'ScopeWise MITRE ATT&CK Coverage: from rule export to board deck' }] },
+  openGraph: { images: [{ url: '/og-mitre-coverage.png', width: 1200, height: 630, alt: 'ScopeSense MITRE ATT&CK Coverage: from rule export to board deck' }] },
   twitter: { images: ['/og-mitre-coverage.png'] },
 };
 
 const FAQS = [
   {
     q: 'Do you need my logs?',
-    a: 'No. ScopeWise reads rule metadata and your environment inventory. It never ingests raw log data, and it never asks for credentials to do a file-based assessment.',
+    a: 'No. ScopeSense reads rule metadata and your environment inventory. It never ingests raw log data, and it never asks for credentials to do a file-based assessment.',
   },
   {
     q: 'Is it Sentinel and Splunk only?',
@@ -93,10 +93,10 @@ export default function MitreCoveragePage() {
       },
       {
         '@type': 'SoftwareApplication',
-        name: 'ScopeWise MITRE ATT&CK Coverage',
+        name: 'ScopeSense MITRE ATT&CK Coverage',
         applicationCategory: 'SecurityApplication',
         operatingSystem: 'Web',
-        url: 'https://scopewise.assessiq.in/product/mitre-coverage',
+        url: 'https://scopesense.in/product/mitre-coverage',
         description:
           'Maps detection rules to MITRE ATT&CK, scores coverage by tactic and technique, and generates a gap-ranked roadmap and briefing deck.',
       },
@@ -107,19 +107,19 @@ export default function MitreCoveragePage() {
             '@type': 'ListItem',
             position: 1,
             name: 'Home',
-            item: 'https://scopewise.assessiq.in/',
+            item: 'https://scopesense.in/',
           },
           {
             '@type': 'ListItem',
             position: 2,
             name: 'Products',
-            item: 'https://scopewise.assessiq.in/product/sow-review',
+            item: 'https://scopesense.in/product/sow-review',
           },
           {
             '@type': 'ListItem',
             position: 3,
             name: 'MITRE ATT&CK Coverage',
-            item: 'https://scopewise.assessiq.in/product/mitre-coverage',
+            item: 'https://scopesense.in/product/mitre-coverage',
           },
         ],
       },
@@ -142,13 +142,13 @@ export default function MitreCoveragePage() {
         </h1>
         <p className="text-lg text-muted-foreground mb-12">
           Export your detection rules, fill in a one-workbook environment
-          inventory, and ScopeWise maps every rule to ATT&amp;CK, decides
+          inventory, and ScopeSense maps every rule to ATT&amp;CK, decides
           what is not applicable to your estate, scores coverage by tactic
           and hands you the gap list, the roadmap and the deck.
         </p>
         <Image
           src="/screens/mitre-coverage-heatmap-960.webp"
-          alt="ScopeWise MITRE ATT&CK assessment results for the ACME sample workspace: coverage, top gaps and the per-tactic technique heatmap"
+          alt="ScopeSense MITRE ATT&CK assessment results for the ACME sample workspace: coverage, top gaps and the per-tactic technique heatmap"
           width={960}
           height={600}
           sizes="(min-width: 1024px) 896px, 100vw"
@@ -252,7 +252,7 @@ export default function MitreCoveragePage() {
             <p className="font-semibold mb-1">63% fewer AI calls</p>
             <p className="text-sm text-muted-foreground">
               Deterministic pre-pass on a realistic rule dump, with zero
-              false positives on hand-verified mappings (ScopeWise internal
+              false positives on hand-verified mappings (ScopeSense internal
               test, Phase 6).
             </p>
           </div>
@@ -273,7 +273,7 @@ export default function MitreCoveragePage() {
         </h2>
         <p className="text-muted-foreground mb-12">
           The manual version of this assessment is a tagging spreadsheet, a
-          pivot table and a slide deck rebuilt for every client. ScopeWise
+          pivot table and a slide deck rebuilt for every client. ScopeSense
           generates all three from the same scored data, so the numbers in
           the deck are the numbers in the tracker.
         </p>

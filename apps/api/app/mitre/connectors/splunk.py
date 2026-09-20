@@ -26,7 +26,7 @@ present; untagged rules flow into the existing tagging ladder downstream.
 NOTE: shipped ahead of a reachable customer Splunk environment — the
 code path is complete and unit-tested against faked transports; first
 live use just needs a real host + token (and, for Splunk Cloud, the
-ScopeWise egress IP allowlisted on the stack's management port).
+ScopeSense egress IP allowlisted on the stack's management port).
 """
 
 import csv

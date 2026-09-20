@@ -224,14 +224,14 @@ async def _notify_admins_if_failing(db, connection) -> int:
         f"permissions ({permission_hint}), or pause the schedule from the "
         "connection settings. The "
         "next successful pull resets this notice.\n\n"
-        "— ScopeWise (automated notice; you won't be emailed again for this "
+        "— ScopeSense (automated notice; you won't be emailed again for this "
         "failure streak)"
     )
     sent = 0
     for admin in admins:
         if await send_email(
             admin.email,
-            f"ScopeWise: scheduled SIEM pull failing — {connection.name}",
+            f"ScopeSense: scheduled SIEM pull failing — {connection.name}",
             body,
         ):
             sent += 1

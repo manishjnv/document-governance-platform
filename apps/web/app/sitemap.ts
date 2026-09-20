@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next';
 import { GLOSSARY_ENTRIES } from './resources/glossary/data';
 import { BLOG_POSTS } from './resources/blog/data';
 
-const BASE_URL = 'https://scopewise.assessiq.in';
+const BASE_URL = 'https://scopesense.in';
 
 // Real last-modified date per static page. Bump the date when the page's
 // content changes; never use new Date() here (Google ignores a lastmod that
@@ -27,7 +27,7 @@ const PAGES: Record<string, string> = {
   '/resources/glossary': '2026-07-20',
   '/resources/templates': '2026-09-12',
   '/compare': '2026-09-12',
-  '/compare/scopewise-vs-manual-review': '2026-09-12',
+  '/compare/scopesense-vs-manual-review': '2026-09-12',
   '/compare/sowaudit-alternative': '2026-09-12',
   '/compare/attack-navigator-alternative': '2026-09-12',
   '/compare/semgrep-alternative': '2026-09-12',

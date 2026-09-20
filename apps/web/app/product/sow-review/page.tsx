@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description:
     'Six specialist AI reviewers plus a deterministic rule engine score your SOW or RFP, quote the evidence for every finding and verify fixes on re-review.',
   alternates: { canonical: '/product/sow-review' },
-  openGraph: { images: [{ url: '/og-sow-review.png', width: 1200, height: 630, alt: 'ScopeWise SOW & RFP Review: evidence for every finding' }] },
+  openGraph: { images: [{ url: '/og-sow-review.png', width: 1200, height: 630, alt: 'ScopeSense SOW & RFP Review: evidence for every finding' }] },
   twitter: { images: ['/og-sow-review.png'] },
 };
 
@@ -65,10 +65,10 @@ export default function SowReviewProductPage() {
     '@graph': [
       {
         '@type': 'SoftwareApplication',
-        name: 'ScopeWise SOW & RFP Review',
+        name: 'ScopeSense SOW & RFP Review',
         applicationCategory: 'BusinessApplication',
         operatingSystem: 'Web',
-        url: 'https://scopewise.assessiq.in/product/sow-review',
+        url: 'https://scopesense.in/product/sow-review',
         description:
           'Six specialist AI reviewers plus a deterministic rule engine score your SOW or RFP, quote the evidence for every finding and verify fixes on re-review.',
       },
@@ -79,13 +79,13 @@ export default function SowReviewProductPage() {
             '@type': 'ListItem',
             position: 1,
             name: 'Home',
-            item: 'https://scopewise.assessiq.in/',
+            item: 'https://scopesense.in/',
           },
           {
             '@type': 'ListItem',
             position: 2,
             name: 'SOW & RFP Review',
-            item: 'https://scopewise.assessiq.in/product/sow-review',
+            item: 'https://scopesense.in/product/sow-review',
           },
         ],
       },
@@ -107,14 +107,14 @@ export default function SowReviewProductPage() {
           SOW and RFP review with evidence for every finding
         </h1>
         <p className="text-lg text-muted-foreground mb-12">
-          Upload a Statement of Work or RFP. ScopeWise parses it, runs six
+          Upload a Statement of Work or RFP. ScopeSense parses it, runs six
           specialist AI agents and a deterministic rule engine against it in
           parallel, and returns a risk-scored review with every finding tied
           back to the exact clause it came from.
         </p>
         <Image
           src="/screens/sow-review-results-960.webp"
-          alt="ScopeWise SOW review results for a sample SOC services statement of work: overall score, risk by area, document x-ray and the findings list"
+          alt="ScopeSense SOW review results for a sample SOC services statement of work: overall score, risk by area, document x-ray and the findings list"
           width={960}
           height={600}
           sizes="(min-width: 1024px) 896px, 100vw"
@@ -144,7 +144,7 @@ export default function SowReviewProductPage() {
 
         <h2 className="text-2xl font-bold mb-4">Versioning and fix-verification</h2>
         <p className="text-muted-foreground mb-12">
-          When you upload a revised version of a document, ScopeWise links it
+          When you upload a revised version of a document, ScopeSense links it
           to the original and re-reviews it. Findings from the previous
           version are automatically checked against the new one: resolved
           issues are marked verified, and issues that are still present stay
@@ -173,9 +173,9 @@ export default function SowReviewProductPage() {
         <p className="text-muted-foreground mb-12">
           On our labeled SOW test set the pipeline reached 29 of 29
           ground-truth findings with zero rule-engine false positives
-          (ScopeWise accuracy baseline, July 2026). Severity ratings are
+          (ScopeSense accuracy baseline, July 2026). Severity ratings are
           assigned by the model and have not yet been validated by an
-          external legal reviewer; ScopeWise is a first-pass triage tool,
+          external legal reviewer; ScopeSense is a first-pass triage tool,
           not legal advice.
         </p>
 

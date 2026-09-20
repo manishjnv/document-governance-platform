@@ -12,16 +12,16 @@ export const metadata: Metadata = {
 
 const FAQS = [
   {
-    q: 'What kind of SOW problems does ScopeWise catch?',
+    q: 'What kind of SOW problems does ScopeSense catch?',
     a: 'Vague deliverables ("software enhancements" with no specifics), missing or undefined acceptance criteria, undefined liability caps, unclear payment terms, and open-ended scope language like "including but not limited to" or "as needed" that leaves the door open to disputes later.',
   },
   {
-    q: 'Does ScopeWise review RFPs too, or only SOWs?',
+    q: 'Does ScopeSense review RFPs too, or only SOWs?',
     a: 'Both. SOW review and RFP review use different agent logic under the hood -- an SOW defines delivered work, an RFP evaluates vendors -- but the same platform handles either document type.',
   },
   {
     q: 'Is this a substitute for legal review?',
-    a: 'No. ScopeWise flags risk patterns and ambiguous language so a human reviewer knows exactly where to look, and the Legal agent output is not independently validated by a legal SME yet. It is a first-pass triage tool, not a replacement for counsel on a material contract.',
+    a: 'No. ScopeSense flags risk patterns and ambiguous language so a human reviewer knows exactly where to look, and the Legal agent output is not independently validated by a legal SME yet. It is a first-pass triage tool, not a replacement for counsel on a material contract.',
   },
   {
     q: 'How fast is a review?',
@@ -98,9 +98,9 @@ export default function SowReviewPage() {
           </div>
         </div>
 
-        <h2 className="text-2xl font-bold mb-4">How ScopeWise catches it</h2>
+        <h2 className="text-2xl font-bold mb-4">How ScopeSense catches it</h2>
         <p className="text-muted-foreground mb-4">
-          Three of ScopeWise&apos;s six specialist agents are built directly
+          Three of ScopeSense&apos;s six specialist agents are built directly
           around these failure modes:
         </p>
         <ul className="list-disc pl-6 text-muted-foreground mb-6 space-y-2">
@@ -154,11 +154,11 @@ export default function SowReviewPage() {
           <p className="text-sm text-muted-foreground">
             Reviewing SOWs for procurement?{' '}
             <Link href="/solutions/for-procurement" className="underline hover:no-underline">
-              See ScopeWise for procurement teams
+              See ScopeSense for procurement teams
             </Link>
             . Reviewing for legal risk?{' '}
             <Link href="/solutions/for-legal" className="underline hover:no-underline">
-              See ScopeWise for legal teams
+              See ScopeSense for legal teams
             </Link>
             .
           </p>

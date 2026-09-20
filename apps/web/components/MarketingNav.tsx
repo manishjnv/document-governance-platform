@@ -34,7 +34,7 @@ const RESOURCES = [
   {
     href: '/compare',
     label: 'Compare',
-    description: 'ScopeWise vs manual review, SOWaudit, ATT&CK Navigator, Semgrep',
+    description: 'ScopeSense vs manual review, SOWaudit, ATT&CK Navigator, Semgrep',
   },
 ];
 

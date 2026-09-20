@@ -14,7 +14,11 @@ const nextConfig = {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000",
   },
   async redirects() {
-    return [{ source: '/product', destination: '/product/sow-review', permanent: true }];
+    return [
+      { source: '/product', destination: '/product/sow-review', permanent: true },
+      // product renamed ScopeWise -> ScopeSense (2026-09-20): keep the old comparison URL working
+      { source: '/compare/scopewise-vs-manual-review', destination: '/compare/scopesense-vs-manual-review', permanent: true },
+    ];
   },
 };
 

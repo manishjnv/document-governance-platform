@@ -16,18 +16,18 @@ const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], dis
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://scopewise.assessiq.in'),
+  metadataBase: new URL('https://scopesense.in'),
   title: {
-    default: 'ScopeWise -- AI-Powered SOW & RFP Review',
-    template: '%s | ScopeWise',
+    default: 'ScopeSense -- AI-Powered SOW & RFP Review',
+    template: '%s | ScopeSense',
   },
   description: 'Catch contract risk before you sign. AI review of your SOW or RFP for scope, delivery, commercial, security, PMO, and legal risk.',
   manifest: '/manifest.json',
   themeColor: '#0066cc',
   openGraph: {
-    siteName: 'ScopeWise',
+    siteName: 'ScopeSense',
     type: 'website',
-    images: [{ url: '/og-default.png', width: 1200, height: 630, alt: 'ScopeWise: evidence-based risk reviews. Contracts, detections, code.' }],
+    images: [{ url: '/og-default.png', width: 1200, height: 630, alt: 'ScopeSense: evidence-based risk reviews. Contracts, detections, code.' }],
   },
   twitter: {
     card: 'summary_large_image',

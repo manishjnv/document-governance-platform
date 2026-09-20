@@ -51,7 +51,7 @@ async def test_report_includes_branding_and_doc_stats():
         doc_meta={"document_type": "SOW", "version": 2, "page_count": 12, "project_name": "Acme Rollout"},
         findings_count={"critical": 1, "major": 2, "medium": 0, "low": 0, "info": 0},
     )
-    assert "ScopeWise" in html
+    assert "ScopeSense" in html
     assert "EDGP" not in html
     assert "SOW" in html
     assert "Acme Rollout" in html

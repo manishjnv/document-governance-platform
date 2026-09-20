@@ -50,7 +50,7 @@ class TestOtpEmailBranding:
         from app.email import otp_email_html
 
         html = otp_email_html("123456")
-        assert "ScopeWise" in html
+        assert "ScopeSense" in html
         assert "123456" in html
 
 

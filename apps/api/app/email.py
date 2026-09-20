@@ -63,12 +63,12 @@ def otp_email_html(code: str) -> str:
     return f"""\
 <div style="background:#f2f1ea;padding:32px 16px;font-family:Georgia,'Times New Roman',serif;">
   <div style="max-width:480px;margin:0 auto;">
-    <div style="font-size:20px;font-weight:bold;color:#1a1a1a;padding:0 4px 16px;">ScopeWise</div>
+    <div style="font-size:20px;font-weight:bold;color:#1a1a1a;padding:0 4px 16px;">ScopeSense</div>
     <div style="background:#ffffff;border-radius:8px;padding:32px;">
       <p style="font-size:11px;letter-spacing:1px;color:#2563eb;text-transform:uppercase;margin:0 0 8px;font-family:Arial,sans-serif;">Sign-in code</p>
       <h1 style="font-size:22px;margin:0 0 16px;color:#1a1a1a;">Your sign-in code</h1>
       <p style="font-size:14px;color:#333;margin:0 0 24px;font-family:Arial,sans-serif;">
-        Enter this code to finish signing in to <strong>ScopeWise</strong>.
+        Enter this code to finish signing in to <strong>ScopeSense</strong>.
       </p>
       <div style="background:#f6f6f4;border-radius:8px;padding:24px;text-align:center;margin:0 0 24px;">
         <span style="font-family:'Courier New',monospace;font-size:32px;font-weight:bold;letter-spacing:8px;color:#1a1a1a;">{code}</span>
