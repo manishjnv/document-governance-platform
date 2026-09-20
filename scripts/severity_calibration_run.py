@@ -5,7 +5,7 @@ build the SME worksheet pack.
     python scripts/severity_calibration_run.py --build   # builds the XLSX from raw/*.json
     python scripts/severity_calibration_run.py           # both
 
-OPENROUTER_API_KEY must be the ScopeWise key (the one in the VPS .env), never
+OPENROUTER_API_KEY must be the ScopeSense key (the one in the VPS .env), never
 the personal tooling key -- see memory `openrouter-key-identity`. Inject it
 per-process; this script never prints it. No product code is modified: the
 agent's OpenRouter adapter is wrapped at runtime only to capture usage and
@@ -288,7 +288,7 @@ def build_pack() -> Path:
         mode = max(counts, key=lambda k: (counts[k], SEVERITY_RANK[k]))
         sm.append([_guard(t), counts["critical"], counts["major"], counts["medium"], counts["low"], counts["info"], total, mode])
 
-    wb.properties.creator = "ScopeWise"
+    wb.properties.creator = "ScopeSense"
     wb.properties.title = "Legal severity calibration -- SME worksheet"
     out = OUT / f"LEGAL_SEVERITY_SME_PACK_{date}.xlsx"
     wb.save(out)
@@ -306,7 +306,7 @@ if __name__ == "__main__":
     if do_run:
         key = os.environ.get("OPENROUTER_API_KEY", "")
         if not key:
-            sys.exit("OPENROUTER_API_KEY not set (inject the ScopeWise key per-process)")
+            sys.exit("OPENROUTER_API_KEY not set (inject the ScopeSense key per-process)")
         asyncio.run(run_all(key))
     if do_build:
         build_pack()

@@ -1,4 +1,4 @@
-# ScopeWise MITRE Coverage — Sentinel workbook (Content Hub add-on, Phase A)
+# ScopeSense MITRE Coverage — Sentinel workbook (Content Hub add-on, Phase A)
 
 Plan: `docs/planning/SENTINEL_CONTENT_HUB_ADDON_PLAN.md`.
 
@@ -21,7 +21,7 @@ version upgrade.
 | Rule health | Enabled rules sorted by alert evidence (never-fired first), noisiest rules, disabled rules | `SecurityAlert` + ARM |
 | Telemetry | Required tables per ATT&CK data component vs. actual ingestion | `Usage` + embedded needs datatable |
 | Top gaps | Uncovered techniques ranked by curated prevalence tier | embedded priority datatable |
-| Full assessment | Funnel to the ScopeWise SaaS | markdown |
+| Full assessment | Funnel to the ScopeSense SaaS | markdown |
 
 ## Testing (needs a Sentinel workspace)
 

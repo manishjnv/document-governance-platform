@@ -1,4 +1,4 @@
-"""Build the pinned, compact ATT&CK dataset for the ScopeWise MITRE module.
+"""Build the pinned, compact ATT&CK dataset for the ScopeSense MITRE module.
 
 Dev-run script — NEVER executed at app runtime. Downloads the official MITRE
 attack-stix-data bundles for the pinned release, compacts them to the shape

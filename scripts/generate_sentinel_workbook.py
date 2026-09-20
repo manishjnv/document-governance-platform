@@ -1,4 +1,4 @@
-"""Generate the ScopeWise Sentinel Content Hub workbook (Phase A of
+"""Generate the ScopeSense Sentinel Content Hub workbook (Phase A of
 docs/planning/SENTINEL_CONTENT_HUB_ADDON_PLAN.md).
 
 Reads the MITRE module's pinned data (apps/api/app/mitre/data/) and emits
@@ -60,7 +60,7 @@ COMPONENT_TABLES = {
     "Email": ["EmailEvents", "OfficeActivity"],
 }
 
-FULL_ASSESSMENT_URL = "https://scopewise.assessiq.in/mitre"
+FULL_ASSESSMENT_URL = "https://scopesense.in/mitre"
 
 
 def _kql_str(value) -> str:
@@ -299,7 +299,7 @@ def build(version, rows):
 
     # -- Overview -----------------------------------------------------------
     items.append(text(
-        f"# ScopeWise MITRE ATT&CK Coverage — honest view\n---\n"
+        f"# ScopeSense MITRE ATT&CK Coverage — honest view\n---\n"
         f"Your detection coverage against **MITRE ATT&CK v{version}** "
         f"({n_total} enterprise techniques and sub-techniques), computed from "
         f"the analytics rules actually running in this workspace.\n\n"
@@ -448,7 +448,7 @@ def build(version, rows):
     items.append(text(
         "## This workbook is the honest snapshot. The full assessment goes further.\n---\n"
         "The free view above only counts rules that carry explicit ATT&CK tags. "
-        f"The **[ScopeWise full assessment]({FULL_ASSESSMENT_URL})** adds:\n\n"
+        f"The **[ScopeSense full assessment]({FULL_ASSESSMENT_URL})** adds:\n\n"
         "- **Keyword + AI mapping** of the untagged majority of your rules — "
         "most environments' biggest blind spot\n"
         "- **Applicability filtering** — score against the techniques that apply "
@@ -461,7 +461,7 @@ def build(version, rows):
         "- **Multi-SIEM** — the same assessment against Splunk\n\n"
         "Setup is read-only: a service principal with the **Microsoft Sentinel "
         "Reader** role, five IDs, and one click. "
-        f"**[Start at scopewise.assessiq.in]({FULL_ASSESSMENT_URL})**.",
+        f"**[Start at scopesense.in]({FULL_ASSESSMENT_URL})**.",
         tab="FullAssessment", name="funnel"))
 
     return {

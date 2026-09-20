@@ -46,7 +46,7 @@ def build_pdf() -> Path:
     path = OUT / "sow-review-checklist.pdf"
     doc = SimpleDocTemplate(
         str(path), pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm, topMargin=18 * mm, bottomMargin=18 * mm,
-        title="SOW review checklist", author="ScopeWise", subject="Ten-point pre-signature Statement of Work checklist",
+        title="SOW review checklist", author="ScopeSense", subject="Ten-point pre-signature Statement of Work checklist",
     )
     ss = getSampleStyleSheet()
     h1 = ParagraphStyle("h1", parent=ss["Title"], fontSize=20, alignment=0, spaceAfter=4, textColor="#0F172A")
@@ -69,8 +69,8 @@ def build_pdf() -> Path:
             story.append(Paragraph(why, note))
     story.append(Spacer(1, 6))
     story.append(Paragraph(
-        "ScopeWise runs this checklist, plus a deterministic rule engine and six specialist reviewers, on every uploaded SOW or RFP and quotes the clause behind each finding. "
-        "https://scopewise.assessiq.in/product/sow-review &nbsp;&middot;&nbsp; This checklist is guidance, not legal advice.", foot))
+        "ScopeSense runs this checklist, plus a deterministic rule engine and six specialist reviewers, on every uploaded SOW or RFP and quotes the clause behind each finding. "
+        "https://scopesense.in/product/sow-review &nbsp;&middot;&nbsp; This checklist is guidance, not legal advice.", foot))
     doc.build(story)
     return path
 
@@ -102,7 +102,7 @@ def build_xlsx() -> Path:
     ws.title = "Read Me"
     ws.column_dimensions["A"].width = 100
     for line in (
-        "RFP evaluation criteria worksheet (ScopeWise)",
+        "RFP evaluation criteria worksheet (ScopeSense)",
         "",
         "Structure mirrors FAR Part 15 (contracting by negotiation): requirements, evaluation factors and weights, submission instructions, basis for award.",
         "1. Requirements: one row per requirement with an ID, so proposals can be scored against the same yardstick.",
@@ -110,7 +110,7 @@ def build_xlsx() -> Path:
         "3. Scoring: one column per bidder; score 0-5 per factor; the weighted total is computed for you.",
         "4. Basis for award: fill in the sentence that goes into the RFP (for example, highest weighted score, or lowest price technically acceptable).",
         "",
-        "This worksheet is guidance, not legal advice. https://scopewise.assessiq.in/use-cases/rfp-review",
+        "This worksheet is guidance, not legal advice. https://scopesense.in/use-cases/rfp-review",
     ):
         ws.append([line])
     ws["A1"].font = Font(bold=True, size=13)
@@ -141,7 +141,7 @@ def build_xlsx() -> Path:
     ):
         sub.append(list(row))
 
-    wb.properties.creator = "ScopeWise"
+    wb.properties.creator = "ScopeSense"
     wb.properties.title = "RFP evaluation criteria worksheet"
     wb.save(path)
     return path

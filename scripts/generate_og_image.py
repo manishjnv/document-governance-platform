@@ -61,7 +61,7 @@ def render(name: str, line1: str, line2: str, subline: str) -> None:
     d.line([(sx + 22, sy + 48), (sx + 36, sy + 62), (sx + 60, sy + 34)], fill=BG, width=9, joint="curve")
 
     wordmark = _font(FONT_CANDIDATES, 84)
-    d.text((sx + 108, sy - 4), "ScopeWise", font=wordmark, fill=INK)
+    d.text((sx + 108, sy - 4), "ScopeSense", font=wordmark, fill=INK)
 
     tagline = _font(FONT_CANDIDATES, 46)
     d.text((sx, 300), line1, font=tagline, fill=INK)
