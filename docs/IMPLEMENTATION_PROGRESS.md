@@ -19,7 +19,9 @@ output (RCA #34, `CODE_REVIEW_MODULE_REFERENCE.md` §5 operator guide);
 Ops: external tester talk2maq@gmail.com's own org granted
 `run_allowance = 5` for MITRE (Code Review needs no grant; demos come from
 `MITRE_DEMO_ASSESSMENT_IDS` / `CODEREVIEW_DEMO_REVIEW_IDS` in the VPS `.env`).
-Deployed at `24dbfaa`.
+Deployed at `24dbfaa`. Later: scan kit on VVAH 1.4.0 with a weekly
+auto-update PR (`scripts/update_vvah_kit.py`, `vvah-kit-update.yml`) and an
+"About the scanner" panel on the upload page.
 
 **Complete app design canvas (finished 2026-09-13, design only):** interactive
 redesign of every authenticated screen in one calm-light system (IBM Plex

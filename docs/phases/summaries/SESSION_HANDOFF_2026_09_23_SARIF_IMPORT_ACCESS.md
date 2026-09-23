@@ -6,9 +6,13 @@
 
 **Ops (no code):** talk2maq@gmail.com's own org `run_allowance` 0 → 5 (SQL + audit row; owner chose allowance over pro). scopewise.assessiq.in serves the app; office "redirect to scopesense.in" is a browser-cached 301 (RCA #35, clear site data).
 
-**Gates:** full backend suite **998 passed / 7 skipped** (8 min 16 s, solo on edgp_test). Code review tests 37/37. Secrets/TODO/CRLF scans clean.
+**Gates:** full backend suite **998 → 999 passed / 7 skipped** (after the SARIF import, then after the kit upgrade; ~8 min solo on edgp_test). Code review + kit tests 42/42; fresh-DB migration apply + DB tests verified for CI. Secrets/TODO/CRLF scans clean.
 
-**Left for the owner:** commit or discard `docs/planning/MITRE_AUTOMATION_VALUE_SLIDE_*.{pptx,xlsx}` + `scripts/build_mitre_value_slide.py` (internal Wipro pitch, public repo). `docs/sample/MITRE_Sample/file.xlsx` names the client — now ignored, never commit. Re-upload pre-`1033775` SARIF reviews to get the full shape.
+**Repo hygiene:** all `*.pptx/*.ppt/*.xlsx/*.xls` gitignored (tracked templates/fixtures stay); `scripts/build_mitre_value_slide.py` kept local and ignored (owner call). `docs/sample/MITRE_Sample/file.xlsx` names the client — ignored, never commit. Re-upload pre-`1033775` SARIF reviews to get the full shape.
+
+**Scan kit (later same day):** kit moved VVAH 1.3.0 → 1.4.0 via new `scripts/update_vvah_kit.py`; weekly `.github/workflows/vvah-kit-update.yml` opens a PR (repo setting "Actions may create PRs" turned on; issue fallback kept) when Visa ships a release; runbook `CODE_REVIEW_MODULE_REFERENCE.md` §8. Upload page gains an "About the scanner" panel (sweep OK at 1440/390). Deferred (owner has no AI credit): a real 1.4 NodeGoat scan to refresh the golden fixture; do not start it unasked.
+
+**CI:** `ci-cd.yml` replaced — the old template targeted main/develop (never ran), pushed GHCR images and deployed to a nonexistent k8s cluster; now push/PR to master runs the full backend suite (Python 3.11, fresh Postgres from migrations/*.sql, Redis) + web tsc, deploys nothing.
 
 **Next:** R1 in `docs/planning/RISK_REMEDIATION_PLAN.md`; optionally read per-finding `triage.json`/`diff.patch` so fix-mode runs show what was fixed.
 
