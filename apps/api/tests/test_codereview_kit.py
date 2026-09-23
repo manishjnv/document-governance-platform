@@ -46,6 +46,17 @@ def test_kit_zip_contains_expected_files_and_wheel_hash():
     assert hashlib.sha256(wheel_bytes).hexdigest() == version["wheel_sha256"]
 
 
+def test_kit_shell_scripts_have_lf_line_endings():
+    # kit.py zips files byte-for-byte from disk; a CRLF checkout (Windows
+    # autocrlf) would ship setup.sh with "#!/usr/bin/env bash\r", which fails
+    # on macOS/Linux. .gitattributes pins eol=lf; this catches an override.
+    zf = zipfile.ZipFile(BytesIO(build_kit_zip()))
+    shell_scripts = [n for n in zf.namelist() if n.endswith(".sh")]
+    assert shell_scripts
+    for name in shell_scripts:
+        assert b"\r" not in zf.read(name), f"{name} has CRLF line endings"
+
+
 def test_config_yaml_sanity():
     config_path = KIT_DIR / "config.yaml"
     text = config_path.read_text()

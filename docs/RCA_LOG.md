@@ -741,6 +741,26 @@ keep chronological.)*
   from an mTLS Caddy block needs the same. Read the Caddy access log's `tls.client_common_name`
   (present on the old host, absent on the new) to spot it in seconds.
 
+
+### 33. Working tree flipped to CRLF: scan kit would ship a broken setup.sh, a template PDF was corrupted (2026-09-23, repo hygiene)
+
+- **Symptom:** `git status` showed 198 modified files (~65k lines in/out) right after a clean
+  commit; only 10 had real edits. `apps/api/app/codereview/kit/setup.sh` started with
+  `#!/usr/bin/env bash\r`, and `apps/web/public/templates/sow-review-checklist.pdf` had CRs
+  injected into its body.
+- **Root cause:** no `.gitattributes`, so line endings depended on whichever git touched the
+  tree. A Windows-side checkout/tool on `E:\` rewrote ~188 LF files as CRLF. `kit.py` zips kit
+  scripts byte-for-byte from disk, so a kit built from (or a commit of) that tree fails on
+  macOS/Linux (`env: 'bash\r': No such file or directory`). git auto-detected the ReportLab PDF
+  as text and converted it too, breaking its xref byte offsets.
+- **Fix:** `.gitattributes` (`* text=auto eol=lf`, `*.cmd`/`*.bat` `eol=crlf`, PDFs/images/
+  Office files/wheels `binary`); working tree converted back to LF in place (real edits kept),
+  PDF restored from the index; `test_kit_shell_scripts_have_lf_line_endings` in
+  `apps/api/tests/test_codereview_kit.py`.
+- **Prevention:** the test fails if a CRLF `.sh` reaches the kit zip. If `git status` suddenly
+  lists hundreds of files, check `git diff --ignore-cr-at-eol --stat` before committing
+  anything; never `git add -A` a tree in that state.
+
 ### 34. SARIF import dropped every narrative field: Agentic SAST reports came out thin (2026-09-23, ingest)
 
 - **Symptom:** a Keycloak scan uploaded as `.sarif` (Agentic SAST 1.4.0, 121 findings) gave an

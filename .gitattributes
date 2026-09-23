@@ -1,0 +1,27 @@
+# Line endings: LF in the repo and in every checkout, whatever the local
+# core.autocrlf says. The scan kit zips its scripts straight from disk
+# (apps/api/app/codereview/kit.py), so a CRLF setup.sh ships a kit that fails
+# on macOS/Linux with "env: 'bash\r': No such file or directory".
+* text=auto eol=lf
+
+# Windows batch files keep CRLF (cmd.exe misparses labels in LF batch files).
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binary: never convert. Without this, git auto-detected a ReportLab PDF as
+# text and a CRLF checkout corrupted its xref byte offsets.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.whl binary
+*.zip binary
+*.xlsx binary
+*.xls binary
+*.docx binary
+*.doc binary
+*.pptx binary
