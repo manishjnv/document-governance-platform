@@ -62,9 +62,11 @@ function CweCell({ cwe }: { cwe: string | null }) {
       href={`https://cwe.mitre.org/data/definitions/${match[1]}.html`}
       target="_blank"
       rel="noreferrer"
-      className="font-mono text-xs text-primary hover:underline"
+      title={cwe}
+      className="whitespace-nowrap font-mono text-xs text-primary hover:underline"
     >
-      {cwe}
+      {/* id only: the Class column already carries the name */}
+      CWE-{match[1]}
     </a>
   );
 }
@@ -285,8 +287,14 @@ export function FindingsTable({
                 <TableCell className="max-w-xs px-2.5 py-1.5" data-th="File:lines">
                   <Tooltip delayDuration={150}>
                     <TooltipTrigger asChild>
-                      <span className="line-clamp-2 break-all font-mono text-xs text-muted-foreground">
-                        {f.file}:{f.line_start}-{f.line_end}
+                      {/* file name first (the part that identifies it), folder underneath */}
+                      <span className="block min-w-0 font-mono text-xs">
+                        <span className="block break-all text-foreground">
+                          {f.file.split('/').pop()}:{f.line_start}-{f.line_end}
+                        </span>
+                        <span className="block truncate text-[11px] text-muted-foreground">
+                          {f.file.split('/').slice(0, -1).join('/')}
+                        </span>
                       </span>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-sm break-all text-xs">
