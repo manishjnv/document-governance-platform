@@ -3,3 +3,4 @@
 -r requirements.txt
 fakeredis==2.36.0
 pyyaml==6.0.3
+aiosqlite==0.22.1
