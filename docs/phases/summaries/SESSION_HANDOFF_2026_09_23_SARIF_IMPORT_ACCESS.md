@@ -1,26 +1,26 @@
-# Session handoff 2026-09-23: SARIF import, external user access, dual-run fallout
+# Session handoff 2026-09-23/24: scanner-run import, scan kit auto-update, CI, external access
 
-**Headline:** Agentic SAST `.sarif` uploads now produce the full Code Review register/deck (was: title/CVSS only). Operator guide for scan-run folders: `docs/planning/CODE_REVIEW_MODULE_REFERENCE.md` §5. Deployed `24dbfaa`; both hosts 200; in-container Python 3.11 smoke imported the 121-finding Keycloak SARIF and built XLSX + PPTX.
+**Headline:** Code Security Review now takes a whole Agentic SAST / VVAH 1.4 run folder zipped and reports each fix checked against the real test results (Keycloak fix #22 "Fixed" by the scanner but it broke `SecureRedirectUrisEnforcerExecutorTest`). Single source of truth: `docs/planning/CODE_REVIEW_MODULE_REFERENCE.md` §0 changelog, §3 data model, §5 ingest + operator guide, §6 reports, §7 UI, §8 kit auto-update. Live app at `c1286be` (later commits are docs only); CI green (1011 passed).
 
-**Commits:** `1033775` SARIF narrative/verdict/snippet import (RCA #34) · `1fec10c` `.gitattributes` LF pin + kit test (RCA #33, other session's work) · `8f92be2` dual-run docs, README rewrite, risk plan (other session's work; a client name scrubbed first) · `24dbfaa` baseline · this commit: gitignore `sample/` + `docs/sample/`, docs, RCA #35, handoff.
+**Code Review:** SARIF narrative/verdict/snippet import (`1033775`, RCA #34) · run-zip extras: fix status vs JUnit/Maven, patch, top-25 scanner evidence, coverage + threat model (`8f47373`, `4e44967`, `1e9a365`, RCA #36) · deck keeps 12 slides: fix strip on Executive Summary, Fix column, "Scanner fix" on spotlights/remediation, Scan run evidence panel, one-line facts (`2cc8179`, RCA #38) · review page full width, fix cards + Fix chips, file name first, CWE id links, phone overflow fixes (RCA #39) · global error boundary reloads once on stale-build chunk errors (`5030a27`, RCA #37).
 
-**Ops (no code):** talk2maq@gmail.com's own org `run_allowance` 0 → 5 (SQL + audit row; owner chose allowance over pro). scopewise.assessiq.in serves the app; office "redirect to scopesense.in" is a browser-cached 301 (RCA #35, clear site data).
+**Scan kit:** VVAH 1.3.0 → 1.4.0 (`89b4d5b`); `scripts/update_vvah_kit.py` + weekly `.github/workflows/vvah-kit-update.yml` open a PR on a new Visa release (repo setting "Actions may create PRs" turned on). "About the scanner" panel on the upload page, checked against VVAH 1.4 docs (Claude-native; OpenRouter is only the kit preset).
 
-**Gates:** full backend suite **998 → 999 passed / 7 skipped** (after the SARIF import, then after the kit upgrade; ~8 min solo on edgp_test). Code review + kit tests 42/42; fresh-DB migration apply + DB tests verified for CI. Secrets/TODO/CRLF scans clean.
+**CI:** `ci-cd.yml` rewritten (old template never ran and targeted k8s/GHCR): full backend suite on Python 3.11 with a fresh DB from `migrations/*.sql` + web tsc, deploys nothing. Test-only deps in `apps/api/requirements-dev.txt`; pytest 9.0.3 / pytest-asyncio 1.3.0 pins.
 
-**Repo hygiene:** all `*.pptx/*.ppt/*.xlsx/*.xls` gitignored (tracked templates/fixtures stay); `scripts/build_mitre_value_slide.py` kept local and ignored (owner call). `docs/sample/MITRE_Sample/file.xlsx` names the client — ignored, never commit. Re-upload pre-`1033775` SARIF reviews to get the full shape.
+**Other session's work committed:** `.gitattributes` LF pin (RCA #33), dual-run + risk-plan docs (client name scrubbed). Browser-cached 301 on the old host explained (RCA #35).
 
-**Scan kit (later same day):** kit moved VVAH 1.3.0 → 1.4.0 via new `scripts/update_vvah_kit.py`; weekly `.github/workflows/vvah-kit-update.yml` opens a PR (repo setting "Actions may create PRs" turned on; issue fallback kept) when Visa ships a release; runbook `CODE_REVIEW_MODULE_REFERENCE.md` §8. Upload page gains an "About the scanner" panel (sweep OK at 1440/390). Deferred (owner has no AI credit): a real 1.4 NodeGoat scan to refresh the golden fixture; do not start it unasked.
+**Ops (no code):** talk2maq@gmail.com: own org, `run_allowance` 5 for MITRE; "Keycloak Fix v1" copied into their org as review `c2e7f3be-…` (snapshot, audit row `shared_from_review`; re-copy if the original is re-uploaded). Verified as that user: list, page, drawer, XLSX Fixes sheet, PPTX fix slides.
 
-**CI:** `ci-cd.yml` replaced — the old template targeted main/develop (never ran), pushed GHCR images and deployed to a nonexistent k8s cluster; now push/PR to master runs the full backend suite (Python 3.11, fresh Postgres from migrations/*.sql, Redis) + web tsc, deploys nothing. First green run `d45e4f9` (1004 passed / 2 skipped) after three pre-existing gaps: test-only deps now in `apps/api/requirements-dev.txt` (fakeredis, pyyaml, aiosqlite), pytest 9.0.3 / pytest-asyncio 1.3.0 pins (0.21.1 ignored pytest.ini loop scope → 390 errors). "About the scanner" rewritten simpler and checked against VVAH 1.4 README/docs (Claude-native; OpenRouter is only the kit preset).
+**Repo hygiene:** `sample/`, `docs/sample/`, all `*.pptx/*.xlsx` gitignored (tracked templates/fixtures kept); `scripts/build_mitre_value_slide.py` local only. Upload files: `sample/upload_ready/keycloak_{fix_mode,report_only}_run.zip`.
 
-**Scan-run zip upload:** whole run folder zipped -> fix status vs JUnit/Maven (Keycloak #22 "Fixed" but broke a test), patch, scanner evidence (top 25), coverage/threat model; Fixes + Scan Coverage sheets, Fix Status slide, drawer/table/scan-details UI (reference §3/§5/§6/§7, RCA #36). Built by 3 parallel Sonnet agents; a Sonnet adversarial review found a CPU DoS, fixed (1.15 s on the payload). Upload files: `sample/upload_ready/keycloak_{fix_mode,report_only}_run.zip`.
+**Gates:** backend 1006 passed / 7 skipped locally, 1011 / 2 in CI; code review + kit tests green; every changed slide rendered via PowerPoint COM; live page checked at 1440/1024/390 with headless Playwright (short-lived token).
 
-**Next:** R1 in `docs/planning/RISK_REMEDIATION_PLAN.md`; optionally read per-finding `triage.json`/`diff.patch` so fix-mode runs show what was fixed.
+**Deferred / next:** real VVAH 1.4 NodeGoat scan to refresh the golden fixture (owner has no AI credit — do not start unasked); R1 in `docs/planning/RISK_REMEDIATION_PLAN.md`; end of dual-run ~2026-10-23 (cut-over doc §4).
 
 **Agent utilization**
-- Opus: main session — scan-zip analysis, importer change + fence/verdict fix found on real files, commit split of another session's tree, deploy, docs.
-- Sonnet: 1 adversarial review of the SARIF ingest diff (codex fallback), verdict accept.
-- Haiku: n/a — lookups were single-file or one DB query.
-- codex:rescue: n/a — companion broken since 2026-07-23 (memory); Sonnet takeover, verdict=accept.
-- Routing: sonnet · adversarial SARIF ingest review · reworked: N
+- Opus: orchestration, specs/contract, diff review, slide and page visual QA, prod debugging, deploys, docs.
+- Sonnet: 3 parallel builders (run-zip ingest, exporters, UI) + 2 adversarial reviews (SARIF ingest: accept; run-zip ingest: revise → CPU DoS fixed).
+- Haiku: n/a — lookups were single-file or one query.
+- codex:rescue: n/a — companion broken since 2026-07-23; Sonnet takeover both times.
+- Routing: sonnet · run-zip ingest builder · reworked: Y (DoS found in review) | sonnet · exporters · reworked: Y (slide overflow, label) | sonnet · UI · reworked: N
