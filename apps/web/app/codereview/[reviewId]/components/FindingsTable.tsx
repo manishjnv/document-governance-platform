@@ -12,7 +12,7 @@ export type SortKey = 'idx' | 'severity' | 'title' | 'vuln_class' | 'cwe' | 'cvs
 export type SortDir = 'asc' | 'desc';
 
 // unanchored: SARIF carries 'CWE-287 - Improper Authentication'
-const CWE_RE = /CWE-(\d+)/i;
+const CWE_RE = /CWE-(\d+)/i;
 
 const SEV_TONE: Record<Severity, ChipTone> = {
   critical: 'crit',
