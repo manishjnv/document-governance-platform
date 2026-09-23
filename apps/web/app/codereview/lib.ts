@@ -13,6 +13,30 @@ export interface DuplicateRef {
   line_end: number;
 }
 
+/** Scanner's own deep-analysis pass on its top findings by CVSS (fix-mode or report-only run). */
+export interface FindingDeep {
+  root_cause: string;
+  gates: { source: string; sink: string; missing_control: string };
+  remaining_risks: string[];
+  recommendations: string[];
+  summary: string;
+}
+
+export type FixStatus = 'fixed' | 'patch_rejected' | 'needs_review' | 'not_fixed' | 'not_attempted';
+export type FixTests = 'broke_tests' | 'passed' | 'not_tested' | 'no_test_results';
+
+/** Scanner's attempted-fix outcome for one finding (fix-mode run only). */
+export interface FindingFix {
+  status: FixStatus;
+  scanner_verdict: string;
+  policy_action: string | null;
+  policy_reason: string;
+  files: string[];
+  patch: string;
+  tests: FixTests | null;
+  tests_detail: string;
+}
+
 export interface CodeReviewFinding {
   idx: number;
   title: string;
@@ -44,6 +68,10 @@ export interface CodeReviewFinding {
   source_ref: string | null;
   sink_ref: string | null;
   duplicates: DuplicateRef[];
+  /** Present only for findings the scanner deep-verified (top findings by CVSS). */
+  deep?: FindingDeep;
+  /** Present only on findings the scanner attempted to fix (fix-mode run). */
+  fix?: FindingFix;
 }
 
 export interface Chain {
@@ -51,6 +79,37 @@ export interface Chain {
   steps: number[];
   severity: string;
   narrative: string;
+}
+
+export interface RunExtrasTests {
+  build: 'success' | 'failure' | null;
+  suites: number;
+  cases: number;
+  failures: number;
+  errors: number;
+  skipped: number;
+  failing: { test: string; message: string }[];
+  not_run_modules: string[];
+}
+
+export interface RunExtrasCoverage {
+  coverage_pct: number | null;
+  files_in_scope: number | null;
+  files_analyzed: number | null;
+  chunks: number | null;
+  duration_sec?: number | null;
+  health: string[];
+  threat_model: string;
+}
+
+/** Report-level rollup from an uploaded scan-run folder (findings.json/SARIF + triage/finding_case/report.md/JUnit/Maven). */
+export interface RunExtras {
+  mode: 'fix' | 'report-only' | null;
+  deep_verified: number;
+  total: number;
+  fix_counts: Partial<Record<FixStatus, number>>;
+  tests: RunExtrasTests | null;
+  coverage: RunExtrasCoverage | null;
 }
 
 export interface CodeReviewReport {
@@ -73,6 +132,8 @@ export interface CodeReviewReport {
   chains: Chain[];
   dropped_count: number;
   raw_findings_count: number;
+  /** Present only when the upload was a whole scan-run folder with extras next to the report. */
+  run_extras?: RunExtras;
   metrics: {
     duration_sec: number | null;
     total_files_in_scope: number | null;
@@ -143,6 +204,28 @@ export const SOURCE_FORMAT_LABEL: Record<CodeReviewReport['source_format'], stri
   findings: 'findings.json',
   sarif: 'SARIF',
 };
+
+export const FIX_STATUS_META: Record<FixStatus, { label: string }> = {
+  fixed: { label: 'Fixed (scanner accepted)' },
+  patch_rejected: { label: 'Patch rejected by scanner policy' },
+  needs_review: { label: 'Not fixed: needs manual review' },
+  not_fixed: { label: 'Not fixed' },
+  not_attempted: { label: 'Not attempted (report-only run)' },
+};
+
+export const FIX_TESTS_META: Record<FixTests, { label: string }> = {
+  broke_tests: { label: 'Fix broke a test' },
+  passed: { label: 'Tests passed' },
+  not_tested: { label: 'No test results for this code' },
+  no_test_results: { label: 'No test results uploaded' },
+};
+
+export const DEEP_VERIFIED_LABEL = 'Deep-verified';
+
+/** "<n> of <total> findings were deep-verified…" report-level note, per the contract's exact wording. */
+export function deepVerifiedNote(deepVerified: number, total: number): string {
+  return `${deepVerified} of ${total} findings were deep-verified by the scanner (its top findings by CVSS); the rest come from the first review pass only.`;
+}
 
 export interface FindingFilter {
   severity?: Severity | null;

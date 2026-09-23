@@ -333,7 +333,7 @@ export default function NewCodeReviewPage() {
                       <UploadCloud className="mx-auto mb-1.5 h-[26px] w-[26px] text-ink3" aria-hidden="true" />
                       <p className="text-sm">Drag &amp; drop or click to select</p>
                       <p className="mt-0.5 text-xs">
-                        findings.json, .sarif or the scan zip · up to 10 MB
+                        findings.json, .sarif, or the whole scan run folder zipped · up to 10 MB
                       </p>
                     </div>
                   )}

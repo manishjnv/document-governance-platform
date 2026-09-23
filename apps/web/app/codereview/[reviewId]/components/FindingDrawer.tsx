@@ -5,9 +5,19 @@ import { ChevronLeft, ChevronRight, Copy, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Chip, useResize, type ChipTone } from '@/components/app';
+import { AlertBanner, Chip, useResize, type ChipTone } from '@/components/app';
 import { cn } from '@/lib/utils';
-import { CodeReviewFinding, SEVERITY_META, Severity, VERDICT_META, Verdict } from '../../lib';
+import {
+  CodeReviewFinding,
+  DEEP_VERIFIED_LABEL,
+  FIX_STATUS_META,
+  FIX_TESTS_META,
+  FixStatus,
+  SEVERITY_META,
+  Severity,
+  VERDICT_META,
+  Verdict,
+} from '../../lib';
 import { FIX_RE, RISK_RE } from './highlightWords';
 
 const CWE_RE = /^CWE-(\d+)$/i;
@@ -24,6 +34,14 @@ const SEV_TONE: Record<Severity, ChipTone> = {
 const VERDICT_TONE: Record<Verdict, ChipTone> = {
   TRUE_POSITIVE: 'ok',
   FALSE_POSITIVE: 'neutral',
+};
+
+const FIX_STATUS_TONE: Record<FixStatus, ChipTone> = {
+  fixed: 'ok',
+  patch_rejected: 'crit',
+  needs_review: 'med',
+  not_fixed: 'neutral',
+  not_attempted: 'neutral',
 };
 
 /* ---------- rich text: highlight keywords, code tokens, links; bullet long prose ---------- */
@@ -235,6 +253,11 @@ export function FindingDrawer({
               <SheetTitle className="flex flex-wrap items-center gap-2 text-base font-semibold leading-snug text-foreground">
                 <SeverityChip severity={selected.severity} />
                 {selected.title}
+                {selected.deep && (
+                  <Chip tone="violet" xs tip="One of the scanner's top findings by CVSS, re-analyzed in a dedicated deep pass">
+                    {DEEP_VERIFIED_LABEL}
+                  </Chip>
+                )}
               </SheetTitle>
               <p className="mt-1 font-mono text-xs text-muted-foreground">
                 #{selected.idx} · {selected.vuln_class_label}
@@ -376,6 +399,75 @@ export function FindingDrawer({
                       </li>
                     ))}
                   </ul>
+                </Section>
+              )}
+              {selected.fix && (
+                <Section label="Fix" tone="bg-primary" hint="What the scanner's own automated fix attempt did to this finding.">
+                  <div className="min-w-0 space-y-2.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Chip tone={selected.fix.tests === 'broke_tests' ? 'crit' : FIX_STATUS_TONE[selected.fix.status]} tip={selected.fix.scanner_verdict}>
+                        {FIX_STATUS_META[selected.fix.status].label}
+                      </Chip>
+                      {selected.fix.tests && (
+                        <span className="text-xs text-muted-foreground">
+                          {FIX_TESTS_META[selected.fix.tests].label}
+                          {selected.fix.tests_detail ? ` — ${selected.fix.tests_detail}` : ''}
+                        </span>
+                      )}
+                    </div>
+                    {selected.fix.tests === 'broke_tests' && (
+                      <AlertBanner kind="error">Fix broke a test: do not treat as fixed</AlertBanner>
+                    )}
+                    {selected.fix.files.length > 0 && (
+                      <div className="min-w-0">
+                        <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-ink3">Files changed</div>
+                        <ul className="space-y-0.5 font-mono text-xs text-muted-foreground">
+                          {selected.fix.files.map((f, i) => (
+                            <li key={i} className="truncate">{f}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {selected.fix.patch && (
+                      <details className="min-w-0 rounded-md border border-border">
+                        <summary className="cursor-pointer select-none px-2.5 py-1.5 text-xs font-medium text-foreground">
+                          Patch
+                        </summary>
+                        <pre className="min-w-0 overflow-auto border-t border-border bg-muted/50 p-3 font-mono text-xs leading-[1.55]">
+                          {selected.fix.patch}
+                        </pre>
+                      </details>
+                    )}
+                  </div>
+                </Section>
+              )}
+              {selected.deep && (
+                <Section label="Scanner evidence" tone="bg-violet" hint="The scanner's own deep-analysis pass on this finding.">
+                  <div className="min-w-0 space-y-2.5">
+                    {selected.deep.root_cause && <RichText text={selected.deep.root_cause} />}
+                    {(selected.deep.gates.source || selected.deep.gates.sink || selected.deep.gates.missing_control) && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {selected.deep.gates.source && <Chip tone="neutral" xs tip="Gate: source">Source: {selected.deep.gates.source}</Chip>}
+                        {selected.deep.gates.sink && <Chip tone="neutral" xs tip="Gate: sink">Sink: {selected.deep.gates.sink}</Chip>}
+                        {selected.deep.gates.missing_control && (
+                          <Chip tone="neutral" xs tip="Gate: missing control">Missing control: {selected.deep.gates.missing_control}</Chip>
+                        )}
+                      </div>
+                    )}
+                    {selected.deep.remaining_risks.length > 0 && (
+                      <div className="min-w-0">
+                        <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-ink3">Remaining risks</div>
+                        <ul className="space-y-1 text-[13.5px] leading-relaxed text-foreground">
+                          {selected.deep.remaining_risks.map((r, i) => (
+                            <li key={i} className="flex gap-2">
+                              <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-sev-crit" aria-hidden="true" />
+                              <span className="min-w-0"><Highlight text={r} /></span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
                 </Section>
               )}
             </div>

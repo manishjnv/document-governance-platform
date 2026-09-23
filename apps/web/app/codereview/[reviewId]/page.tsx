@@ -396,6 +396,7 @@ export default function CodeReviewResultsPage() {
               sortDir={sortDir}
               onSort={toggleSort}
               onOpenFinding={setSelectedIdx}
+              showFixColumn={report.run_extras?.mode === 'fix'}
             />
           )}
           {tab === 'chains' && <ChainsTab chains={report.chains} onOpenFinding={setSelectedIdx} />}

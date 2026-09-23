@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Chip, type ChipTone } from '@/components/app';
 import { cn } from '@/lib/utils';
-import { CodeReviewFinding, SEVERITY_META, Severity, VERDICT_META, Verdict } from '../../lib';
+import { CodeReviewFinding, FIX_STATUS_META, FixStatus, SEVERITY_META, Severity, VERDICT_META, Verdict } from '../../lib';
 
 export type SortKey = 'idx' | 'severity' | 'title' | 'vuln_class' | 'cwe' | 'cvss_score' | 'confidence' | 'file';
 export type SortDir = 'asc' | 'desc';
@@ -24,6 +24,14 @@ const SEV_TONE: Record<Severity, ChipTone> = {
 const VERDICT_TONE: Record<Verdict, ChipTone> = {
   TRUE_POSITIVE: 'ok',
   FALSE_POSITIVE: 'neutral',
+};
+
+const FIX_STATUS_TONE: Record<FixStatus, ChipTone> = {
+  fixed: 'ok',
+  patch_rejected: 'crit',
+  needs_review: 'med',
+  not_fixed: 'neutral',
+  not_attempted: 'neutral',
 };
 
 /** Focus the next/previous data row relative to the row that was
@@ -76,6 +84,25 @@ function ConfidenceCell({ confidence, votes }: { confidence: number; votes: numb
   );
 }
 
+function FixCell({ fix }: { fix: CodeReviewFinding['fix'] }) {
+  if (!fix) return <span className="text-muted-foreground">—</span>;
+  const brokeTests = fix.tests === 'broke_tests';
+  return (
+    <Tooltip delayDuration={150}>
+      <TooltipTrigger asChild>
+        <span>
+          <Chip tone={brokeTests ? 'crit' : FIX_STATUS_TONE[fix.status]} xs>
+            {FIX_STATUS_META[fix.status].label}
+          </Chip>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="text-xs">
+        {brokeTests ? 'Fix broke a test: do not treat as fixed' : FIX_STATUS_META[fix.status].label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 function VerdictCell({ verdict }: { verdict: CodeReviewFinding['verdict'] }) {
   if (!verdict) return <span className="text-muted-foreground">—</span>;
   const meta = VERDICT_META[verdict as Verdict];
@@ -107,6 +134,7 @@ export function FindingsTable({
   sortDir,
   onSort,
   onOpenFinding,
+  showFixColumn,
 }: {
   /** Current filtered + sorted findings to render. */
   rows: CodeReviewFinding[];
@@ -124,6 +152,8 @@ export function FindingsTable({
   sortDir: SortDir;
   onSort: (key: SortKey) => void;
   onOpenFinding: (idx: number) => void;
+  /** Show the compact Fix-status column — only meaningful for a fix-mode run-folder upload. */
+  showFixColumn?: boolean;
 }) {
   const classOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -201,6 +231,7 @@ export function FindingsTable({
               <SortHeader label="Confidence" sk="confidence" />
               <SortHeader label="File:lines" sk="file" />
               <TableHead className="h-auto whitespace-nowrap px-2.5 py-2">Verdict</TableHead>
+              {showFixColumn && <TableHead className="h-auto whitespace-nowrap px-2.5 py-2">Fix</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -265,11 +296,16 @@ export function FindingsTable({
                 <TableCell className="px-2.5 py-1.5" data-th="Verdict">
                   <VerdictCell verdict={f.verdict} />
                 </TableCell>
+                {showFixColumn && (
+                  <TableCell className="px-2.5 py-1.5" data-th="Fix">
+                    <FixCell fix={f.fix} />
+                  </TableCell>
+                )}
               </TableRow>
             ))}
             {rows.length === 0 && (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={9} className="px-2.5 py-6 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={showFixColumn ? 10 : 9} className="px-2.5 py-6 text-center text-sm text-muted-foreground">
                   No findings match your search or filter.
                 </TableCell>
               </TableRow>

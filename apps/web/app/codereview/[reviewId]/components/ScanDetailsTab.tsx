@@ -1,6 +1,6 @@
 'use client';
 
-import { CodeReviewReport } from '../../lib';
+import { CodeReviewReport, deepVerifiedNote } from '../../lib';
 
 function Dl({ rows }: { rows: [string, React.ReactNode][] }) {
   return (
@@ -15,9 +15,9 @@ function Dl({ rows }: { rows: [string, React.ReactNode][] }) {
   );
 }
 
-function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+function SectionCard({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className="rounded-[10px] border border-border bg-card p-4">
+    <div className={`rounded-[10px] border border-border bg-card p-4${className ? ` ${className}` : ''}`}>
       <h3 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">{title}</h3>
       {children}
     </div>
@@ -29,6 +29,7 @@ function SectionCard({ title, children }: { title: string; children: React.React
 export function ScanDetailsTab({ report }: { report: CodeReviewReport }) {
   const m = report.metrics;
   const manifest = report.manifest;
+  const extras = report.run_extras;
 
   const metricRows: [string, React.ReactNode][] = [
     ['Files in scope', m.total_files_in_scope ?? '—'],
@@ -74,6 +75,75 @@ export function ScanDetailsTab({ report }: { report: CodeReviewReport }) {
           <p className="text-sm text-muted-foreground">none</p>
         )}
       </SectionCard>
+
+      {extras && (
+        <SectionCard title="Run coverage" className="sm:col-span-2">
+          <div className="space-y-3">
+            <p className="text-[13px] text-foreground">{deepVerifiedNote(extras.deep_verified, extras.total)}</p>
+
+            {extras.coverage && (
+              <Dl
+                rows={[
+                  ['Coverage', extras.coverage.coverage_pct != null ? `${extras.coverage.coverage_pct}%` : '—'],
+                  ['Files in scope', extras.coverage.files_in_scope ?? '—'],
+                  ['Files analyzed', extras.coverage.files_analyzed ?? '—'],
+                  ['Chunks', extras.coverage.chunks ?? '—'],
+                ]}
+              />
+            )}
+
+            {extras.coverage && extras.coverage.health.length > 0 && (
+              <div>
+                <div className="mb-1 text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">Scan health</div>
+                <ul className="list-disc space-y-1 pl-4 text-[13px] text-foreground">
+                  {extras.coverage.health.map((h, i) => (
+                    <li key={i}>{h}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {extras.tests && (
+              <div>
+                <div className="mb-1 text-[11px] font-semibold uppercase tracking-[.05em] text-ink3">Test summary</div>
+                <Dl
+                  rows={[
+                    ['Build', extras.tests.build ?? '—'],
+                    ['Cases', extras.tests.cases],
+                    ['Failures', extras.tests.failures],
+                  ]}
+                />
+                {extras.tests.failing.length > 0 && (
+                  <ul className="mt-1.5 space-y-0.5 font-mono text-xs text-muted-foreground">
+                    {extras.tests.failing.map((t, i) => (
+                      <li key={i}>
+                        {t.test}
+                        {t.message ? `: ${t.message}` : ''}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {extras.tests.not_run_modules.length > 0 && (
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    Not tested: {extras.tests.not_run_modules.join(', ')}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {extras.coverage?.threat_model && (
+              <details className="rounded-md border border-border">
+                <summary className="cursor-pointer select-none px-2.5 py-1.5 text-xs font-medium text-foreground">
+                  Threat model
+                </summary>
+                <p className="whitespace-pre-wrap border-t border-border px-2.5 py-2 text-[13px] leading-relaxed text-muted-foreground">
+                  {extras.coverage.threat_model}
+                </p>
+              </details>
+            )}
+          </div>
+        </SectionCard>
+      )}
 
       {report.summary_text && (
         <div className="rounded-[10px] border border-border bg-card p-4 sm:col-span-2">
