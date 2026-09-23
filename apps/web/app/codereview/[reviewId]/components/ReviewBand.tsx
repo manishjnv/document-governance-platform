@@ -74,7 +74,7 @@ export function ReviewBand({
           ))}
         </div>
       )}
-      <p className="text-xs text-muted-foreground">{deriveHeadline(report)}</p>
+      <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">{deriveHeadline(report)}</p>
     </div>
   );
 }
