@@ -612,8 +612,9 @@ input from the upload page, without reading VVAH docs.
     and `.sarif`; if new fields appear, extend the field lists in
     `test_codereview_ingest.py` (keep the old lists; older kits stay in
     consultants' hands) and `ingest.py`; review the "About the scanner"
-    panel text on the upload page (stage names/limits come from VVAH's
-    `docs/architecture.md`); deploy; tell consultants to re-download.
+    panel text on the upload page (checked against VVAH's `README.md`
+    "What's new" + Limitations, `docs/features.md` lenses, `docs/models.md`
+    backends; last checked 1.4.0); deploy; tell consultants to re-download.
   - *Policy:* pin a tag + sha256, never float to `main`; upgrade within ~2
     weeks of a release; the importer stays backward compatible with every
     VVAH version still in use.

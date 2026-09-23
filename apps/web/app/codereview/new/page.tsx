@@ -16,44 +16,43 @@ const MANIFEST_EXTS = ['.json'];
 
 const KIT_VERSION = '1.4.0';
 
-// Stage names and limits from VVAH's docs/architecture.md; revisit on each kit upgrade.
+// Checked against VVAH 1.4.0 README, docs/features.md and docs/models.md;
+// re-check on each kit upgrade (CODE_REVIEW_MODULE_REFERENCE.md §8).
 const ABOUT_SCANNER = [
   {
     title: 'What it is',
     items: [
-      "Visa's open-source AI code scanner (VVAH, Apache-2.0)",
-      'Runs on your machine; AI calls go through your own OpenRouter key',
-      'Your code is sent to the AI model provider, never to ScopeSense',
-      'Reports vulnerabilities only; the kit does not change your code',
+      "Visa's open-source AI security scanner (VVAH)",
+      'Runs on your computer; nothing runs on ScopeSense',
+      'Works with Claude natively, or OpenAI-compatible and open models',
+      'This kit is set up for OpenRouter; your code goes only to that AI provider',
     ],
   },
   {
-    title: 'Stages',
+    title: 'How it works',
     items: [
-      'Map: source-to-sink call graph, repo survey, threat model',
-      'Split: the code is cut into focused review chunks',
-      'Review: AI deep-dive per chunk, then evidence gates',
-      'Verify: adversarial true/false-positive check and CVSS score',
-      'Rank: duplicates merged, exploit chains linked, report + SARIF',
+      'Discover: maps the code and builds a threat model',
+      'Deep dive: AI reviews each part, then a second pass challenges every finding',
+      'Report: merges duplicates, links attack chains, scores each with CVSS',
+      'Auto-fix and fix validation exist in VVAH but are off in this kit',
     ],
   },
   {
     title: 'What it finds',
     items: [
-      'Auth and access-control gaps, injection, SSRF, path traversal',
-      'Weak crypto and certificate checks, secrets in logs, logic bugs',
-      'CI/CD and infrastructure-as-code risks',
-      'Each finding: CWE, CVSS, exploit scenario, fix and verification note',
+      'Access control: missing checks, IDOR, privilege escalation',
+      'Injection: SQL, command, SSRF, path traversal, XSS',
+      'Weak crypto, hardcoded secrets, data leaks in logs or errors',
+      'Logic flaws and cloud or CI/CD configuration mistakes',
     ],
   },
   {
     title: 'Limits',
     items: [
-      'Findings are AI triage candidates: confirm before acting',
-      'Deepest data-flow tracing for Python, Java, C#, JS/TS; lighter for Go',
-      'No branch- or path-sensitive analysis',
-      'Large repos take hours and millions of tokens; the kit estimates cost first',
-      'Exploit chains need findings.json; a .sarif upload has none',
+      'Findings are AI suggestions: a person must confirm them',
+      'Reads code only; it never builds or runs your app',
+      'Deepest analysis for Python, Java, C# and JavaScript/TypeScript',
+      'No published accuracy figures yet',
     ],
   },
 ];

@@ -147,7 +147,8 @@ last incident.
 - CI (`.github/workflows/ci-cd.yml`, since 2026-09-23): every push/PR to
   `master` touching `apps/**` runs the full backend suite on Python 3.11
   (prod's version) against a fresh Postgres built from `migrations/*.sql`,
-  plus the frontend type-check. It deploys nothing. A red run on a
+  plus the frontend type-check. It deploys nothing. Test-only packages
+  live in `apps/api/requirements-dev.txt` (`pip install -r` it for local runs). A red run on a
   migration usually means a new `.sql` file breaks when applied in order
   to an empty DB. `.github/workflows/vvah-kit-update.yml` is the weekly scan
   kit upgrade PR (`CODE_REVIEW_MODULE_REFERENCE.md` §8).

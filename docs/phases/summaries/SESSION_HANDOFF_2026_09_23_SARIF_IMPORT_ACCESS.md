@@ -12,7 +12,7 @@
 
 **Scan kit (later same day):** kit moved VVAH 1.3.0 → 1.4.0 via new `scripts/update_vvah_kit.py`; weekly `.github/workflows/vvah-kit-update.yml` opens a PR (repo setting "Actions may create PRs" turned on; issue fallback kept) when Visa ships a release; runbook `CODE_REVIEW_MODULE_REFERENCE.md` §8. Upload page gains an "About the scanner" panel (sweep OK at 1440/390). Deferred (owner has no AI credit): a real 1.4 NodeGoat scan to refresh the golden fixture; do not start it unasked.
 
-**CI:** `ci-cd.yml` replaced — the old template targeted main/develop (never ran), pushed GHCR images and deployed to a nonexistent k8s cluster; now push/PR to master runs the full backend suite (Python 3.11, fresh Postgres from migrations/*.sql, Redis) + web tsc, deploys nothing.
+**CI:** `ci-cd.yml` replaced — the old template targeted main/develop (never ran), pushed GHCR images and deployed to a nonexistent k8s cluster; now push/PR to master runs the full backend suite (Python 3.11, fresh Postgres from migrations/*.sql, Redis) + web tsc, deploys nothing. First green run `d45e4f9` (1004 passed / 2 skipped) after three pre-existing gaps: test-only deps now in `apps/api/requirements-dev.txt` (fakeredis, pyyaml, aiosqlite), pytest 9.0.3 / pytest-asyncio 1.3.0 pins (0.21.1 ignored pytest.ini loop scope → 390 errors). "About the scanner" rewritten simpler and checked against VVAH 1.4 README/docs (Claude-native; OpenRouter is only the kit preset).
 
 **Next:** R1 in `docs/planning/RISK_REMEDIATION_PLAN.md`; optionally read per-finding `triage.json`/`diff.patch` so fix-mode runs show what was fixed.
 
