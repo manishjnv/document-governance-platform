@@ -834,3 +834,17 @@ keep chronological.)*
 - **Prevention:** every deploy leaves open tabs on the old build; the boundary now heals the
   first navigation. When a client error is reported right after a deploy, reproduce with a fresh
   browser before touching code (headless Playwright with a short-lived token worked here).
+
+### 38. PPTX critical spotlight: file path wrapped into the "WHAT IS WRONG" heading (2026-09-23, report)
+
+- **Symptom:** on "Critical Findings — What, Why, Fix" a long path plus CWE name wrapped to two
+  lines and the second line ("✓ verifier-confirmed") printed over the WHAT IS WRONG heading; on
+  the Executive Summary the path + full CWE name ran below the finding cards.
+- **Root cause:** `report_pptx.py` put the full repo path and full CWE label in fixed 0.24 in text
+  boxes sized for one line; Keycloak's deep package paths (~90 chars) never fit.
+- **Fix:** `report_pptx.py` `_tail()` (path tail) on spotlights, file name only on the summary and
+  table, `_cwe_id()` (CWE id; the name stays in the Excel), check mark instead of the words.
+- **Prevention:** anything in a fixed-height one-line box gets a length cap; render the deck from a
+  real large-repo run (PowerPoint COM) after any slide change — the NodeGoat fixture's short
+  paths never showed it.
+

@@ -450,10 +450,16 @@ the extracted report is what gets stored, under its sanitized basename.
 - **Run extras (2026-09-23), only when `run_extras` is present:** XLSX
   register gains Deep-verified / Fix status / Tests after fix columns, a
   "Fixes" sheet (patch capped at 32000 chars, every cell through `_guard`)
-  and a "Scan Coverage" sheet, plus Summary rows; PPTX gains a "Fix Status"
-  slide after the remediation plan (fix mode only; broken fixes first, 6
-  rows, the rest pointed at the Excel) and a run line + report.md file
-  counts/duration on the coverage slide. Visual QA: PowerPoint COM render.
+  and a "Scan Coverage" sheet, plus Summary rows. PPTX adds no slide (owner
+  call 2026-09-23): a fix-status strip on the Executive Summary, a Fix
+  column on Findings at a Glance, "Scanner fix: ..." beside HOW TO FIX on the
+  critical spotlights and under each remediation-plan row, and a "Scan run
+  evidence" panel (deep-verified count, chunks, tests after the fixes,
+  failing test, modules not tested, scan health) filling the coverage
+  slide's left side when there are no per-language metrics. Spotlight and
+  summary facts show the file name and CWE id only, so they stay on one
+  line (a wrapped path overlapped "WHAT IS WRONG", RCA #38). Visual QA:
+  PowerPoint COM render.
 
 Both share `report_common.resolve_branding`, the `_guard` formula-injection
 guard, and the BRAND `341954` / ACCENT `00A98B` / ZEBRA `F3F0F7` palette
@@ -535,6 +541,11 @@ directly. Used for the NodeGoat deck; rendered slides kept at
   section (status, tests, files, collapsible patch) and Scanner evidence
   (root cause, gates, remaining risks); the table adds a Fix column in fix
   mode; Scan details adds a Run coverage card. All gated on the optional keys.
+  Review page is `AppShell fullWidth` (the table no longer scrolls sideways
+  at 1440); fix-mode runs get fix KPI cards (Fixed / Fix broke a test / Patch
+  rejected / Needs review / Not fixed) that toggle a `fix` filter, mirrored as
+  Fix chips beside the severity chips (`FindingFilter.fix`, `matchesFix`);
+  File:lines wraps to two lines like the title.
 
 Pages: `page.tsx` (list cards), `new/page.tsx` (two-column upload), `[reviewId]/page.tsx`
 (results with tabs and drawer), `lib.ts` (types + pure helpers). Inline
