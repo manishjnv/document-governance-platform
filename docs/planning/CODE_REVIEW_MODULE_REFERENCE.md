@@ -25,6 +25,11 @@ not blocking): PPTX org branding (still `resolve_branding(None)`), a
 **This section replaces per-session summaries for this feature — append
 here, do not create a new doc.**
 
+- **2026-09-23 — kit on VVAH 1.4.0 + auto-update:** weekly
+  `vvah-kit-update.yml` + `scripts/update_vvah_kit.py` keep the kit on the
+  latest VVAH release via a reviewed PR (§8 "Keeping the scan kit on the
+  latest VVAH"); upload page gains an "About the scanner" panel (what it
+  is, stages, what it finds, limits).
 - **2026-09-23 — SARIF narrative import:** SARIF import now reads Agentic SAST 1.4.0's
   sectioned `properties.description` (impact, exploit scenario,
   preconditions, how to fix, adversarial verification), offensive priority,
@@ -573,13 +578,52 @@ input from the upload page, without reading VVAH docs.
 
 - **Pinned VVAH release, hosted in the repo.** VVAH has no PyPI package and
   no GitHub release assets, so the wheel is built from the tag
-  (`pip wheel --no-deps git+…@v1.3.0`) and vendored at
-  `apps/api/app/codereview/kit/vendor/vvaharness-1.3.0-py3-none-any.whl`
-  (1.1 MB) with `LICENSE`, `NOTICE`, `THIRD_PARTY_LICENSES.md`. Pin +
-  sha256 live in `kit/KIT_VERSION.json`. **Pin-bump procedure:** re-run
-  the ingest tests, including the golden fixture (§9), against the new
-  release before changing the pin; if the schema differs, fix `ingest.py`
-  and regenerate the synthetic sample — the real file always wins.
+  (`pip wheel --no-deps git+…@<tag>`) and vendored at
+  `apps/api/app/codereview/kit/vendor/vvaharness-<ver>-py3-none-any.whl`
+  with `LICENSE`, `NOTICE`, `THIRD_PARTY_LICENSES.md`. Pin + sha256 live in
+  `kit/bin/KIT_VERSION.json` (the source of truth; **1.4.0 since
+  2026-09-23**, was 1.3.0).
+- **Keeping the scan kit on the latest VVAH (2026-09-23).**
+  - *Detect:* `.github/workflows/vvah-kit-update.yml` runs Mondays 04:00
+    UTC (and on demand, optional `tag` input). It calls
+    `scripts/update_vvah_kit.py --check` (exit 10 = a newer release than
+    the pin). Manual check: `python scripts/update_vvah_kit.py --check`.
+  - *Upgrade (automated):* `python scripts/update_vvah_kit.py [--tag vX.Y.Z]`
+    builds and vendors the wheel, refreshes the three licence files, and
+    rewrites every pin: `KIT_VERSION.json` (version, tag, wheel, sha256,
+    date), the kit `README.md` install line, the `config.yaml` header, and
+    `KIT_VERSION` in `apps/web/app/codereview/new/page.tsx`. It stops with
+    a message if a pin's expected text is missing (hand-edited).
+    `test_kit_version_pins_agree` fails if any pin drifts.
+  - *CI gate before the PR:* installs the new wheel in a venv, prints
+    `vvaharness --version`, loads the kit `config.yaml` with VVAH's own
+    `vvaharness.config.load` (asserts remediate/validate stay off; no model
+    spend), runs `tests/test_codereview_kit.py --noconftest`, then opens a
+    PR `vvah-kit/<tag>` whose body carries the release's CHANGELOG section.
+    Needs the repo setting "Allow GitHub Actions to create pull requests"
+    (turned on 2026-09-23 via `gh api -X PUT …/actions/permissions/workflow`,
+    default workflow permissions left read-only); if it is ever turned off
+    the job falls back to an issue pointing at the pushed branch. The job
+    never merges or deploys.
+  - *Human steps before merging:* read the CHANGELOG section for
+    `findings.json` schema (`vvaharness/models/_scan.py`), SARIF writer, CLI
+    flag and default-profile changes; run the full backend suite; run one
+    real scan (NodeGoat, small, few tokens) and upload its `findings.json`
+    and `.sarif`; if new fields appear, extend the field lists in
+    `test_codereview_ingest.py` (keep the old lists; older kits stay in
+    consultants' hands) and `ingest.py`; review the "About the scanner"
+    panel text on the upload page (stage names/limits come from VVAH's
+    `docs/architecture.md`); deploy; tell consultants to re-download.
+  - *Policy:* pin a tag + sha256, never float to `main`; upgrade within ~2
+    weeks of a release; the importer stays backward compatible with every
+    VVAH version still in use.
+  - *1.3.0 → 1.4.0 findings (2026-09-23):* only headline change is
+    exploit verification (beta, API only, off unless `EV_API_COLLECTION`
+    is set; adds `ev_*` fields to `findings.json`, SARIF unchanged);
+    `default.yaml` now disables S10/S11 (our kit already sets both off);
+    `models/_scan.py` byte-identical; kit config loads unchanged. Not yet
+    done: a real 1.4 NodeGoat scan to refresh the golden fixture — **deferred
+    by the owner (no AI credit, 2026-09-23); do not start it unasked**.
 - **Kit layout, as shipped** (`apps/api/app/codereview/kit/`), served by
   `GET /api/v1/codereview/kit.zip` (any authenticated user; built in
   memory by `kit.build_kit_zip()`, rooted at `scopewise-scan-kit/`): kit
@@ -587,7 +631,7 @@ input from the upload page, without reading VVAH docs.
   `scopewise-scan.cmd`/`.sh`, user request "only one setup file to pick"),
   with `README.md`, `config.yaml`, and the PowerShell internals
   (`bin/setup.ps1`, `bin/scopewise-scan.ps1`, `bin/KIT_VERSION.json`) and
-  vendored release (`vendor/vvaharness-1.3.0-py3-none-any.whl` + `LICENSE`,
+  vendored release (`vendor/vvaharness-<ver>-py3-none-any.whl` + `LICENSE`,
   `NOTICE`, `THIRD_PARTY_LICENSES.md`) tucked under `bin/`/`vendor/`;
   `.venv`, `.env`, `logs/`, and produced zips appear after first use.
 

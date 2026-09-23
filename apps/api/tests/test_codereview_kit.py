@@ -35,15 +35,27 @@ def test_kit_zip_contains_expected_files_and_wheel_hash():
         "scopewise-scan-kit/bin/setup.ps1",
         "scopewise-scan-kit/bin/scopewise-scan.ps1",
         "scopewise-scan-kit/bin/KIT_VERSION.json",
-        "scopewise-scan-kit/vendor/vvaharness-1.3.0-py3-none-any.whl",
+        f"scopewise-scan-kit/{kit_version()['wheel']}",
         "scopewise-scan-kit/vendor/LICENSE",
         "scopewise-scan-kit/vendor/NOTICE",
     }
     assert expected.issubset(names)
 
     version = kit_version()
-    wheel_bytes = zf.read("scopewise-scan-kit/vendor/vvaharness-1.3.0-py3-none-any.whl")
+    wheel_bytes = zf.read(f"scopewise-scan-kit/{version['wheel']}")
     assert hashlib.sha256(wheel_bytes).hexdigest() == version["wheel_sha256"]
+
+
+def test_kit_version_pins_agree():
+    # scripts/update_vvah_kit.py rewrites all of these; a hand edit that
+    # misses one ships a kit whose page/README name a different VVAH.
+    v = kit_version()["vvah_version"]
+    wheels = [p.name for p in (KIT_DIR / "vendor").glob("vvaharness-*.whl")]
+    assert wheels == [f"vvaharness-{v}-py3-none-any.whl"]
+    assert f"vvaharness-{v}-" in (KIT_DIR / "README.md").read_text(encoding="utf-8")
+    assert f"VVAH config profile, v{v}." in (KIT_DIR / "config.yaml").read_text(encoding="utf-8")
+    page = Path(__file__).resolve().parents[2] / "web/app/codereview/new/page.tsx"
+    assert f"const KIT_VERSION = '{v}';" in page.read_text(encoding="utf-8")
 
 
 def test_kit_shell_scripts_have_lf_line_endings():

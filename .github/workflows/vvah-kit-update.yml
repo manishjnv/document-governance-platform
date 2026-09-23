@@ -1,0 +1,107 @@
+# Weekly: if Visa's VVAH has a newer release than the scan kit pins, rebuild the
+# kit on it, prove it installs and loads the kit config, run the kit tests, and
+# open a PR (never merges or deploys). Runbook: CODE_REVIEW_MODULE_REFERENCE.md
+# "Keeping the scan kit on the latest VVAH".
+name: VVAH kit update
+
+on:
+  schedule:
+    - cron: "0 4 * * 1"   # Mondays 04:00 UTC
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "VVAH tag to pin (blank = latest release)"
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write   # fallback when "Allow GitHub Actions to create pull requests" is off
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Check for a newer VVAH release
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          out=$(python scripts/update_vvah_kit.py --check ${{ inputs.tag && format('--tag {0}', inputs.tag) || '' }} --notes /tmp/notes.md)
+          rc=$?
+          set -e
+          echo "$out"
+          case "$rc" in
+            10) echo "outdated=true" >> "$GITHUB_OUTPUT" ;;
+            0)  echo "outdated=false" >> "$GITHUB_OUTPUT" ;;
+            *)  exit "$rc" ;;
+          esac
+          # "pinned v1.3.0, target v1.4.0" -> v1.4.0
+          echo "tag=${out##*target }" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if a PR for this tag is already open
+        if: steps.check.outputs.outdated == 'true'
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          n=$(gh pr list --head "vvah-kit/${{ steps.check.outputs.tag }}" --state open --json number --jq length)
+          echo "open=$n" >> "$GITHUB_OUTPUT"
+
+      - name: Upgrade the kit
+        if: steps.check.outputs.outdated == 'true' && steps.existing.outputs.open == '0'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/update_vvah_kit.py --tag "${{ steps.check.outputs.tag }}"
+
+      - name: Install the new wheel and load the kit config with it (no model spend)
+        if: steps.check.outputs.outdated == 'true' && steps.existing.outputs.open == '0'
+        run: |
+          python -m venv /tmp/vv
+          /tmp/vv/bin/pip install --quiet apps/api/app/codereview/kit/vendor/vvaharness-*.whl
+          /tmp/vv/bin/vvaharness --version
+          cd apps/api/app/codereview/kit
+          OPENROUTER_API_KEY=dummy /tmp/vv/bin/python -c "import vvaharness.config as c; cfg = c.load('config.yaml'); assert cfg['step_remediate']['enabled'] is False and cfg['step_validate']['enabled'] is False; print('kit config loads')"
+
+      - name: Kit tests
+        if: steps.check.outputs.outdated == 'true' && steps.existing.outputs.open == '0'
+        working-directory: apps/api
+        run: |
+          pip install --quiet pytest pyyaml
+          python -m pytest tests/test_codereview_kit.py -q --noconftest
+
+      - name: Open a PR
+        if: steps.check.outputs.outdated == 'true' && steps.existing.outputs.open == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.check.outputs.tag }}
+        run: |
+          branch="vvah-kit/$TAG"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add apps/api/app/codereview/kit apps/web/app/codereview/new/page.tsx
+          git commit -m "Scan kit: VVAH $TAG"
+          git push -u origin "$branch"
+          {
+            echo "Automated scan-kit upgrade to VVAH **$TAG**. Checked in CI: wheel installs, the kit config.yaml loads with it, kit tests pass."
+            echo
+            echo "Before merging (runbook: CODE_REVIEW_MODULE_REFERENCE.md, 'Keeping the scan kit on the latest VVAH'):"
+            echo "- read the notes below for schema, SARIF, CLI or config-default changes"
+            echo "- run the full backend suite and one real scan (NodeGoat), upload its findings.json and .sarif"
+            echo "- deploy, then tell consultants to re-download the kit"
+            echo
+            echo "---"
+            cat /tmp/notes.md
+          } > /tmp/body.md
+          gh pr create --base "${{ github.event.repository.default_branch }}" --head "$branch" \
+            --title "Scan kit: VVAH $TAG" --body-file /tmp/body.md \
+          || gh issue create --title "Scan kit: VVAH $TAG ready on branch $branch" \
+               --body "$(printf 'Actions may not open PRs in this repo, so open one from branch `%s`.\n\n' "$branch"; cat /tmp/body.md)"

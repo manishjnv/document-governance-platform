@@ -1,4 +1,4 @@
-# ScopeSense consultant scan kit — VVAH config profile, v1.3.0.
+# ScopeSense consultant scan kit — VVAH config profile, v1.4.0.
 # Partial VVAH config: every key omitted here falls back to VVAH's own
 # built-in defaults (see vendor/THIRD_PARTY_LICENSES.md for VVAH itself).
 # Detection-only run (report is uploaded, never remediated/validated here).

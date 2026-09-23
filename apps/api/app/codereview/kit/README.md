@@ -41,7 +41,7 @@ ScopeSense -> Code Security Review -> New review.
 
 ## Manual install (plain pip)
 
-    pip install vendor/vvaharness-1.3.0-py3-none-any.whl
+    pip install vendor/vvaharness-1.4.0-py3-none-any.whl
 
 Then create `.env` in this folder (never share or commit it):
 

@@ -14,7 +14,7 @@ const MAX_SIZE = 10 * 1024 * 1024;
 const REPORT_EXTS = ['.json', '.sarif', '.zip'];
 const MANIFEST_EXTS = ['.json'];
 
-const KIT_VERSION = '1.3.0';
+const KIT_VERSION = '1.4.0';
 
 const STEPS = [
   <>
