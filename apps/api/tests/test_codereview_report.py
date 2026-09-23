@@ -98,6 +98,92 @@ def _fake_review():
     )
 
 
+def _fake_review_with_extras():
+    """Same base report, plus run_extras and deep/fix on findings #1 (fixed,
+    but broke a test) and #3 (needs review) — contract 2026-09-23."""
+    review = _fake_review()
+    report = review.report
+    report["findings"][0]["deep"] = {
+        "root_cause": "User input reaches the query builder unsanitized.",
+        "gates": {"source": "request.args", "sink": "cursor.execute", "missing_control": "parameterization"},
+        "remaining_risks": ["Same pattern may exist elsewhere in app/db.py"],
+        "recommendations": ["Use parameterized queries everywhere"],
+        "summary": "Confirmed SQL injection, patched.",
+    }
+    report["findings"][0]["fix"] = {
+        "status": "fixed", "scanner_verdict": "Fixed", "policy_action": "accept",
+        "policy_reason": "", "files": ["app/db.py"],
+        "patch": "--- a/app/db.py\n+++ b/app/db.py\n@@ -1 +1 @@\n-old\n+new\n",
+        "tests": "broke_tests", "tests_detail": "DbTest.test_query failed after this change",
+    }
+    report["findings"][2]["deep"] = {
+        "root_cause": "Weak hash algorithm.", "gates": {"source": "", "sink": "", "missing_control": ""},
+        "remaining_risks": [], "recommendations": ["Use bcrypt"], "summary": "Needs review.",
+    }
+    report["findings"][2]["fix"] = {
+        "status": "needs_review", "scanner_verdict": "Needs Review", "policy_action": None,
+        "policy_reason": "", "files": [], "patch": "", "tests": None, "tests_detail": "",
+    }
+    report["run_extras"] = {
+        "mode": "fix", "deep_verified": 2, "total": 4,
+        "fix_counts": {"fixed": 1, "needs_review": 1},
+        "tests": {
+            "build": "failure", "suites": 1, "cases": 10, "failures": 1, "errors": 0, "skipped": 0,
+            "failing": [{"test": "DbTest.test_query", "message": "assertion failed"}],
+            "not_run_modules": ["Reporting Module"],
+        },
+        "coverage": {
+            "coverage_pct": 99.1, "files_in_scope": 50, "files_analyzed": 48, "chunks": 12,
+            "health": ["No fatal scan errors", "All chunks processed"],
+            "threat_model": "External attacker with network access to the API.",
+        },
+    }
+    return review
+
+
+def test_xlsx_run_extras_sheets_and_warning_row():
+    from openpyxl import load_workbook
+
+    review = _fake_review_with_extras()
+    wb = load_workbook(io_bytes(build_xlsx_export(review)))
+    assert "Fixes" in wb.sheetnames
+    assert "Scan Coverage" in wb.sheetnames
+    ws = wb["Findings Register"]
+    headers = [c.value for c in ws[1]]
+    assert "Fix status" in headers
+    tests_col = headers.index("Tests after fix") + 1
+    broke_cells = [
+        ws.cell(row=r, column=tests_col).value
+        for r in range(2, ws.max_row + 1)
+    ]
+    assert any("Fix broke a test" in str(v) for v in broke_cells)
+
+
+def test_xlsx_without_run_extras_has_no_extra_sheets():
+    review = _fake_review()
+    wb_names = __import__("openpyxl").load_workbook(io_bytes(build_xlsx_export(review))).sheetnames
+    assert "Fixes" not in wb_names
+    assert "Scan Coverage" not in wb_names
+
+
+def test_pptx_fix_status_slide():
+    from pptx import Presentation
+
+    review = _fake_review_with_extras()
+    prs = Presentation(io_bytes(build_pptx_export(review)))
+    all_text = "\n".join(
+        shape.text_frame.text
+        for slide in prs.slides
+        for shape in slide.shapes
+        if shape.has_text_frame
+    ) + "\n".join(
+        c.text for slide in prs.slides for sh in slide.shapes if sh.has_table
+        for r in sh.table.rows for c in r.cells
+    )
+    assert "Fix status" in all_text
+    assert "do not treat as fixed" in all_text
+
+
 def test_xlsx_builds_and_guards_formula_titles():
     from openpyxl import load_workbook
 

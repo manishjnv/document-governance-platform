@@ -16,7 +16,9 @@ scanner's own finding prose, trimmed to fit. No LLM call here.
 import io
 import re
 
-from app.codereview.report_xlsx import _CODE_RE, _FIX_RE, _RISK_RE, _sentences
+from app.codereview.report_xlsx import (
+    FIX_STATUS_LABELS, FIX_TESTS_LABELS, _CODE_RE, _FIX_RE, _RISK_RE, _sentences,
+)
 from app.mitre.report_common import resolve_branding
 
 _PURPLE = "341954"
@@ -111,6 +113,7 @@ def build_pptx_export(review) -> bytes:
     fp_count = sum(1 for f in findings if f.get("verdict") == "FALSE_POSITIVE")
     files_hit = len({f.get("file") for f in findings if f.get("file")})
     title_by_idx = {f.get("idx"): f for f in findings}
+    run_extras = report.get("run_extras") or None
     git_sha_short = (review.git_sha or "")[:8]
     created = str(review.created_at or "")[:10]
     tool_version = (manifest.get("tool_version") or report.get("tool_version") or "")
@@ -635,14 +638,57 @@ def build_pptx_export(review) -> bytes:
           P([R(f"Confirm or dismiss the {fp_count} verifier-rejected finding(s), re-run the scan, "
                "and compare counts.", size=9)])])
 
+    # ------------------------------------------------------- fix status
+    if run_extras and run_extras.get("mode") == "fix":
+        s = slide()
+        chrome(s, "Fix Status — What the Scanner Attempted",
+               "Attempted fixes from the run folder, the scanner's own accept/reject policy, and whether tests broke")
+        fix_counts = run_extras.get("fix_counts") or {}
+        tile_order = ["fixed", "patch_rejected", "needs_review", "not_fixed", "not_attempted"]
+        tile_colors = {"fixed": _TEAL, "patch_rejected": _AMBER, "needs_review": _ROSE,
+                       "not_fixed": _RED_D, "not_attempted": _MUTED}
+        tiles = [(status, n) for status in tile_order if (n := fix_counts.get(status))]
+        tw = min(2.18, 9.10 / max(len(tiles), 1) - 0.10)
+        for i, (status, n) in enumerate(tiles):
+            stat_tile(s, 0.45 + i * (tw + 0.10), 1.18, tw, 1.10, str(n),
+                      FIX_STATUS_LABELS.get(status, status), tile_colors.get(status, _PURPLE))
+        attempted = [f for f in findings if (f.get("fix") or {}).get("status") in ("fixed", "patch_rejected")]
+        attempted.sort(key=lambda f: (f["fix"].get("tests") != "broke_tests", f["fix"].get("status") != "fixed"))
+        max_rows = 6  # what fits under the tiles, even with two-line titles; the Excel "Fixes" sheet has every row
+        more = len(attempted) - max_rows
+        attempted = attempted[:max_rows]
+        heading = "Attempted fixes" + (f" (first {max_rows}; {more} more in the Excel 'Fixes' sheet)" if more > 0 else "")
+        text(s, 0.45, 2.46, 9.10, 0.28, [P([R(heading, bold=True, color=_PURPLE, size=12)])])
+        rows = 1 + max(len(attempted), 1)
+        tbl = s.shapes.add_table(rows, 4, Inches(0.45), Inches(2.78), Inches(9.10), Inches(0.30 * rows)).table
+        for ci, h in enumerate(("#", "Finding", "Fix status", "Tests after fix")):
+            tbl.cell(0, ci).text = h
+        if attempted:
+            for ri, f in enumerate(attempted, start=1):
+                fix = f.get("fix") or {}
+                broke = fix.get("tests") == "broke_tests"
+                set_cell(tbl.cell(ri, 0), f.get("idx", ri), align=PP_ALIGN.CENTER)
+                set_cell(tbl.cell(ri, 1), _trim(f.get("title"), 60), color=_PURPLE, bold=True)
+                set_cell(tbl.cell(ri, 2), FIX_STATUS_LABELS.get(fix.get("status"), fix.get("status") or "—"))
+                tests_txt = FIX_TESTS_LABELS.get(fix.get("tests"), "—")
+                if broke:
+                    tests_txt = f"{tests_txt} — do not treat as fixed"
+                tests_color = _RED_D if broke else (_GREEN_D if fix.get("tests") == "passed" else _MUTED)
+                set_cell(tbl.cell(ri, 3), tests_txt, color=tests_color, bold=broke,
+                         fill_=("FFE4E6" if broke else None))
+        else:
+            tbl.cell(1, 0).text = "No fixes were attempted."
+        style_table(tbl, [0.40, 3.30, 2.60, 2.80], row_h=0.32)
+
     # ---------------------------------------------- coverage & confidence
     s = slide()
     chrome(s, "Scan Coverage & Confidence — How Much to Trust This",
            "What was analysed, how the scanner checked itself, and the limits of an automated review")
-    in_scope = metrics.get("total_files_in_scope")
-    analysed = metrics.get("analyzed_files_unique")
+    run_cov = ((run_extras or {}).get("coverage") or {})
+    in_scope = metrics.get("total_files_in_scope") or run_cov.get("files_in_scope")
+    analysed = metrics.get("analyzed_files_unique") or run_cov.get("files_analyzed")
     cov_pct = f"{round(100 * analysed / in_scope)}%" if in_scope and analysed else "—"
-    dur = metrics.get("duration_sec")
+    dur = metrics.get("duration_sec") or run_cov.get("duration_sec")
     ctiles = [
         (str(in_scope or "—"), "files in scope", _PURPLE, f"{analysed or '—'} analysed ({cov_pct})"),
         (f"{round(dur / 60)} min" if dur else "—", "scan duration", _LAVENDER,
@@ -651,8 +697,21 @@ def build_pptx_export(review) -> bytes:
         (str(report.get("raw_findings_count") or total), "raw candidates", _MAGENTA,
          f"{report.get('dropped_count') or 0} dropped by triage → {total} kept"),
     ]
+    ctile_h = 1.00 if run_extras else 1.22
     for i, (big, label, color, sub) in enumerate(ctiles):
-        stat_tile(s, 0.45 + i * 2.32, 1.18, 2.18, 1.22, big, label, color, sub)
+        stat_tile(s, 0.45 + i * 2.32, 1.18, 2.18, ctile_h, big, label, color, sub)
+    if run_extras:
+        # ponytail: one compact strip (not a redesigned layout) — the slide has
+        # no spare real estate, so the run note + build status + health bullets
+        # are joined into a single trimmed line rather than stacked.
+        cov = run_extras.get("coverage") or {}
+        tests = run_extras.get("tests") or {}
+        bits = [f"{run_extras.get('deep_verified', 0)} of {run_extras.get('total', total)} findings deep-verified"]
+        if tests.get("build"):
+            bits.append(f"test build: {tests['build']}")
+        bits.extend((cov.get("health") or [])[:3])
+        text(s, 0.45, 2.22, 9.10, 0.30,
+             [P([R(_trim(" · ".join(bits), 190), color=_GREY, size=8.5, autonum=False)])])
     loc = metrics.get("loc_scanned_by_language") or {}
     loc_items = sorted(((k, v) for k, v in loc.items() if v), key=lambda kv: -kv[1])[:6]
     text(s, 0.45, 2.58, 4.40, 0.28, [P([R("Lines analysed by language", bold=True, color=_PURPLE, size=12)])])

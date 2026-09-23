@@ -47,6 +47,21 @@ _STATUS_FILLS = {
     "False positive": ("F1F5F9", "475569"),
 }
 
+# Run-extras display labels (contract §"Display labels", shared by XLSX/PPTX/web).
+FIX_STATUS_LABELS = {
+    "fixed": "Fixed (scanner accepted)",
+    "patch_rejected": "Patch rejected by scanner policy",
+    "needs_review": "Not fixed: needs manual review",
+    "not_fixed": "Not fixed",
+    "not_attempted": "Not attempted (report-only run)",
+}
+FIX_TESTS_LABELS = {
+    "broke_tests": "Fix broke a test",
+    "passed": "Tests passed",
+    "not_tested": "No test results for this code",
+    "no_test_results": "No test results uploaded",
+}
+
 # Highlighting: single source of truth is highlight_words.json (next to this
 # file); the web drawer's highlightWords.ts is GENERATED from it by
 # scripts/generate_highlight_words.py, and test_codereview_report.py fails
@@ -166,6 +181,8 @@ def build_xlsx_export(review) -> bytes:
     metrics = report.get("metrics") or {}
     manifest = report.get("manifest") or {}
     title_by_idx = {f.get("idx"): f.get("title") for f in findings}
+    run_extras = report.get("run_extras") or None
+    fix_findings = [f for f in findings if (f.get("fix") or {}).get("status") not in (None, "not_attempted")]
 
     wb = Workbook()
     thin = Side(style="thin", color="D6D0E0")
@@ -250,6 +267,14 @@ def build_xlsx_export(review) -> bytes:
          "Findings produced by Visa Vulnerability Agentic Harness (Apache-2.0). "
          "ScopeSense consumes its output only; no VVAH code is vendored."],
     ]
+    if run_extras:
+        readme_rows.append([
+            "Scanner run extras",
+            "This upload included the scanner's full run folder, so some findings also carry a deep "
+            "analysis and (in fix mode) an attempted patch with test results — see the Deep-verified, "
+            "Fix status and Tests after fix columns in the Findings Register, the Fixes sheet (attempted "
+            "fixes) and the Scan Coverage sheet (coverage, health and test-build detail).",
+        ])
     ws_rm = sheet("Read Me", ["How to read this workbook", ""], readme_rows,
                   [38, 100], first=True, filters=False, borders=False, tab=BRAND)
     for row in ws_rm.iter_rows(min_row=2, max_col=1):
@@ -295,11 +320,20 @@ def build_xlsx_export(review) -> bytes:
             sum_rows.append([f"Model - {role}", model.get("id")])
         if manifest.get("total_cost_usd") is not None:
             sum_rows.append(["Total cost (USD)", manifest["total_cost_usd"]])
+    if run_extras:
+        sum_rows.append([])
+        sum_rows.append(["Scanner run extras", ""])
+        sum_rows.append(["Deep-verified findings", f"{run_extras.get('deep_verified', 0)} of {run_extras.get('total', len(findings))}"])
+        for status, n in (run_extras.get("fix_counts") or {}).items():
+            sum_rows.append([FIX_STATUS_LABELS.get(status, status), n])
+        tests = run_extras.get("tests") or {}
+        if tests.get("build"):
+            sum_rows.append(["Test build status", tests["build"].title()])
     ws_sum = sheet("Summary", ["Metric", "Value"], sum_rows, [42, 26], filters=False, tab=ACCENT)
     for row in ws_sum.iter_rows(min_row=2, max_col=2):
         label, value = row
         key = str(label.value or "")
-        if key in ("Counts by severity", "Counts by vulnerability type", "Scan metrics", "Scan run details"):
+        if key in ("Counts by severity", "Counts by vulnerability type", "Scan metrics", "Scan run details", "Scanner run extras"):
             for c in row:
                 c.fill = fill(SECTION)
                 c.font = Font(bold=True, size=10.5, color=BRAND)
@@ -325,6 +359,10 @@ def build_xlsx_export(review) -> bytes:
         "Preconditions", "Code", "Source → Sink", "Also at",
         "Owner", "Status", "Target date", "Notes",
     ]
+    widths = [5, 11, 34, 18, 10, 7, 10, 11, 7, 15, 30, 10, 48, 40, 44, 44, 34, 40, 34, 26, 14, 14, 12, 28]
+    if run_extras:
+        reg_headers = reg_headers + ["Deep-verified", "Fix status", "Tests after fix"]
+        widths = widths + [12, 30, 34]
     reg_rows = []
     for f in findings:
         dupes = "\n".join(
@@ -333,7 +371,7 @@ def build_xlsx_export(review) -> bytes:
         source_sink = " → ".join(x for x in (f.get("source_ref"), f.get("sink_ref")) if x)
         lines = f"{f.get('line_start')}-{f.get('line_end')}"
         pre = f.get("preconditions") or []
-        reg_rows.append([
+        row = [
             f.get("idx"), (f.get("severity") or "").title(), f.get("title"),
             f.get("vuln_class_label") or f.get("vuln_class"), f.get("cwe"),
             f.get("cvss_score"), f.get("cvss_rating"), f.get("confidence"),
@@ -343,8 +381,18 @@ def build_xlsx_export(review) -> bytes:
             _rich("\n".join("• " + p for p in pre), bullets=False) if pre else "",
             f.get("code_snippet"), source_sink, dupes,
             "", "Open", "", "",
-        ])
-    widths = [5, 11, 34, 18, 10, 7, 10, 11, 7, 15, 30, 10, 48, 40, 44, 44, 34, 40, 34, 26, 14, 14, 12, 28]
+        ]
+        if run_extras:
+            fix = f.get("fix") or {}
+            tests_label = FIX_TESTS_LABELS.get(fix.get("tests"), "")
+            if fix.get("tests") == "broke_tests" and fix.get("tests_detail"):
+                tests_label = f"{tests_label}: {fix['tests_detail']}"
+            row += [
+                "Yes" if f.get("deep") else "No",
+                FIX_STATUS_LABELS.get(fix.get("status"), ""),
+                tests_label,
+            ]
+        reg_rows.append(row)
     ws_reg = sheet("Findings Register", reg_headers, reg_rows, widths, tab="B02830")
     text_cols = {13, 14, 15, 16, 17, 18}
     for row in ws_reg.iter_rows(min_row=2):
@@ -371,6 +419,15 @@ def build_xlsx_export(review) -> bytes:
         row[19].font = Font(name="Consolas", size=9.5, color=MUTED)  # also at
         row[21].alignment = center
         chip(row[21], _STATUS_FILLS["Open"], bold=False)
+        if run_extras:
+            deep_cell, fix_cell, tests_cell = row[24], row[25], row[26]
+            deep_cell.alignment = center
+            broke = "Fix broke a test" in str(tests_cell.value or "")
+            if broke:
+                warn = _SEVERITY_FILLS["critical"]
+                chip(fix_cell, warn, bold=True)
+                chip(tests_cell, warn, bold=True)
+                tests_cell.alignment = top_left
         # row height from the longest wrapped text cell (~ chars per line at the column width)
         longest = 1
         for col in text_cols:
@@ -450,6 +507,100 @@ def build_xlsx_export(review) -> bytes:
     else:
         ws_ch.append(["", "No exploit chains reported", "", "", "The scanner did not link any findings together.", ""])
     ws_ch.freeze_panes = "A3"
+
+    # ------------------------------------------------------------------ Fixes
+    if fix_findings:
+        fx_headers = ["#", "Title", "Severity", "Fix status", "Tests after fix",
+                      "Files changed", "Root cause", "Remaining risks", "Patch"]
+        fx_widths = [5, 32, 11, 30, 30, 30, 40, 40, 60]
+        fx_rows = []
+        for f in fix_findings:
+            fix = f.get("fix") or {}
+            deep = f.get("deep") or {}
+            tests_label = FIX_TESTS_LABELS.get(fix.get("tests"), "")
+            if fix.get("tests") == "broke_tests" and fix.get("tests_detail"):
+                tests_label = f"{tests_label}: {fix['tests_detail']}"
+            patch = fix.get("patch") or ""
+            if len(patch) > 32000:
+                patch = patch[:32000] + "... (truncated)"
+            fx_rows.append([
+                f.get("idx"), f.get("title"), (f.get("severity") or "").title(),
+                FIX_STATUS_LABELS.get(fix.get("status"), fix.get("status") or ""),
+                tests_label,
+                "\n".join(fix.get("files") or []),
+                deep.get("root_cause") or "",
+                "\n".join(deep.get("remaining_risks") or []),
+                patch,
+            ])
+        ws_fx = sheet("Fixes", fx_headers, fx_rows, fx_widths, tab=ACCENT)
+        for row in ws_fx.iter_rows(min_row=2):
+            idx, title, sev, status, tests_after, files_, root_cause, risks, patch_cell = row
+            idx.alignment = center
+            title.font = bold_ink
+            colors = _SEVERITY_FILLS.get(str(sev.value or "").lower())
+            if colors:
+                chip(sev, colors)
+            if "Fix broke a test" in str(tests_after.value or ""):
+                warn = _SEVERITY_FILLS["critical"]
+                chip(status, warn, bold=True)
+                chip(tests_after, warn, bold=True)
+                tests_after.alignment = top_left
+            patch_cell.font = Font(name="Consolas", size=8.5, color=INK)
+            patch_cell.alignment = top_left
+            longest = max(1, str(patch_cell.value or "").count("\n") + 1, -(-_plain_len(patch_cell.value) // 90))
+            ws_fx.row_dimensions[row[0].row].height = min(409, 14 * longest + 6)
+        ws_fx.freeze_panes = "A2"
+
+    # ------------------------------------------------------------ Scan Coverage
+    if run_extras:
+        cov = run_extras.get("coverage") or {}
+        tests = run_extras.get("tests") or {}
+        cov_rows = [
+            ["Deep-verified run", ""],
+            [f"{run_extras.get('deep_verified', 0)} of {run_extras.get('total', len(findings))} findings were "
+             "deep-verified by the scanner (its top findings by CVSS); the rest come from the first review "
+             "pass only.", ""],
+        ]
+        if cov:
+            cov_rows.append([])
+            cov_rows.append(["Coverage metrics", ""])
+            for label, key in (
+                ("Coverage %", "coverage_pct"), ("Files in scope", "files_in_scope"),
+                ("Files analyzed", "files_analyzed"), ("Chunks", "chunks"),
+            ):
+                if cov.get(key) is not None:
+                    cov_rows.append([label, cov[key]])
+            if cov.get("health"):
+                cov_rows.append([])
+                cov_rows.append(["Scan health", ""])
+                for line in cov["health"]:
+                    cov_rows.append([line, ""])
+            if cov.get("threat_model"):
+                cov_rows.append([])
+                cov_rows.append(["Threat model", ""])
+                cov_rows.append([cov["threat_model"], ""])
+        if tests:
+            cov_rows.append([])
+            cov_rows.append(["Test summary", ""])
+            for label, key in (
+                ("Build", "build"), ("Suites", "suites"), ("Cases", "cases"),
+                ("Failures", "failures"), ("Errors", "errors"), ("Skipped", "skipped"),
+            ):
+                if tests.get(key) is not None:
+                    cov_rows.append([label, tests[key]])
+            for fc in tests.get("failing") or []:
+                cov_rows.append([f"Failing: {fc.get('test')}", fc.get("message") or ""])
+            if tests.get("not_run_modules"):
+                cov_rows.append(["Modules not tested", ", ".join(tests["not_run_modules"])])
+        ws_cov = sheet("Scan Coverage", ["Item", "Detail"], cov_rows, [40, 70], filters=False, tab=ACCENT)
+        section_labels = ("Coverage metrics", "Scan health", "Threat model", "Test summary")
+        for row in ws_cov.iter_rows(min_row=2, max_col=2):
+            label, _detail = row
+            key = str(label.value or "")
+            if key in section_labels or key == "Deep-verified run":
+                for c in row:
+                    c.fill = fill(SECTION)
+                    c.font = Font(bold=True, size=10.5, color=BRAND)
 
     wb.properties.title = f"{review.name} - Code Security Review"
     wb.properties.creator = branding.get("report_display_name") or "ScopeSense"
