@@ -63,6 +63,38 @@ def _trim(value, length=300):
     return cut.rstrip(",;:") + "…"
 
 
+def _tail(path, length):
+    """Keep the end of a long path (file name + nearest folders) on one line."""
+    path = "" if path is None else str(path)
+    return path if len(path) <= length else "…" + path[-(length - 1):]
+
+
+# Short fix labels for table cells and pills (full labels: FIX_STATUS_LABELS).
+_FIX_SHORT = {
+    "fixed": "Fixed",
+    "patch_rejected": "Patch rejected",
+    "needs_review": "Needs review",
+    "not_fixed": "Not fixed",
+    "not_attempted": "Not attempted",
+}
+
+
+def _cwe_id(cwe):
+    """'CWE-287 - Improper Authentication' -> 'CWE-287' (the name lives in the Excel)."""
+    return (cwe or "").split(" - ")[0].split(":")[0].strip()
+
+
+def _fix_cell(fix):
+    """(text, colour, bold) for a finding's fix status; a broken fix is never shown as fixed."""
+    if not fix:
+        return "—", _MUTED, False
+    if fix.get("tests") == "broke_tests":
+        return "Fix broke a test", _RED_D, True
+    status = fix.get("status")
+    colour = {"fixed": _GREEN_D, "patch_rejected": _AMBER, "needs_review": _ROSE, "not_fixed": _RED_D}.get(status, _MUTED)
+    return _FIX_SHORT.get(status, status or "—"), colour, status == "fixed"
+
+
 def _first_sentences(text, n=2, cap=260):
     return _trim(" ".join(_sentences(text or "")[:n]), cap)
 
@@ -409,12 +441,28 @@ def build_pptx_export(review) -> bytes:
     ]
     for i, (big, label, color, sub) in enumerate(tiles):
         stat_tile(s, 0.45 + i * 1.86, 1.22, 1.74, 1.22, big, label, color, sub)
+    fix_mode = bool(run_extras and run_extras.get("mode") == "fix")
+    y0 = 2.62
+    if fix_mode:
+        # fix-status strip: counts from the uploaded run folder, broken fixes called out
+        broke = sum(1 for f in findings if (f.get("fix") or {}).get("tests") == "broke_tests")
+        counts = run_extras.get("fix_counts") or {}
+        runs = [R("Fix status  ", bold=True, color=_PURPLE, size=10)]
+        for key, colour in (("fixed", _GREEN_D), ("patch_rejected", _AMBER), ("needs_review", _ROSE), ("not_fixed", _RED_D)):
+            if counts.get(key):
+                runs += [R(f"{counts[key]} ", bold=True, color=colour, size=10),
+                         R(f"{_FIX_SHORT[key].lower()}    ", color=_GREY, size=9.5, autonum=False)]
+        if broke:
+            runs += [R(f"{broke} fix broke a test — do not treat as fixed", bold=True, color=_RED_D, size=9.5, autonum=False)]
+        text(s, 0.45, 2.52, 9.10, 0.26, [P(runs)])
+        y0 = 2.84
     top3 = findings[:3]
-    text(s, 0.45, 2.62, 9.10, 0.30, [P([R("Start here — the three most severe findings", bold=True, color=_PURPLE, size=12.5)])])
+    step = 0.70 if fix_mode else 0.74
+    text(s, 0.45, y0, 9.10, 0.30, [P([R("Start here — the three most severe findings", bold=True, color=_PURPLE, size=12.5)])])
     for i, f in enumerate(top3):
-        y = 2.98 + i * 0.74
+        y = y0 + 0.36 + i * step
         sev = f.get("severity") or "info"
-        card(s, 0.45, y, 9.10, 0.66, _SEV[sev][0], "FFFFFF")
+        card(s, 0.45, y, 9.10, step - 0.08, _SEV[sev][0], "FFFFFF")
         chip(s, 0.62, y + 0.19, 0.90, 0.28, sev.title(), sev)
         text(s, 1.62, y + 0.06, 5.60, 0.30,
              [P([R(f"#{f.get('idx')}  ", bold=True, color=_MUTED, size=11),
@@ -423,9 +471,9 @@ def build_pptx_export(review) -> bytes:
              [P(rich_runs(_first_sentences(f.get("impact") or f.get("description"), 1, 110), 9))])
         cv = f.get("cvss_score")
         text(s, 7.35, y + 0.08, 2.10, 0.52, [
-            P([R(f"{f.get('file')}:{f.get('line_start')}", color=_BLUE, size=8.5, mono=True)]),
+            P([R(f"{_trim((f.get('file') or '').split('/')[-1], 24)}:{f.get('line_start')}", color=_BLUE, size=8.5, mono=True)]),
             P([R("CVSS " + (f"{cv:.1f}" if cv is not None else "—"), bold=True, color=_SEV[sev][0], size=9.5),
-               R(f"   {f.get('cwe') or ''}", color=_MUTED, size=8.5, autonum=False)]),
+               R(f"   {_cwe_id(f.get('cwe'))}", color=_MUTED, size=8.5, autonum=False)]),
         ])
 
     # ------------------------------------------------------- 3 · risk profile
@@ -464,8 +512,10 @@ def build_pptx_export(review) -> bytes:
     chrome(s, "Findings at a Glance",
            f"Top {len(top)} of {total}, sorted by severity then CVSS · full register with tracker columns in the XLSX")
     rows = 1 + max(len(top), 1)
-    tbl = s.shapes.add_table(rows, 7, Inches(0.45), Inches(1.18), Inches(9.10), Inches(0.30 * rows)).table
-    for ci, h in enumerate(("#", "Severity", "Finding", "Type", "File : line", "CVSS", "Verdict")):
+    has_fix = any(f.get("fix") for f in findings)
+    heads = ("#", "Severity", "Finding", "Type", "File : line", "CVSS", "Verdict") + (("Fix",) if has_fix else ())
+    tbl = s.shapes.add_table(rows, len(heads), Inches(0.45), Inches(1.18), Inches(9.10), Inches(0.30 * rows)).table
+    for ci, h in enumerate(heads):
         tbl.cell(0, ci).text = h
     if top:
         for ri, f in enumerate(top, start=1):
@@ -473,17 +523,21 @@ def build_pptx_export(review) -> bytes:
             solid, bg, fg = _SEV[sev]
             set_cell(tbl.cell(ri, 0), f.get("idx", ri), align=PP_ALIGN.CENTER)
             set_cell(tbl.cell(ri, 1), sev.title(), color=fg, bold=True, align=PP_ALIGN.CENTER, fill_=bg)
-            set_cell(tbl.cell(ri, 2), _trim(f.get("title"), 62), color=_PURPLE, bold=True)
+            set_cell(tbl.cell(ri, 2), _trim(f.get("title"), 54 if has_fix else 62), color=_PURPLE, bold=True)
             set_cell(tbl.cell(ri, 3), _trim(f.get("vuln_class_label") or f.get("vuln_class"), 22))
-            set_cell(tbl.cell(ri, 4), f"{_trim(f.get('file'), 34)}:{f.get('line_start')}", color=_BLUE, mono=True)
+            set_cell(tbl.cell(ri, 4), f"{_trim((f.get('file') or '').split('/')[-1], 28 if has_fix else 34)}:{f.get('line_start')}", color=_BLUE, mono=True)
             cv = f.get("cvss_score")
             set_cell(tbl.cell(ri, 5), "—" if cv is None else f"{cv:.1f}", color=solid, bold=True, align=PP_ALIGN.CENTER)
             v = f.get("verdict")
             set_cell(tbl.cell(ri, 6), "Confirmed" if v == "TRUE_POSITIVE" else ("False positive" if v == "FALSE_POSITIVE" else "—"),
                      color=_GREEN_D if v == "TRUE_POSITIVE" else _MUTED, bold=v == "TRUE_POSITIVE", align=PP_ALIGN.CENTER)
+            if has_fix:
+                ftxt, fcol, fbold = _fix_cell(f.get("fix"))
+                set_cell(tbl.cell(ri, 7), ftxt, color=fcol, bold=fbold, align=PP_ALIGN.CENTER)
     else:
         tbl.cell(1, 0).text = "No findings reported."
-    style_table(tbl, [0.40, 0.95, 3.05, 1.30, 2.05, 0.55, 0.80], row_h=0.30)
+    style_table(tbl, [0.40, 0.85, 2.60, 1.15, 1.75, 0.50, 0.80, 1.05] if has_fix
+                else [0.40, 0.95, 3.05, 1.30, 2.05, 0.55, 0.80], row_h=0.30)
 
     # --------------------------------------------- 5 · divider · critical findings
     spot = [f for f in findings if f.get("severity") == "critical"][:6] or findings[:2]
@@ -510,18 +564,24 @@ def build_pptx_export(review) -> bytes:
                  [P([R(f"#{f.get('idx')}  ", bold=True, color=_MUTED, size=10),
                      R(_trim(f.get("title"), 70), bold=True, color=_PURPLE, size=11)])], anchor=MSO_ANCHOR.MIDDLE)
             cv = f.get("cvss_score")
-            facts = [R(f"{f.get('file')}:{f.get('line_start')}-{f.get('line_end')}", color=_BLUE, size=8.5, mono=True),
+            # one line only: a wrapped path used to run into "WHAT IS WRONG" below
+            facts = [R(f"{_tail(f.get('file'), 38)}:{f.get('line_start')}", color=_BLUE, size=8.5, mono=True),
                      R(f"   CVSS {cv:.1f}" if cv is not None else "", bold=True, color=_SEV[sev][0], size=9),
-                     R(f"   {f.get('cwe') or ''}", color=_MUTED, size=8.5, autonum=False)]
+                     R(f"   {_cwe_id(f.get('cwe'))}", color=_MUTED, size=8.5, autonum=False)]
             if f.get("verdict") == "TRUE_POSITIVE":
-                facts.append(R("   ✓ verifier-confirmed", bold=True, color=_GREEN_D, size=8.5))
+                facts.append(R("  ✓", bold=True, color=_GREEN_D, size=8.5))
             text(s, x + 0.16, 1.86, w - 0.32, 0.24, [P(facts)])
             y = 2.14
             for head, key, fix, color in (("WHAT IS WRONG", "description", False, _RED_D),
                                            ("WHY IT MATTERS", "impact", False, _AMBER),
                                            ("HOW TO FIX", "recommendation", True, _GREEN_D)):
                 rect(s, x + 0.16, y + 0.02, w - 0.32, 0.015, "E3DEEB")
-                text(s, x + 0.16, y + 0.06, w - 0.32, 0.20, [P([R(head, bold=True, color=color, size=8.5)])])
+                head_runs = [R(head, bold=True, color=color, size=8.5)]
+                if fix and f.get("fix"):
+                    ftxt, fcol, fbold = _fix_cell(f.get("fix"))
+                    head_runs += [R("   Scanner fix: ", color=_MUTED, size=8, autonum=False),
+                                  R(ftxt, bold=True, color=fcol, size=8, autonum=False)]
+                text(s, x + 0.16, y + 0.06, w - 0.32, 0.20, [P(head_runs)])
                 body = bullets(f.get(key), size=9, fix=fix, n=2, cap=125, gap=1)
                 text(s, x + 0.16, y + 0.28, w - 0.32, 0.70, body)
                 y += 1.02
@@ -609,6 +669,11 @@ def build_pptx_export(review) -> bytes:
         set_cell(tbl.cell(ri, 3), hits or "—", color=_MAGENTA if hits else _MUTED, bold=bool(hits), align=PP_ALIGN.CENTER)
         # plain cell (no rich runs) — drop markdown backticks so code reads as prose
         set_cell(tbl.cell(ri, 4), _first_sentences(f.get("recommendation"), 1, 95).replace("`", ""))
+        if f.get("fix"):
+            ftxt, fcol, _b = _fix_cell(f.get("fix"))
+            p4 = tbl.cell(ri, 4).text_frame.add_paragraph()
+            _add_run(p4, "Scanner fix: ", 8, False, _MUTED)
+            _add_run(p4, ftxt, 8, True, fcol)
     if not plan:
         tbl.cell(1, 0).text = "Nothing to remediate."
     style_table(tbl, [0.35, 0.80, 2.15, 0.70, 2.30], body_size=8.5, row_h=0.44)
@@ -638,48 +703,6 @@ def build_pptx_export(review) -> bytes:
           P([R(f"Confirm or dismiss the {fp_count} verifier-rejected finding(s), re-run the scan, "
                "and compare counts.", size=9)])])
 
-    # ------------------------------------------------------- fix status
-    if run_extras and run_extras.get("mode") == "fix":
-        s = slide()
-        chrome(s, "Fix Status — What the Scanner Attempted",
-               "Attempted fixes from the run folder, the scanner's own accept/reject policy, and whether tests broke")
-        fix_counts = run_extras.get("fix_counts") or {}
-        tile_order = ["fixed", "patch_rejected", "needs_review", "not_fixed", "not_attempted"]
-        tile_colors = {"fixed": _TEAL, "patch_rejected": _AMBER, "needs_review": _ROSE,
-                       "not_fixed": _RED_D, "not_attempted": _MUTED}
-        tiles = [(status, n) for status in tile_order if (n := fix_counts.get(status))]
-        tw = min(2.18, 9.10 / max(len(tiles), 1) - 0.10)
-        for i, (status, n) in enumerate(tiles):
-            stat_tile(s, 0.45 + i * (tw + 0.10), 1.18, tw, 1.10, str(n),
-                      FIX_STATUS_LABELS.get(status, status), tile_colors.get(status, _PURPLE))
-        attempted = [f for f in findings if (f.get("fix") or {}).get("status") in ("fixed", "patch_rejected")]
-        attempted.sort(key=lambda f: (f["fix"].get("tests") != "broke_tests", f["fix"].get("status") != "fixed"))
-        max_rows = 6  # what fits under the tiles, even with two-line titles; the Excel "Fixes" sheet has every row
-        more = len(attempted) - max_rows
-        attempted = attempted[:max_rows]
-        heading = "Attempted fixes" + (f" (first {max_rows}; {more} more in the Excel 'Fixes' sheet)" if more > 0 else "")
-        text(s, 0.45, 2.46, 9.10, 0.28, [P([R(heading, bold=True, color=_PURPLE, size=12)])])
-        rows = 1 + max(len(attempted), 1)
-        tbl = s.shapes.add_table(rows, 4, Inches(0.45), Inches(2.78), Inches(9.10), Inches(0.30 * rows)).table
-        for ci, h in enumerate(("#", "Finding", "Fix status", "Tests after fix")):
-            tbl.cell(0, ci).text = h
-        if attempted:
-            for ri, f in enumerate(attempted, start=1):
-                fix = f.get("fix") or {}
-                broke = fix.get("tests") == "broke_tests"
-                set_cell(tbl.cell(ri, 0), f.get("idx", ri), align=PP_ALIGN.CENTER)
-                set_cell(tbl.cell(ri, 1), _trim(f.get("title"), 60), color=_PURPLE, bold=True)
-                set_cell(tbl.cell(ri, 2), FIX_STATUS_LABELS.get(fix.get("status"), fix.get("status") or "—"))
-                tests_txt = FIX_TESTS_LABELS.get(fix.get("tests"), "—")
-                if broke:
-                    tests_txt = f"{tests_txt} — do not treat as fixed"
-                tests_color = _RED_D if broke else (_GREEN_D if fix.get("tests") == "passed" else _MUTED)
-                set_cell(tbl.cell(ri, 3), tests_txt, color=tests_color, bold=broke,
-                         fill_=("FFE4E6" if broke else None))
-        else:
-            tbl.cell(1, 0).text = "No fixes were attempted."
-        style_table(tbl, [0.40, 3.30, 2.60, 2.80], row_h=0.32)
-
     # ---------------------------------------------- coverage & confidence
     s = slide()
     chrome(s, "Scan Coverage & Confidence — How Much to Trust This",
@@ -697,30 +720,47 @@ def build_pptx_export(review) -> bytes:
         (str(report.get("raw_findings_count") or total), "raw candidates", _MAGENTA,
          f"{report.get('dropped_count') or 0} dropped by triage → {total} kept"),
     ]
-    ctile_h = 1.00 if run_extras else 1.22
+    ctile_h = 1.22
     for i, (big, label, color, sub) in enumerate(ctiles):
         stat_tile(s, 0.45 + i * 2.32, 1.18, 2.18, ctile_h, big, label, color, sub)
-    if run_extras:
-        # ponytail: one compact strip (not a redesigned layout) — the slide has
-        # no spare real estate, so the run note + build status + health bullets
-        # are joined into a single trimmed line rather than stacked.
-        cov = run_extras.get("coverage") or {}
-        tests = run_extras.get("tests") or {}
-        bits = [f"{run_extras.get('deep_verified', 0)} of {run_extras.get('total', total)} findings deep-verified"]
-        if tests.get("build"):
-            bits.append(f"test build: {tests['build']}")
-        bits.extend((cov.get("health") or [])[:3])
-        text(s, 0.45, 2.22, 9.10, 0.30,
-             [P([R(_trim(" · ".join(bits), 190), color=_GREY, size=8.5, autonum=False)])])
     loc = metrics.get("loc_scanned_by_language") or {}
     loc_items = sorted(((k, v) for k, v in loc.items() if v), key=lambda kv: -kv[1])[:6]
-    text(s, 0.45, 2.58, 4.40, 0.28, [P([R("Lines analysed by language", bold=True, color=_PURPLE, size=12)])])
+    text(s, 0.45, 2.58, 4.40, 0.28, [P([R("Lines analysed by language" if loc_items or not run_extras else "Scan run evidence",
+                                          bold=True, color=_PURPLE, size=12)])])
     if loc_items:
         ld = CategoryChartData()
         ld.categories = [k for k, _ in loc_items][::-1]
         ld.add_series("LOC", [v for _, v in loc_items][::-1])
         gf = s.shapes.add_chart(XL_CHART_TYPE.BAR_CLUSTERED, Inches(0.40), Inches(2.84), Inches(4.50), Inches(2.35), ld)
         style_chart(gf, number_format="#,##0", label_size=9, gap=35)
+    elif run_extras:
+        # no language metrics: use the space for what the uploaded run folder proves
+        cov = run_extras.get("coverage") or {}
+        tests = run_extras.get("tests") or {}
+        ev = [P([R(f"{run_extras.get('deep_verified', 0)} of {run_extras.get('total', total)}", bold=True, color=_PURPLE, size=9.5),
+                 R(" findings deep-verified by the scanner (its top findings by CVSS); the rest come from the first pass.",
+                   size=9, autonum=False)], space_after=4)]
+        if cov.get("chunks"):
+            ev.append(P([R("•  ", bold=True, color=_TEAL, size=9),
+                         R(f"{cov['chunks']:,} code chunks reviewed", size=9, autonum=False)], space_after=2))
+        if tests:
+            build = tests.get("build")
+            ev.append(P([R("•  ", bold=True, color=_TEAL, size=9), R("Tests after the fixes: ", size=9, autonum=False),
+                         R(f"build {build}" if build else "results uploaded", bold=True,
+                           color=_RED_D if build == "failure" else _GREEN_D, size=9, autonum=False),
+                         R(f" · {tests.get('cases', 0):,} cases, {tests.get('failures', 0) + tests.get('errors', 0)} failing",
+                           size=9, autonum=False)], space_after=2))
+            for fail in (tests.get("failing") or [])[:2]:
+                ev.append(P([R("     ", size=8.5), R(_trim(fail.get("test"), 60), color=_BLUE, size=8, mono=True)], space_after=1))
+            if tests.get("not_run_modules"):
+                mods = tests["not_run_modules"]
+                ev.append(P([R("•  ", bold=True, color=_TEAL, size=9), R("Not tested (build stopped first): ", size=9, autonum=False),
+                             R(_trim(", ".join(mods[:3]) + (f" +{len(mods) - 3} more" if len(mods) > 3 else ""), 110),
+                             color=_GREY, size=8.5, autonum=False)], space_after=2))
+        for line in (cov.get("health") or [])[:2]:
+            ev.append(P([R("•  ", bold=True, color=_AMBER, size=9), R(_trim(line, 150), size=8.5, autonum=False)], space_after=2))
+        card(s, 0.45, 2.90, 4.50, 2.29, _PURPLE, _CARD)
+        text(s, 0.61, 2.96, 4.20, 2.19, ev)
     else:
         text(s, 0.45, 2.90, 4.40, 0.40, [P([R("No per-language metrics in this report.", color=_MUTED, size=10, autonum=False)])])
     models = manifest.get("models") or {}
