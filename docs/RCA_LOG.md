@@ -848,3 +848,22 @@ keep chronological.)*
   real large-repo run (PowerPoint COM) after any slide change — the NodeGoat fixture's short
   paths never showed it.
 
+
+### 39. Code review page: table scrolled sideways, phone overflow, CWE links lost (2026-09-23, web)
+
+- **Symptom:** (a) on a SARIF run the findings table scrolled sideways inside the 1240 px page
+  (Title column cut off, Fix column off-screen); (b) at 390 px the page scrolled sideways (707 px,
+  then 392 px); (c) after a regex edit every CWE cell rendered as grey text instead of a link.
+- **Root cause:** (a) fixed-width `AppShell` plus duplicated long CWE names in Class and CWE
+  columns and a `truncate` (nowrap) folder line that sized the column to the full path;
+  (b) the class `<select>` sizes to its longest option (long SARIF CWE names) and the headline's
+  unbreakable file path; (c) a Python escape (`"\b"`) wrote a literal backspace byte into
+  `CWE_RE` in `FindingsTable.tsx`.
+- **Fix:** `apps/web/app/codereview/[reviewId]/page.tsx` `AppShell fullWidth`; `FindingsTable.tsx`
+  CWE id only (unanchored `CWE_RE`), file name + line first with a `line-clamp-1 break-all` folder
+  line, no `-0` end line, class select `w-full max-w-full sm:max-w-xs`; `ReviewBand.tsx` headline
+  `[overflow-wrap:anywhere]`.
+- **Prevention:** after any page change, measure `scrollWidth` vs `clientWidth` at 1440 and 390 on
+  a real large-repo review (headless Playwright with a short-lived token); edit TS/regex files
+  with the Edit tool or raw strings, never through non-raw Python string literals, and grep
+  touched files for control characters (`grep -P "[\x00-\x08]"`).
