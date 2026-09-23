@@ -16,6 +16,48 @@ const MANIFEST_EXTS = ['.json'];
 
 const KIT_VERSION = '1.4.0';
 
+// Stage names and limits from VVAH's docs/architecture.md; revisit on each kit upgrade.
+const ABOUT_SCANNER = [
+  {
+    title: 'What it is',
+    items: [
+      "Visa's open-source AI code scanner (VVAH, Apache-2.0)",
+      'Runs on your machine; AI calls go through your own OpenRouter key',
+      'Your code is sent to the AI model provider, never to ScopeSense',
+      'Reports vulnerabilities only; the kit does not change your code',
+    ],
+  },
+  {
+    title: 'Stages',
+    items: [
+      'Map: source-to-sink call graph, repo survey, threat model',
+      'Split: the code is cut into focused review chunks',
+      'Review: AI deep-dive per chunk, then evidence gates',
+      'Verify: adversarial true/false-positive check and CVSS score',
+      'Rank: duplicates merged, exploit chains linked, report + SARIF',
+    ],
+  },
+  {
+    title: 'What it finds',
+    items: [
+      'Auth and access-control gaps, injection, SSRF, path traversal',
+      'Weak crypto and certificate checks, secrets in logs, logic bugs',
+      'CI/CD and infrastructure-as-code risks',
+      'Each finding: CWE, CVSS, exploit scenario, fix and verification note',
+    ],
+  },
+  {
+    title: 'Limits',
+    items: [
+      'Findings are AI triage candidates: confirm before acting',
+      'Deepest data-flow tracing for Python, Java, C#, JS/TS; lighter for Go',
+      'No branch- or path-sensitive analysis',
+      'Large repos take hours and millions of tokens; the kit estimates cost first',
+      'Exploit chains need findings.json; a .sarif upload has none',
+    ],
+  },
+];
+
 const STEPS = [
   <>
     Unzip the kit, then run <code className="rounded-md border border-border bg-muted/50 px-1 font-mono text-xs">.\setup.cmd</code> (Windows, double-click works) or{' '}
@@ -360,6 +402,26 @@ export default function NewCodeReviewPage() {
             </div>
           </div>
         </div>
+
+        <section aria-labelledby="about-scanner" className="rounded-[10px] border border-border bg-card">
+          <div className="border-b border-border px-4 py-3">
+            <h3 id="about-scanner" className="text-sm font-semibold">About the scanner</h3>
+          </div>
+          <div className="grid gap-x-6 gap-y-4 p-4 md:grid-cols-2 [&>*]:min-w-0">
+            {ABOUT_SCANNER.map((group) => (
+              <div key={group.title}>
+                <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  {group.title}
+                </p>
+                <ul className="list-disc space-y-1 pl-4 text-[13px] leading-snug text-foreground marker:text-muted-foreground">
+                  {group.items.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
       </TooltipProvider>
     </AppShell>
