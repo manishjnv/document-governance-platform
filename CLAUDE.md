@@ -131,8 +131,8 @@ last incident.
 ## Testing
 
 - Full backend suite: `cd apps/api && python -m pytest` — baseline is
-  **998 passed, 7 skipped** (measured 2026-09-23 after the SARIF narrative
-  import + kit LF test, 8 min 16 s solo on edgp_test; 996 on 2026-09-20 after the
+  **999 passed, 7 skipped** (measured 2026-09-23 after the VVAH 1.4.0 kit
+  pin test, 8 min 14 s solo on edgp_test; 998 after the SARIF narrative import; 996 on 2026-09-20 after the
   ScopeSense rename; previously 985 passed, 7 skipped, measured 2026-09-12 after the Code Security
   Review highlight-words single-source + VVAH schema-contract tests, +12
   over the same-day kit baseline of 973, +44 over the 2026-08-20 RCA #21
@@ -144,6 +144,13 @@ last incident.
   update this line when new tests land.
 - Frontend type-check: `cd apps/web && npx tsc --noEmit` — must be clean
   before committing any frontend change.
+- CI (`.github/workflows/ci-cd.yml`, since 2026-09-23): every push/PR to
+  `master` touching `apps/**` runs the full backend suite on Python 3.11
+  (prod's version) against a fresh Postgres built from `migrations/*.sql`,
+  plus the frontend type-check. It deploys nothing. A red run on a
+  migration usually means a new `.sql` file breaks when applied in order
+  to an empty DB. `.github/workflows/vvah-kit-update.yml` is the weekly scan
+  kit upgrade PR (`CODE_REVIEW_MODULE_REFERENCE.md` §8).
 - Frontend visual sweep: `python apps/web/tests/ui_sweep.py --base http://localhost:3000`
   (dev server running) fails on any page that scrolls sideways at 1440/390 and writes
   screenshots to `apps/web/.sweep/`; run before committing a restyle. Per-screen label
