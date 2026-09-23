@@ -816,3 +816,21 @@ keep chronological.)*
 - **Prevention:** any new cross-product over uploaded data gets an index or a cap before merge;
   render new deck slides (PowerPoint COM) with a real run before shipping — the unit tests passed
   on all three.
+
+### 37. "Application error: a client-side exception" right after uploading a scan-run zip (2026-09-23, web)
+
+- **Symptom:** uploading `keycloak_fix_mode_run.zip` on /codereview/new showed Next's "Application
+  error: a client-side exception has occurred" instead of the review.
+- **Root cause (most likely; not reproducible afterwards):** the upload tab was loaded before the
+  17:30 IST deploy. The upload succeeded (201, review stored with all 25 fixes), then
+  `router.push` did a client-side navigation that asked for the old build's JS chunks, which the
+  new build no longer serves -> ChunkLoadError. A fresh headless session on the same review
+  opened the page, the drawer and every tab with zero console errors, and the stored JSONB types
+  matched the frontend types.
+- **Fix:** `apps/web/app/global-error.tsx`: a root error boundary that reloads once (30 s
+  sessionStorage guard against loops) on ChunkLoadError / "Loading chunk ... failed" /
+  "Failed to fetch dynamically imported module", and shows a plain Reload / Try again page for
+  any other error.
+- **Prevention:** every deploy leaves open tabs on the old build; the boundary now heals the
+  first navigation. When a client error is reported right after a deploy, reproduce with a fresh
+  browser before touching code (headless Playwright with a short-lived token worked here).
