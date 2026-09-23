@@ -75,3 +75,12 @@ docs/sample/project/
 # tracked; add a new fixture deliberately with `git add -f`.
 sample/
 docs/sample/
+
+# Office files are generated reports or input samples, not source. Tracked
+# exceptions stay tracked (apps/web/public/templates/*.xlsx, served as
+# downloads and rebuilt by scripts/generate_templates.py); a NEW template
+# must be added with `git add -f`.
+*.pptx
+*.ppt
+*.xlsx
+*.xls
