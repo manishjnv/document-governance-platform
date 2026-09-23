@@ -8,9 +8,8 @@ const nextConfig = {
   },
   env: {
     // Empty string is a valid, deliberate value: relative "/api/..." URLs make the
-    // browser call the API on whatever host the page was served from, so the same
-    // build works on scopewise.assessiq.in and scopesense.in during the dual-run
-    // (2026-09-12). Only an UNSET variable falls back to the local dev API.
+    // browser call the API on whatever host the page was served from (scopesense.in
+    // in prod). Only an UNSET variable falls back to the local dev API.
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000",
   },
   async redirects() {

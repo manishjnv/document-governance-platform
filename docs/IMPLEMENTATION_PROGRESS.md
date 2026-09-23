@@ -1468,6 +1468,13 @@ prevention), `docs/phases/prompts/PHASE_{3-7}_PROMPT.md` (scope-trim rationale p
 
 ## Next action
 
+0. **Risk remediation (2026-09-21 project review):** eight items with fix,
+   acceptance test and session order in
+   `docs/planning/RISK_REMEDIATION_PLAN.md`; kickoff
+   `docs/phases/prompts/RISK_REMEDIATION_PROMPT.md`. R8 redirect reverted 2026-09-23 (office proxy blocks scopesense.in; both hosts live until ~2026-10-23). Start with R1 (prod free
+   model is unmeasured). The items below predate that plan and several are
+   stale; R3 rewrites this file.
+
 1. **Manual browser click-through still open** for Projects/Versioning/
    Fix-verification flows, mandatory-project upload validation, seamless
    Google/OTP login, and the new marketing pages -- all deployed and

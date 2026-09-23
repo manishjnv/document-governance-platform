@@ -66,13 +66,78 @@ Code (commit `e83f435`, deployed): `apps/web/next.config.js` treats an **empty**
 
 Rollback: restore `Caddyfile.bak.<ts>` by truncate-write + reload; restore `.env.bak.<ts>`; rebuild web. The old host never depended on the new block, so a broken new block only affects `scopesense.in`.
 
-## 4. After ~30 days (target 2026-10-12) — end of dual-run
+## 4. End of dual-run: scopesense.in as the only URL
 
-- Caddy: replace the `scopewise.assessiq.in` block body with `redir https://scopesense.in{uri} 301` (keep its TLS/AOP stanza).
-- SEO: `apps/web/app/layout.tsx` `metadataBase`, `app/page.tsx` `baseUrl`, the JSON-LD `item`/`url` fields in `app/product/*` and `app/compare/*`, sitemap and robots → `https://scopesense.in`; resubmit the sitemap in GSC; add the new property in GSC/GA4.
-- Docs/kit: CLAUDE.md "Live deployment", `CODE_REVIEW_MODULE_REFERENCE.md` / `MITRE_MODULE_REFERENCE.md` URLs, the scan-kit README upload line, email templates if any mention the host.
-- Google OAuth: old origin can be removed after the redirect has been live for a while.
-- `.env`: `CORS_ORIGINS` / `ALLOWED_HOSTS` may drop the old host once the redirect is in place.
+**Owner decision 2026-09-21: bring this forward; do not wait for 2026-10-12.**
+Tracked as R8 in `RISK_REMEDIATION_PLAN.md`.
+
+**REVERTED 2026-09-23 08:55 UTC:** scopesense.in is blocked by the owner's
+office proxy, so the old host's proxy body was restored (backup
+`Caddyfile.bak.20260923T085528Z`, body re-inserted rather than restoring the
+whole file, validated, truncate-written, reloaded; both hosts 200). Dual-run
+resumes; new target for this section **~2026-10-23**. The step list below still
+applies when that date comes; step 6 doc edits were kept (docs already name
+scopesense.in as canonical, which is true).
+
+**Status 2026-09-21 07:52 UTC: steps 1-3 and 6 DONE (then reverted, above).** Backup
+`Caddyfile.bak.20260921T075229Z`; only the old block's body changed (diff was
+14 lines out, 2 in), validated, truncate-written, reloaded. Verified:
+`scopewise.assessiq.in/mitre?x=1` -> 301 `https://scopesense.in/mitre?x=1`,
+`/api/v1/health` -> 301, scopesense.in `/login` `/mitre` `/api/v1/health` 200,
+neighbours `assessiq.in` and `foxfiber.in` 200. **Step 1's traffic check could
+not be done**: Caddy has no access log enabled for these sites, so old-host
+usage in the prior week is unknown. **Open:** step 4 (owner: resubmit sitemap in
+GSC and Bing, try change of address) and step 5 (tighten, on or after
+2026-10-05).
+
+**What is given up.** The dual-run existed because office proxies may block a
+new domain. After the redirect, a user behind such a proxy cannot reach the app
+at all (the old host only answers with a 301 to the blocked one). Before step 2,
+check the last 7 days of Caddy access logs for the old host: if real signed-in
+traffic still arrives there, tell those users first.
+
+Steps, in order. Each is reversible until step 5.
+
+1. **Pre-check (read-only).** `curl -sI https://scopesense.in/login` is 200;
+   Google sign-in and email OTP both work on scopesense.in (OTP email links and
+   the OAuth redirect URI use the new host); `grep -c scopewise.assessiq.in` on
+   the old-host access log for the week.
+2. **Caddy 301.** On the VPS, in `/opt/ti-platform/caddy/Caddyfile`: back up
+   (`cp Caddyfile Caddyfile.bak.$(date -u +%Y%m%dT%H%M%SZ)`), replace only the
+   **body** of the `scopewise.assessiq.in` block with
+   `redir https://scopesense.in{uri} 301`, keeping its TLS / AOP stanza.
+   Validate the candidate (`docker exec ti-platform-caddy-1 caddy validate
+   --config /tmp/new --adapter caddyfile`), install by **truncate-write**
+   (`cat /tmp/new > Caddyfile`, never `mv`), then `caddy reload`. Touch no other
+   site block.
+3. **Verify.** `curl -sI https://scopewise.assessiq.in/mitre?x=1` returns 301
+   with `location: https://scopesense.in/mitre?x=1` (path and query kept);
+   `/api/v1/health` on the old host also 301s; scopesense.in still 200; one
+   other tenant on the same Caddy (for example an `assessiq` host) still 200.
+   A signed-in session does not carry over (cookies and localStorage are
+   per-host), so users sign in once more on the new host. Expected, not a bug.
+4. **Search engines.** Try Google Search Console "Change of address" and the
+   Bing equivalent; the old site is a subdomain under the `assessiq.in` Domain
+   property, so the tool may refuse it (unverified). If it does, the 301 plus
+   the canonical (on scopesense.in since 2026-09-20) is sufficient; resubmit the scopesense.in sitemap in GSC and Bing
+   Webmaster; confirm a GSC + GA4 property exists for scopesense.in.
+5. **Tighten, after the 301 has been live about 2 weeks.** Drop the old host
+   from `.env` `CORS_ORIGINS` / `ALLOWED_HOSTS` and rebuild; remove the old
+   origin and redirect URI from the Google OAuth client
+   `522377802447-…`. Keep the Caddy redirect block and the `*.assessiq.in` DNS
+   record indefinitely: old links, the scan-kit README and printed
+   deliverables still point there.
+6. **Code and docs.** `apps/web/next.config.js:12` comment (same-origin API
+   stays, it is still the right setting); CLAUDE.md "Live deployment", "Domain
+   routing" and the deploy smoke URL; `CODE_REVIEW_MODULE_REFERENCE.md:8`,
+   `MITRE_MODULE_REFERENCE.md:5`, `SEO_STRATEGY.md:8`, the two Sentinel plan
+   docs, and the scan-kit README upload line. Dated logs under `docs/phases/`
+   and `RCA_LOG.md` keep the old host.
+
+SEO signals (`metadataBase`, canonical, sitemap, robots, JSON-LD) moved on
+2026-09-20, see "Rename" below; nothing left to do there.
+
+Rollback for step 2: truncate-write the `Caddyfile.bak.<ts>` back and reload.
 
 ## 5. Gotchas learned
 

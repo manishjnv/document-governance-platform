@@ -19,15 +19,15 @@ sees. Dated session logs under `docs/phases/` keep the name they were written wi
 Legal) + a rule engine, per `docs/planning/4_AI_AGENT_SPECS.md`.
 
 - Public repo: github.com/manishjnv/document-governance-platform
-- Live deployment: https://scopewise.assessiq.in — and, from the
-  2026-09-12 cut-over, https://scopesense.in as well. **Both hosts stay live
-  for ~30 days** (until ~2026-10-12; office proxies may block the new
-  domain), so: no redirect yet, the web build uses `NEXT_PUBLIC_API_URL=`
-  (empty = same-origin `/api/...`), Caddy has one site block per host. **The
-  SEO canonical, metadataBase, sitemap and robots point at scopesense.in since
-  2026-09-20** (owner decision; the earlier plan kept them on the old host
-  until the switch, which kept scopesense.in out of Bing and Google). Both
-  hosts still serve identical pages; only the search signals moved.
+- Live deployment: https://scopesense.in (canonical) **and**
+  https://scopewise.assessiq.in — **dual-run until ~2026-10-23**. The old
+  host was 301'd on 2026-09-21 and restored on 2026-09-23 because office
+  proxies block scopesense.in for ~30 days; both hosts serve identical
+  pages, no redirect. Do not re-apply the redirect before that date without
+  the owner's say-so. The web build uses `NEXT_PUBLIC_API_URL=` (empty =
+  same-origin `/api/...`); Caddy has one site block per host. SEO canonical,
+  metadataBase, sitemap and robots point at scopesense.in since 2026-09-20.
+  End-of-dual-run steps: `docs/planning/SCOPESENSE_DOMAIN_CUTOVER.md` §4.
   Cut-over runbook: `/opt/scopewise/deploy/cutover-scopesense.sh` on the VPS;
   Cloudflare zone `scopesense.in` id `b2765bac…` (memory `scopesense-domain-cutover`).
 - LLM provider: OpenRouter (see `apps/api/app/ai/agent.py` — never
@@ -184,8 +184,8 @@ last incident.
   a new port, this VPS runs several other unrelated projects
   (`assessiq-*`, `accessbridge-*`, `roadmap-*`, `ti-platform-*`). **Never
   touch containers/volumes/configs that aren't `scopewise-*`.**
-- Domain routing: `https://scopewise.assessiq.in` → Cloudflare (proxied,
-  wildcard `*.assessiq.in` origin cert already covers it) → Caddy
+- Domain routing: `https://scopesense.in` → Cloudflare (proxied, zone
+  `scopesense.in`, its own Origin CA cert, Authenticated Origin Pulls on) → Caddy
   (`ti-platform-caddy-1`, config at `/opt/ti-platform/caddy/Caddyfile` on
   the VPS) → the two `scopewise-*` containers.
 - **Caddyfile edits: truncate-write only (`cat file > Caddyfile`), NEVER
@@ -200,7 +200,7 @@ last incident.
   --env-file .env build && GIT_SHA=\$(git rev-parse --short HEAD) docker
   compose -f docker-compose.vps.yml --env-file .env up -d"` → apply any
   new migration (see above) → smoke test
-  `https://scopewise.assessiq.in/login`. The `GIT_SHA=...` prefix on
+  `https://scopesense.in/login`. The `GIT_SHA=...` prefix on
   `up -d` matters — it lands in every review's audit_meta.
 - `docker-compose.vps.yml` is distinct from `docker-compose.prod.yml`
   (the latter assumes a dedicated host on standard ports — not this

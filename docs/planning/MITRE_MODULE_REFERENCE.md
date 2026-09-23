@@ -2,7 +2,7 @@
 
 **Status:** COMPLETE (Phases 0–7 + optional Phases 8–12 + Phase 13
 SIEM integration 13a–13d), launch-ready, live in production at
-`https://scopewise.assessiq.in/mitre`. Phase 13's own contract/deep
+`https://scopesense.in/mitre`. Phase 13's own contract/deep
 reference is `docs/planning/MITRE_SIEM_INTEGRATION_PLAN.md` — read BOTH
 docs before touching `app/mitre/connectors/*` or `app/mitre/tasks.py`.
 **Written:** 2026-08-02, after Phase 7. This is the end-to-end reference

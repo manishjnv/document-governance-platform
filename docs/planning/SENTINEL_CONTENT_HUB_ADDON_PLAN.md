@@ -25,7 +25,7 @@ listing is a later option, Tier 3).
 | 2 | **ATT&CK v19.1** technique/sub-technique matrix with sub-technique rollup | Blade is stuck on v18 | Bake technique metadata from our `attack.json` into the workbook as a static JSON grid (build-time generated, not fetched) |
 | 3 | **Telemetry reality check** — techniques whose required tables/connectors are absent ("you have a T1110 rule but no sign-in logs") | Blade has no telemetry awareness | Static mapping generated from `apps/api/app/mitre/ranking.py::_LOG_SOURCE_RULES`; KQL `union isfuzzy` table-existence probes |
 | 4 | **Top-5 gaps that matter** — prevalence-weighted teaser of the ranked roadmap | Blade ranks nothing | Static prevalence weights exported from our ranking data into the workbook; NOT the threat-actor engine |
-| 5 | **Funnel** — "what the full assessment adds" panel + guided service-principal setup doc (Sentinel Reader role, 5 IDs) linking to scopewise.assessiq.in | — | Markdown steps in the workbook + solution README |
+| 5 | **Funnel** — "what the full assessment adds" panel + guided service-principal setup doc (Sentinel Reader role, 5 IDs) linking to scopesense.in | — | Markdown steps in the workbook + solution README |
 
 ### Explicitly NOT in the add-on (paid SaaS, already built)
 
@@ -144,7 +144,7 @@ static grids and republishing.
   Sentinel trial available). Needed from Phase A step 3.
 - **Partner Center enrollment** (user action, Phase C.1) — the elapsed-time
   long pole; start early.
-- Privacy policy + support page on scopewise.assessiq.in (Partner Center
+- Privacy policy + support page on scopesense.in (Partner Center
   listing requirements).
 
 ## Effort estimate (engineering only, excludes Microsoft elapsed time)

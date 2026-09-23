@@ -5,7 +5,7 @@ output of Visa's open-source
 [Vulnerability Agentic Harness](https://github.com/visa/visa-vulnerability-agentic-harness)
 (VVAH, Apache-2.0) and turns it into a reviewable findings register plus
 client-ready XLSX / PPTX deliverables. Live in production at
-`https://scopewise.assessiq.in/codereview`.
+`https://scopesense.in/codereview`.
 
 This is the single living reference for the module — extend it in place as
 the feature changes. Session handoffs and the original kickoff prompt are

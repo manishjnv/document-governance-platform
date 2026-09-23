@@ -64,7 +64,7 @@ ScopeWise-branded workbook that enumerates the tenant's own analytics rules
 via the workbook ARM data source (viewer's own RBAC, no credentials to us) and
 renders a basic in-tenant ATT&CK heatmap of *explicitly tagged* rules only,
 with a "full assessment (keyword+AI mapping, applicability, reports, trend) at
-scopewise.assessiq.in" link. That is a teaser/funnel, deliberately inferior to
+scopesense.in" link. That is a teaser/funnel, deliberately inferior to
 the SaaS. Process cost is unchanged (Partner Center, GitHub PR, certification)
 but code cost is one workbook JSON.
 

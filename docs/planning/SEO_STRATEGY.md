@@ -5,7 +5,7 @@ positioning and site architecture superseded 2026-09-12 by
 `HOMEPAGE_BRANDING_SEO_PLAN.md` (three-product umbrella); Phase 3+ items here
 still stand.
 **Date:** 2026-07-20
-**Site:** https://scopewise.assessiq.in
+**Site:** https://scopesense.in
 **Prepared via:** `seo-plan` skill (SaaS template) + live-site baseline check. No
 DataForSEO/Ahrefs/SEMrush access in this session — competitive keyword
 volumes/difficulty below are qualitative estimates from category knowledge,
