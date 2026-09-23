@@ -84,3 +84,6 @@ docs/sample/
 *.ppt
 *.xlsx
 *.xls
+
+# Local-only sales helper (one-slide MITRE value pitch); owner keeps it out of the repo.
+scripts/build_mitre_value_slide.py
