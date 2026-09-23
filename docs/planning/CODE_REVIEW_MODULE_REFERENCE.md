@@ -25,6 +25,12 @@ not blocking): PPTX org branding (still `resolve_branding(None)`), a
 **This section replaces per-session summaries for this feature — append
 here, do not create a new doc.**
 
+- **2026-09-23 — scan-run zip upload:** a whole scanner run folder zipped
+  now adds per-finding fix status checked against JUnit/Maven results
+  (e.g. Keycloak fix #22 "Fixed" by the scanner but it broke
+  `SecureRedirectUrisEnforcerExecutorTest`), the patch, scanner evidence for
+  the deep-verified top findings, and scan coverage/threat model (§3, §5, §6,
+  §7; RCA #36).
 - **2026-09-23 — kit on VVAH 1.4.0 + auto-update:** weekly
   `vvah-kit-update.yml` + `scripts/update_vvah_kit.py` keep the kit on the
   latest VVAH release via a reviewed PR (§8 "Keeping the scan kit on the
@@ -190,6 +196,24 @@ needs the same four-way manual apply (see project `CLAUDE.md`).
 
 ## 3. Data model — normalized report shape
 
+**Optional scan-run extras (2026-09-23; absent for plain findings.json /
+SARIF / kit-zip uploads, so older reviews render unchanged):**
+- per finding `deep`: `{root_cause, gates: {source, sink, missing_control},
+  remaining_risks[<=20], recommendations[<=20], summary}`;
+- per finding `fix`: `{status: fixed|patch_rejected|needs_review|not_fixed|
+  not_attempted, scanner_verdict, policy_action, policy_reason,
+  files[<=50], patch (<=60000 chars), tests: broke_tests|passed|not_tested|
+  no_test_results|null, tests_detail}`;
+- report `run_extras`: `{mode: fix|report-only|null, deep_verified, total,
+  fix_counts, tests: {build, suites, cases, failures, errors, skipped,
+  failing[<=50 {test, message}], not_run_modules[<=50]} | null, coverage:
+  {coverage_pct, files_in_scope, files_analyzed, chunks, duration_sec,
+  health[<=20], threat_model} | null}`.
+Labels live once per side: `FIX_STATUS_LABELS`/`FIX_TESTS_LABELS` in
+`report_xlsx.py` (the PPTX imports them) and `FIX_STATUS_META`/
+`FIX_TESTS_META` in `apps/web/app/codereview/lib.ts`. A `broke_tests` fix is
+always shown as a warning ("do not treat as fixed").
+
 Produced by `app/codereview/ingest.py` from either input. All strings are
 attacker-controlled (they come from the scanned repo via the LLM) — cap
 lengths at ingest, `_guard` them in XLSX, never render as HTML.
@@ -313,6 +337,40 @@ the extracted report is what gets stored, under its sanitized basename.
 
 ## 5. Ingest rules
 
+- **Scan-run zip extras (2026-09-23, RCA #36).** A consultant can upload a
+  whole scanner run folder zipped (e.g. `keycloak_fix_mode_run.zip`: SARIF +
+  `report.md` + 25 `NN_<slug>/` folders + Maven/surefire output). Pipeline:
+  `unpack_scan_zip` (picks the report) -> `parse_report` ->
+  `read_run_extras(zip)` -> `apply_run_extras(report, extras)`; the router wraps
+  the last two in try/except, so a bad extra file only adds an assumption note.
+  - *Zip rules:* `__MACOSX/`, `._*`, `.DS_Store` are dropped before anything
+    is counted; `MAX_ZIP_ENTRIES` 2000 (was 50); per-member 10 MB and 30 MB
+    total-uncompressed caps unchanged; report candidates under more than one
+    top-level folder -> 422 "This zip holds N scan runs ... upload one"; extras
+    are read only from the chosen report's top-level folder.
+  - *Read:* `NN_*/finding_case.json`, `NN_*/evidence/triage.json`,
+    `NN_*/evidence/diff.patch`, `*report.md`, JUnit XML (any `.xml` whose
+    root is `testsuite`/`testsuites`; <= 1000 files; a file containing
+    `<!DOCTYPE`/`<!ENTITY` anywhere is skipped; <= 50000 testcases kept), and
+    `mvn_test_results.txt` (ANSI stripped).
+  - *Matching:* `finding_case.finding.title` == finding title (case-folded),
+    fallback `(file, line_start)`.
+  - *fix.status:* triage `mode` `report-only` -> `not_attempted`; `Fixed` +
+    `ACCEPT` -> `fixed`; `Fixed` otherwise -> `patch_rejected`; `Needs Review`
+    -> `needs_review`; else `not_fixed`.
+  - *fix.tests* (fixed/patch_rejected with changed files only): a failing
+    JUnit case whose class is `<Stem>Test`/`<Stem>Tests`/`Test<Stem>` of a
+    changed file, or sits in the changed file's Java package -> `broke_tests`;
+    else a case in that package -> `passed`; else `not_tested` (shown as "No
+    test results for this code": the zip may simply lack that module's
+    reports) or `no_test_results`. Test cases are indexed once by class and
+    package (the first cut looped files x cases per fix, a CPU DoS, RCA #36).
+  - *Coverage* from `report.md`: `## Scan Metrics` (coverage %, files in
+    scope/analysed, chunks, duration), `## Scan Health` bullets (markdown
+    stripped; "Non-fatal errors..." and "Full error log" dropped), `## Threat
+    Model` (<= 8000 chars). Maven: `BUILD SUCCESS/FAILURE` and reactor
+    `SKIPPED` modules.
+
 - **Caps** (enforced in `ingest.py`): upload ≤ 10 MB; ≤ 2000 findings kept,
   remainder counted in `dropped_count` with an assumption note; each text
   field capped at 20000 chars; `file` path capped at 500 chars; optional
@@ -352,8 +410,10 @@ the extracted report is what gets stored, under its sanitized basename.
   `summary.md` and in fix mode `diff.patch` (not read), plus `config.yaml`,
   run log and Maven/surefire output (not read). In fix-mode runs the SARIF
   sits under `security-remediation/`.
-  - **Do not upload the whole zip:** `MAX_ZIP_ENTRIES = 50`, so it is
-    rejected. Upload the `.sarif` alone, or a zip holding only it.
+  - **Upload one run folder zipped** (since 2026-09-23): it adds the fix
+    status, test results, scanner evidence and coverage (see "Scan-run zip
+    extras" above). A zip with both runs is refused with a clear message;
+    the `.sarif` alone still works but carries none of the extras.
   - **Upload formats accepted:** `findings.json`, `.sarif`, `.zip`
     (≤ 10 MB). Detection is by content: `findings`+`repo_root` keys →
     findings.json path; `runs` + `$schema`/`version` → SARIF path.
@@ -386,6 +446,14 @@ the extracted report is what gets stored, under its sanitized basename.
   not per finding — fixed as part of the initial build's Phase 3 critique.
 
 ## 6. Reports — XLSX and PPTX
+
+- **Run extras (2026-09-23), only when `run_extras` is present:** XLSX
+  register gains Deep-verified / Fix status / Tests after fix columns, a
+  "Fixes" sheet (patch capped at 32000 chars, every cell through `_guard`)
+  and a "Scan Coverage" sheet, plus Summary rows; PPTX gains a "Fix Status"
+  slide after the remediation plan (fix mode only; broken fixes first, 6
+  rows, the rest pointed at the Excel) and a run line + report.md file
+  counts/duration on the coverage slide. Visual QA: PowerPoint COM render.
 
 Both share `report_common.resolve_branding`, the `_guard` formula-injection
 guard, and the BRAND `341954` / ACCENT `00A98B` / ZEBRA `F3F0F7` palette
@@ -462,6 +530,11 @@ directly. Used for the NodeGoat deck; rendered slides kept at
 `screenshots/codereview_deck_2026_09_12/`.
 
 ## 7. Frontend — `apps/web/app/codereview/`
+
+- **Run extras (2026-09-23):** the drawer shows a Deep-verified chip, a Fix
+  section (status, tests, files, collapsible patch) and Scanner evidence
+  (root cause, gates, remaining risks); the table adds a Fix column in fix
+  mode; Scan details adds a Run coverage card. All gated on the optional keys.
 
 Pages: `page.tsx` (list cards), `new/page.tsx` (two-column upload), `[reviewId]/page.tsx`
 (results with tabs and drawer), `lib.ts` (types + pure helpers). Inline

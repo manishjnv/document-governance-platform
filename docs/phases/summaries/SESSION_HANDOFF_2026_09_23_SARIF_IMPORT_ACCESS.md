@@ -14,6 +14,8 @@
 
 **CI:** `ci-cd.yml` replaced — the old template targeted main/develop (never ran), pushed GHCR images and deployed to a nonexistent k8s cluster; now push/PR to master runs the full backend suite (Python 3.11, fresh Postgres from migrations/*.sql, Redis) + web tsc, deploys nothing. First green run `d45e4f9` (1004 passed / 2 skipped) after three pre-existing gaps: test-only deps now in `apps/api/requirements-dev.txt` (fakeredis, pyyaml, aiosqlite), pytest 9.0.3 / pytest-asyncio 1.3.0 pins (0.21.1 ignored pytest.ini loop scope → 390 errors). "About the scanner" rewritten simpler and checked against VVAH 1.4 README/docs (Claude-native; OpenRouter is only the kit preset).
 
+**Scan-run zip upload:** whole run folder zipped -> fix status vs JUnit/Maven (Keycloak #22 "Fixed" but broke a test), patch, scanner evidence (top 25), coverage/threat model; Fixes + Scan Coverage sheets, Fix Status slide, drawer/table/scan-details UI (reference §3/§5/§6/§7, RCA #36). Built by 3 parallel Sonnet agents; a Sonnet adversarial review found a CPU DoS, fixed (1.15 s on the payload). Upload files: `sample/upload_ready/keycloak_{fix_mode,report_only}_run.zip`.
+
 **Next:** R1 in `docs/planning/RISK_REMEDIATION_PLAN.md`; optionally read per-finding `triage.json`/`diff.patch` so fix-mode runs show what was fixed.
 
 **Agent utilization**

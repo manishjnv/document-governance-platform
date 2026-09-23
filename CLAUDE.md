@@ -131,8 +131,8 @@ last incident.
 ## Testing
 
 - Full backend suite: `cd apps/api && python -m pytest` — baseline is
-  **999 passed, 7 skipped** (measured 2026-09-23 after the VVAH 1.4.0 kit
-  pin test, 8 min 14 s solo on edgp_test; 998 after the SARIF narrative import; 996 on 2026-09-20 after the
+  **1006 passed, 7 skipped** (measured 2026-09-23 after the scan-run zip
+  extras, 7 min 12 s solo on edgp_test; 999 after the kit pin test; 998 after the SARIF narrative import; 996 on 2026-09-20 after the
   ScopeSense rename; previously 985 passed, 7 skipped, measured 2026-09-12 after the Code Security
   Review highlight-words single-source + VVAH schema-contract tests, +12
   over the same-day kit baseline of 973, +44 over the 2026-08-20 RCA #21

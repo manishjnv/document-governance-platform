@@ -796,3 +796,23 @@ keep chronological.)*
 - **Prevention:** any redirect that might be reverted is a 302 until it is final; only the true
   end-of-dual-run switch (`SCOPESENSE_DOMAIN_CUTOVER.md` §4, ~2026-10-23) gets a 301. Noted in
   that doc's §5 Gotchas.
+
+### 36. Scan-run zip extras: three defects caught before shipping (2026-09-23, ingest + PPTX)
+
+- **Symptom:** (a) security review: fix-to-test matching took hours of CPU on a crafted run zip
+  (400 fix folders x 50 files x ~170k JUnit cases); (b) PPTX preview: most fixes read "No tests
+  cover this code", the Fix Status table ran off the slide, and "No test results" was green;
+  (c) the scan-health line showed raw markdown ("DEGRADED** —") and the coverage tiles showed
+  "—" although `report.md` had the numbers.
+- **Root cause:** (a) `_compute_fix_tests` looped files x all testcases for every fix; (b) the
+  label claimed no tests exist when the zip only lacked that module's reports, and the table had
+  no row cap; (c) `_clean_health_bullet` stripped `**` only as a prefix, and the coverage slide
+  read only SARIF/findings metrics.
+- **Fix:** `apps/api/app/codereview/ingest.py` `_index_testcases` (one index by class and
+  package; matching is a dict lookup) + `MAX_TESTCASES`; the payload now takes 1.15 s. Label
+  "No test results for this code" (`report_xlsx.py` `FIX_TESTS_LABELS`, `lib.ts`);
+  `report_pptx.py` Fix Status: broken fixes first, 6 rows, grey for untested; coverage tiles fall
+  back to `run_extras.coverage` (incl. `duration_sec`); health bullets drop all `**`.
+- **Prevention:** any new cross-product over uploaded data gets an index or a cap before merge;
+  render new deck slides (PowerPoint COM) with a real run before shipping — the unit tests passed
+  on all three.
