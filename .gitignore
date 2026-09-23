@@ -68,3 +68,10 @@ apps/api/data/
 # claude-mem plugin context dump (internal session notes, not a deliverable)
 AGENTS.md
 docs/sample/project/
+
+# Sample folders: scanner output, customer documents and scratch uploads land
+# here, so nothing new is picked up by `git add`. Files already tracked under
+# docs/sample/ (test fixtures such as CodeReview_Sample/, MITRE_Sample/) stay
+# tracked; add a new fixture deliberately with `git add -f`.
+sample/
+docs/sample/

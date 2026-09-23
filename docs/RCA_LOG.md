@@ -782,3 +782,17 @@ keep chronological.)*
 - **Prevention:** when a new scanner's output is imported, diff the populated fields of one real
   finding against the `findings.json` path before calling the import "supported". SARIF reviews
   imported before this fix keep the thin shape until re-uploaded.
+
+### 35. Old host kept redirecting office users to the blocked new domain after the 301 was removed (2026-09-23, infra)
+
+- **Symptom:** scopewise.assessiq.in/login sent office users to scopesense.in/login, which the
+  office proxy blocks — even though the old host was restored to serve the app.
+- **Root cause:** the 2026-09-21 cut-over (R8) used a *permanent* 301 on the old host. Browsers
+  cache 301s indefinitely and stop asking the server, so reverting the Caddy block on 2026-09-23
+  did not reach browsers that had already seen it. Server side was correct (curl: 200, no
+  `Location`, on `/login` `/dashboard` `/mitre` `/codereview`; app navigation is relative).
+- **Fix:** none possible server-side; affected browsers clear site data for
+  scopewise.assessiq.in (Chrome/Edge `…/settings/content/all`) or use a private window.
+- **Prevention:** any redirect that might be reverted is a 302 until it is final; only the true
+  end-of-dual-run switch (`SCOPESENSE_DOMAIN_CUTOVER.md` §4, ~2026-10-23) gets a 301. Noted in
+  that doc's §5 Gotchas.

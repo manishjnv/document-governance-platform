@@ -11,6 +11,16 @@
 
 ## ✅ Done
 
+**2026-09-23 session (handoff `docs/phases/summaries/SESSION_HANDOFF_2026_09_23_SARIF_IMPORT_ACCESS.md`):**
+SARIF upload now yields the full Code Review register/deck for Agentic SAST
+output (RCA #34, `CODE_REVIEW_MODULE_REFERENCE.md` §5 operator guide);
+`.gitattributes` LF pin (RCA #33); dual-run docs; browser-cached 301
+(RCA #35); `sample/` + `docs/sample/` gitignored (tracked fixtures kept).
+Ops: external tester talk2maq@gmail.com's own org granted
+`run_allowance = 5` for MITRE (Code Review needs no grant; demos come from
+`MITRE_DEMO_ASSESSMENT_IDS` / `CODEREVIEW_DEMO_REVIEW_IDS` in the VPS `.env`).
+Deployed at `24dbfaa`.
+
 **Complete app design canvas (finished 2026-09-13, design only):** interactive
 redesign of every authenticated screen in one calm-light system (IBM Plex
 Sans, darker ink, colour only where it carries meaning), built as a Claude

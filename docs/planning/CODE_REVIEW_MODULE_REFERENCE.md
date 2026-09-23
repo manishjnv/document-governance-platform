@@ -13,8 +13,9 @@ historical logs only; see §0 for the rule.
 
 ## 0. Status & changelog
 
-**Current state (2026-09-12):** shipped, deployed, in daily use. Prod commit
-`2a5f918`. Backend suite baseline **985 passed / 7 skipped**; `npx tsc
+**Current state (2026-09-23):** shipped, deployed, in daily use. Prod commit
+`24dbfaa` (SARIF narrative import `1033775`). Backend suite baseline
+**998 passed / 7 skipped**; `npx tsc
 --noEmit` clean. Migrations through `039_code_review.sql`, applied to
 `edgp_dev`, `edgp_test`, and `scopewise_prod`. Deferred by user (not bugs,
 not blocking): PPTX org branding (still `resolve_branding(None)`), a
@@ -337,6 +338,41 @@ the extracted report is what gets stored, under its sanitized basename.
   `exploitability_notes`) are mapped; `run.properties.scanDegraded` plus
   the invocation notifications (minus "non-fatal error" lines, first 10)
   become `degraded`/`degraded_reason`.
+- **Uploading Agentic SAST / VVAH 1.4 scan output (operator guide,
+  2026-09-23).** A scan run folder (e.g. the Keycloak
+  `Report_only_and_fix_mode.zip`, ~1000 files) holds, per run:
+  `<repo>_<ts>_report.sarif` (upload this), `<repo>_<ts>_report.md`
+  (human report; **not uploadable**, the importer is JSON-only), 25
+  `NN_<slug>/` folders with `finding_case.json`, `evidence/triage.json`,
+  `summary.md` and in fix mode `diff.patch` (not read), plus `config.yaml`,
+  run log and Maven/surefire output (not read). In fix-mode runs the SARIF
+  sits under `security-remediation/`.
+  - **Do not upload the whole zip:** `MAX_ZIP_ENTRIES = 50`, so it is
+    rejected. Upload the `.sarif` alone, or a zip holding only it.
+  - **Upload formats accepted:** `findings.json`, `.sarif`, `.zip`
+    (≤ 10 MB). Detection is by content: `findings`+`repo_root` keys →
+    findings.json path; `runs` + `$schema`/`version` → SARIF path.
+  - **What a SARIF upload fills** (since `1033775`): everything the
+    findings.json path fills except exploit **chains** (SARIF has no field
+    for them — they only exist in VVAH `findings.json`), `source_ref` /
+    `sink_ref`, and the verdict on findings whose verification section
+    lacks a `**Verdict:**` line (18 of 121 on Keycloak).
+  - **"Scan degraded" banner** is the scanner's own flag
+    (`run.properties.scanDegraded`). On the Keycloak run: exploit-chain
+    analysis failed to parse (findings unranked, export falls back to
+    severity/CVSS order) and 2 of 1805 deep-dive chunks timed out; ~100
+    per-chunk "non-fatal error" notes are filtered out of the reason.
+  - **Report-only vs fix mode:** both SARIFs carry the same 121 findings;
+    they differ only in `result.remediation` status. What was actually fixed
+    (14/25 on Keycloak) and the patches live in the per-finding
+    `triage.json` / `diff.patch`, which the importer does not read. The
+    Keycloak fix-mode Maven build failed at `keycloak-services`.
+  - **Repo name / git SHA** are absent from SARIF: type a review name at
+    upload.
+  - Before `1033775` the same result came from a throwaway converter
+    (`sample/upload_ready/sarif_to_findings.py`, local only, gitignored);
+    it is obsolete — upload the SARIF directly. Reviews imported from SARIF
+    before that commit keep the thin shape until re-uploaded.
 - **Severity normalisation:** vocabulary is `critical|high|medium|low|info`;
   an unrecognized severity string falls back to `medium` with a
   deduplicated assumption note (an earlier build repeated the note once

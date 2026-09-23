@@ -145,6 +145,8 @@ Rollback for step 2: truncate-write the `Caddyfile.bak.<ts>` back and reload.
 - Origin CA Key is deprecated; the `/certificates` endpoint works with a Bearer token that has Zone → SSL and Certificates → Edit, but **only for active zones**.
 - IP-filtered tokens: force IPv4 on the VPS (`curl -4`); Python `urllib` picks IPv6 and fails with a misleading generic 401.
 - The dashboard's "Add site" pre-creates DNS records from the parking page (an A record to `2.57.91.91`); always re-check records after adding a zone.
+- **Browsers cache a 301 (RCA #35).** After the 2026-09-21 old-host 301 was reverted on 2026-09-23, office browsers that had visited scopewise.assessiq.in still jumped to the blocked scopesense.in (server returned 200, verified with curl on `/login`, `/dashboard`, `/mitre`, `/codereview`). Fix is per browser: clear site data for scopewise.assessiq.in or use a private window. For the real end-of-dual-run, a 301 is right; for any trial redirect, use 302.
+- **Temporary alt host tried and rolled back (2026-09-23).** A `scopewise.freshfusion.in` bypass (Cloudflare A record, Caddy block, `ALLOWED_HOSTS`/`CORS_ORIGINS` entries) was stood up by mistake — the owner meant scopewise.assessiq.in — and fully removed the same hour: DNS record deleted, Caddy block and env entries restored from backup, both real hosts verified 200. No freshfusion reference remains in the repo or in ScopeWise config (the `hm*.freshfusion.in` Caddy blocks belong to another project).
 
 ## Status 2026-09-13 22:50 IST: LIVE (dual-run started)
 
