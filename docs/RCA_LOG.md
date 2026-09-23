@@ -741,3 +741,24 @@ keep chronological.)*
   from an mTLS Caddy block needs the same. Read the Caddy access log's `tls.client_common_name`
   (present on the old host, absent on the new) to spot it in seconds.
 
+### 34. SARIF import dropped every narrative field: Agentic SAST reports came out thin (2026-09-23, ingest)
+
+- **Symptom:** a Keycloak scan uploaded as `.sarif` (Agentic SAST 1.4.0, 121 findings) gave an
+  XLSX/PPTX with empty impact, exploit scenario, preconditions, fix, verification and priority
+  columns, and no reason under "Scan degraded" (the `findings.json` path fills all of these).
+- **Root cause:** `_map_sarif_result` in `apps/api/app/codereview/ingest.py` was written against
+  the generic SARIF shape and hard-coded those fields to empty; `_from_sarif` hard-coded
+  `degraded=False`. The scanner puts the narrative in `properties.description` as `#### Heading`
+  sections, priority in `properties.offensivePriority*`, fix status in `result.remediation`, and
+  scan health in `run.properties.scanDegraded` + `invocations[].toolExecutionNotifications`.
+- **Fix:** `_split_sarif_sections` (line-based, no regex over attacker text) maps the six
+  headings onto the existing fields; priority/category/remediation mapped; degraded flag and
+  reason (notifications minus per-chunk "non-fatal error" noise) carried through; trailing
+  `[CVSS …]` stripped from titles; the first fenced code block becomes `code_snippet`, the
+  `**Exploitability:**` line joins the remediation note in `exploitability_notes`, and the
+  `**Verdict:** TRUE_POSITIVE (confidence: 9/10) — …` line fills verdict/confidence/reason (a
+  first cut without the fence handling put code lines into `preconditions` for 121/121 Keycloak
+  findings, caught on the real files before commit). Test `test_sarif_agentic_sast_sections_mapped`.
+- **Prevention:** when a new scanner's output is imported, diff the populated fields of one real
+  finding against the `findings.json` path before calling the import "supported". SARIF reviews
+  imported before this fix keep the thin shape until re-uploaded.

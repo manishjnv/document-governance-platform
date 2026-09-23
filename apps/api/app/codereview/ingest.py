@@ -28,6 +28,7 @@ _SEVERITY_RANK = {s: i for i, s in enumerate(SEVERITIES)}
 _TEXT_CAP = 20000
 _TITLE_CAP = 500
 _SUMMARY_CAP = 4000
+_MAX_SARIF_DESCRIPTION = 6 * _TEXT_CAP  # whole sectioned blob; each section is then capped at _TEXT_CAP
 _SARIF_LEVEL_SEVERITY = {"error": "high", "warning": "medium", "note": "low"}
 _METRIC_KEYS = (
     "duration_sec",
@@ -449,6 +450,14 @@ def _from_sarif(obj: dict) -> dict:
         except Exception:  # noqa: BLE001
             assumptions.append("a malformed finding entry was skipped")
 
+    # Scan-health notes (Agentic SAST): skip the per-chunk "N non-fatal error(s)" noise.
+    notes = []
+    for inv in _list_or_empty(run.get("invocations")):
+        for note in _list_or_empty(_dict_or_empty(inv).get("toolExecutionNotifications")):
+            text = _s(_dict_or_empty(_dict_or_empty(note).get("message")).get("text"), _TITLE_CAP)
+            if text and "non-fatal error" not in text:
+                notes.append(text)
+
     return _finalize(
         source_format="sarif",
         tool=_opt_s(driver.get("name")) or "vvaharness",
@@ -456,8 +465,8 @@ def _from_sarif(obj: dict) -> dict:
         repo_name=None,
         git_sha=None,
         summary_text="",
-        degraded=False,
-        degraded_reason="",
+        degraded=_dict_or_empty(run.get("properties")).get("scanDegraded") is True,
+        degraded_reason=_s(". ".join(notes[:10]), _TEXT_CAP),
         assumptions=assumptions,
         raw_findings=raw_findings,
         chains=[],
@@ -465,6 +474,68 @@ def _from_sarif(obj: dict) -> dict:
         raw_findings_count=len(results),
         metrics=_map_metrics(None),
     )
+
+
+_SARIF_SECTIONS = {
+    "description": "description",
+    "impact": "impact",
+    "exploit scenario": "exploit_scenario",
+    "preconditions": "preconditions",
+    "how to fix": "recommendation",
+    "adversarial verification": "verifier_reasoning",
+}
+
+
+def _split_sarif_sections(text: str) -> dict:
+    """Split '#### Heading' markdown into known fields; unknown headings end a
+    section. Line-based (no regex over attacker text); text before the first
+    known heading is dropped (it is dedup boilerplate). The first fenced code
+    block becomes code_snippet and a '**Exploitability:**' line becomes
+    exploitability, wherever they sit, so neither leaks into another field."""
+    out: dict = {}
+    key = None
+    fence = None  # None = outside a block; list = collecting the first block; False = skipping later blocks
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            if fence is None and "code_snippet" not in out:
+                fence = []
+            elif isinstance(fence, list):
+                out["code_snippet"] = fence
+                fence = None
+            else:
+                fence = None if fence is False else False
+            continue
+        if fence is not None:
+            if isinstance(fence, list):
+                fence.append(line)
+            continue
+        if stripped.startswith("**Exploitability:**"):
+            out["exploitability"] = [stripped[len("**Exploitability:**"):]]
+            continue
+        if stripped.startswith("#"):
+            key = _SARIF_SECTIONS.get(stripped.lstrip("#").strip().lower())
+            if key:
+                out[key] = []
+            continue
+        if key:
+            out[key].append(line)
+    return {k: "\n".join(v).strip() for k, v in out.items()}
+
+
+def _parse_sarif_verdict(text: str) -> tuple:
+    """'**Verdict:** TRUE_POSITIVE (confidence: 9/10) — reason' -> (verdict, confidence, reason)."""
+    first = text.strip().split("\n", 1)[0].strip()
+    if not first.startswith("**Verdict:**"):
+        return None, None, ""
+    rest = first[len("**Verdict:**"):].strip()
+    word = rest.split(" ", 1)[0]
+    verdict = word if word in ("TRUE_POSITIVE", "FALSE_POSITIVE") else None
+    confidence = None
+    if "(confidence:" in rest:
+        confidence = _opt_int(rest.split("(confidence:", 1)[1].split("/", 1)[0].strip())
+    reason = rest.split("—", 1)[1].strip() if "—" in rest else ""
+    return verdict, confidence, reason
 
 
 def _map_sarif_result(result: dict, assumptions: list) -> dict:
@@ -497,12 +568,33 @@ def _map_sarif_result(result: dict, assumptions: list) -> dict:
         )
 
     rule_id = _opt_s(result.get("ruleId"))
+    # Agentic SAST puts the narrative in properties.description as "#### <Heading>" sections.
+    sections = _split_sarif_sections(_s(props.get("description"), _MAX_SARIF_DESCRIPTION))
+    remediation = _dict_or_empty(result.get("remediation"))
+    remediation_note = ""
+    if remediation.get("remediationStatus"):
+        remediation_note = (
+            f"Remediation: {_s(remediation.get('remediationStatus'), 50)}. "
+            f"{_s(remediation.get('remediationReason'))}"
+        ).strip()
+    notes = "\n\n".join(n for n in (sections.get("exploitability", ""), remediation_note) if n)
+    verdict, verdict_confidence, verdict_reason = _parse_sarif_verdict(
+        sections.get("verifier_reasoning", "")
+    )
+    preconditions = [
+        line.lstrip("-*0123456789.) ").strip()
+        for line in sections.get("preconditions", "").splitlines()
+        if line.strip()
+    ]
+    title = _s(message.get("text"), _TITLE_CAP)
+    if title.endswith("]") and " [CVSS " in title:  # CVSS has its own columns
+        title = title.rsplit(" [CVSS ", 1)[0].rstrip()
     return {
         "idx": 0,
-        "title": _s(message.get("text"), _TITLE_CAP),
+        "title": title,
         "severity": _normalize_severity(severity_raw, assumptions),
         "vuln_class": rule_id,
-        "vuln_class_label": rule_id,
+        "vuln_class_label": _opt_s(props.get("category")) or rule_id,
         "cwe": _opt_s(props.get("cwe")),
         "cvss_score": _float_or_none(props.get("cvssScore")),
         "cvss_vector": _opt_s(props.get("cvssVector")),
@@ -512,19 +604,19 @@ def _map_sarif_result(result: dict, assumptions: list) -> dict:
         "line_end": _int(region.get("endLine"), 0),
         "confidence": _confidence(props.get("confidence")),
         "votes": 1,
-        "verdict": None,
-        "verdict_confidence": None,
-        "verdict_reason": "",
-        "description": _s(message.get("text"), _TEXT_CAP),
-        "impact": "",
-        "exploit_scenario": "",
-        "preconditions": [],
-        "recommendation": "",
-        "code_snippet": "",
-        "exploitability_notes": "",
-        "verifier_reasoning": "",
-        "offensive_priority": None,
-        "offensive_reason": "",
+        "verdict": verdict,
+        "verdict_confidence": verdict_confidence,
+        "verdict_reason": _s(verdict_reason, _TEXT_CAP),
+        "description": _s(sections.get("description") or message.get("text"), _TEXT_CAP),
+        "impact": _s(sections.get("impact"), _TEXT_CAP),
+        "exploit_scenario": _s(sections.get("exploit_scenario"), _TEXT_CAP),
+        "preconditions": [_s(p, _TEXT_CAP) for p in preconditions[:50]],
+        "recommendation": _s(sections.get("recommendation"), _TEXT_CAP),
+        "code_snippet": _s(sections.get("code_snippet"), _TEXT_CAP),
+        "exploitability_notes": _s(notes, _TEXT_CAP),
+        "verifier_reasoning": _s(sections.get("verifier_reasoning"), _TEXT_CAP),
+        "offensive_priority": _opt_s(props.get("offensivePriority"), 20),
+        "offensive_reason": _s(props.get("offensivePriorityReason"), _TEXT_CAP),
         "source_ref": None,
         "sink_ref": None,
         "duplicates": duplicates,

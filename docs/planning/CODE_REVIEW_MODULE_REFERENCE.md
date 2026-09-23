@@ -24,6 +24,13 @@ not blocking): PPTX org branding (still `resolve_branding(None)`), a
 **This section replaces per-session summaries for this feature — append
 here, do not create a new doc.**
 
+- **2026-09-23 — SARIF narrative import:** SARIF import now reads Agentic SAST 1.4.0's
+  sectioned `properties.description` (impact, exploit scenario,
+  preconditions, how to fix, adversarial verification), offensive priority,
+  CWE category, code snippet, TP/FP verdict, `remediation` status and
+  scan-degraded reason, so a raw
+  `.sarif` upload gives the same register/deck detail as `findings.json`
+  (RCA #34). Existing SARIF reviews must be re-uploaded to pick it up.
 - **2026-09-12 — `2a5f918`:** PPTX remediation-plan cell stripped literal
   backticks before rendering as plain text (RCA #26).
 - **2026-09-12 — `ce94179`:** sentence-split regex made ellipsis-safe in
@@ -317,6 +324,19 @@ the extracted report is what gets stored, under its sanitized basename.
   Any future field that references another finding by position must be
   remapped in the same function that reorders — grep for `steps`,
   `canonical_idx`, `duplicates` whenever the sort key changes.
+- **SARIF narrative (RCA #34):** `properties.description` is split on
+  `#### <Heading>` lines (Description, Impact, Exploit scenario,
+  Preconditions, How to fix, Adversarial verification; unknown headings end
+  a section, text before the first heading is dropped). The first ```
+  fenced block becomes `code_snippet` (never part of a section), a
+  `**Exploitability:**` line goes to `exploitability_notes`, and a leading
+  `**Verdict:** <TP|FP> (confidence: N/10) — reason` line in the
+  verification section fills `verdict`/`verdict_confidence`/`verdict_reason`.
+  `offensivePriority`/`offensivePriorityReason`, `category` (label) and
+  `result.remediation` ("Remediation: <status>. <reason>" in
+  `exploitability_notes`) are mapped; `run.properties.scanDegraded` plus
+  the invocation notifications (minus "non-fatal error" lines, first 10)
+  become `degraded`/`degraded_reason`.
 - **Severity normalisation:** vocabulary is `critical|high|medium|low|info`;
   an unrecognized severity string falls back to `medium` with a
   deduplicated assumption note (an earlier build repeated the note once

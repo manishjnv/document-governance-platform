@@ -138,6 +138,58 @@ def test_parse_sarif_sample():
     assert sum(report["counts"]["by_severity"].values()) == 12
 
 
+def test_sarif_agentic_sast_sections_mapped():
+    # Shape of Agentic SAST 1.4.0 SARIF (Keycloak run, 2026-09-17), trimmed.
+    desc = (
+        "*1 additional call site(s) collapsed during dedup.*\n\n"
+        "#### Description\nToken is not bound to the client.\n\n"
+        "#### Impact\nAccount takeover.\n\n"
+        "#### Exploit scenario\nReplay a token from another client.\n\n"
+        "#### Preconditions\n- Attacker has a token\n- Exchange is enabled\n\n"
+        "```\nreturn exchange(token);\n```\n\n"
+        "#### How to fix\nCheck the audience.\n\n"
+        "**Exploitability:** Post-auth, network reachable.\n\n"
+        "#### Adversarial verification\n"
+        "**Verdict:** TRUE_POSITIVE (confidence: 9/10) — Confirmed reachable."
+    )
+    sarif = {
+        "version": "2.1.0",
+        "runs": [{
+            "tool": {"driver": {"name": "Agentic SAST", "version": "1.4.0"}},
+            "properties": {"scanDegraded": True},
+            "invocations": [{"toolExecutionNotifications": [
+                {"message": {"text": "s4: 101 non-fatal error(s) logged"}},
+                {"message": {"text": "Exploit-chain analysis could not be computed"}},
+            ]}],
+            "results": [{
+                "ruleId": "CWE-287",
+                "message": {"text": "External token exchange accepts any client's token  [CVSS 9.6: CVSS:3.1/AV:N]"},
+                "locations": [{"physicalLocation": {"artifactLocation": {"uri": "a/B.java"}, "region": {"startLine": 5}}}],
+                "properties": {
+                    "severity": "critical", "cvssScore": 9.6, "category": "CWE-287: Improper Authentication",
+                    "offensivePriority": "P3", "offensivePriorityReason": "Internal network", "description": desc,
+                },
+                "remediation": {"remediationStatus": "skipped", "remediationReason": "report-only run"},
+            }],
+        }],
+    }
+    report = ingest.parse_report(json.dumps(sarif).encode())
+    f = report["findings"][0]
+    assert f["title"] == "External token exchange accepts any client's token"
+    assert f["description"] == "Token is not bound to the client."
+    assert f["impact"] == "Account takeover."
+    assert f["exploit_scenario"] == "Replay a token from another client."
+    assert f["preconditions"] == ["Attacker has a token", "Exchange is enabled"]
+    assert f["recommendation"] == "Check the audience."
+    assert f["code_snippet"] == "return exchange(token);"
+    assert (f["verdict"], f["verdict_confidence"], f["verdict_reason"]) == ("TRUE_POSITIVE", 9, "Confirmed reachable.")
+    assert f["offensive_priority"] == "P3"
+    assert f["vuln_class_label"] == "CWE-287: Improper Authentication"
+    assert f["exploitability_notes"] == "Post-auth, network reachable.\n\nRemediation: skipped. report-only run"
+    assert report["degraded"] is True
+    assert report["degraded_reason"] == "Exploit-chain analysis could not be computed"
+
+
 def test_unknown_severity_normalized_to_medium():
     raw = {
         "repo_root": "/x",
