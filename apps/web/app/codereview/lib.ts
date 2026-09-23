@@ -231,7 +231,23 @@ export interface FindingFilter {
   severity?: Severity | null;
   klass?: string | null;
   verdict?: Verdict | 'none' | null;
+  fix?: FixFilter | null;
   query?: string;
+}
+
+/** Fix filter: a fix status, or 'broke_tests' (fixed/rejected patches whose tests failed). */
+export type FixFilter = FixStatus | 'broke_tests';
+
+export const FIX_FILTER_ORDER: { key: FixFilter; label: string; tip: string }[] = [
+  { key: 'fixed', label: 'Fixed', tip: 'Patches the scanner accepted (check the tests column).' },
+  { key: 'broke_tests', label: 'Fix broke a test', tip: 'A test failed in the code this patch changed: do not treat as fixed.' },
+  { key: 'patch_rejected', label: 'Patch rejected', tip: "Patches the scanner's own policy gate rejected." },
+  { key: 'needs_review', label: 'Needs review', tip: 'No fix applied: needs manual review.' },
+  { key: 'not_fixed', label: 'Not fixed', tip: 'The scanner could not fix these.' },
+];
+
+export function matchesFix(x: CodeReviewFinding, fix: FixFilter): boolean {
+  return fix === 'broke_tests' ? x.fix?.tests === 'broke_tests' : x.fix?.status === fix;
 }
 
 /** Pure filter used by the results table, chains tab and prev/next navigation. */
@@ -241,6 +257,7 @@ export function filterFindings(findings: CodeReviewFinding[], f: FindingFilter):
     if (f.severity && x.severity !== f.severity) return false;
     if (f.klass && x.vuln_class !== f.klass) return false;
     if (f.verdict === 'none' ? x.verdict !== null : f.verdict && x.verdict !== f.verdict) return false;
+    if (f.fix && !matchesFix(x, f.fix)) return false;
     if (!q) return true;
     return (
       x.title.toLowerCase().includes(q) ||

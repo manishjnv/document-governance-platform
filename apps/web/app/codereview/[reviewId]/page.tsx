@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import {
   CodeReviewDetail,
   CodeReviewFinding,
+  FixFilter,
   SEVERITY_META,
   SOURCE_FORMAT_LABEL,
   Severity,
@@ -99,6 +100,7 @@ export default function CodeReviewResultsPage() {
   const [search, setSearch] = useState('');
   const [klass, setKlass] = useState<string | null>(null);
   const [verdict, setVerdict] = useState<Verdict | 'none' | null>(null);
+  const [fixFilter, setFixFilter] = useState<FixFilter | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('severity');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
@@ -188,8 +190,8 @@ export default function CodeReviewResultsPage() {
   const findings = review?.report.findings ?? [];
 
   const filtered = useMemo(
-    () => filterFindings(findings, { severity: severityFilter, klass, verdict, query: search }),
-    [findings, severityFilter, klass, verdict, search]
+    () => filterFindings(findings, { severity: severityFilter, klass, verdict, fix: fixFilter, query: search }),
+    [findings, severityFilter, klass, verdict, fixFilter, search]
   );
   const sorted = useMemo(() => sortFindings(filtered, sortKey, sortDir), [filtered, sortKey, sortDir]);
 
@@ -228,7 +230,7 @@ export default function CodeReviewResultsPage() {
   const report = review.report;
 
   return (
-    <AppShell>
+    <AppShell fullWidth>
       <TooltipProvider>
         <PageHeader
           back={{ href: '/codereview', label: 'Reviews' }}
@@ -350,13 +352,20 @@ export default function CodeReviewResultsPage() {
         )}
 
         <div className="space-y-4">
-          <ReviewBand report={report} onSelectSeverity={(s) => setSeverityFilter(s)} />
+          <ReviewBand
+            report={report}
+            onSelectSeverity={(s) => setSeverityFilter(s)}
+            fix={fixFilter}
+            onSelectFix={setFixFilter}
+          />
 
           <SeverityStrip
             findings={findings}
-            filter={{ klass, verdict, query: search }}
+            filter={{ klass, verdict, fix: fixFilter, query: search }}
             severity={severityFilter}
             onChange={setSeverityFilter}
+            fix={fixFilter}
+            onFixChange={report.run_extras?.mode === 'fix' ? setFixFilter : undefined}
           />
 
           <div role="tablist" className="flex gap-5 border-b border-border">

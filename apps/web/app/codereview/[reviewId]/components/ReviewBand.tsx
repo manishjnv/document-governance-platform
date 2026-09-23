@@ -1,17 +1,32 @@
 'use client';
 
-import { KpiTile } from '@/components/app';
-import { CodeReviewReport, Severity, deriveHeadline } from '../../lib';
+import { KpiTile, type KpiTone } from '@/components/app';
+import { CodeReviewReport, FIX_FILTER_ORDER, FixFilter, Severity, deriveHeadline, matchesFix } from '../../lib';
+
+const FIX_TONE: Record<FixFilter, KpiTone> = {
+  fixed: 'ok',
+  broke_tests: 'crit',
+  patch_rejected: 'high',
+  needs_review: 'med',
+  not_fixed: 'grey',
+  not_attempted: 'grey',
+};
 
 /** Executive band: 5 stat tiles + a derived one-line headline. Matches the
  * MITRE ExecutiveBand tile pattern (tinted number, muted label, tooltip). */
 export function ReviewBand({
   report,
   onSelectSeverity,
+  fix,
+  onSelectFix,
 }: {
   report: CodeReviewReport;
   onSelectSeverity: (severity: Severity) => void;
+  /** Fix-status cards, shown for fix-mode scan runs only. */
+  fix?: FixFilter | null;
+  onSelectFix?: (fix: FixFilter | null) => void;
 }) {
+  const showFix = report.run_extras?.mode === 'fix' && onSelectFix;
   const c = report.counts.by_severity;
   const fp = report.metrics.false_positive_count;
   return (
@@ -44,6 +59,21 @@ export function ReviewBand({
           tip="Findings the AI verifier marked as false positive."
         />
       </div>
+      {showFix && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {FIX_FILTER_ORDER.map(({ key, label, tip }) => (
+            <KpiTile
+              key={key}
+              label={label}
+              value={report.findings.filter((f) => matchesFix(f, key)).length}
+              tone={FIX_TONE[key]}
+              tip={`${tip} Click to filter the table.`}
+              active={fix === key}
+              onClick={() => onSelectFix(fix === key ? null : key)}
+            />
+          ))}
+        </div>
+      )}
       <p className="text-xs text-muted-foreground">{deriveHeadline(report)}</p>
     </div>
   );

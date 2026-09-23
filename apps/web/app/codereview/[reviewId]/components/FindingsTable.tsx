@@ -284,7 +284,7 @@ export function FindingsTable({
                 <TableCell className="max-w-xs px-2.5 py-1.5" data-th="File:lines">
                   <Tooltip delayDuration={150}>
                     <TooltipTrigger asChild>
-                      <span className="block truncate font-mono text-xs text-muted-foreground">
+                      <span className="line-clamp-2 break-all font-mono text-xs text-muted-foreground">
                         {f.file}:{f.line_start}-{f.line_end}
                       </span>
                     </TooltipTrigger>
