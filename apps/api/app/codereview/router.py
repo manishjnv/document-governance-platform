@@ -128,7 +128,9 @@ async def create_review(
     report_filename_hint = report.filename or "report.json"
     zip_manifest_bytes = None
     zip_manifest_name = None
+    original_zip_bytes = None
     if report_filename_hint.lower().endswith(".zip") or report_bytes[:4] == b"PK\x03\x04":
+        original_zip_bytes = report_bytes
         try:
             report_bytes, report_filename_hint, zip_manifest_bytes, zip_manifest_name = (
                 ingest.unpack_scan_zip(report_bytes)
@@ -140,6 +142,18 @@ async def create_review(
         parsed = ingest.parse_report(report_bytes)
     except IngestError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+
+    if original_zip_bytes is not None:
+        # Best-effort: a real scan-run zip carries triage.json/finding_case.json/
+        # report.md/JUnit/Maven output alongside the report. Never let a bad
+        # extra file turn a successful import into a 4xx/5xx.
+        try:
+            extras = ingest.read_run_extras(original_zip_bytes)
+            if extras is not None:
+                ingest.apply_run_extras(parsed, extras)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"Code review run-extras skipped: {exc}")
+            parsed["assumptions"] = [*(parsed.get("assumptions") or []), "scan run extras could not be read"]
 
     manifest_bytes = None
     manifest_parsed = None

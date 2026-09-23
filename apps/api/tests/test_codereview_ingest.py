@@ -290,3 +290,212 @@ def test_real_nodegoat_golden():
     assert manifest["tool_version"] == "1.3.0"
     assert manifest["total_tokens"] == 3400424 and manifest["total_cost_usd"] is None
     assert manifest["models"]["deepdive"]["id"] == "deepseek/deepseek-v4-pro"
+
+
+# --------------------------------------------------------------------------
+# Scan-run extras (run_extras contract, 2026-09-23)
+# --------------------------------------------------------------------------
+
+import io
+import zipfile
+
+RUN = "run"  # single top-level run folder used by the synthetic fixtures below
+
+
+def _zip_write(zf: zipfile.ZipFile, path: str, content):
+    data = content if isinstance(content, bytes) else content.encode("utf-8")
+    zf.writestr(f"{RUN}/{path}", data)
+
+
+def _synthetic_fix_mode_zip() -> bytes:
+    sarif = {
+        "version": "2.1.0",
+        "runs": [{
+            "tool": {"driver": {"name": "Agentic SAST", "version": "1.4.0"}},
+            "results": [
+                {
+                    "ruleId": "CWE-1",
+                    "message": {"text": "Redirect check bypass"},
+                    "locations": [{"physicalLocation": {
+                        "artifactLocation": {"uri": "services/src/main/java/org/x/RedirectExec.java"},
+                        "region": {"startLine": 10},
+                    }}],
+                    "properties": {"severity": "high"},
+                },
+                {
+                    "ruleId": "CWE-2",
+                    "message": {"text": "Group join by substring"},
+                    "locations": [{"physicalLocation": {
+                        "artifactLocation": {"uri": "federation/ip/src/main/java/org/y/Ipa.java"},
+                        "region": {"startLine": 20},
+                    }}],
+                    "properties": {"severity": "medium"},
+                },
+            ],
+        }],
+    }
+    report_md = (
+        "## Scan Metrics\n\n"
+        "- Coverage: 95.0%\n"
+        "- Files in scope: 100\n"
+        "- Files analyzed (unique): 95\n"
+        "- Chunks: 50 (risk=5, catch-all=10)\n\n"
+        "## Scan Health\n\n"
+        "- ⚠️ **DEGRADED** — some non-fatal issue\n"
+        "- Non-fatal errors logged by stage: s4=1\n"
+        "- Full error log: `errors.jsonl`\n\n"
+        "## Threat Model\n\n"
+        "Attacker can bypass redirect validation and pivot into federation.\n"
+    )
+
+    def _finding_case(title, file_, line):
+        return json.dumps({"finding": {"title": title, "file": file_, "line_start": line}}).encode()
+
+    def _triage(title, file_):
+        return json.dumps({
+            "finding_index": 1, "verdict": "Fixed",
+            "gates": {"source": "pass", "sink": "pass", "missing_control": "pass"},
+            "root_cause": "bad check", "changes": [], "remaining_risks": ["r1"],
+            "recommendations": ["rec1"], "summary": "fixed the bypass",
+            "severity": "high", "title": title, "file": file_, "mode": "fix",
+            "policy_action": "patch", "policy_reason": "default_action",
+            "final_verdict": "ACCEPT", "diff_captured": True,
+        }).encode()
+
+    def _diff(file_):
+        return (
+            f"diff --git a/{file_} b/{file_}\n"
+            "index 111..222 100644\n"
+            f"--- a/{file_}\n"
+            f"+++ b/{file_}\n"
+            "@@ -1,1 +1,1 @@\n-old\n+new\n"
+        )
+
+    junit_xml = (
+        '<?xml version="1.0"?>\n'
+        '<testsuite name="org.x.RedirectExecTest" tests="2" errors="0" failures="1" skipped="0">\n'
+        '  <testcase name="testRedirect" classname="org.x.RedirectExecTest" time="0.01">\n'
+        '    <failure message="bypass still works">trace</failure>\n'
+        "  </testcase>\n"
+        '  <testcase name="testOk" classname="org.x.RedirectExecTest" time="0.01"/>\n'
+        "</testsuite>\n"
+    )
+    mvn_log = (
+        "[INFO] Reactor Summary\n"
+        "[INFO] Core .......... SUCCESS\n"
+        "[INFO] Ipa Federation ....... SKIPPED\n"
+        "[INFO] ------------------------------------------------------------------------\n"
+        "[INFO] BUILD FAILURE\n"
+    )
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        _zip_write(zf, "report.sarif", json.dumps(sarif))
+        _zip_write(zf, "report.md", report_md)
+        _zip_write(zf, "01_redirect/finding_case.json",
+                    _finding_case("Redirect check bypass", "services/src/main/java/org/x/RedirectExec.java", 10))
+        _zip_write(zf, "01_redirect/evidence/triage.json",
+                    _triage("Redirect check bypass", "services/src/main/java/org/x/RedirectExec.java"))
+        _zip_write(zf, "01_redirect/evidence/diff.patch",
+                    _diff("services/src/main/java/org/x/RedirectExec.java"))
+        _zip_write(zf, "02_ipa/finding_case.json",
+                    _finding_case("Group join by substring", "federation/ip/src/main/java/org/y/Ipa.java", 20))
+        _zip_write(zf, "02_ipa/evidence/triage.json",
+                    _triage("Group join by substring", "federation/ip/src/main/java/org/y/Ipa.java"))
+        _zip_write(zf, "02_ipa/evidence/diff.patch",
+                    _diff("federation/ip/src/main/java/org/y/Ipa.java"))
+        _zip_write(zf, "surefire-reports/TEST-org.x.RedirectExecTest.xml", junit_xml)
+        _zip_write(zf, "mvn_test_results.txt", mvn_log)
+        # macOS junk: must never be counted or crash parsing.
+        zf.writestr("__MACOSX/run/._report.sarif", b"junk")
+        zf.writestr(f"{RUN}/._junk.txt", b"junk")
+    return buf.getvalue()
+
+
+def test_synthetic_fix_mode_run_extras():
+    raw = _synthetic_fix_mode_zip()
+    report_bytes, report_name, _mbytes, _mname = ingest.unpack_scan_zip(raw)
+    report = ingest.parse_report(report_bytes)
+    extras = ingest.read_run_extras(raw)
+    assert extras is not None
+    ingest.apply_run_extras(report, extras)
+
+    by_title = {f["title"]: f for f in report["findings"]}
+    redirect = by_title["Redirect check bypass"]
+    ipa = by_title["Group join by substring"]
+
+    assert redirect["fix"]["status"] == "fixed"
+    assert ipa["fix"]["status"] == "fixed"
+    assert redirect["fix"]["tests"] == "broke_tests"
+    assert "RedirectExecTest" in redirect["fix"]["tests_detail"]
+    assert ipa["fix"]["tests"] == "not_tested"
+
+    run_extras = report["run_extras"]
+    assert run_extras["mode"] == "fix"
+    assert run_extras["deep_verified"] == 2
+    assert run_extras["tests"]["build"] == "failure"
+    assert "Ipa Federation" in run_extras["tests"]["not_run_modules"]
+    assert run_extras["coverage"]["coverage_pct"] == 95.0
+    assert not any(h.startswith("Non-fatal errors") for h in run_extras["coverage"]["health"])
+    assert run_extras["coverage"]["threat_model"]
+
+
+def test_unpack_scan_zip_multi_run_rejected_and_junk_ignored():
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("a/report.sarif", json.dumps({"version": "2.1.0", "runs": [{"results": []}]}))
+        zf.writestr("b/report.sarif", json.dumps({"version": "2.1.0", "runs": [{"results": []}]}))
+    with pytest.raises(IngestError, match="scan runs"):
+        ingest.unpack_scan_zip(buf.getvalue())
+
+    # single run: >50 real files plus a pile of __MACOSX junk that would
+    # blow the (now 2000) entry cap if it were counted.
+    buf2 = io.BytesIO()
+    with zipfile.ZipFile(buf2, "w") as zf:
+        zf.writestr(f"{RUN}/report.sarif", json.dumps({"version": "2.1.0", "runs": [{"results": []}]}))
+        for i in range(60):
+            zf.writestr(f"{RUN}/extra_{i}.txt", "x")
+        for i in range(2500):
+            zf.writestr(f"__MACOSX/{RUN}/._junk_{i}.txt", "x")
+    report_bytes, _name, _mb, _mn = ingest.unpack_scan_zip(buf2.getvalue())
+    assert json.loads(report_bytes)["version"] == "2.1.0"
+
+
+def test_xml_doctype_skipped_not_raised():
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr(f"{RUN}/report.sarif", json.dumps({"version": "2.1.0", "runs": [{"results": []}]}))
+        zf.writestr(
+            f"{RUN}/01_x/finding_case.json",
+            json.dumps({"finding": {"title": "t", "file": "a.java", "line_start": 1}}),
+        )
+        zf.writestr(
+            f"{RUN}/01_x/evidence/triage.json",
+            json.dumps({"title": "t", "file": "a.java", "mode": "fix", "verdict": "Fixed", "final_verdict": "ACCEPT"}),
+        )
+        zf.writestr(
+            f"{RUN}/surefire-reports/evil.xml",
+            '<?xml version="1.0"?><!DOCTYPE testsuite [<!ENTITY x "y">]><testsuite name="t"></testsuite>',
+        )
+    extras = ingest.read_run_extras(buf.getvalue())
+    assert extras is not None
+    assert any("disallowed XML construct" in n for n in extras["notes"])
+    # end-to-end: applying extras must never raise even with the bad XML present
+    report = ingest.parse_report(json.dumps({"version": "2.1.0", "runs": [{"results": [
+        {"message": {"text": "t"}, "locations": [{"physicalLocation": {
+            "artifactLocation": {"uri": "a.java"}, "region": {"startLine": 1}}}]},
+    ]}]}).encode())
+    ingest.apply_run_extras(report, extras)
+    assert report["run_extras"]["deep_verified"] == 1
+
+
+def test_plain_sarif_zip_has_no_run_extras():
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("report.sarif", json.dumps({"version": "2.1.0", "runs": [{"results": []}]}))
+    raw = buf.getvalue()
+    report_bytes, _name, _mb, _mn = ingest.unpack_scan_zip(raw)
+    report = ingest.parse_report(report_bytes)
+    extras = ingest.read_run_extras(raw)
+    assert extras is None
+    assert "run_extras" not in report
