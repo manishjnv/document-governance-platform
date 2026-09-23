@@ -11,7 +11,8 @@ import { CodeReviewFinding, FIX_STATUS_META, FixStatus, SEVERITY_META, Severity,
 export type SortKey = 'idx' | 'severity' | 'title' | 'vuln_class' | 'cwe' | 'cvss_score' | 'confidence' | 'file';
 export type SortDir = 'asc' | 'desc';
 
-const CWE_RE = /^CWE-(\d+)$/i;
+// unanchored: SARIF carries 'CWE-287 - Improper Authentication'
+const CWE_RE = /CWE-(\d+)/i;
 
 const SEV_TONE: Record<Severity, ChipTone> = {
   critical: 'crit',
@@ -290,9 +291,11 @@ export function FindingsTable({
                       {/* file name first (the part that identifies it), folder underneath */}
                       <span className="block min-w-0 font-mono text-xs">
                         <span className="block break-all text-foreground">
-                          {f.file.split('/').pop()}:{f.line_start}-{f.line_end}
+                          {f.file.split('/').pop()}:{f.line_start}
+                          {f.line_end > f.line_start ? `-${f.line_end}` : ''}
                         </span>
-                        <span className="block truncate text-[11px] text-muted-foreground">
+                        {/* line-clamp, not truncate: nowrap would size the column to the full path */}
+                        <span className="line-clamp-1 break-all text-[11px] text-muted-foreground">
                           {f.file.split('/').slice(0, -1).join('/')}
                         </span>
                       </span>
