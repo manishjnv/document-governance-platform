@@ -196,7 +196,8 @@ export function FindingsTable({
           value={klass ?? ''}
           onChange={(e) => onKlassChange(e.target.value || null)}
           aria-label="Filter by vulnerability class"
-          className="h-8 rounded-md border border-input bg-card px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          // long CWE class names would otherwise size the select past a phone screen
+          className="h-8 w-full min-w-0 max-w-full rounded-md border border-input bg-card px-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-auto sm:max-w-xs"
         >
           <option value="">All classes</option>
           {classOptions.map(([id, label]) => (
