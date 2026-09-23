@@ -1,0 +1,5 @@
+# Test-only dependencies (CI and local test runs); the prod image installs
+# requirements.txt alone.
+-r requirements.txt
+fakeredis==2.36.0
+pyyaml==6.0.3
