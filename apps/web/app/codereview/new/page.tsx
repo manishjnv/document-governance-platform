@@ -14,7 +14,7 @@ const MAX_SIZE = 10 * 1024 * 1024;
 const REPORT_EXTS = ['.json', '.sarif', '.zip'];
 const MANIFEST_EXTS = ['.json'];
 
-const KIT_VERSION = '1.4.0';
+const KIT_VERSION = '1.5.1';
 
 // Checked against VVAH 1.4.0 README, docs/features.md and docs/models.md;
 // re-check on each kit upgrade (CODE_REVIEW_MODULE_REFERENCE.md §8).
