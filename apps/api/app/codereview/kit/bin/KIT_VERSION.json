@@ -1,9 +1,9 @@
 {
-  "vvah_version": "1.4.0",
-  "vvah_tag": "v1.4.0",
+  "vvah_version": "1.5.1",
+  "vvah_tag": "v1.5.1",
   "vvah_repo": "https://github.com/visa/visa-vulnerability-agentic-harness",
-  "wheel": "vendor/vvaharness-1.4.0-py3-none-any.whl",
-  "wheel_sha256": "f03e7626b9e7953c983232850713bdfdd5a37b2412b797312a1e41d3be441b85",
-  "built": "2026-09-23",
-  "build_note": "pip wheel --no-deps git+https://github.com/visa/visa-vulnerability-agentic-harness.git@v1.4.0 (no PyPI release, no GitHub release assets)"
+  "wheel": "vendor/vvaharness-1.5.1-py3-none-any.whl",
+  "wheel_sha256": "12580479e89f232d49729d0c7239946bc5d02f09ed9030f85f5a86016394e319",
+  "built": "2026-10-26",
+  "build_note": "pip wheel --no-deps git+https://github.com/visa/visa-vulnerability-agentic-harness.git@v1.5.1 (no PyPI release, no GitHub release assets)"
 }
